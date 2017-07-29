@@ -7,6 +7,7 @@
     "lint": "eslint .",
     "start": "babel-node index.js"
   },
+  "pre-commit": [ "lint" ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/eshaham/israeli-bank-scrapers.git"
@@ -29,6 +30,7 @@
     "babel-preset-es2015": "^6.24.1",
     "eslint": "^4.3.0",
     "eslint-config-airbnb-base": "^11.3.1",
-    "eslint-plugin-import": "^2.7.0"
+    "eslint-plugin-import": "^2.7.0",
+    "pre-commit": "^1.2.2"
   }
 }
