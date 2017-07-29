@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "description": "Provide scrapers for all major Israeli banks and credit card companies",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint ."
   },
   "repository": {
     "type": "git",
@@ -19,5 +20,10 @@
   "bugs": {
     "url": "https://github.com/eshaham/israeli-bank-scrapers/issues"
   },
-  "homepage": "https://github.com/eshaham/israeli-bank-scrapers#readme"
+  "homepage": "https://github.com/eshaham/israeli-bank-scrapers#readme",
+  "devDependencies": {
+    "eslint": "^4.3.0",
+    "eslint-config-airbnb-base": "^11.3.1",
+    "eslint-plugin-import": "^2.7.0"
+  }
 }
