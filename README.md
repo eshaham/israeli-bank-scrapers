@@ -23,12 +23,28 @@ Then you can simply import and use it in your node module:
 const scrapers = require('israeli-bank-scrapers');
 
 const credentials = {...}; // different for each bank
-const accountData = await scrapers.discountScraper(credentials);
+const scrapeResult = await scrapers.discountScraper(credentials);
 
-console.log(`account number: ${accountData.accountNumber}`);
-console.log(`# transactions found: ${accountData.txns.length}`);
+if (scrapeResult.success) {
+  console.log(`account number: ${scrapeResult.accountNumber}`);
+  console.log(`# transactions found: ${scrapeResult.txns.length}`);
+}
+else {
+  console.error(`scraping failed for the following reason: ${scrapeResult.errorType}`);
+}
 ```
-For now, you can only use `discountScraper`.
+The structure of the result object is as follows:
+```node
+{
+  "success": true|false
+  "errorType": 'invalidPassword'|'changePassword' // only on success=false
+  "accountNumber": string,
+  "txns": [{
+    ... // currently what discount returns, will need to standardize soon
+  }],
+}
+```
+Note: only `discountScraper`is available.
 
 # Credentials per scraper
 ## Discount scraper
