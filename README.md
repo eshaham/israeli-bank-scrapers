@@ -52,7 +52,7 @@ The structure of the result object is as follows:
   "txns": [{
     ... // currently what discount returns, will need to standardize soon
   }],
-  "errorType": "invalidPassword"|"changePassword"|"generic", // only on success=false
+  "errorType": "invalidPassword"|"changePassword"|"timeout"|"generic", // only on success=false
   "errorMessage": string, // only on success=false
 }
 ```
