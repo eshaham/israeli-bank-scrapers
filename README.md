@@ -37,11 +37,12 @@ The structure of the result object is as follows:
 ```node
 {
   "success": true|false
-  "errorType": 'invalidPassword'|'changePassword' // only on success=false
   "accountNumber": string,
   "txns": [{
     ... // currently what discount returns, will need to standardize soon
   }],
+  "errorType": "invalidPassword"|"changePassword"|"generic", // only on success=false
+  "errorMessage": string, // only on success=false
 }
 ```
 Note: only `discountScraper`is available.
