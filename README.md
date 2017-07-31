@@ -23,7 +23,12 @@ Then you can simply import and use it in your node module:
 const scrapers = require('israeli-bank-scrapers');
 
 const credentials = {...}; // different for each bank
-const scrapeResult = await scrapers.discountScraper(credentials);
+const options = {
+  eventsCallback: (msg) => {
+    console.log(msg);
+  }
+};
+const scrapeResult = await scrapers.discountScraper(credentials, options);
 
 if (scrapeResult.success) {
   console.log(`account number: ${scrapeResult.accountNumber}`);
@@ -31,6 +36,12 @@ if (scrapeResult.success) {
 }
 else {
   console.error(`scraping failed for the following reason: ${scrapeResult.errorType}`);
+}
+```
+You can currently send the following options:
+```node
+{
+  eventsCallback: function, // can be used to receive any progress messages from the scraper
 }
 ```
 The structure of the result object is as follows:
@@ -41,7 +52,7 @@ The structure of the result object is as follows:
   "txns": [{
     ... // currently what discount returns, will need to standardize soon
   }],
-  "errorType": "invalidPassword"|"changePassword"|"generic", // only on success=false
+  "errorType": "invalidPassword"|"changePassword"|"timeout"|"generic", // only on success=false
   "errorMessage": string, // only on success=false
 }
 ```
