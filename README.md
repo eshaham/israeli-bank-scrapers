@@ -47,13 +47,17 @@ You can currently send the following options:
 The structure of the result object is as follows:
 ```node
 {
-  "success": true|false
-  "accountNumber": string,
-  "txns": [{
-    ... // currently what discount returns, will need to standardize soon
+  success: boolean,
+  accountNumber: string,
+  txns: [{
+    identifier: int,
+    date: Date,
+    processedDate: Date,
+    amount: double,
+    description: string
   }],
-  "errorType": "invalidPassword"|"changePassword"|"timeout"|"generic", // only on success=false
-  "errorMessage": string, // only on success=false
+  errorType: "invalidPassword"|"changePassword"|"timeout"|"generic", // only on success=false
+  errorMessage: string, // only on success=false
 }
 ```
 Note: only `discountScraper`is available.
