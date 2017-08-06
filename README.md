@@ -41,7 +41,7 @@ else {
 You can currently send the following options:
 ```node
 {
-  startDate: Date, // the date to fetch transactions from
+  startDate: Date, // the date to fetch transactions from (can't be before the minimum allowed time difference for the scraper)
   eventsCallback: function, // can be used to receive any progress messages from the scraper
 }
 ```
@@ -62,7 +62,7 @@ The structure of the result object is as follows:
 }
 ```
 
-# Credentials per scraper
+# Specific definitions per scraper
 ## Discount scraper
 This scraper expects the following credentials object:
 ```node
@@ -72,6 +72,7 @@ const credentials = {
   num: <user identificaiton code>
 };
 ```
+This scraper supports fetching transaction from up to one year (minus 1 day).
 
 ## Leumi-Card scraper
 This scraper expects the following credentials object:
@@ -81,6 +82,7 @@ const credentials = {
   password: <user password>
 };
 ```
+This scraper supports fetching transaction from up to one year. 
 
 # License
 The MIT License
