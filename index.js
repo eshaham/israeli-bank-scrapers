@@ -1,3 +1,4 @@
 import discountScraper from './lib/scrapers/discount';
+import leumiCardScraper from './lib/scrapers/leumi-card';
 
-export default { discountScraper };
+export { discountScraper, leumiCardScraper };

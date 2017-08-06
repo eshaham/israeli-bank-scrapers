@@ -40,6 +40,8 @@
     "pre-commit": "^1.2.2"
   },
   "dependencies": {
+    "build-url": "^1.0.10",
+    "moment": "^2.18.1",
     "phantom": "^4.0.5"
   }
 }
