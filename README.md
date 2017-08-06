@@ -8,7 +8,7 @@ Israeli Bank Scrapers - Get closer to your own data
 
 # What's here?
 What you can find here is scrapers for all major Israeli banks and credit card companies. That's the plan at least.
-Currently only Discount Banks is supported.
+Currently only Discount Bank and Leumi Card are supported.
 
 # Prerequisites
 You will need to have `PhatomJS`
@@ -50,7 +50,7 @@ The structure of the result object is as follows:
   success: boolean,
   accountNumber: string,
   txns: [{
-    identifier: int,
+    identifier: int, // only if exists
     date: Date,
     processedDate: Date,
     amount: double,
@@ -60,7 +60,6 @@ The structure of the result object is as follows:
   errorMessage: string, // only on success=false
 }
 ```
-Note: only `discountScraper`is available.
 
 # Credentials per scraper
 ## Discount scraper
@@ -70,6 +69,15 @@ const credentials = {
   id: <user identification number>,
   password: <user password>,
   num: <user identificaiton code>
+};
+```
+
+## Leumi-Card scraper
+This scraper expects the following credentials object:
+```node
+const credentials = {
+  username: <user email>,
+  password: <user password>
 };
 ```
 
