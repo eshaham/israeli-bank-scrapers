@@ -41,6 +41,7 @@ else {
 You can currently send the following options:
 ```node
 {
+  startDate: Date, // the date to fetch transactions from
   eventsCallback: function, // can be used to receive any progress messages from the scraper
 }
 ```
