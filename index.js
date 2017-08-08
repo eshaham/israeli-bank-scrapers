@@ -1,4 +1,14 @@
-import discountScraper from './lib/scrapers/discount';
-import leumiCardScraper from './lib/scrapers/leumi-card';
+import DiscountScraper from './lib/scrapers/discount';
+import LeumiCardScraper from './lib/scrapers/leumi-card';
+
+function discountScraper(credentials, options) {
+  const scraper = new DiscountScraper();
+  return scraper.scrape(credentials, options);
+}
+
+function leumiCardScraper(credentials, options) {
+  const scraper = new LeumiCardScraper();
+  return scraper.scrape(credentials, options);
+}
 
 export { discountScraper, leumiCardScraper };
