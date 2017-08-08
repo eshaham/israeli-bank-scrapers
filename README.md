@@ -43,6 +43,7 @@ You can currently send the following options:
 {
   startDate: Date, // the date to fetch transactions from (can't be before the minimum allowed time difference for the scraper)
   eventsCallback: function, // can be used to receive any progress messages from the scraper
+  verbose: include more debug info about in the output
 }
 ```
 The structure of the result object is as follows:
@@ -82,7 +83,7 @@ const credentials = {
   password: <user password>
 };
 ```
-This scraper supports fetching transaction from up to one year. 
+This scraper supports fetching transaction from up to one year.
 
 # License
 The MIT License
