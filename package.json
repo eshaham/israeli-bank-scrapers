@@ -6,10 +6,11 @@
     "node": ">= 8.2.1",
     "npm": ">= 5.3.0"
   },
+  "main": "lib/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint .",
-    "start": "babel-node index.js"
+    "lint": "eslint src",
+    "prepublishOnly": "node_modules/babel-cli/bin/babel.js src --out-dir lib"
   },
   "pre-commit": [
     "lint"
