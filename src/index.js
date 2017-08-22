@@ -1,3 +1,4 @@
+import 'babel-polyfill';
 import DiscountScraper from './scrapers/discount';
 import LeumiCardScraper from './scrapers/leumi-card';
 
