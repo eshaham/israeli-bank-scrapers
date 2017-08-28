@@ -12,7 +12,39 @@ const ID_TYPE = '1';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 
-function getTransactionsUrl(month, year) {
+function getAccountsUrl(monthMoment) {
+  const billingDate = monthMoment.format('YYYY-MM-DD');
+  return buildUrl(SERVICES_URL, {
+    queryParams: {
+      reqName: 'DashboardMonth',
+      actionCode: 0,
+      billingDate,
+      format: 'Json',
+    },
+  });
+}
+
+async function fetchAccounts(page, monthMoment) {
+  const dataUrl = getAccountsUrl(monthMoment);
+  const dataResult = await fetchGet(page, dataUrl);
+  if (_.get(dataResult, 'Header.Status') === '1' && dataResult.DashboardMonthBean) {
+    const cardsCharges = dataResult.DashboardMonthBean.cardsCharges;
+    if (cardsCharges) {
+      return cardsCharges.map((cardCharge) => {
+        return {
+          index: parseInt(cardCharge.cardIndex, 10),
+          accountNumber: cardCharge.cardNumber,
+          processedDate: moment(cardCharge.billingDate, DATE_FORMAT).toDate(),
+        };
+      });
+    }
+  }
+  return null;
+}
+
+function getTransactionsUrl(monthMoment) {
+  const month = monthMoment.month();
+  const year = monthMoment.year();
   const monthStr = month < 10 ? `0${month}` : month.toString();
   return buildUrl(SERVICES_URL, {
     queryParams: {
@@ -29,39 +61,37 @@ function convertTransactions(txns, processedDate) {
     return {
       identifier: txn.voucherNumberRatz,
       date: moment(txn.fullPurchaseDate, DATE_FORMAT).toDate(),
-      processedDate: moment(processedDate, DATE_FORMAT).toDate(),
+      processedDate,
       amount: txn.dealSum,
       description: txn.fullSupplierNameHeb,
     };
   });
 }
 
-async function fetchTransactions(page, month, year) {
-  const dataUrl = getTransactionsUrl(month, year);
+async function fetchTransactions(page, monthMoment) {
+  const accounts = await fetchAccounts(page, monthMoment);
+  const dataUrl = getTransactionsUrl(monthMoment);
   const dataResult = await fetchGet(page, dataUrl);
   if (_.get(dataResult, 'Header.Status') === '1' && dataResult.CardsTransactionsListBean) {
-    const cardsDetails = dataResult.CardsTransactionsListBean.cardNumberList;
-    if (cardsDetails && cardsDetails.length) {
-      const cardNumbers = cardsDetails.map((cardStr) => {
-        return cardStr.substring(cardStr.length - 4);
-      });
-      const payDay = dataResult.CardsTransactionsListBean.payDay || '1';
-      const processedDate = new Date(year, month, parseInt(payDay, 10));
-      const txnGroups = _.get(dataResult, 'CardsTransactionsListBean.Index0.CurrentCardTransactions');
+    const accountTxns = {};
+    accounts.forEach((account) => {
+      const txnGroups = _.get(dataResult, `CardsTransactionsListBean.Index${account.index}.CurrentCardTransactions`);
       if (txnGroups) {
         const allTxs = [];
         txnGroups.forEach((txnGroup) => {
           if (txnGroup.txnIsrael) {
-            const txns = convertTransactions(txnGroup.txnIsrael, processedDate);
+            const txns = convertTransactions(txnGroup.txnIsrael, account.processedDate);
             allTxs.push(...txns);
           }
         });
-        return {
-          accountNumber: cardNumbers[0],
+        accountTxns[account.accountNumber] = {
+          accountNumber: account.accountNumber,
+          index: account.index,
           txns: allTxs,
         };
       }
-    }
+    });
+    return accountTxns;
   }
 
   return null;
@@ -78,18 +108,26 @@ async function fetchAllTransactions(page, startMoment) {
   }
 
   const results = await Promise.all(allMonths.map(async (monthMoment) => {
-    const month = monthMoment.month();
-    const year = monthMoment.year();
-    return fetchTransactions(page, month, year);
+    return fetchTransactions(page, monthMoment);
   }));
 
-  const combinedTransactions = [];
+  const combinedTransactions = {};
   results.forEach((result) => {
-    combinedTransactions.push(...result.txns);
+    Object.keys(result).forEach((accountNumber) => {
+      if (!combinedTransactions[accountNumber]) {
+        combinedTransactions[accountNumber] = [];
+      }
+      combinedTransactions[accountNumber].push(...result[accountNumber].txns);
+    });
   });
+
+  const lastResult = results[results.length - 1];
+  const firstAccountNumberOfLastMonth = Object.keys(lastResult).filter((accountNumber) => {
+    return lastResult[accountNumber].index === 0;
+  })[0];
   return {
-    accountNumber: results[0].accountNumber,
-    txns: combinedTransactions,
+    accountNumber: firstAccountNumberOfLastMonth,
+    txns: combinedTransactions[firstAccountNumberOfLastMonth],
   };
 }
 
