@@ -11,7 +11,7 @@ What you can find here is scrapers for all major Israeli banks and credit card c
 Currently only Discount Bank and Leumi Card are supported.
 
 # Prerequisites
-You will need to have `PhatomJS`
+To use this you will need to have [Node.js](https://nodejs.org) >= 6 installed.
 
 # Getting started
 To use these scrapers you'll need to install the package from npm:

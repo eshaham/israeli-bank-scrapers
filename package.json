@@ -1,15 +1,16 @@
 {
   "name": "israeli-bank-scrapers",
-  "version": "0.2.1",
+  "version": "0.2.3",
   "description": "Provide scrapers for all major Israeli banks and credit card companies",
   "engines": {
     "node": ">= 8.2.1",
     "npm": ">= 5.3.0"
   },
+  "main": "lib/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint .",
-    "start": "babel-node index.js"
+    "lint": "eslint src",
+    "prepublishOnly": "node_modules/babel-cli/bin/babel.js src --out-dir lib"
   },
   "pre-commit": [
     "lint"
@@ -30,9 +31,10 @@
   },
   "homepage": "https://github.com/eshaham/israeli-bank-scrapers#readme",
   "devDependencies": {
-    "babel-cli": "^6.24.1",
-    "babel-core": "^6.25.0",
-    "babel-preset-es2015": "^6.24.1",
+    "babel-cli": "^6.26.0",
+    "babel-plugin-transform-es2015-arrow-functions": "^6.22.0",
+    "babel-plugin-transform-es2015-block-scoping": "^6.26.0",
+    "babel-plugin-transform-es2015-shorthand-properties": "^6.24.1",
     "babel-preset-env": "^1.6.0",
     "eslint": "^4.3.0",
     "eslint-config-airbnb-base": "^11.3.1",
@@ -40,6 +42,7 @@
     "pre-commit": "^1.2.2"
   },
   "dependencies": {
+    "babel-polyfill": "^6.26.0",
     "build-url": "^1.0.10",
     "lodash": "^4.17.4",
     "moment": "^2.18.1",

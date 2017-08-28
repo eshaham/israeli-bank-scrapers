@@ -1,6 +1,7 @@
-import DiscountScraper from './lib/scrapers/discount';
-import LeumiCardScraper from './lib/scrapers/leumi-card';
-import IsracardScraper from './lib/scrapers/isracard';
+import 'babel-polyfill';
+import DiscountScraper from './scrapers/discount';
+import LeumiCardScraper from './scrapers/leumi-card';
+import IsracardScraper from './scrapers/isracard';
 
 function discountScraper(credentials, options) {
   const scraper = new DiscountScraper();
