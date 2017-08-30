@@ -68,7 +68,7 @@ function convertTransactions(txns, processedDate) {
   });
 }
 
-async function fetchTransactions(page, monthMoment) {
+async function fetchTransactions(page, startMoment, monthMoment) {
   const accounts = await fetchAccounts(page, monthMoment);
   const dataUrl = getTransactionsUrl(monthMoment);
   const dataResult = await fetchGet(page, dataUrl);
@@ -80,7 +80,8 @@ async function fetchTransactions(page, monthMoment) {
         const allTxs = [];
         txnGroups.forEach((txnGroup) => {
           if (txnGroup.txnIsrael) {
-            const txns = convertTransactions(txnGroup.txnIsrael, account.processedDate);
+            let txns = convertTransactions(txnGroup.txnIsrael, account.processedDate);
+            txns = txns.filter(txn => startMoment.isSameOrBefore(txn.date));
             allTxs.push(...txns);
           }
         });
@@ -108,16 +109,19 @@ async function fetchAllTransactions(page, startMoment) {
   }
 
   const results = await Promise.all(allMonths.map(async (monthMoment) => {
-    return fetchTransactions(page, monthMoment);
+    return fetchTransactions(page, startMoment, monthMoment);
   }));
 
-  const combinedTransactions = {};
+  const combinedTxns = {};
   results.forEach((result) => {
     Object.keys(result).forEach((accountNumber) => {
-      if (!combinedTransactions[accountNumber]) {
-        combinedTransactions[accountNumber] = [];
+      let txnsForAccount = combinedTxns[accountNumber];
+      if (!txnsForAccount) {
+        txnsForAccount = [];
+        combinedTxns[accountNumber] = txnsForAccount;
       }
-      combinedTransactions[accountNumber].push(...result[accountNumber].txns);
+      const toBeAddedTxns = result[accountNumber].txns;
+      combinedTxns[accountNumber].push(...toBeAddedTxns);
     });
   });
 
@@ -127,7 +131,7 @@ async function fetchAllTransactions(page, startMoment) {
   })[0];
   return {
     accountNumber: firstAccountNumberOfLastMonth,
-    txns: combinedTransactions[firstAccountNumberOfLastMonth],
+    txns: combinedTxns[firstAccountNumberOfLastMonth],
   };
 }
 
