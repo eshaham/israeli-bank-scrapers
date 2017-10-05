@@ -88,7 +88,7 @@ async function fetchTransactionsByType(page, accountIndex, transactionsType, sta
     return {
       date: moment(txn.dateStr, DATE_FORMAT).toDate(),
       processedDate: moment(txn.processedDateStr, DATE_FORMAT).toDate(),
-      amount: parseFloat(txn.amountStr),
+      amount: parseFloat(txn.amountStr.replace(',', '')),
       description: txn.description.trim(),
     };
   });
