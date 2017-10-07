@@ -81,6 +81,10 @@ function getLoadedRawTransactions(page) {
 async function fetchTransactionsByType(page, accountIndex, transactionsType, startDate) {
   const url = getTransactionsUrl(accountIndex, transactionsType, startDate);
   await page.open(url);
+  const current = await page.property('url');
+  if (current.includes('error.aspx')) {
+    return [];
+  }
   await waitUntilElementFound(page, 'tbl1_lvTransactions_lnkPurchaseDate');
 
   const rawTxns = await getLoadedRawTransactions(page);
