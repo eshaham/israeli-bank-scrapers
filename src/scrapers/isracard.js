@@ -77,14 +77,18 @@ async function fetchTransactions(page, startMoment, monthMoment) {
     accounts.forEach((account) => {
       const txnGroups = _.get(dataResult, `CardsTransactionsListBean.Index${account.index}.CurrentCardTransactions`);
       if (txnGroups) {
-        const allTxs = [];
+        let allTxs = [];
         txnGroups.forEach((txnGroup) => {
           if (txnGroup.txnIsrael) {
-            let txns = convertTransactions(txnGroup.txnIsrael, account.processedDate);
-            txns = txns.filter(txn => startMoment.isSameOrBefore(txn.date));
+            const txns = convertTransactions(txnGroup.txnIsrael, account.processedDate);
+            allTxs.push(...txns);
+          }
+          if (txnGroup.txnAbroad) {
+            const txns = convertTransactions(txnGroup.txnAbroad, account.processedDate);
             allTxs.push(...txns);
           }
         });
+        allTxs = allTxs.filter(txn => startMoment.isSameOrBefore(txn.date));
         accountTxns[account.accountNumber] = {
           accountNumber: account.accountNumber,
           index: account.index,
