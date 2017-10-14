@@ -150,9 +150,9 @@ class IsracardScraper extends BaseScraper {
   }
 
   async login(credentials) {
-    this.notify('logging in');
-
     await this.page.goto(`${BASE_URL}/personalarea/Login`);
+
+    this.notify('logging in');
 
     const validateUrl = `${SERVICES_URL}?reqName=ValidateIdData`;
     const validateRequest = {
