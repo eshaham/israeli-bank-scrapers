@@ -2,7 +2,7 @@ import buildUrl from 'build-url';
 import moment from 'moment';
 
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
-import { waitForRedirect, waitForPageLoad } from '../helpers/navigation';
+import { waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 
 const BASE_URL = 'https://online.leumi-card.co.il';
@@ -80,8 +80,8 @@ function getLoadedRawTransactions(page) {
 
 async function fetchTransactionsByType(page, accountIndex, transactionsType, startDate) {
   const url = getTransactionsUrl(accountIndex, transactionsType, startDate);
-  await page.open(url);
-  const current = await page.property('url');
+  await page.goto(url);
+  const current = await page.url();
   if (current.includes('error.aspx')) {
     return [];
   }
@@ -121,8 +121,7 @@ async function fetchTransactions(page, accountIndex, options) {
 
 async function getAccountData(page, options) {
   const accountsPage = `${BASE_URL}/Registred/Transactions/ChargesDeals.aspx`;
-  await page.open(accountsPage);
-  await waitForPageLoad(page);
+  await page.goto(accountsPage);
 
   const accountNumbers = await getAccountNumbers(page);
   const txns = await fetchTransactions(page, 0, options);
