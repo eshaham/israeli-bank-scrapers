@@ -44,6 +44,7 @@
   "dependencies": {
     "babel-polyfill": "^6.26.0",
     "build-url": "^1.0.10",
+    "lodash": "^4.17.4",
     "moment": "^2.18.1",
     "puppeteer": "github:GoogleChrome/puppeteer"
   }

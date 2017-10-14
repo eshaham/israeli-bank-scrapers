@@ -8,6 +8,7 @@ const LOGIN_RESULT = {
   SUCCESS: 'success',
   INVALID_PASSWORD: 'invalidPassword',
   CHANGE_PASSWORD: 'changePassword',
+  UNKNOWN_ERROR: 'unknownError',
 };
 
 const GENERAL_ERROR = 'generalError';
@@ -80,11 +81,9 @@ class BaseScraper {
   async scrape(credentials, options = {}) {
     await this.initialize(options);
 
-    const loginOptions = this.getLoginOptions(credentials);
-
     let loginResult;
     try {
-      loginResult = await this.login(loginOptions);
+      loginResult = await this.login(credentials);
     } catch (e) {
       loginResult = e.timeout ? createTimeoutError(e.errorMessage) : createGenericNavigationError();
     }
@@ -120,10 +119,12 @@ class BaseScraper {
     return null;
   }
 
-  async login(options) {
-    if (!options) {
+  async login(credentials) {
+    if (!credentials) {
       return createGeneralError();
     }
+
+    const options = this.getLoginOptions(credentials);
 
     await this.page.goto(options.loginUrl);
     await waitUntilElementFound(this.page, options.submitButtonId);

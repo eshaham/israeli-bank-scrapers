@@ -2,7 +2,7 @@ import moment from 'moment';
 
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { waitForRedirect } from '../helpers/navigation';
-import fetch from '../helpers/fetch';
+import { fetchGet } from '../helpers/fetch';
 
 const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
@@ -23,7 +23,7 @@ async function fetchAccountData(page, options, notifyAction) {
   const apiSiteUrl = `${BASE_URL}/Titan/gatewayAPI`;
 
   const accountDataUrl = `${apiSiteUrl}/userAccountsData`;
-  const accountInfo = await fetch(page, accountDataUrl);
+  const accountInfo = await fetchGet(page, accountDataUrl);
   const accountNumber = accountInfo.UserAccountsData.DefaultAccountNumber;
 
   notifyAction(`found account number ${accountNumber}`);
@@ -34,7 +34,7 @@ async function fetchAccountData(page, options, notifyAction) {
 
   const startDateStr = startMoment.format(DATE_FORMAT);
   const txnsUrl = `${apiSiteUrl}/lastTransactions/${accountNumber}/Date?IsCategoryDescCode=True&IsTransactionDetails=True&IsEventNames=True&FromDate=${startDateStr}`;
-  const txnsResult = await fetch(page, txnsUrl);
+  const txnsResult = await fetchGet(page, txnsUrl);
   if (txnsResult.Error) {
     return {
       success: false,

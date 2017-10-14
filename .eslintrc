@@ -5,7 +5,8 @@
   },
   "globals": {
     "document": true,
-    "fetch": true
+    "fetch": true,
+    "Headers": true
   },
   "extends": "airbnb-base"
 }
