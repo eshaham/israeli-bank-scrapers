@@ -28,7 +28,7 @@ async function fetchAccounts(page, monthMoment) {
   const dataUrl = getAccountsUrl(monthMoment);
   const dataResult = await fetchGet(page, dataUrl);
   if (_.get(dataResult, 'Header.Status') === '1' && dataResult.DashboardMonthBean) {
-    const cardsCharges = dataResult.DashboardMonthBean.cardsCharges;
+    const { cardsCharges } = dataResult.DashboardMonthBean;
     if (cardsCharges) {
       return cardsCharges.map((cardCharge) => {
         return {
@@ -174,7 +174,7 @@ class IsracardScraper extends BaseScraper {
 
     const validateReturnCode = validateResult.ValidateIdDataBean.returnCode;
     if (validateReturnCode === '1') {
-      const userName = validateResult.ValidateIdDataBean.userName;
+      const { userName } = validateResult.ValidateIdDataBean;
 
       const loginUrl = `${SERVICES_URL}?reqName=performLogonI`;
       const request = {
