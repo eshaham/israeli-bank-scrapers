@@ -43,7 +43,7 @@ async function fetchAccounts(page, monthMoment) {
 }
 
 function getTransactionsUrl(monthMoment) {
-  const month = monthMoment.month();
+  const month = monthMoment.month() + 1;
   const year = monthMoment.year();
   const monthStr = month < 10 ? `0${month}` : month.toString();
   return buildUrl(SERVICES_URL, {
@@ -103,11 +103,11 @@ async function fetchTransactions(page, startMoment, monthMoment) {
 }
 
 async function fetchAllTransactions(page, startMoment) {
-  let monthMoment = startMoment;
+  let monthMoment = moment(startMoment).startOf('month');
 
   const allMonths = [];
-  const startOfMonth = moment().startOf('month');
-  while (monthMoment.isBefore(startOfMonth)) {
+  const startOfNextMonth = moment().startOf('month').add(1, 'month');
+  while (monthMoment.isSameOrBefore(startOfNextMonth)) {
     allMonths.push(monthMoment);
     monthMoment = moment(monthMoment).add(1, 'month');
   }
@@ -147,7 +147,7 @@ class IsracardScraper extends BaseScraper {
   async login(credentials) {
     this.notify('logging in');
 
-    await this.page.open(`${BASE_URL}/personalarea/Login`);
+    await this.page.goto(`${BASE_URL}/personalarea/Login`);
 
     const validateUrl = `${SERVICES_URL}?reqName=ValidateIdData`;
     const validateRequest = {
