@@ -124,8 +124,6 @@ class BaseScraper {
       return createGeneralError();
     }
 
-    this.notify('logging in');
-
     const options = this.getLoginOptions(credentials);
 
     await this.page.goto(options.loginUrl);
