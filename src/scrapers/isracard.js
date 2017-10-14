@@ -133,9 +133,14 @@ async function fetchAllTransactions(page, startMoment) {
   const firstAccountNumberOfLastMonth = Object.keys(lastResult).filter((accountNumber) => {
     return lastResult[accountNumber].index === 0;
   })[0];
+
+  let firstAccountNumberOfLastMonthTxns = combinedTxns[firstAccountNumberOfLastMonth];
+  firstAccountNumberOfLastMonthTxns = firstAccountNumberOfLastMonthTxns.sort((a, b) => {
+    return a.date - b.date;
+  });
   return {
     accountNumber: firstAccountNumberOfLastMonth,
-    txns: combinedTxns[firstAccountNumberOfLastMonth],
+    txns: firstAccountNumberOfLastMonthTxns,
   };
 }
 
