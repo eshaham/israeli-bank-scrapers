@@ -3,7 +3,6 @@ import moment from 'moment';
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { waitForRedirect } from '../helpers/navigation';
 import { fetchGet } from '../helpers/fetch';
-import includeJQuery from '../helpers/imported-libs';
 
 const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
@@ -21,8 +20,6 @@ function convertTransactions(txns) {
 }
 
 async function fetchAccountData(page, options, notifyAction) {
-  await includeJQuery(page);
-
   const apiSiteUrl = `${BASE_URL}/Titan/gatewayAPI`;
 
   const accountDataUrl = `${apiSiteUrl}/userAccountsData`;
@@ -59,7 +56,7 @@ async function fetchAccountData(page, options, notifyAction) {
 
 function getPossibleLoginResults() {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = `${BASE_URL}/apollo/core/templates/default/masterPage.html#/MY_ACCOUNT_HOMEPAGE`;
+  urls[LOGIN_RESULT.SUCCESS] = `${BASE_URL}/apollo/core/templates/default/masterPage.html`;
   urls[LOGIN_RESULT.INVALID_PASSWORD] = `${BASE_URL}/LoginPages/Logon?multilang=he&t=P&pagekey=home&bank=d#`;
   urls[LOGIN_RESULT.CHANGE_PASSWORD] = `${BASE_URL}/LoginPages/Logon`;
   return urls;

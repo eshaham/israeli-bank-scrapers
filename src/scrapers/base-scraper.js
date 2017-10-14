@@ -1,7 +1,7 @@
-import phantom from 'phantom';
+import puppeteer from 'puppeteer';
 
 import ScraperNotifier from '../helpers/notifier';
-import { waitForUrls, NAVIGATION_ERRORS } from '../helpers/navigation';
+import { waitForNavigation, NAVIGATION_ERRORS } from '../helpers/navigation';
 import { waitUntilElementFound, fillInput, clickButton } from '../helpers/elements-interactions';
 
 const LOGIN_RESULT = {
@@ -12,6 +12,10 @@ const LOGIN_RESULT = {
 };
 
 const GENERAL_ERROR = 'generalError';
+
+function getKeyByValue(object, value) {
+  return Object.keys(object).find(key => object[key] === value);
+}
 
 function handleLoginResult(loginResult, notifyAction) {
   switch (loginResult) {
@@ -63,8 +67,13 @@ class BaseScraper {
   async initialize(options) {
     this.options = options;
     this.notifier = new ScraperNotifier(this.scraperName);
-    this.instance = await phantom.create([], { logLevel: options.verbose ? 'info' : 'warn' });
-    this.page = await this.instance.createPage();
+
+    let env = null;
+    if (options.verbose) {
+      env = Object.assign({ DEBUG: '*' }, process.env);
+    }
+    this.browser = await puppeteer.launch({ env });
+    this.page = await this.browser.newPage();
 
     this.notify('start scraping');
   }
@@ -91,13 +100,23 @@ class BaseScraper {
       scrapeResult = loginResult;
     }
 
-    await this.instance.exit();
+    await this.browser.close();
 
     return scrapeResult;
   }
 
   getLoginOptions() {
     this.notify('you must override getLoginOptions()');
+  }
+
+  async fillInputs(fields) {
+    const modified = [...fields];
+    const input = modified.shift();
+    await fillInput(this.page, input.id, input.value);
+    if (modified.length) {
+      return this.fillInputs(modified);
+    }
+    return null;
   }
 
   async login(credentials) {
@@ -109,21 +128,21 @@ class BaseScraper {
 
     const options = this.getLoginOptions(credentials);
 
-    await this.page.open(options.loginUrl);
+    await this.page.goto(options.loginUrl);
     await waitUntilElementFound(this.page, options.submitButtonId);
 
-    await Promise.all(options.fields.map((field) => {
-      return fillInput(this.page, field.id, field.value);
-    }));
-
+    await this.fillInputs(options.fields);
     await clickButton(this.page, options.submitButtonId);
     this.notify('logging in');
 
     if (options.postAction) {
       await options.postAction();
+    } else {
+      await waitForNavigation(this.page);
     }
 
-    const loginResult = await waitForUrls(this.page, options.possibleResults);
+    const current = await this.page.url();
+    const loginResult = getKeyByValue(options.possibleResults, current);
     return handleLoginResult(loginResult, msg => this.notify(msg));
   }
 

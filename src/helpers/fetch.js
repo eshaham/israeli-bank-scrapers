@@ -1,23 +1,16 @@
-let injected = false;
-
-async function verifyJQuery(page) {
-  if (!injected) {
-    await page.includeJs('https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js');
-    injected = true;
-  }
-}
-
-async function fetch(page, url, method = 'GET', data) {
-  await verifyJQuery(page);
+async function fetchGet(page, url, method = 'GET', data) {
   return page.evaluate((url, method, data) => {
-    const result = $.ajax({
-      async: false,
-      url,
-      method,
-      data,
-      dataType: 'json',
+    return new Promise((resolve, reject) => {
+      fetch(url, {
+        method,
+        body: data,
+        credentials: 'include',
+      }).then((result) => {
+        resolve(result.json());
+      }).catch((e) => {
+        reject(e);
+      });
     });
-    return JSON.parse(result.responseText);
   }, url, method, data);
 }
 
@@ -25,4 +18,4 @@ async function fetchPost(page, url, data) {
   return fetch(page, url, 'POST', data);
 }
 
-export { fetch as fetchGet, fetchPost };
+export { fetchGet, fetchPost };

@@ -5,60 +5,24 @@ const NAVIGATION_ERRORS = {
   GENERIC: 'generic',
 };
 
-function getKeyByValue(object, value) {
-  return Object.keys(object).find(key => object[key] === value);
-}
-
-async function waitForUrls(page, urls, timeout = 20000) {
-  try {
-    await waitUntil(async () => {
-      const current = await page.property('url');
-      return getKeyByValue(urls, current) != null;
-    }, `waiting for any of the ${Object.keys(urls).length} urls`, timeout, 1000);
-  } catch (e) {
-    if (e.timeout) {
-      const current = await page.property('url');
-      e.lastUrl = current;
-    }
-    throw e;
-  }
-
-  const current = await page.property('url');
-  return getKeyByValue(urls, current);
-}
-
-function waitForUrl(page, url, timeout) {
-  return waitForUrls(page, { default: url }, timeout);
+async function waitForNavigation(page) {
+  await page.waitForNavigation();
 }
 
 async function waitForRedirect(page, timeout = 20000) {
-  const initial = await page.property('url');
+  const initial = await page.url();
   try {
     await waitUntil(async () => {
-      const current = await page.property('url');
+      const current = await page.url();
       return current !== initial;
     }, `waiting for redirect from ${initial}`, timeout, 1000);
   } catch (e) {
     if (e && e.timeout) {
-      const current = await page.property('url');
+      const current = await page.url();
       e.lastUrl = current;
     }
     throw e;
   }
 }
 
-async function waitForPageLoad(page, timeout = 20000) {
-  const eventName = 'onLoadFinished';
-
-  let loading = true;
-  await page.on(eventName, () => {
-    loading = false;
-    page.off(eventName);
-  });
-
-  await waitUntil(async () => {
-    return !loading;
-  }, 'waiting for page load event', timeout, 1000);
-}
-
-export { waitForUrls, waitForUrl, waitForRedirect, waitForPageLoad, NAVIGATION_ERRORS };
+export { waitForNavigation, waitForRedirect, NAVIGATION_ERRORS };
