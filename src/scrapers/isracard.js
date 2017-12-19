@@ -10,6 +10,7 @@ const BASE_URL = 'https://digital.isracard.co.il';
 const SERVICES_URL = `${BASE_URL}/services/ProxyRequestHandler.ashx`;
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';
+const INSTALLMENTS_KEYWORD = 'תשלום';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 
@@ -58,7 +59,7 @@ function getTransactionsUrl(monthMoment) {
 }
 
 function getInstallmentsInfo(txn) {
-  if (!txn.moreInfo) {
+  if (!txn.moreInfo || !txn.moreInfo.includes(INSTALLMENTS_KEYWORD)) {
     return null;
   }
   const matches = txn.moreInfo.match(/\d+/g);
@@ -86,6 +87,7 @@ function convertTransactions(txns, processedDate) {
       originalAmount: -txn.dealSum,
       chargedAmount: -txn.paymentSum,
       description: txn.fullSupplierNameHeb,
+      installments: getInstallmentsInfo(txn),
     };
   });
 }

@@ -69,6 +69,7 @@ function getLoadedRawTransactions(page) {
         const originalAmountStr = cells[6].textContent;
         const chargedAmountStr = cells[6].textContent;
         const description = cells[3].textContent;
+        const comments = cells[7].textContent;
 
         const txn = {
           typeStr,
@@ -77,6 +78,7 @@ function getLoadedRawTransactions(page) {
           originalAmountStr,
           chargedAmountStr,
           description,
+          comments,
         };
         txns.push(txn);
       }
@@ -94,6 +96,21 @@ function getTransactionType(txnTypeStr) {
     default:
       throw new Error(`unknown transaction type ${txnTypeStr}`);
   }
+}
+
+function getInstallmentsInfo(comments) {
+  if (!comments) {
+    return null;
+  }
+  const matches = comments.match(/\d+/g);
+  if (!matches || matches.length < 2) {
+    return null;
+  }
+
+  return {
+    number: matches[0],
+    total: matches[1],
+  };
 }
 
 async function fetchTransactionsByType(page, accountIndex, transactionsType, startDate) {
@@ -114,6 +131,7 @@ async function fetchTransactionsByType(page, accountIndex, transactionsType, sta
       originalAmount: -parseFloat(txn.originalAmountStr.replace(',', '')),
       chargedAmount: -parseFloat(txn.chargedAmountStr.replace(',', '')),
       description: txn.description.trim(),
+      installments: getInstallmentsInfo(txn.comments),
     };
   });
   return txns;
