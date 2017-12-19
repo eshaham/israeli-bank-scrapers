@@ -52,11 +52,16 @@ The structure of the result object is as follows:
   success: boolean,
   accountNumber: string,
   txns: [{
+    type: string, // can be either 'normal' or 'installments'
     identifier: int, // only if exists
     date: Date,
     processedDate: Date,
     amount: double,
-    description: string
+    description: string,
+    installments: {
+      number: int, // the current installment number
+      total: int, // the total number of installments
+    }
   }],
   errorType: "invalidPassword"|"changePassword"|"timeout"|"generic", // only on success=false
   errorMessage: string, // only on success=false
