@@ -62,13 +62,15 @@ function getLoadedRawTransactions(page) {
 
         const dateStr = cells[1].textContent.trim();
         const processedDateStr = cells[2].textContent.trim();
-        const amountStr = cells[6].textContent;
+        const originalAmountStr = cells[6].textContent;
+        const chargedAmountStr = cells[6].textContent;
         const description = cells[3].textContent;
 
         const txn = {
           dateStr,
           processedDateStr,
-          amountStr,
+          originalAmountStr,
+          chargedAmountStr,
           description,
         };
         txns.push(txn);
@@ -92,7 +94,8 @@ async function fetchTransactionsByType(page, accountIndex, transactionsType, sta
     return {
       date: moment(txn.dateStr, DATE_FORMAT).toDate(),
       processedDate: moment(txn.processedDateStr, DATE_FORMAT).toDate(),
-      amount: -parseFloat(txn.amountStr.replace(',', '')),
+      originalAmount: -parseFloat(txn.originalAmountStr.replace(',', '')),
+      chargedAmount: -parseFloat(txn.chargedAmountStr.replace(',', '')),
       description: txn.description.trim(),
     };
   });

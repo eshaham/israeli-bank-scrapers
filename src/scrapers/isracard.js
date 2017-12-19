@@ -62,7 +62,8 @@ function convertTransactions(txns, processedDate) {
       identifier: txn.voucherNumberRatz,
       date: moment(txn.fullPurchaseDate, DATE_FORMAT).toDate(),
       processedDate,
-      amount: -txn.dealSum,
+      originalAmount: -txn.dealSum,
+      chargedAmount: -txn.paymentSum,
       description: txn.fullSupplierNameHeb,
     };
   });

@@ -13,7 +13,8 @@ function convertTransactions(txns) {
       identifier: txn.OperationNumber,
       date: moment(txn.OperationDate, DATE_FORMAT).toDate(),
       processedDate: moment(txn.ValueDate, DATE_FORMAT).toDate(),
-      amount: txn.OperationAmount,
+      originalAmount: txn.OperationAmount,
+      chargedAmount: txn.OperationAmount,
       description: txn.OperationDescriptionToDisplay,
     };
   });
