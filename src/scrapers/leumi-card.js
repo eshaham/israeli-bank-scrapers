@@ -4,7 +4,7 @@ import moment from 'moment';
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
-import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE } from '../constants';
+import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY } from '../constants';
 
 const BASE_URL = 'https://online.leumi-card.co.il';
 const DATE_FORMAT = 'DD/MM/YYYY';
@@ -66,7 +66,7 @@ function getLoadedRawTransactions(page) {
         const typeStr = cells[4].textContent;
         const dateStr = cells[1].textContent.trim();
         const processedDateStr = cells[2].textContent.trim();
-        const originalAmountStr = cells[6].textContent;
+        const originalAmountStr = cells[5].textContent;
         const chargedAmountStr = cells[6].textContent;
         const description = cells[3].textContent;
         const comments = cells[7].textContent;
@@ -128,7 +128,7 @@ async function fetchTransactionsByType(page, accountIndex, transactionsType, sta
       type: getTransactionType(txn.typeStr),
       date: moment(txn.dateStr, DATE_FORMAT).toDate(),
       processedDate: moment(txn.processedDateStr, DATE_FORMAT).toDate(),
-      originalAmount: -parseFloat(txn.originalAmountStr.replace(',', '')),
+      originalAmount: -parseFloat(txn.originalAmountStr.replace(',', '').replace(SHEKEL_CURRENCY, '')),
       chargedAmount: -parseFloat(txn.chargedAmountStr.replace(',', '')),
       description: txn.description.trim(),
       installments: getInstallmentsInfo(txn.comments),
