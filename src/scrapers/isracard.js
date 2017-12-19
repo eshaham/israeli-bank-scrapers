@@ -4,11 +4,13 @@ import moment from 'moment';
 
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { fetchGet, fetchPost } from '../helpers/fetch';
+import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE } from '../constants';
 
 const BASE_URL = 'https://digital.isracard.co.il';
 const SERVICES_URL = `${BASE_URL}/services/ProxyRequestHandler.ashx`;
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';
+const INSTALLMENTS_KEYWORD = 'תשלום';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 
@@ -56,15 +58,36 @@ function getTransactionsUrl(monthMoment) {
   });
 }
 
+function getInstallmentsInfo(txn) {
+  if (!txn.moreInfo || !txn.moreInfo.includes(INSTALLMENTS_KEYWORD)) {
+    return null;
+  }
+  const matches = txn.moreInfo.match(/\d+/g);
+  if (!matches || matches.length < 2) {
+    return null;
+  }
+
+  return {
+    number: matches[0],
+    total: matches[1],
+  };
+}
+
+function getTransactionType(txn) {
+  return getInstallmentsInfo(txn) ? NORMAL_TXN_TYPE : INSTALLMENTS_TXN_TYPE;
+}
+
 function convertTransactions(txns, processedDate) {
   return txns.map((txn) => {
     return {
+      type: getTransactionType(txn),
       identifier: txn.voucherNumberRatz,
       date: moment(txn.fullPurchaseDate, DATE_FORMAT).toDate(),
       processedDate,
       originalAmount: -txn.dealSum,
       chargedAmount: -txn.paymentSum,
       description: txn.fullSupplierNameHeb,
+      installments: getInstallmentsInfo(txn),
     };
   });
 }
