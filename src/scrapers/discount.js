@@ -3,6 +3,7 @@ import moment from 'moment';
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { waitForRedirect } from '../helpers/navigation';
 import { fetchGet } from '../helpers/fetch';
+import { NORMAL_TXN_TYPE } from '../constants';
 
 const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
@@ -10,6 +11,7 @@ const DATE_FORMAT = 'YYYYMMDD';
 function convertTransactions(txns) {
   return txns.map((txn) => {
     return {
+      type: NORMAL_TXN_TYPE,
       identifier: txn.OperationNumber,
       date: moment(txn.OperationDate, DATE_FORMAT).toDate(),
       processedDate: moment(txn.ValueDate, DATE_FORMAT).toDate(),

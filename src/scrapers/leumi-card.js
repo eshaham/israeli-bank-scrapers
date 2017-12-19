@@ -4,9 +4,12 @@ import moment from 'moment';
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
+import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE } from '../constants';
 
 const BASE_URL = 'https://online.leumi-card.co.il';
 const DATE_FORMAT = 'DD/MM/YYYY';
+const NORMAL_TYPE_NAME = 'רגילה';
+const INSTALLMENTS_TYPE_NAME = 'תשלומים';
 
 function redirectOrDialog(page) {
   return Promise.race([
@@ -60,6 +63,7 @@ function getLoadedRawTransactions(page) {
       if (rows[i].id && rows[i].id.indexOf('tbl1') >= 0) {
         const cells = rows[i].getElementsByTagName('td');
 
+        const typeStr = cells[4].textContent;
         const dateStr = cells[1].textContent.trim();
         const processedDateStr = cells[2].textContent.trim();
         const originalAmountStr = cells[6].textContent;
@@ -67,6 +71,7 @@ function getLoadedRawTransactions(page) {
         const description = cells[3].textContent;
 
         const txn = {
+          typeStr,
           dateStr,
           processedDateStr,
           originalAmountStr,
@@ -78,6 +83,17 @@ function getLoadedRawTransactions(page) {
     }
     return txns;
   });
+}
+
+function getTransactionType(txnTypeStr) {
+  switch (txnTypeStr.trim()) {
+    case NORMAL_TYPE_NAME:
+      return NORMAL_TXN_TYPE;
+    case INSTALLMENTS_TYPE_NAME:
+      return INSTALLMENTS_TXN_TYPE;
+    default:
+      throw new Error(`unknown transaction type ${txnTypeStr}`);
+  }
 }
 
 async function fetchTransactionsByType(page, accountIndex, transactionsType, startDate) {
@@ -92,6 +108,7 @@ async function fetchTransactionsByType(page, accountIndex, transactionsType, sta
   const rawTxns = await getLoadedRawTransactions(page);
   const txns = rawTxns.map((txn) => {
     return {
+      type: getTransactionType(txn.typeStr),
       date: moment(txn.dateStr, DATE_FORMAT).toDate(),
       processedDate: moment(txn.processedDateStr, DATE_FORMAT).toDate(),
       originalAmount: -parseFloat(txn.originalAmountStr.replace(',', '')),
