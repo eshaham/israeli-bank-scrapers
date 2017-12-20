@@ -169,8 +169,8 @@ async function fetchAllTransactions(page, startMoment) {
 }
 
 class IsracardScraper extends BaseScraper {
-  constructor() {
-    super('isracard');
+  constructor(options) {
+    super('isracard', options);
   }
 
   async login(credentials) {

@@ -60,16 +60,16 @@ function createGeneralError() {
 }
 
 class BaseScraper {
-  constructor(scraperName) {
+  constructor(scraperName, options) {
     this.scraperName = scraperName || 'base';
+    this.options = options;
   }
 
-  async initialize(options) {
-    this.options = options;
+  async initialize() {
     this.notifier = new ScraperNotifier(this.scraperName);
 
     let env = null;
-    if (options.verbose) {
+    if (this.options.verbose) {
       env = Object.assign({ DEBUG: '*' }, process.env);
     }
     this.browser = await puppeteer.launch({ env });
@@ -78,8 +78,8 @@ class BaseScraper {
     this.notify('start scraping');
   }
 
-  async scrape(credentials, options = {}) {
-    await this.initialize(options);
+  async scrape(credentials) {
+    await this.initialize();
 
     let loginResult;
     try {
@@ -124,23 +124,23 @@ class BaseScraper {
       return createGeneralError();
     }
 
-    const options = this.getLoginOptions(credentials);
+    const loginOptions = this.getLoginOptions(credentials);
 
-    await this.page.goto(options.loginUrl);
-    await waitUntilElementFound(this.page, options.submitButtonId);
+    await this.page.goto(loginOptions.loginUrl);
+    await waitUntilElementFound(this.page, loginOptions.submitButtonId);
 
-    await this.fillInputs(options.fields);
-    await clickButton(this.page, options.submitButtonId);
+    await this.fillInputs(loginOptions.fields);
+    await clickButton(this.page, loginOptions.submitButtonId);
     this.notify('logging in');
 
-    if (options.postAction) {
-      await options.postAction();
+    if (loginOptions.postAction) {
+      await loginOptions.postAction();
     } else {
       await waitForNavigation(this.page);
     }
 
     const current = await this.page.url();
-    const loginResult = getKeyByValue(options.possibleResults, current);
+    const loginResult = getKeyByValue(loginOptions.possibleResults, current);
     return handleLoginResult(loginResult, msg => this.notify(msg));
   }
 

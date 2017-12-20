@@ -186,8 +186,8 @@ function createLoginFields(inputGroupName, credentials) {
 }
 
 class LeumiCardScraper extends BaseScraper {
-  constructor() {
-    super('leumi-card');
+  constructor(options) {
+    super('leumi-card', options);
   }
 
   getLoginOptions(credentials) {

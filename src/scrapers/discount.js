@@ -74,8 +74,8 @@ function createLoginFields(credentials) {
 }
 
 class DiscountScraper extends BaseScraper {
-  constructor() {
-    super('discount');
+  constructor(options) {
+    super('discount', options);
   }
 
   getLoginOptions(credentials) {
