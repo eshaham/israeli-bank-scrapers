@@ -1,35 +1,29 @@
+import { EventEmitter } from 'events';
 import puppeteer from 'puppeteer';
 
-import ScraperNotifier from '../helpers/notifier';
+import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT, GENERAL_ERROR } from '../constants';
 import { waitForNavigation, NAVIGATION_ERRORS } from '../helpers/navigation';
 import { waitUntilElementFound, fillInput, clickButton } from '../helpers/elements-interactions';
 
-const LOGIN_RESULT = {
-  SUCCESS: 'success',
-  INVALID_PASSWORD: 'invalidPassword',
-  CHANGE_PASSWORD: 'changePassword',
-  UNKNOWN_ERROR: 'unknownError',
-};
-
-const GENERAL_ERROR = 'generalError';
+const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';
 
 function getKeyByValue(object, value) {
   return Object.keys(object).find(key => object[key] === value);
 }
 
-function handleLoginResult(loginResult, notifyAction) {
+function handleLoginResult(scraper, loginResult) {
   switch (loginResult) {
     case LOGIN_RESULT.SUCCESS:
-      notifyAction('login successful');
+      scraper.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
       return { success: true };
     case LOGIN_RESULT.INVALID_PASSWORD:
-      notifyAction('invalid password');
+      scraper.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_FAILED);
       return {
         success: false,
         errorType: loginResult,
       };
     case LOGIN_RESULT.CHANGE_PASSWORD:
-      notifyAction('need to change password');
+      scraper.emitProgress(SCRAPE_PROGRESS_TYPES.CHANGE_PASSWORD);
       return {
         success: false,
         errorType: loginResult,
@@ -51,8 +45,8 @@ function createTimeoutError(errorMessage) {
   return createErrorResult(NAVIGATION_ERRORS.TIMEOUT, errorMessage);
 }
 
-function createGenericNavigationError() {
-  return createErrorResult(NAVIGATION_ERRORS.GENERAL_ERROR);
+function createGenericNavigationError(errorMessage) {
+  return createErrorResult(NAVIGATION_ERRORS.GENERIC, errorMessage);
 }
 
 function createGeneralError() {
@@ -60,32 +54,31 @@ function createGeneralError() {
 }
 
 class BaseScraper {
-  constructor(scraperName) {
-    this.scraperName = scraperName || 'base';
+  constructor(options) {
+    this.options = options;
+    this.eventEmitter = new EventEmitter();
   }
 
-  async initialize(options) {
-    this.options = options;
-    this.notifier = new ScraperNotifier(this.scraperName);
-
+  async initialize() {
     let env = null;
-    if (options.verbose) {
+    if (this.options.verbose) {
       env = Object.assign({ DEBUG: '*' }, process.env);
     }
     this.browser = await puppeteer.launch({ env });
     this.page = await this.browser.newPage();
-
-    this.notify('start scraping');
   }
 
-  async scrape(credentials, options = {}) {
-    await this.initialize(options);
+  async scrape(credentials) {
+    this.emitProgress(SCRAPE_PROGRESS_TYPES.START_SCRAPING);
+    await this.initialize();
 
     let loginResult;
     try {
       loginResult = await this.login(credentials);
     } catch (e) {
-      loginResult = e.timeout ? createTimeoutError(e.errorMessage) : createGenericNavigationError();
+      loginResult = e.timeout ?
+        createTimeoutError(e.message) :
+        createGenericNavigationError(e.message);
     }
 
     let scrapeResult;
@@ -94,19 +87,22 @@ class BaseScraper {
         scrapeResult = await this.fetchData();
       } catch (e) {
         scrapeResult =
-          e.timeout ? createTimeoutError(e.errorMessage) : createGenericNavigationError();
+          e.timeout ?
+            createTimeoutError(e.message) :
+            createGenericNavigationError(e.message);
       }
     } else {
       scrapeResult = loginResult;
     }
 
-    await this.browser.close();
+    await this.terminate();
+    this.emitProgress(SCRAPE_PROGRESS_TYPES.END_SCRAPING);
 
     return scrapeResult;
   }
 
   getLoginOptions() {
-    this.notify('you must override getLoginOptions()');
+    throw new Error(`getLoginOptions() is not created in ${this.options.companyId}`);
   }
 
   async fillInputs(fields) {
@@ -124,32 +120,44 @@ class BaseScraper {
       return createGeneralError();
     }
 
-    const options = this.getLoginOptions(credentials);
+    const loginOptions = this.getLoginOptions(credentials);
 
-    await this.page.goto(options.loginUrl);
-    await waitUntilElementFound(this.page, options.submitButtonId);
+    await this.page.goto(loginOptions.loginUrl);
+    await waitUntilElementFound(this.page, loginOptions.submitButtonId);
 
-    await this.fillInputs(options.fields);
-    await clickButton(this.page, options.submitButtonId);
-    this.notify('logging in');
+    await this.fillInputs(loginOptions.fields);
+    await clickButton(this.page, loginOptions.submitButtonId);
+    this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGGING_IN);
 
-    if (options.postAction) {
-      await options.postAction();
+    if (loginOptions.postAction) {
+      await loginOptions.postAction();
     } else {
       await waitForNavigation(this.page);
     }
 
     const current = await this.page.url();
-    const loginResult = getKeyByValue(options.possibleResults, current);
-    return handleLoginResult(loginResult, msg => this.notify(msg));
+    const loginResult = getKeyByValue(loginOptions.possibleResults, current);
+    return handleLoginResult(this, loginResult);
   }
 
   async fetchData() {
-    this.notify('you must override fetchData()');
+    throw new Error(`fetchData() is not created in ${this.options.companyId}`);
   }
 
-  notify(msg) {
-    this.notifier.notify(this.options, msg);
+  async terminate() {
+    await this.browser.close();
+  }
+
+  emitProgress(type) {
+    this.emit(SCRAPE_PROGRESS, { type });
+  }
+
+  emit(eventName, payload) {
+    this.eventEmitter.emit(eventName, this.options.companyId, payload);
+  }
+
+  onProgress(func) {
+    this.eventEmitter.on(SCRAPE_PROGRESS, func);
   }
 }
 

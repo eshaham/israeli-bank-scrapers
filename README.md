@@ -20,15 +20,12 @@ npm install israeli-bank-scrapers --save
 ```
 Then you can simply import and use it in your node module:
 ```node
-const scrapers = require('israeli-bank-scrapers');
+import { createScraper } from 'israeli-bank-scrapers';
 
 const credentials = {...}; // different for each bank
-const options = {
-  eventsCallback: (msg) => {
-    console.log(msg);
-  }
-};
-const scrapeResult = await scrapers.discountScraper(credentials, options);
+const options = {...};
+const scraper = createScraper(options);
+const scrapeResult = scraper.scrape(credentials);
 
 if (scrapeResult.success) {
   console.log(`account number: ${scrapeResult.accountNumber}`);
@@ -38,12 +35,12 @@ else {
   console.error(`scraping failed for the following reason: ${scrapeResult.errorType}`);
 }
 ```
-You can currently send the following options:
+The definition of the `options` object is as follows:
 ```node
 {
+  companyId: string, // mandatory; one of 'discount', 'leumiCard', 'isracard'
   startDate: Date, // the date to fetch transactions from (can't be before the minimum allowed time difference for the scraper)
-  eventsCallback: function, // can be used to receive any progress messages from the scraper
-  verbose: include more debug info about in the output
+  verbose: boolean // include more debug info about in the output
 }
 ```
 The structure of the result object is as follows:
@@ -65,6 +62,21 @@ The structure of the result object is as follows:
   }],
   errorType: "invalidPassword"|"changePassword"|"timeout"|"generic", // only on success=false
   errorMessage: string, // only on success=false
+}
+```
+You can also use the `SCRAPERS` list to get scraper metadata:
+```node
+import { SCRAPERS } from 'israeli-bank-scrapers';
+```
+The return value is a list of scraper metadata:
+```node
+{
+  <companyId>: {
+    name: string, // the name of the scraper
+    loginFields: [ // a list of login field required by this scraper
+      '<some field>' // the name of the field
+    ]
+  }
 }
 ```
 

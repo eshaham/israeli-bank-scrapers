@@ -4,7 +4,7 @@ import moment from 'moment';
 
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { fetchGet, fetchPost } from '../helpers/fetch';
-import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE } from '../constants';
+import { SCRAPE_PROGRESS_TYPES, NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE } from '../constants';
 
 const BASE_URL = 'https://digital.isracard.co.il';
 const SERVICES_URL = `${BASE_URL}/services/ProxyRequestHandler.ashx`;
@@ -169,14 +169,10 @@ async function fetchAllTransactions(page, startMoment) {
 }
 
 class IsracardScraper extends BaseScraper {
-  constructor() {
-    super('isracard');
-  }
-
   async login(credentials) {
     await this.page.goto(`${BASE_URL}/personalarea/Login`);
 
-    this.notify('logging in');
+    this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGGING_IN);
 
     const validateUrl = `${SERVICES_URL}?reqName=ValidateIdData`;
     const validateRequest = {
@@ -189,11 +185,7 @@ class IsracardScraper extends BaseScraper {
     };
     const validateResult = await fetchPost(this.page, validateUrl, validateRequest);
     if (!validateResult || !validateResult.Header || validateResult.Header.Status !== '1' || !validateResult.ValidateIdDataBean) {
-      this.notify('unknown error during login');
-      return {
-        success: false,
-        errorType: LOGIN_RESULT.UNKNOWN_ERROR,
-      };
+      throw new Error('unknown error during login');
     }
 
     const validateReturnCode = validateResult.ValidateIdDataBean.returnCode;
@@ -211,19 +203,19 @@ class IsracardScraper extends BaseScraper {
       };
       const loginResult = await fetchPost(this.page, loginUrl, request);
       if (loginResult.status === '1') {
-        this.notify('login successful');
+        this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
         return { success: true };
       }
 
       if (loginResult.status === '3') {
-        this.notify('need to change password');
+        this.emitProgress(SCRAPE_PROGRESS_TYPES.CHANGE_PASSWORD);
         return {
           success: false,
           errorType: LOGIN_RESULT.CHANGE_PASSWORD,
         };
       }
 
-      this.notify('invalid password');
+      this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_FAILED);
       return {
         success: false,
         errorType: LOGIN_RESULT.INVALID_PASSWORD,
@@ -231,14 +223,14 @@ class IsracardScraper extends BaseScraper {
     }
 
     if (validateReturnCode === '4') {
-      this.notify('need to change password');
+      this.emitProgress(SCRAPE_PROGRESS_TYPES.CHANGE_PASSWORD);
       return {
         success: false,
         errorType: LOGIN_RESULT.CHANGE_PASSWORD,
       };
     }
 
-    this.notify('invalid password');
+    this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_FAILED);
     return {
       success: false,
       errorType: LOGIN_RESULT.INVALID_PASSWORD,
@@ -251,18 +243,14 @@ class IsracardScraper extends BaseScraper {
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
     const txnsResult = await fetchAllTransactions(this.page, startMoment);
-    if (txnsResult) {
-      return {
-        success: true,
-        accountNumber: txnsResult.accountNumber,
-        txns: txnsResult.txns,
-      };
+    if (!txnsResult) {
+      throw new Error('unknown error while fetching data');
     }
 
-    this.notify('unknown error while fetching data');
     return {
-      success: false,
-      errorType: LOGIN_RESULT.UNKNOWN_ERROR,
+      success: true,
+      accountNumber: txnsResult.accountNumber,
+      txns: txnsResult.txns,
     };
   }
 }
