@@ -71,10 +71,6 @@ function createLoginFields(credentials) {
 }
 
 class DiscountScraper extends BaseScraper {
-  constructor(options) {
-    super('discount', options);
-  }
-
   getLoginOptions(credentials) {
     return {
       loginUrl: `${BASE_URL}/LoginPages/Logon?multilang=he&t=P&pageKey=home&bank=d`,

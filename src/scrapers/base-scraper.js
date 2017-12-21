@@ -54,8 +54,7 @@ function createGeneralError() {
 }
 
 class BaseScraper {
-  constructor(scraperName, options) {
-    this.scraperName = scraperName || 'base';
+  constructor(options) {
     this.options = options;
     this.eventEmitter = new EventEmitter();
   }

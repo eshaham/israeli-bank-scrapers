@@ -169,10 +169,6 @@ async function fetchAllTransactions(page, startMoment) {
 }
 
 class IsracardScraper extends BaseScraper {
-  constructor(options) {
-    super('isracard', options);
-  }
-
   async login(credentials) {
     await this.page.goto(`${BASE_URL}/personalarea/Login`);
 
