@@ -3,19 +3,16 @@ import DiscountScraper from './scrapers/discount';
 import LeumiCardScraper from './scrapers/leumi-card';
 import IsracardScraper from './scrapers/isracard';
 
-function discountScraper(credentials, options) {
-  const scraper = new DiscountScraper(options);
-  return scraper.scrape(credentials);
-}
+const scrapers = {
+  discount: DiscountScraper,
+  leumiCard: LeumiCardScraper,
+  isracard: IsracardScraper,
+};
 
-function leumiCardScraper(credentials, options) {
-  const scraper = new LeumiCardScraper(options);
-  return scraper.scrape(credentials);
-}
+export default function createScraper(options) {
+  if (!scrapers[options.companyId]) {
+    return null;
+  }
 
-function isracardScraper(credentials, options) {
-  const scraper = new IsracardScraper(options);
-  return scraper.scrape(credentials);
+  return new scrapers[options.companyId](options);
 }
-
-export { discountScraper, leumiCardScraper, isracardScraper };
