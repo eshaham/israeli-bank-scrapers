@@ -22,14 +22,12 @@ function convertTransactions(txns) {
   });
 }
 
-async function fetchAccountData(page, options, notifyAction) {
+async function fetchAccountData(page, options) {
   const apiSiteUrl = `${BASE_URL}/Titan/gatewayAPI`;
 
   const accountDataUrl = `${apiSiteUrl}/userAccountsData`;
   const accountInfo = await fetchGet(page, accountDataUrl);
   const accountNumber = accountInfo.UserAccountsData.DefaultAccountNumber;
-
-  notifyAction(`found account number ${accountNumber}`);
 
   const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
   const startDate = options.startDate || defaultStartMoment.toDate();
@@ -52,7 +50,6 @@ async function fetchAccountData(page, options, notifyAction) {
     accountNumber,
     txns,
   };
-  notifyAction(`end scraping for account ${accountData.accountNumber}, found ${accountData.txns.length} transactions`);
 
   return accountData;
 }
