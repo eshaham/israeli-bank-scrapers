@@ -5,6 +5,7 @@ import moment from 'moment';
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { fetchGet, fetchPost } from '../helpers/fetch';
 import { SCRAPE_PROGRESS_TYPES, NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE } from '../constants';
+import getAllMonthMoments from '../helpers/dates';
 
 const BASE_URL = 'https://digital.isracard.co.il';
 const SERVICES_URL = `${BASE_URL}/services/ProxyRequestHandler.ashx`;
@@ -127,15 +128,7 @@ async function fetchTransactions(page, startMoment, monthMoment) {
 }
 
 async function fetchAllTransactions(page, startMoment) {
-  let monthMoment = moment(startMoment).startOf('month');
-
-  const allMonths = [];
-  const startOfNextMonth = moment().startOf('month').add(1, 'month');
-  while (monthMoment.isSameOrBefore(startOfNextMonth)) {
-    allMonths.push(monthMoment);
-    monthMoment = moment(monthMoment).add(1, 'month');
-  }
-
+  const allMonths = getAllMonthMoments(startMoment);
   const results = await Promise.all(allMonths.map(async (monthMoment) => {
     return fetchTransactions(page, startMoment, monthMoment);
   }));
