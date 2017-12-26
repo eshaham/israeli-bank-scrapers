@@ -5,11 +5,13 @@ import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY } from '../constants';
+import getAllMonthMoments from '../helpers/dates';
 
 const BASE_URL = 'https://online.leumi-card.co.il';
 const DATE_FORMAT = 'DD/MM/YYYY';
 const NORMAL_TYPE_NAME = 'רגילה';
 const INSTALLMENTS_TYPE_NAME = 'תשלומים';
+const POSTPONED_TYPE_NAME = 'דחוי חודש';
 
 function redirectOrDialog(page) {
   return Promise.race([
@@ -31,65 +33,30 @@ function getAccountNumbers(page) {
   });
 }
 
-function getTransactionsUrl(accountIndex, tableType, startDate) {
-  const fromDateStr = moment(startDate).format(DATE_FORMAT);
-  const toDateStr = moment().format(DATE_FORMAT);
-
+function getTransactionsUrl(monthMoment) {
+  let monthCharge = null;
+  let actionType = 1;
+  if (monthMoment) {
+    const month = monthMoment.month() + 1;
+    const monthStr = month < 10 ? `0${month}` : month.toString();
+    const year = monthMoment.year();
+    monthCharge = `${year}${monthStr}`;
+    actionType = 2;
+  }
   return buildUrl(BASE_URL, {
-    path: 'Popups/Print.aspx',
+    path: 'Registred/Transactions/ChargesDeals.aspx',
     queryParams: {
-      PrintType: 'TransactionsTable',
-      CardIndex: accountIndex,
-      TableType: tableType,
-      ActionType: 'Dates',
-      FilterParam: 'AllTranactions',
-      FromDate: fromDateStr,
-      ToDate: toDateStr,
-      SortDirection: 'Ascending',
-      SortParam: 'PaymentDate',
+      ActionType: actionType,
+      MonthCharge: monthCharge,
+      Index: -2,
     },
-  });
-}
-
-function getLoadedRawTransactions(page) {
-  return page.evaluate(() => {
-    const tables = document.getElementsByTagName('table');
-    const table = tables[0];
-
-    const rows = table.getElementsByTagName('tr');
-
-    const txns = [];
-    for (let i = 0; i < rows.length; i += 1) {
-      if (rows[i].id && rows[i].id.indexOf('tbl1') >= 0) {
-        const cells = rows[i].getElementsByTagName('td');
-
-        const typeStr = cells[4].textContent;
-        const dateStr = cells[1].textContent.trim();
-        const processedDateStr = cells[2].textContent.trim();
-        const originalAmountStr = cells[5].textContent;
-        const chargedAmountStr = cells[6].textContent;
-        const description = cells[3].textContent;
-        const comments = cells[7].textContent;
-
-        const txn = {
-          typeStr,
-          dateStr,
-          processedDateStr,
-          originalAmountStr,
-          chargedAmountStr,
-          description,
-          comments,
-        };
-        txns.push(txn);
-      }
-    }
-    return txns;
   });
 }
 
 function getTransactionType(txnTypeStr) {
   switch (txnTypeStr.trim()) {
     case NORMAL_TYPE_NAME:
+    case POSTPONED_TYPE_NAME:
       return NORMAL_TXN_TYPE;
     case INSTALLMENTS_TYPE_NAME:
       return INSTALLMENTS_TXN_TYPE;
@@ -113,17 +80,8 @@ function getInstallmentsInfo(comments) {
   };
 }
 
-async function fetchTransactionsByType(page, accountIndex, transactionsType, startDate) {
-  const url = getTransactionsUrl(accountIndex, transactionsType, startDate);
-  await page.goto(url);
-  const current = await page.url();
-  if (current.includes('error.aspx')) {
-    return [];
-  }
-  await waitUntilElementFound(page, 'tbl1_lvTransactions_lnkPurchaseDate');
-
-  const rawTxns = await getLoadedRawTransactions(page);
-  const txns = rawTxns.map((txn) => {
+function convertTransactions(rawTxns) {
+  return rawTxns.map((txn) => {
     return {
       type: getTransactionType(txn.typeStr),
       date: moment(txn.dateStr, DATE_FORMAT).toDate(),
@@ -134,27 +92,113 @@ async function fetchTransactionsByType(page, accountIndex, transactionsType, sta
       installments: getInstallmentsInfo(txn.comments),
     };
   });
-  return txns;
 }
 
-async function fetchTransactions(page, accountIndex, options) {
-  const defaultStartMoment = moment().subtract(1, 'years');
-  let startDate = options.startDate || defaultStartMoment.toDate();
-  const startMoment = moment.max(defaultStartMoment, moment(startDate));
-  startDate = startMoment.toDate();
+async function getCurrentTransactions(page) {
+  const result = {};
+  const cardContainers = await page.$$('.infoList_holder');
+  for (let cardIndex = 0; cardIndex < cardContainers.length; cardIndex += 1) {
+    const cardContainer = cardContainers[cardIndex];
+    const infoContainer = await cardContainer.$('.creditCard_name');
+    const numberListItems = await infoContainer.$$('li');
+    const numberListItem = numberListItems[1];
+    const accountNumberStr = await page.evaluate((li) => {
+      return li.innerText;
+    }, numberListItem);
+    const accountNumber = accountNumberStr.replace('(', '').replace(')', '');
 
-  const localTxns = await fetchTransactionsByType(page, accountIndex, 'NisTransactions', startDate);
-  const futureLocalTxns = await fetchTransactionsByType(page, accountIndex, 'FutureNisTransactions', startDate);
-  const foreignTxns = await fetchTransactionsByType(page, accountIndex, 'ForeignTransactions', startDate);
-  const futureForeignTxns = await fetchTransactionsByType(page, accountIndex, 'FutureForeignTransactions', startDate);
-  const allTxns = [...localTxns, ...futureLocalTxns, ...foreignTxns, ...futureForeignTxns];
+    const txns = [];
+    const txnsRows = await cardContainer.$$('.jobs_regular');
+    for (let txnIndex = 0; txnIndex < txnsRows.length; txnIndex += 1) {
+      const txnColumns = await txnsRows[txnIndex].$$('td');
+      const typeStr = await page.evaluate((td) => {
+        return td.innerText;
+      }, txnColumns[4]);
+
+      const dateStr = await page.evaluate((td) => {
+        return td.innerText;
+      }, txnColumns[1]);
+
+      const processedDateStr = await page.evaluate((td) => {
+        return td.innerText;
+      }, txnColumns[2]);
+
+      const originalAmountStr = await page.evaluate((td) => {
+        return td.innerText;
+      }, txnColumns[5]);
+
+      const chargedAmountStr = await page.evaluate((td) => {
+        return td.innerText;
+      }, txnColumns[6]);
+
+      const description = await page.evaluate((td) => {
+        return td.innerText;
+      }, txnColumns[3]);
+
+      const comments = await page.evaluate((td) => {
+        return td.innerText;
+      }, txnColumns[7]);
+
+      const txn = {
+        typeStr,
+        dateStr,
+        processedDateStr,
+        originalAmountStr,
+        chargedAmountStr,
+        description,
+        comments,
+      };
+      txns.push(txn);
+    }
+
+    result[accountNumber] = convertTransactions(txns);
+  }
+
+  return result;
+}
+
+async function fetchTransactionsForMonth(page, monthMoment) {
+  const url = getTransactionsUrl(monthMoment);
+  await page.goto(url);
+
+  return getCurrentTransactions(page);
+}
+
+function addResult(allResults, result) {
+  const tempResults = Object.assign({}, allResults);
+  Object.keys(result).forEach((accountNumber) => {
+    if (!tempResults[accountNumber]) {
+      tempResults[accountNumber] = [];
+    }
+    tempResults[accountNumber].push(...result[accountNumber]);
+  });
+  return tempResults;
+}
+
+async function fetchTransactions(page, options, accountNumber) {
+  const defaultStartMoment = moment().subtract(1, 'years');
+  const startDate = options.startDate || defaultStartMoment.toDate();
+  const startMoment = moment.max(defaultStartMoment, moment(startDate));
+  const allMonths = getAllMonthMoments(startMoment, false);
+
+  let allResults = {};
+  for (let i = 0; i < allMonths.length; i += 1) {
+    const result = await fetchTransactionsForMonth(page, allMonths[i]);
+    allResults = addResult(allResults, result);
+  }
+
+  const result = await fetchTransactionsForMonth(page);
+  allResults = addResult(allResults, result);
+
+  const allTxns = allResults[accountNumber];
   allTxns.sort((txn1, txn2) => {
     if (txn1.date.getTime() === txn2.date.getTime()) {
       return 0;
     }
     return txn1.date < txn2.date ? -1 : 1;
   });
-  return allTxns;
+
+  return allTxns.filter(txn => startMoment.isSameOrBefore(txn.date));
 }
 
 async function getAccountData(page, options) {
@@ -162,7 +206,7 @@ async function getAccountData(page, options) {
   await page.goto(accountsPage);
 
   const accountNumbers = await getAccountNumbers(page);
-  const txns = await fetchTransactions(page, 0, options);
+  const txns = await fetchTransactions(page, options, accountNumbers[0]);
 
   return {
     success: true,
