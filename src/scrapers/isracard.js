@@ -128,7 +128,7 @@ async function fetchTransactions(page, startMoment, monthMoment) {
 }
 
 async function fetchAllTransactions(page, startMoment) {
-  const allMonths = getAllMonthMoments(startMoment);
+  const allMonths = getAllMonthMoments(startMoment, true);
   const results = await Promise.all(allMonths.map(async (monthMoment) => {
     return fetchTransactions(page, startMoment, monthMoment);
   }));
