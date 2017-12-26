@@ -1,8 +1,20 @@
 import moment from 'moment';
-import { INSTALLMENTS_TXN_TYPE } from '../constants';
+import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE } from '../constants';
+
+function isNormalTransaction(txn) {
+  return txn.type === NORMAL_TXN_TYPE;
+}
+
+function isInstallmentTransaction(txn) {
+  return txn.type === INSTALLMENTS_TXN_TYPE;
+}
 
 function isNonInitialInstallmentTransaction(txn) {
-  return txn.type === INSTALLMENTS_TXN_TYPE && txn.installments && txn.installments.number > 1;
+  return isInstallmentTransaction(txn) && txn.installments && txn.installments.number > 1;
+}
+
+function isInitialInstallmentTransaction(txn) {
+  return isInstallmentTransaction(txn) && txn.installments && txn.installments.number === 1;
 }
 
 export function fixInstallments(txns) {
@@ -31,7 +43,9 @@ export function sortTransactionsByDate(txns) {
 
 export function filterOldTransactions(txns, startMoment, combineInstallments) {
   return txns.filter((txn) => {
-    return startMoment.isSameOrBefore(txn.date) &&
-      (!combineInstallments || !isNonInitialInstallmentTransaction(txn));
+    const combineNeededAndInitialOrNormal =
+      combineInstallments && (isNormalTransaction(txn) || isInitialInstallmentTransaction(txn));
+    return (!combineInstallments && startMoment.isSameOrBefore(txn.processedDate)) ||
+           (combineNeededAndInitialOrNormal && startMoment.isSameOrBefore(txn.date));
   });
 }

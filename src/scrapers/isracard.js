@@ -70,8 +70,8 @@ function getInstallmentsInfo(txn) {
   }
 
   return {
-    number: matches[0],
-    total: matches[1],
+    number: parseInt(matches[0], 10),
+    total: parseInt(matches[1], 10),
   };
 }
 
