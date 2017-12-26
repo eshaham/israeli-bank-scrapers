@@ -6,6 +6,7 @@ import { waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
+import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
 
 const BASE_URL = 'https://online.leumi-card.co.il';
 const DATE_FORMAT = 'DD/MM/YYYY';
@@ -77,8 +78,8 @@ function getInstallmentsInfo(comments) {
   }
 
   return {
-    number: matches[0],
-    total: matches[1],
+    number: parseInt(matches[0], 10),
+    total: parseInt(matches[1], 10),
   };
 }
 
@@ -192,15 +193,13 @@ async function fetchTransactions(page, options, accountNumber) {
   const result = await fetchTransactionsForMonth(page);
   allResults = addResult(allResults, result);
 
-  const allTxns = allResults[accountNumber];
-  allTxns.sort((txn1, txn2) => {
-    if (txn1.date.getTime() === txn2.date.getTime()) {
-      return 0;
-    }
-    return txn1.date < txn2.date ? -1 : 1;
-  });
-
-  return allTxns.filter(txn => startMoment.isSameOrBefore(txn.date));
+  let allTxns = allResults[accountNumber];
+  if (!options.combineInstallments) {
+    allTxns = fixInstallments(allTxns);
+  }
+  allTxns = sortTransactionsByDate(allTxns);
+  allTxns = filterOldTransactions(allTxns, startMoment, options.combineInstallments);
+  return allTxns;
 }
 
 async function getAccountData(page, options) {
