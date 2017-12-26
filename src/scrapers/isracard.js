@@ -6,6 +6,7 @@ import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { fetchGet, fetchPost } from '../helpers/fetch';
 import { SCRAPE_PROGRESS_TYPES, NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
+import { fixInstallments, filterOldTransactions } from '../helpers/transactions';
 
 const BASE_URL = 'https://digital.isracard.co.il';
 const SERVICES_URL = `${BASE_URL}/services/ProxyRequestHandler.ashx`;
@@ -93,7 +94,7 @@ function convertTransactions(txns, processedDate) {
   });
 }
 
-async function fetchTransactions(page, startMoment, monthMoment) {
+async function fetchTransactions(page, options, startMoment, monthMoment) {
   const accounts = await fetchAccounts(page, monthMoment);
   const dataUrl = getTransactionsUrl(monthMoment);
   const dataResult = await fetchGet(page, dataUrl);
@@ -102,22 +103,27 @@ async function fetchTransactions(page, startMoment, monthMoment) {
     accounts.forEach((account) => {
       const txnGroups = _.get(dataResult, `CardsTransactionsListBean.Index${account.index}.CurrentCardTransactions`);
       if (txnGroups) {
-        let allTxs = [];
+        let allTxns = [];
         txnGroups.forEach((txnGroup) => {
           if (txnGroup.txnIsrael) {
             const txns = convertTransactions(txnGroup.txnIsrael, account.processedDate);
-            allTxs.push(...txns);
+            allTxns.push(...txns);
           }
           if (txnGroup.txnAbroad) {
             const txns = convertTransactions(txnGroup.txnAbroad, account.processedDate);
-            allTxs.push(...txns);
+            allTxns.push(...txns);
           }
         });
-        allTxs = allTxs.filter(txn => startMoment.isSameOrBefore(txn.date));
+
+        if (!options.combineInstallments) {
+          allTxns = fixInstallments(allTxns);
+        }
+        allTxns = filterOldTransactions(allTxns, startMoment, options.combineInstallments);
+
         accountTxns[account.accountNumber] = {
           accountNumber: account.accountNumber,
           index: account.index,
-          txns: allTxs,
+          txns: allTxns,
         };
       }
     });
@@ -127,10 +133,10 @@ async function fetchTransactions(page, startMoment, monthMoment) {
   return null;
 }
 
-async function fetchAllTransactions(page, startMoment) {
+async function fetchAllTransactions(page, options, startMoment) {
   const allMonths = getAllMonthMoments(startMoment, true);
   const results = await Promise.all(allMonths.map(async (monthMoment) => {
-    return fetchTransactions(page, startMoment, monthMoment);
+    return fetchTransactions(page, options, startMoment, monthMoment);
   }));
 
   const combinedTxns = {};
@@ -235,7 +241,7 @@ class IsracardScraper extends BaseScraper {
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-    const txnsResult = await fetchAllTransactions(this.page, startMoment);
+    const txnsResult = await fetchAllTransactions(this.page, this.options, startMoment);
     if (!txnsResult) {
       throw new Error('unknown error while fetching data');
     }
