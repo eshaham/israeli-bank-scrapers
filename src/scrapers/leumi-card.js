@@ -11,6 +11,7 @@ import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '
 const BASE_URL = 'https://online.leumi-card.co.il';
 const DATE_FORMAT = 'DD/MM/YYYY';
 const NORMAL_TYPE_NAME = 'רגילה';
+const ATM_TYPE_NAME = 'חיוב עסקות מיידי';
 const INSTALLMENTS_TYPE_NAME = 'תשלומים';
 const POSTPONED_TYPE_NAME = 'דחוי חודש';
 
@@ -56,6 +57,7 @@ function getTransactionsUrl(monthMoment) {
 
 function getTransactionType(txnTypeStr) {
   switch (txnTypeStr.trim()) {
+    case ATM_TYPE_NAME:
     case NORMAL_TYPE_NAME:
     case POSTPONED_TYPE_NAME:
       return NORMAL_TXN_TYPE;

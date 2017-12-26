@@ -76,7 +76,7 @@ function getInstallmentsInfo(txn) {
 }
 
 function getTransactionType(txn) {
-  return getInstallmentsInfo(txn) ? NORMAL_TXN_TYPE : INSTALLMENTS_TXN_TYPE;
+  return getInstallmentsInfo(txn) ? INSTALLMENTS_TXN_TYPE : NORMAL_TXN_TYPE;
 }
 
 function convertTransactions(txns, processedDate) {
