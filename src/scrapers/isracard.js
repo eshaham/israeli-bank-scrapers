@@ -79,7 +79,7 @@ function getTransactionType(txn) {
 }
 
 function convertTransactions(txns, processedDate) {
-  return txns.map((txn) => {
+  return txns.filter(txn => txn.dealSumType !== '1').map((txn) => {
     return {
       type: getTransactionType(txn),
       identifier: txn.voucherNumberRatz,
