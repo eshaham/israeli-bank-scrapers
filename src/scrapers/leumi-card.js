@@ -22,19 +22,6 @@ function redirectOrDialog(page) {
   ]);
 }
 
-function getAccountNumbers(page) {
-  return page.evaluate(() => {
-    const creditCardDetailsList = document.getElementsByClassName('creditCard_name');
-    const accountNumbers = [];
-    for (let i = 0; i < creditCardDetailsList.length; i += 1) {
-      const dirtyAccountNumber = creditCardDetailsList[i].lastChild.textContent;
-      const accountNumber = dirtyAccountNumber.trim().replace('(', '').replace(')', '');
-      accountNumbers.push(accountNumber);
-    }
-    return accountNumbers;
-  });
-}
-
 function getTransactionsUrl(monthMoment) {
   let monthCharge = null;
   let actionType = 1;
@@ -168,17 +155,27 @@ async function fetchTransactionsForMonth(page, monthMoment) {
 }
 
 function addResult(allResults, result) {
-  const tempResults = Object.assign({}, allResults);
+  const clonedResults = Object.assign({}, allResults);
   Object.keys(result).forEach((accountNumber) => {
-    if (!tempResults[accountNumber]) {
-      tempResults[accountNumber] = [];
+    if (!clonedResults[accountNumber]) {
+      clonedResults[accountNumber] = [];
     }
-    tempResults[accountNumber].push(...result[accountNumber]);
+    clonedResults[accountNumber].push(...result[accountNumber]);
   });
-  return tempResults;
+  return clonedResults;
 }
 
-async function fetchTransactions(page, options, accountNumber) {
+function prepareTransactions(txns, startMoment, combineInstallments) {
+  let clonedTxns = Array.from(txns);
+  if (!combineInstallments) {
+    clonedTxns = fixInstallments(clonedTxns);
+  }
+  clonedTxns = sortTransactionsByDate(clonedTxns);
+  clonedTxns = filterOldTransactions(clonedTxns, startMoment, combineInstallments);
+  return clonedTxns;
+}
+
+async function fetchTransactions(page, options) {
   const defaultStartMoment = moment().subtract(1, 'years');
   const startDate = options.startDate || defaultStartMoment.toDate();
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
@@ -193,26 +190,30 @@ async function fetchTransactions(page, options, accountNumber) {
   const result = await fetchTransactionsForMonth(page);
   allResults = addResult(allResults, result);
 
-  let allTxns = allResults[accountNumber];
-  if (!options.combineInstallments) {
-    allTxns = fixInstallments(allTxns);
-  }
-  allTxns = sortTransactionsByDate(allTxns);
-  allTxns = filterOldTransactions(allTxns, startMoment, options.combineInstallments);
-  return allTxns;
+  Object.keys(allResults).forEach((accountNumber) => {
+    let txns = allResults[accountNumber];
+    txns = prepareTransactions(txns, startMoment, options.combineInstallments);
+    allResults[accountNumber] = txns;
+  });
+
+  return allResults;
 }
 
 async function getAccountData(page, options) {
   const accountsPage = `${BASE_URL}/Registred/Transactions/ChargesDeals.aspx`;
   await page.goto(accountsPage);
 
-  const accountNumbers = await getAccountNumbers(page);
-  const txns = await fetchTransactions(page, options, accountNumbers[0]);
+  const results = await fetchTransactions(page, options);
+  const accounts = Object.keys(results).map((accountNumber) => {
+    return {
+      accountNumber,
+      txns: results[accountNumber],
+    };
+  });
 
   return {
     success: true,
-    accountNumber: accountNumbers[0],
-    txns,
+    accounts,
   };
 }
 
