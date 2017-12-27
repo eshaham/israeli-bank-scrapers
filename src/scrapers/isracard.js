@@ -152,18 +152,16 @@ async function fetchAllTransactions(page, options, startMoment) {
     });
   });
 
-  const lastResult = results[results.length - 1];
-  const firstAccountNumberOfLastMonth = Object.keys(lastResult).filter((accountNumber) => {
-    return lastResult[accountNumber].index === 0;
-  })[0];
-
-  let firstAccountNumberOfLastMonthTxns = combinedTxns[firstAccountNumberOfLastMonth];
-  firstAccountNumberOfLastMonthTxns = firstAccountNumberOfLastMonthTxns.sort((a, b) => {
-    return a.date - b.date;
+  const accounts = Object.keys(combinedTxns).map((accountNumber) => {
+    return {
+      accountNumber,
+      txns: combinedTxns[accountNumber],
+    };
   });
+
   return {
-    accountNumber: firstAccountNumberOfLastMonth,
-    txns: firstAccountNumberOfLastMonthTxns,
+    success: true,
+    accounts,
   };
 }
 
@@ -241,16 +239,7 @@ class IsracardScraper extends BaseScraper {
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-    const txnsResult = await fetchAllTransactions(this.page, this.options, startMoment);
-    if (!txnsResult) {
-      throw new Error('unknown error while fetching data');
-    }
-
-    return {
-      success: true,
-      accountNumber: txnsResult.accountNumber,
-      txns: txnsResult.txns,
-    };
+    return fetchAllTransactions(this.page, this.options, startMoment);
   }
 }
 
