@@ -25,11 +25,12 @@ import { createScraper } from 'israeli-bank-scrapers';
 const credentials = {...}; // different for each bank
 const options = {...};
 const scraper = createScraper(options);
-const scrapeResult = scraper.scrape(credentials);
+const scrapeResult = await scraper.scrape(credentials);
 
 if (scrapeResult.success) {
-  console.log(`account number: ${scrapeResult.accountNumber}`);
-  console.log(`# transactions found: ${scrapeResult.txns.length}`);
+  scrapeResult.accounts.forEach((account) => {
+    console.log(`found ${account.txns.length} transactions for account number ${account.accountNumber}`);
+  });
 }
 else {
   console.error(`scraping failed for the following reason: ${scrapeResult.errorType}`);
@@ -48,18 +49,20 @@ The structure of the result object is as follows:
 ```node
 {
   success: boolean,
-  accountNumber: string,
-  txns: [{
-    type: string, // can be either 'normal' or 'installments'
-    identifier: int, // only if exists
-    date: Date,
-    processedDate: Date,
-    amount: double,
-    description: string,
-    installments: {
-      number: int, // the current installment number
-      total: int, // the total number of installments
-    }
+  accounts: [{
+    accountNumber: string,
+    txns: [{
+      type: string, // can be either 'normal' or 'installments'
+      identifier: int, // only if exists
+      date: Date,
+      processedDate: Date,
+      amount: double,
+      description: string,
+      installments: {
+        number: int, // the current installment number
+        total: int, // the total number of installments
+      }
+    }],  
   }],
   errorType: "invalidPassword"|"changePassword"|"timeout"|"generic", // only on success=false
   errorMessage: string, // only on success=false
