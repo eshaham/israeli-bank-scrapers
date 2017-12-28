@@ -47,8 +47,10 @@ async function fetchAccountData(page, options) {
 
   const accountData = {
     success: true,
-    accountNumber,
-    txns,
+    accounts: [{
+      accountNumber,
+      txns,
+    }],
   };
 
   return accountData;
