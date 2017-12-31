@@ -174,14 +174,16 @@ async function fetchAllTransactions(page, options, startMoment) {
 
 class IsracardAmexBaseScraper extends BaseScraper {
   constructor(options, baseUrl, companyCode) {
-    super(Object.assign({}, options));
-    this.options.baseUrl = baseUrl;
-    this.options.servicesUrl = `${baseUrl}/services/ProxyRequestHandler.ashx`;
-    this.options.companyCode = companyCode;
+    const clonedOptions = Object.assign(options, {
+      baseUrl,
+      servicesUrl: `${baseUrl}/services/ProxyRequestHandler.ashx`,
+      companyCode,
+    });
+    super(clonedOptions);
   }
 
   async login(credentials) {
-    await this.page.goto(`${this.baseUrl}/personalarea/Login`);
+    await this.page.goto(`${this.options.baseUrl}/personalarea/Login`);
 
     this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGGING_IN);
 

@@ -1,4 +1,4 @@
-import { IsracardAmexBaseScraper } from './base-isracard-amex';
+import IsracardAmexBaseScraper from './base-isracard-amex';
 
 const BASE_URL = 'https://he.americanexpress.co.il';
 const COMPANY_CODE = '77';
