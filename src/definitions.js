@@ -13,4 +13,8 @@ export const SCRAPERS = {
     name: 'Isracard',
     loginFields: ['id', 'card6Digits', PASSWORD_FIELD],
   },
+  amex: {
+    name: 'Amex',
+    loginFields: ['id', 'card6Digits', PASSWORD_FIELD],
+  },
 };
