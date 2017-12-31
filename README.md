@@ -8,7 +8,11 @@ Israeli Bank Scrapers - Get closer to your own data
 
 # What's here?
 What you can find here is scrapers for all major Israeli banks and credit card companies. That's the plan at least.
-Currently only Discount Bank, Leumi Card and Isracard are supported.
+Currently only the following banks are supported:
+- Discount Bank
+- Leumi Card
+- Isracard
+- Amex (thanks @erezd)
 
 # Prerequisites
 To use this you will need to have [Node.js](https://nodejs.org) >= 6 installed.
@@ -39,7 +43,7 @@ else {
 The definition of the `options` object is as follows:
 ```node
 {
-  companyId: string, // mandatory; one of 'discount', 'leumiCard', 'isracard'
+  companyId: string, // mandatory; one of 'discount', 'leumiCard', 'isracard', 'amex'
   startDate: Date, // the date to fetch transactions from (can't be before the minimum allowed time difference for the scraper)
   combineInstallments: boolean, // if set to true, all installment transactions will be combine into the first one
   verbose: boolean // include more debug info about in the output
@@ -107,6 +111,17 @@ const credentials = {
 This scraper supports fetching transaction from up to one year.
 
 ## Isracard scraper
+This scraper expects the following credentials object:
+```node
+const credentials = {
+  id: <user identification number>,
+  card6Digits: <6 last digits of card>
+  password: <user password>
+};
+```
+This scraper supports fetching transaction from up to one year.
+
+## Amex scraper
 This scraper expects the following credentials object:
 ```node
 const credentials = {
