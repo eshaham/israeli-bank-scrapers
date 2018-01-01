@@ -60,7 +60,8 @@ The structure of the result object is as follows:
       identifier: int, // only if exists
       date: Date,
       processedDate: Date,
-      amount: double,
+      originalAmount: double,
+      chargedAmount: double,
       description: string,
       installments: {
         number: int, // the current installment number
