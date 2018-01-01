@@ -16,6 +16,7 @@ function convertTransactions(txns) {
       date: moment(txn.OperationDate, DATE_FORMAT).toDate(),
       processedDate: moment(txn.ValueDate, DATE_FORMAT).toDate(),
       originalAmount: txn.OperationAmount,
+      originalCurrency: 'ILS',
       chargedAmount: txn.OperationAmount,
       description: txn.OperationDescriptionToDisplay,
     };

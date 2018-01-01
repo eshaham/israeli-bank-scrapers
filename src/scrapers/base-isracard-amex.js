@@ -4,7 +4,7 @@ import moment from 'moment';
 
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { fetchGet, fetchPost } from '../helpers/fetch';
-import { SCRAPE_PROGRESS_TYPES, NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE } from '../constants';
+import { SCRAPE_PROGRESS_TYPES, NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_KEYWORD, SHEKEL_CURRENCY } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, filterOldTransactions } from '../helpers/transactions';
 
@@ -58,6 +58,13 @@ function getTransactionsUrl(servicesUrl, monthMoment) {
   });
 }
 
+function convertCurrency(currencyStr) {
+  if (currencyStr === SHEKEL_CURRENCY_KEYWORD) {
+    return SHEKEL_CURRENCY;
+  }
+  return currencyStr;
+}
+
 function getInstallmentsInfo(txn) {
   if (!txn.moreInfo || !txn.moreInfo.includes(INSTALLMENTS_KEYWORD)) {
     return null;
@@ -93,10 +100,10 @@ function convertTransactions(txns, processedDate) {
       date: txnMoment.toDate(),
       processedDate,
       originalAmount: isOutbound ? -txn.dealSumOutbound : -txn.dealSum,
+      originalCurrency: convertCurrency(txn.currencyId),
       chargedAmount: isOutbound ? -txn.paymentSumOutbound : -txn.paymentSum,
       description: isOutbound ? txn.fullSupplierNameOutbound : txn.fullSupplierNameHeb,
       installments: getInstallmentsInfo(txn),
-      currency: txn.currencyId,
     };
   });
 }

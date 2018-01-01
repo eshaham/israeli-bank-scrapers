@@ -4,7 +4,7 @@ import moment from 'moment';
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
-import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY } from '../constants';
+import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_SYMBOL, SHEKEL_CURRENCY } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
 
@@ -55,6 +55,25 @@ function getTransactionType(txnTypeStr) {
   }
 }
 
+function getAmountData(amountStr) {
+  const amountStrCopy = amountStr.replace(',', '');
+  let currency = null;
+  let amount = null;
+  if (amountStrCopy.includes(SHEKEL_CURRENCY_SYMBOL)) {
+    amount = parseFloat(amountStrCopy.replace(SHEKEL_CURRENCY_SYMBOL, ''));
+    currency = SHEKEL_CURRENCY;
+  } else {
+    const parts = amountStrCopy.split(' ');
+    amount = parseFloat(parts[0]);
+    [, currency] = parts;
+  }
+
+  return {
+    amount,
+    currency,
+  };
+}
+
 function getInstallmentsInfo(comments) {
   if (!comments) {
     return null;
@@ -72,12 +91,15 @@ function getInstallmentsInfo(comments) {
 
 function convertTransactions(rawTxns) {
   return rawTxns.map((txn) => {
+    const originalAmountData = getAmountData(txn.originalAmountStr);
+    const chargedAmountData = getAmountData(txn.chargedAmountStr);
     return {
       type: getTransactionType(txn.typeStr),
       date: moment(txn.dateStr, DATE_FORMAT).toDate(),
       processedDate: moment(txn.processedDateStr, DATE_FORMAT).toDate(),
-      originalAmount: -parseFloat(txn.originalAmountStr.replace(',', '').replace(SHEKEL_CURRENCY, '')),
-      chargedAmount: -parseFloat(txn.chargedAmountStr.replace(',', '')),
+      originalAmount: -originalAmountData.amount,
+      originalCurrency: originalAmountData.currency,
+      chargedAmount: -chargedAmountData.amount,
       description: txn.description.trim(),
       installments: getInstallmentsInfo(txn.comments),
     };
