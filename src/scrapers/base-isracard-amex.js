@@ -84,7 +84,7 @@ function convertTransactions(txns, processedDate) {
 
   return filteredTxns.map((txn) => {
     const isOutbound = txn.dealSumOutbound;
-    const txnDateStr = isOutbound ? txn.fullPurchaseDateOutbound : txn.fullPurchaseDateOutbound;
+    const txnDateStr = isOutbound ? txn.fullPurchaseDateOutbound : txn.fullPurchaseDate;
     const txnMoment = moment(txnDateStr, DATE_FORMAT);
 
     return {
