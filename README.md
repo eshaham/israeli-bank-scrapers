@@ -61,6 +61,7 @@ The structure of the result object is as follows:
       date: Date,
       processedDate: Date,
       originalAmount: double,
+      originalCurrency: string,
       chargedAmount: double,
       description: string,
       installments: {
