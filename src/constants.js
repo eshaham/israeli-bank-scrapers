@@ -1,7 +1,9 @@
 export const NORMAL_TXN_TYPE = 'normal';
 export const INSTALLMENTS_TXN_TYPE = 'installments';
 
-export const SHEKEL_CURRENCY = '₪';
+export const SHEKEL_CURRENCY_SYMBOL = '₪';
+export const SHEKEL_CURRENCY_KEYWORD = 'ש"ח';
+export const SHEKEL_CURRENCY = 'ILS';
 
 export const SCRAPE_PROGRESS_TYPES = {
   START_SCRAPING: 'START_SCRAPING',
