@@ -12,6 +12,7 @@ const BASE_URL = 'https://online.leumi-card.co.il';
 const DATE_FORMAT = 'DD/MM/YYYY';
 const NORMAL_TYPE_NAME = 'רגילה';
 const ATM_TYPE_NAME = 'חיוב עסקות מיידי';
+const INTERNET_SHOPPING_TYPE_NAME = 'אינטרנט/חו"ל';
 const INSTALLMENTS_TYPE_NAME = 'תשלומים';
 const POSTPONED_TYPE_NAME = 'דחוי חודש';
 
@@ -47,6 +48,7 @@ function getTransactionType(txnTypeStr) {
     case ATM_TYPE_NAME:
     case NORMAL_TYPE_NAME:
     case POSTPONED_TYPE_NAME:
+    case INTERNET_SHOPPING_TYPE_NAME:
       return NORMAL_TXN_TYPE;
     case INSTALLMENTS_TYPE_NAME:
       return INSTALLMENTS_TXN_TYPE;
