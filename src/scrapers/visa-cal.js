@@ -1,9 +1,11 @@
+/* eslint-disable no-restricted-syntax */
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
-import { SCRAPE_PROGRESS_TYPES, NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_KEYWORD, SHEKEL_CURRENCY } from '../constants';
+import { SCRAPE_PROGRESS_TYPES } from '../constants';
 
 const BASE_URL = 'https://restservices.cal-online.co.il/Cal4U/';
 
 const fetch = require('node-fetch');
+const queryString = require('query-string');
 
 class VisaCalScraper extends BaseScraper {
   async login(credentials) {
@@ -16,7 +18,6 @@ class VisaCalScraper extends BaseScraper {
     this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGGING_IN);
 
 
-    // const authResponse = await fetchPost(this.page, authUrl, authRequest);
     const authResponse = await fetch(
       authUrl,
       {
@@ -48,17 +49,15 @@ class VisaCalScraper extends BaseScraper {
         },
       )
         .then((res) => { return res.json(); });
-      const cards = [];
+
       if (banks.Response.Status.Succeeded === true) {
-        banks.BankAccounts.forEach((bank) => {
-          bank.Cards.forEach((card) => {
-            if (card.CardStatus == null) {
-              cards.push(card);
-            }
-          });
-        });
+        for (const bank of banks.BankAccounts) {
+          for (const card of bank.Cards) {
+            const cardTxns = await this.getTxnsOfCard(bank.AccountID, card);
+            console.log(cardTxns);
+          }
+        }
       }
-      console.log(banks);
       return { success: true };
     }
 
@@ -68,10 +67,97 @@ class VisaCalScraper extends BaseScraper {
     };
   }
 
-  function
+  async getTxnsOfCard(accountId, card) {
+    const cardId = card.Id;
+    const bankDebits = await this.getBankDebits(accountId, cardId);
+    const debitDates = [];
+    bankDebits.Debits.forEach((debit) => {
+      debitDates.push(debit.Date);
+    });
+    return this.fetchTxns(cardId, debitDates);
+  }
 
-  async fetchData() {
-    // return getAccountData(this.page, this.options);
+  async fetchTxns(cardId, debitDates) {
+    const txns = [];
+    for (const date of debitDates) {
+      const params = {};
+      params.ToDate = date;
+      params.FromDate = date;
+      const stringParams = queryString.stringify(params);
+      const fetchTxnUrl = `${BASE_URL}CalTransactions/${cardId}?${stringParams}`;
+      let txnResponse = await fetch(
+        fetchTxnUrl,
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json, text/plain, */*',
+            'Content-Type': 'application/json',
+            Authorization: this.authHeader,
+          },
+        },
+      )
+        .then((res) => { return res.json(); });
+      if (txnResponse.Transactions) {
+        txns.push(...txnResponse.Transactions);
+      }
+      while (txnResponse.HasNextPage) {
+        txnResponse = await this.getTransactionsNextPage();
+        if (txnResponse.Transactions != null) {
+          txns.push(...txnResponse.Transactions);
+        }
+      }
+    }
+    return txns;
+  }
+
+  async getTransactionsNextPage() {
+    const hasNextPageUrl = `${BASE_URL}CalTransNextPage`;
+    return fetch(
+      hasNextPageUrl,
+      {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json, text/plain, */*',
+          'Content-Type': 'application/json',
+          Authorization: this.authHeader,
+        },
+      },
+    )
+      .then((res) => {
+        return res.json();
+      });
+  }
+
+  async getBankDebits(accountId, cardId) {
+    const params = {};
+    params.DebitLevel = 'A';
+    params.DebitType = '2';
+    params.cardID = cardId;
+    const toDate = new Date();
+    const fromDate = new Date();
+    toDate.setMonth(toDate.getMonth() + 2);
+    fromDate.setMonth(fromDate.getMonth() - 6);
+    params.FromMonth = fromDate.getMonth().toString();
+    params.FromYear = fromDate.getFullYear().toString();
+    params.ToMonth = toDate.getMonth().toString();
+    params.ToYear = toDate.getFullYear().toString();
+    const stringParams = queryString.stringify(params);
+    const getBankDebitsUrl = `${BASE_URL}CalBankDebits/${accountId}?${stringParams}`;
+
+    return fetch(
+      getBankDebitsUrl,
+      {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json, text/plain, */*',
+          'Content-Type': 'application/json',
+          Authorization: this.authHeader,
+        },
+      },
+    )
+      .then((res) => {
+        return res.json();
+      });
   }
 }
 
