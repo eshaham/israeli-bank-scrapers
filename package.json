@@ -46,6 +46,7 @@
     "build-url": "^1.0.10",
     "lodash": "^4.17.4",
     "moment": "^2.20.1",
+    "node-fetch": "^1.7.3",
     "puppeteer": "^0.13.0"
   }
 }
