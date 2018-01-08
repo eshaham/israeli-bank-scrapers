@@ -1,11 +1,10 @@
-/* eslint-disable no-restricted-syntax */
+import fetch from 'node-fetch';
+import queryString from 'query-string';
+
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { SCRAPE_PROGRESS_TYPES } from '../constants';
 
 const BASE_URL = 'https://restservices.cal-online.co.il/Cal4U/';
-
-const fetch = require('node-fetch');
-const queryString = require('query-string');
 
 class VisaCalScraper extends BaseScraper {
   async login(credentials) {
