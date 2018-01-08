@@ -1,14 +1,44 @@
 import fetch from 'node-fetch';
-import queryString from 'query-string';
+import buildUrl from 'build-url';
 
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { SCRAPE_PROGRESS_TYPES } from '../constants';
 
-const BASE_URL = 'https://restservices.cal-online.co.il/Cal4U/';
+const BASE_URL = 'https://restservices.cal-online.co.il/Cal4U';
+
+function getBankDebitsUrl(accountId, cardId) {
+  const toDate = new Date();
+  const fromDate = new Date();
+  toDate.setMonth(toDate.getMonth() + 2);
+  fromDate.setMonth(fromDate.getMonth() - 6);
+
+  return buildUrl(BASE_URL, {
+    path: `CalBankDebits/${accountId}`,
+    queryParams: {
+      DebitLevel: 'A',
+      DebitType: '2',
+      cardID: cardId,
+      FromMonth: fromDate.getMonth().toString(),
+      FromYear: fromDate.getFullYear().toString(),
+      ToMonth: toDate.getMonth().toString(),
+      ToYear: toDate.getFullYear().toString(),
+    },
+  });
+}
+
+function getTxnsUrl(cardId, debitDate) {
+  return buildUrl(BASE_URL, {
+    path: `CalTransactions/${cardId}`,
+    queryParams: {
+      ToDate: debitDate,
+      FromDate: debitDate,
+    },
+  });
+}
 
 class VisaCalScraper extends BaseScraper {
   async login(credentials) {
-    const authUrl = `${BASE_URL}CalAuthenticator`;
+    const authUrl = `${BASE_URL}/CalAuthenticator`;
     const authRequest = {
       username: credentials.username,
       password: credentials.password,
@@ -35,7 +65,7 @@ class VisaCalScraper extends BaseScraper {
 
     if (authResponse.Response.Status.Succeeded === true) {
       this.authHeader = `CalAuthScheme ${authResponse.AuthenticationToken}`;
-      const getCardsByAccount = `${BASE_URL}CardsByAccounts`;
+      const getCardsByAccount = `${BASE_URL}/CardsByAccounts`;
       const banks = await fetch(
         getCardsByAccount,
         {
@@ -79,11 +109,7 @@ class VisaCalScraper extends BaseScraper {
   async fetchTxns(cardId, debitDates) {
     const txns = [];
     for (const date of debitDates) {
-      const params = {};
-      params.ToDate = date;
-      params.FromDate = date;
-      const stringParams = queryString.stringify(params);
-      const fetchTxnUrl = `${BASE_URL}CalTransactions/${cardId}?${stringParams}`;
+      const fetchTxnUrl = getTxnsUrl(date);
       let txnResponse = await fetch(
         fetchTxnUrl,
         {
@@ -110,7 +136,7 @@ class VisaCalScraper extends BaseScraper {
   }
 
   async getTransactionsNextPage() {
-    const hasNextPageUrl = `${BASE_URL}CalTransNextPage`;
+    const hasNextPageUrl = `${BASE_URL}/CalTransNextPage`;
     return fetch(
       hasNextPageUrl,
       {
@@ -128,23 +154,9 @@ class VisaCalScraper extends BaseScraper {
   }
 
   async getBankDebits(accountId, cardId) {
-    const params = {};
-    params.DebitLevel = 'A';
-    params.DebitType = '2';
-    params.cardID = cardId;
-    const toDate = new Date();
-    const fromDate = new Date();
-    toDate.setMonth(toDate.getMonth() + 2);
-    fromDate.setMonth(fromDate.getMonth() - 6);
-    params.FromMonth = fromDate.getMonth().toString();
-    params.FromYear = fromDate.getFullYear().toString();
-    params.ToMonth = toDate.getMonth().toString();
-    params.ToYear = toDate.getFullYear().toString();
-    const stringParams = queryString.stringify(params);
-    const getBankDebitsUrl = `${BASE_URL}CalBankDebits/${accountId}?${stringParams}`;
-
+    const bankDebitsUrl = getBankDebitsUrl(accountId, cardId);
     return fetch(
-      getBankDebitsUrl,
+      bankDebitsUrl,
       {
         method: 'GET',
         headers: {
