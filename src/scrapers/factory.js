@@ -15,7 +15,7 @@ export default function createScraper(options) {
     case 'amex':
       return new AmexScraper(options);
     case 'hapoalim':
-        return new HapoalimScraper(options);
+      return new HapoalimScraper(options);
     default:
       throw new Error(`unkown company id ${options.companyId}`);
   }
