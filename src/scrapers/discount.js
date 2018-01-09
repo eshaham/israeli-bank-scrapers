@@ -2,7 +2,7 @@ import moment from 'moment';
 
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { waitForRedirect } from '../helpers/navigation';
-import { fetchGet } from '../helpers/fetch';
+import { fetchGetWithinPage } from '../helpers/fetch';
 import { NORMAL_TXN_TYPE } from '../constants';
 
 const BASE_URL = 'https://start.telebank.co.il';
@@ -27,7 +27,7 @@ async function fetchAccountData(page, options) {
   const apiSiteUrl = `${BASE_URL}/Titan/gatewayAPI`;
 
   const accountDataUrl = `${apiSiteUrl}/userAccountsData`;
-  const accountInfo = await fetchGet(page, accountDataUrl);
+  const accountInfo = await fetchGetWithinPage(page, accountDataUrl);
   const accountNumber = accountInfo.UserAccountsData.DefaultAccountNumber;
 
   const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
@@ -36,7 +36,7 @@ async function fetchAccountData(page, options) {
 
   const startDateStr = startMoment.format(DATE_FORMAT);
   const txnsUrl = `${apiSiteUrl}/lastTransactions/${accountNumber}/Date?IsCategoryDescCode=True&IsTransactionDetails=True&IsEventNames=True&FromDate=${startDateStr}`;
-  const txnsResult = await fetchGet(page, txnsUrl);
+  const txnsResult = await fetchGetWithinPage(page, txnsUrl);
   if (txnsResult.Error) {
     return {
       success: false,

@@ -1,4 +1,4 @@
-async function fetchGet(page, url) {
+async function fetchGetWithinPage(page, url) {
   return page.evaluate((url) => {
     return new Promise((resolve, reject) => {
       fetch(url, {
@@ -12,7 +12,7 @@ async function fetchGet(page, url) {
   }, url);
 }
 
-async function fetchPost(page, url, data) {
+async function fetchPostWithinPage(page, url, data) {
   return page.evaluate((url, data) => {
     return new Promise((resolve, reject) => {
       fetch(url, {
@@ -29,4 +29,4 @@ async function fetchPost(page, url, data) {
   }, url, data);
 }
 
-export { fetchGet, fetchPost };
+export { fetchGetWithinPage, fetchPostWithinPage };
