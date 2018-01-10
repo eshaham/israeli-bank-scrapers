@@ -71,7 +71,7 @@ function getPossibleLoginResults() {
 
 function createLoginFields(credentials) {
   return [
-    { id: 'userID', value: credentials.id },
+    { id: 'userID', value: credentials.userCode },
     { id: 'userPassword', value: credentials.password },
   ];
 }

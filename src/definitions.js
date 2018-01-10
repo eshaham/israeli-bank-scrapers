@@ -19,6 +19,6 @@ export const SCRAPERS = {
   },
   hapoalim: {
     name: 'Bank Hapoalim',
-    loginFields: ['id', PASSWORD_FIELD],
+    loginFields: ['userCode', PASSWORD_FIELD],
   },
 };
