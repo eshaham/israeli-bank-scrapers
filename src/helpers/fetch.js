@@ -15,7 +15,7 @@ export async function fetchGet(url, extraHeaders) {
     headers = Object.assign(headers, extraHeaders);
   }
   const request = {
-    method: 'POST',
+    method: 'GET',
     headers,
   };
   const result = await fetch(url, request);
