@@ -19,7 +19,7 @@ function convertTransactions(txns) {
       originalAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
       originalCurrency: 'ILS',
       chargedAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
-      description: txn.englishActionDesc,
+      description: txn.activityDescription,
     };
   });
 }
