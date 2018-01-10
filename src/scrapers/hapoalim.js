@@ -10,14 +10,15 @@ const DATE_FORMAT = 'YYYYMMDD';
 
 function convertTransactions(txns) {
   return txns.map((txn) => {
+    const isOutbound = txn.eventActivityTypeCode === 2;
     return {
       type: NORMAL_TXN_TYPE,
       identifier: txn.referenceNumber,
       date: moment(txn.eventDate, DATE_FORMAT).toDate(),
       processedDate: moment(txn.valueDate, DATE_FORMAT).toDate(),
-      originalAmount: txn.eventAmount,
+      originalAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
       originalCurrency: 'ILS',
-      chargedAmount: txn.eventAmount,
+      chargedAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
       description: txn.englishActionDesc,
     };
   });
