@@ -1,8 +1,8 @@
-import fetch from 'node-fetch';
 import buildUrl from 'build-url';
 
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { SCRAPE_PROGRESS_TYPES } from '../constants';
+import { fetchGet, fetchPost } from '../helpers/fetch';
 
 const BASE_URL = 'https://restservices.cal-online.co.il/Cal4U';
 
@@ -46,41 +46,18 @@ class VisaCalScraper extends BaseScraper {
 
     this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGGING_IN);
 
-
-    const authResponse = await fetch(
-      authUrl,
-      {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json, text/plain, */*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(authRequest),
-      },
-    )
-      .then((res) => { return res.json(); });
+    const authResponse = await fetchPost(authUrl, authRequest);
     if (!authResponse || !authResponse.AuthenticationToken) {
       throw new Error('unknown error during login');
     }
 
     if (authResponse.Response.Status.Succeeded === true) {
       this.authHeader = `CalAuthScheme ${authResponse.AuthenticationToken}`;
-      const getCardsByAccount = `${BASE_URL}/CardsByAccounts`;
-      const banks = await fetch(
-        getCardsByAccount,
-        {
-          method: 'GET',
-          headers: {
-            Accept: 'application/json, text/plain, */*',
-            'Content-Type': 'application/json',
-            Authorization: this.authHeader,
-          },
-        },
-      )
-        .then((res) => { return res.json(); });
+      const cardsByAccountUrl = `${BASE_URL}/CardsByAccounts`;
+      const banksResponse = await fetchGet(cardsByAccountUrl, this.createAuthHeader());
 
-      if (banks.Response.Status.Succeeded === true) {
-        for (const bank of banks.BankAccounts) {
+      if (banksResponse.Response.Status.Succeeded === true) {
+        for (const bank of banksResponse.BankAccounts) {
           for (const card of bank.Cards) {
             const cardTxns = await this.getTxnsOfCard(bank.AccountID, card);
             console.log(cardTxns);
@@ -110,18 +87,7 @@ class VisaCalScraper extends BaseScraper {
     const txns = [];
     for (const date of debitDates) {
       const fetchTxnUrl = getTxnsUrl(date);
-      let txnResponse = await fetch(
-        fetchTxnUrl,
-        {
-          method: 'GET',
-          headers: {
-            Accept: 'application/json, text/plain, */*',
-            'Content-Type': 'application/json',
-            Authorization: this.authHeader,
-          },
-        },
-      )
-        .then((res) => { return res.json(); });
+      let txnResponse = await fetchGet(fetchTxnUrl, this.createAuthHeader());
       if (txnResponse.Transactions) {
         txns.push(...txnResponse.Transactions);
       }
@@ -137,38 +103,18 @@ class VisaCalScraper extends BaseScraper {
 
   async getTransactionsNextPage() {
     const hasNextPageUrl = `${BASE_URL}/CalTransNextPage`;
-    return fetch(
-      hasNextPageUrl,
-      {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json, text/plain, */*',
-          'Content-Type': 'application/json',
-          Authorization: this.authHeader,
-        },
-      },
-    )
-      .then((res) => {
-        return res.json();
-      });
+    return fetchGet(hasNextPageUrl, this.createAuthHeader());
   }
 
   async getBankDebits(accountId, cardId) {
     const bankDebitsUrl = getBankDebitsUrl(accountId, cardId);
-    return fetch(
-      bankDebitsUrl,
-      {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json, text/plain, */*',
-          'Content-Type': 'application/json',
-          Authorization: this.authHeader,
-        },
-      },
-    )
-      .then((res) => {
-        return res.json();
-      });
+    return fetchGet(bankDebitsUrl, this.createAuthHeader());
+  }
+
+  createAuthHeader() {
+    return {
+      Authorization: this.authHeader,
+    };
   }
 }
 
