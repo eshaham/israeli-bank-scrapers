@@ -51,12 +51,12 @@ class VisaCalScraper extends BaseScraper {
       throw new Error('unknown error during login');
     }
 
-    if (authResponse.Response.Status.Succeeded === true) {
+    if (authResponse.Response.Status.Succeeded) {
       this.authHeader = `CalAuthScheme ${authResponse.AuthenticationToken}`;
       const cardsByAccountUrl = `${BASE_URL}/CardsByAccounts`;
       const banksResponse = await fetchGet(cardsByAccountUrl, this.createAuthHeader());
 
-      if (banksResponse.Response.Status.Succeeded === true) {
+      if (banksResponse.Response.Status.Succeeded) {
         for (const bank of banksResponse.BankAccounts) {
           for (const card of bank.Cards) {
             const cardTxns = await this.getTxnsOfCard(bank.AccountID, card);
