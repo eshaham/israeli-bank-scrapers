@@ -53,17 +53,7 @@ class VisaCalScraper extends BaseScraper {
 
     if (authResponse.Response.Status.Succeeded) {
       this.authHeader = `CalAuthScheme ${authResponse.AuthenticationToken}`;
-      const cardsByAccountUrl = `${BASE_URL}/CardsByAccounts`;
-      const banksResponse = await fetchGet(cardsByAccountUrl, this.createAuthHeader());
-
-      if (banksResponse.Response.Status.Succeeded) {
-        for (const bank of banksResponse.BankAccounts) {
-          for (const card of bank.Cards) {
-            const cardTxns = await this.getTxnsOfCard(bank.AccountID, card);
-            console.log(cardTxns);
-          }
-        }
-      }
+      this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
       return { success: true };
     }
 
@@ -71,6 +61,21 @@ class VisaCalScraper extends BaseScraper {
       success: false,
       errorType: LOGIN_RESULT.INVALID_PASSWORD,
     };
+  }
+
+  async fetchData() {
+    const cardsByAccountUrl = `${BASE_URL}/CardsByAccounts`;
+    const banksResponse = await fetchGet(cardsByAccountUrl, this.createAuthHeader());
+
+    if (banksResponse.Response.Status.Succeeded) {
+      for (const bank of banksResponse.BankAccounts) {
+        for (const card of bank.Cards) {
+          const cardTxns = await this.getTxnsOfCard(bank.AccountID, card);
+          console.log(cardTxns);
+        }
+      }
+    }
+    return { success: true };
   }
 
   async getTxnsOfCard(accountId, card) {
