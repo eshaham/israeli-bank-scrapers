@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import buildUrl from 'build-url';
 
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
@@ -51,7 +52,7 @@ class VisaCalScraper extends BaseScraper {
       throw new Error('unknown error during login');
     }
 
-    if (authResponse.Response.Status.Succeeded) {
+    if (_.get(authResponse, 'Response.Status.Succeeded')) {
       this.authHeader = `CalAuthScheme ${authResponse.AuthenticationToken}`;
       this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
       return { success: true };
@@ -67,15 +68,16 @@ class VisaCalScraper extends BaseScraper {
     const cardsByAccountUrl = `${BASE_URL}/CardsByAccounts`;
     const banksResponse = await fetchGet(cardsByAccountUrl, this.createAuthHeader());
 
-    if (banksResponse.Response.Status.Succeeded) {
+    if (_.get(banksResponse, 'Response.Status.Succeeded')) {
       for (const bank of banksResponse.BankAccounts) {
         for (const card of bank.Cards) {
           const cardTxns = await this.getTxnsOfCard(bank.AccountID, card);
           console.log(cardTxns);
         }
       }
+      return { success: true };
     }
-    return { success: true };
+    return { success: false };
   }
 
   async getTxnsOfCard(accountId, card) {
