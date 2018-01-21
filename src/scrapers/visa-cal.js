@@ -93,7 +93,7 @@ class VisaCalScraper extends BaseScraper {
   async fetchTxns(cardId, debitDates) {
     const txns = [];
     for (const date of debitDates) {
-      const fetchTxnUrl = getTxnsUrl(date);
+      const fetchTxnUrl = getTxnsUrl(cardId, date);
       let txnResponse = await fetchGet(fetchTxnUrl, this.createAuthHeader());
       if (txnResponse.Transactions) {
         txns.push(...txnResponse.Transactions);
