@@ -27,7 +27,7 @@ function getBankDebitsUrl(accountId, cardId) {
   });
 }
 
-function getTxnsUrl(cardId, debitDate) {
+function getTransactionsUrl(cardId, debitDate) {
   return buildUrl(BASE_URL, {
     path: `CalTransactions/${cardId}`,
     queryParams: {
@@ -97,7 +97,7 @@ class VisaCalScraper extends BaseScraper {
   async fetchTxns(cardId, debitDates) {
     const txns = [];
     for (const date of debitDates) {
-      const fetchTxnUrl = getTxnsUrl(cardId, date);
+      const fetchTxnUrl = getTransactionsUrl(cardId, date);
       let txnResponse = await fetchGet(fetchTxnUrl, this.createAuthHeader());
       if (txnResponse.Transactions) {
         txns.push(...txnResponse.Transactions);
