@@ -83,11 +83,14 @@ class VisaCalScraper extends BaseScraper {
   async getTxnsOfCard(accountId, card) {
     const cardId = card.Id;
     const bankDebits = await this.getBankDebits(accountId, cardId);
-    const debitDates = [];
-    bankDebits.Debits.forEach((debit) => {
-      debitDates.push(debit.Date);
-    });
-    return this.fetchTxns(cardId, debitDates);
+    if (_.get(bankDebits, 'Response.Status.Succeeded')) {
+      const debitDates = [];
+      bankDebits.Debits.forEach((debit) => {
+        debitDates.push(debit.Date);
+      });
+      return this.fetchTxns(cardId, debitDates);
+    }
+    return null;
   }
 
   async fetchTxns(cardId, debitDates) {
