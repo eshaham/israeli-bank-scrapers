@@ -1,11 +1,17 @@
 import _ from 'lodash';
 import buildUrl from 'build-url';
+import moment from 'moment';
 
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
-import { SCRAPE_PROGRESS_TYPES } from '../constants';
+import { SCRAPE_PROGRESS_TYPES, NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_SYMBOL, SHEKEL_CURRENCY } from '../constants';
 import { fetchGet, fetchPost } from '../helpers/fetch';
 
 const BASE_URL = 'https://restservices.cal-online.co.il/Cal4U';
+const DATE_FORMAT = 'DD/MM/YYYY';
+
+const NORMAL_TYPE_CODE = '5';
+const REFUND_TYPE_CODE = '6';
+const INSTALLMENTS_TYPE_CODE = '8';
 
 function getBankDebitsUrl(accountId, cardId) {
   const toDate = new Date();
@@ -34,6 +40,52 @@ function getTransactionsUrl(cardId, debitDate) {
       ToDate: debitDate,
       FromDate: debitDate,
     },
+  });
+}
+
+function convertTransactionType(txnType) {
+  switch (txnType) {
+    case NORMAL_TYPE_CODE:
+    case REFUND_TYPE_CODE:
+      return NORMAL_TXN_TYPE;
+    case INSTALLMENTS_TYPE_CODE:
+      return INSTALLMENTS_TXN_TYPE;
+    default:
+      throw new Error(`unknown transaction type ${txnType}`);
+  }
+}
+
+function convertCurrency(currency) {
+  if (currency === SHEKEL_CURRENCY_SYMBOL) {
+    return SHEKEL_CURRENCY;
+  }
+
+  return currency;
+}
+
+function getInstallmentsInfo(txn) {
+  if (!txn.CurrentPayment || txn.CurrentPayment === '0') {
+    return null;
+  }
+
+  return {
+    number: parseInt(txn.CurrentPayment, 10),
+    total: parseInt(txn.TotalPayments, 10),
+  };
+}
+
+function convertTransactions(txns) {
+  return txns.map((txn) => {
+    return {
+      type: convertTransactionType(txn.TransType),
+      date: moment(txn.Date, DATE_FORMAT).toDate(),
+      processedDate: moment(txn.DebitDate, DATE_FORMAT).toDate(),
+      originalAmount: -txn.Amount.Value,
+      originalCurrency: convertCurrency(txn.Amount.Symbol),
+      chargedAmount: -txn.DebitAmount.Value,
+      description: txn.MerchantDetails.Name,
+      installments: getInstallmentsInfo(txn),
+    };
   });
 }
 
@@ -72,8 +124,9 @@ class VisaCalScraper extends BaseScraper {
       for (let i = 0; i < banksResponse.BankAccounts.length; i += 1) {
         const bank = banksResponse.BankAccounts[i];
         for (let j = 0; j < bank.Cards.length; j += 1) {
-          const cardTxns = await this.getTxnsOfCard(bank.AccountID, bank.Cards[j]);
-          console.log(cardTxns);
+          const rawTxns = await this.getTxnsOfCard(bank.AccountID, bank.Cards[j]);
+          const txns = convertTransactions(rawTxns);
+          console.log(txns);
         }
       }
       return { success: true };
