@@ -69,9 +69,10 @@ class VisaCalScraper extends BaseScraper {
     const banksResponse = await fetchGet(cardsByAccountUrl, this.createAuthHeader());
 
     if (_.get(banksResponse, 'Response.Status.Succeeded')) {
-      for (const bank of banksResponse.BankAccounts) {
-        for (const card of bank.Cards) {
-          const cardTxns = await this.getTxnsOfCard(bank.AccountID, card);
+      for (let i = 0; i < banksResponse.BankAccounts.length; i += 1) {
+        const bank = banksResponse.BankAccounts[i];
+        for (let j = 0; j < bank.Cards.length; j += 1) {
+          const cardTxns = await this.getTxnsOfCard(bank.AccountID, bank.Cards[j]);
           console.log(cardTxns);
         }
       }
