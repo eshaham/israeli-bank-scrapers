@@ -5,6 +5,9 @@ export const SHEKEL_CURRENCY_SYMBOL = '₪';
 export const SHEKEL_CURRENCY_KEYWORD = 'ש"ח';
 export const SHEKEL_CURRENCY = 'ILS';
 
+export const DOLLAR_CURRENCY_SYMBOL = '$';
+export const DOLLAR_CURRENCY = 'USD';
+
 export const SCRAPE_PROGRESS_TYPES = {
   START_SCRAPING: 'START_SCRAPING',
   LOGGING_IN: 'LOGGING_IN',

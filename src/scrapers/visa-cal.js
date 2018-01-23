@@ -3,7 +3,14 @@ import buildUrl from 'build-url';
 import moment from 'moment';
 
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
-import { SCRAPE_PROGRESS_TYPES, NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_SYMBOL, SHEKEL_CURRENCY } from '../constants';
+import {
+  SCRAPE_PROGRESS_TYPES,
+  NORMAL_TXN_TYPE,
+  INSTALLMENTS_TXN_TYPE,
+  SHEKEL_CURRENCY_SYMBOL,
+  SHEKEL_CURRENCY,
+  DOLLAR_CURRENCY_SYMBOL,
+  DOLLAR_CURRENCY } from '../constants';
 import { fetchGet, fetchPost } from '../helpers/fetch';
 
 const BASE_URL = 'https://restservices.cal-online.co.il/Cal4U';
@@ -58,11 +65,14 @@ function convertTransactionType(txnType) {
 }
 
 function convertCurrency(currency) {
-  if (currency === SHEKEL_CURRENCY_SYMBOL) {
-    return SHEKEL_CURRENCY;
+  switch (currency) {
+    case SHEKEL_CURRENCY_SYMBOL:
+      return SHEKEL_CURRENCY;
+    case DOLLAR_CURRENCY_SYMBOL:
+      return DOLLAR_CURRENCY;
+    default:
+      return currency;
   }
-
-  return currency;
 }
 
 function getInstallmentsInfo(txn) {
