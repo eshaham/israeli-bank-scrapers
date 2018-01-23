@@ -11,6 +11,7 @@ const DATE_FORMAT = 'DD/MM/YYYY';
 
 const NORMAL_TYPE_CODE = '5';
 const REFUND_TYPE_CODE = '6';
+const CANCEL_TYPE_CODE = '25';
 const INSTALLMENTS_TYPE_CODE = '8';
 
 function getBankDebitsUrl(accountId, cardId) {
@@ -47,6 +48,7 @@ function convertTransactionType(txnType) {
   switch (txnType) {
     case NORMAL_TYPE_CODE:
     case REFUND_TYPE_CODE:
+    case CANCEL_TYPE_CODE:
       return NORMAL_TXN_TYPE;
     case INSTALLMENTS_TYPE_CODE:
       return INSTALLMENTS_TXN_TYPE;
