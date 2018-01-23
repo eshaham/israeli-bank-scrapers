@@ -133,17 +133,25 @@ class VisaCalScraper extends BaseScraper {
     const banksResponse = await fetchGet(cardsByAccountUrl, this.createAuthHeader());
 
     if (_.get(banksResponse, 'Response.Status.Succeeded')) {
+      const accounts = [];
       for (let i = 0; i < banksResponse.BankAccounts.length; i += 1) {
         const bank = banksResponse.BankAccounts[i];
         for (let j = 0; j < bank.Cards.length; j += 1) {
           const rawTxns = await this.getTxnsOfCard(bank.AccountID, bank.Cards[j]);
           if (rawTxns) {
             const txns = convertTransactions(rawTxns);
-            console.log(txns);
+            const result = {
+              accountNumber: bank.Cards[j].LastFourDigits,
+              txns,
+            };
+            accounts.push(result);
           }
         }
       }
-      return { success: true };
+      return {
+        success: true,
+        accounts,
+      };
     }
     return { success: false };
   }
