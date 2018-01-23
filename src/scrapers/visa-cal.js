@@ -21,7 +21,7 @@ const REFUND_TYPE_CODE = '6';
 const CANCEL_TYPE_CODE = '25';
 const INSTALLMENTS_TYPE_CODE = '8';
 
-function getBankDebitsUrl(accountId, cardId) {
+function getBankDebitsUrl(accountId) {
   const toDate = new Date();
   const fromDate = new Date();
   toDate.setMonth(toDate.getMonth() + 2);
@@ -32,7 +32,6 @@ function getBankDebitsUrl(accountId, cardId) {
     queryParams: {
       DebitLevel: 'A',
       DebitType: '2',
-      cardID: cardId,
       FromMonth: fromDate.getMonth().toString(),
       FromYear: fromDate.getFullYear().toString(),
       ToMonth: toDate.getMonth().toString(),
@@ -136,15 +135,18 @@ class VisaCalScraper extends BaseScraper {
       const accounts = [];
       for (let i = 0; i < banksResponse.BankAccounts.length; i += 1) {
         const bank = banksResponse.BankAccounts[i];
-        for (let j = 0; j < bank.Cards.length; j += 1) {
-          const rawTxns = await this.getTxnsOfCard(bank.AccountID, bank.Cards[j]);
-          if (rawTxns) {
-            const txns = convertTransactions(rawTxns);
-            const result = {
-              accountNumber: bank.Cards[j].LastFourDigits,
-              txns,
-            };
-            accounts.push(result);
+        const bankDebits = await this.getBankDebits(bank.AccountID);
+        if (_.get(bankDebits, 'Response.Status.Succeeded')) {
+          for (let j = 0; j < bank.Cards.length; j += 1) {
+            const rawTxns = await this.getTxnsOfCard(bank.Cards[j], bankDebits.Debits);
+            if (rawTxns) {
+              const txns = convertTransactions(rawTxns);
+              const result = {
+                accountNumber: bank.Cards[j].LastFourDigits,
+                txns,
+              };
+              accounts.push(result);
+            }
           }
         }
       }
@@ -156,17 +158,14 @@ class VisaCalScraper extends BaseScraper {
     return { success: false };
   }
 
-  async getTxnsOfCard(accountId, card) {
+  async getTxnsOfCard(card, bankDebits) {
     const cardId = card.Id;
-    const bankDebits = await this.getBankDebits(accountId, cardId);
-    if (_.get(bankDebits, 'Response.Status.Succeeded')) {
-      const debitDates = [];
-      bankDebits.Debits.forEach((debit) => {
-        debitDates.push(debit.Date);
-      });
-      return this.fetchTxns(cardId, debitDates);
-    }
-    return null;
+    const cardDebitDates = bankDebits.filter((bankDebit) => {
+      return bankDebit.CardId === cardId;
+    }).map((cardDebit) => {
+      return cardDebit.Date;
+    });
+    return this.fetchTxns(cardId, cardDebitDates);
   }
 
   async fetchTxns(cardId, debitDates) {
