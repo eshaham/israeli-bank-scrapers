@@ -127,8 +127,10 @@ class VisaCalScraper extends BaseScraper {
         const bank = banksResponse.BankAccounts[i];
         for (let j = 0; j < bank.Cards.length; j += 1) {
           const rawTxns = await this.getTxnsOfCard(bank.AccountID, bank.Cards[j]);
-          const txns = convertTransactions(rawTxns);
-          console.log(txns);
+          if (rawTxns) {
+            const txns = convertTransactions(rawTxns);
+            console.log(txns);
+          }
         }
       }
       return { success: true };
