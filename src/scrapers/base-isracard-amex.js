@@ -3,7 +3,7 @@ import buildUrl from 'build-url';
 import moment from 'moment';
 
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
-import { fetchGet, fetchPost } from '../helpers/fetch';
+import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import { SCRAPE_PROGRESS_TYPES, NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_KEYWORD, SHEKEL_CURRENCY } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, filterOldTransactions } from '../helpers/transactions';
@@ -28,7 +28,7 @@ function getAccountsUrl(servicesUrl, monthMoment) {
 
 async function fetchAccounts(page, servicesUrl, monthMoment) {
   const dataUrl = getAccountsUrl(servicesUrl, monthMoment);
-  const dataResult = await fetchGet(page, dataUrl);
+  const dataResult = await fetchGetWithinPage(page, dataUrl);
   if (_.get(dataResult, 'Header.Status') === '1' && dataResult.DashboardMonthBean) {
     const { cardsCharges } = dataResult.DashboardMonthBean;
     if (cardsCharges) {
@@ -111,7 +111,7 @@ function convertTransactions(txns, processedDate) {
 async function fetchTransactions(page, options, startMoment, monthMoment) {
   const accounts = await fetchAccounts(page, options.servicesUrl, monthMoment);
   const dataUrl = getTransactionsUrl(options.servicesUrl, monthMoment);
-  const dataResult = await fetchGet(page, dataUrl);
+  const dataResult = await fetchGetWithinPage(page, dataUrl);
   if (_.get(dataResult, 'Header.Status') === '1' && dataResult.CardsTransactionsListBean) {
     const accountTxns = {};
     accounts.forEach((account) => {
@@ -203,7 +203,7 @@ class IsracardAmexBaseScraper extends BaseScraper {
       checkLevel: '1',
       companyCode: this.options.companyCode,
     };
-    const validateResult = await fetchPost(this.page, validateUrl, validateRequest);
+    const validateResult = await fetchPostWithinPage(this.page, validateUrl, validateRequest);
     if (!validateResult || !validateResult.Header || validateResult.Header.Status !== '1' || !validateResult.ValidateIdDataBean) {
       throw new Error('unknown error during login');
     }
@@ -221,7 +221,7 @@ class IsracardAmexBaseScraper extends BaseScraper {
         countryCode: COUNTRY_CODE,
         idType: ID_TYPE,
       };
-      const loginResult = await fetchPost(this.page, loginUrl, request);
+      const loginResult = await fetchPostWithinPage(this.page, loginUrl, request);
       if (loginResult.status === '1') {
         this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
         return { success: true };
