@@ -207,8 +207,8 @@ class VisaCalScraper extends BaseScraper {
     return fetchGet(hasNextPageUrl, this.createAuthHeader());
   }
 
-  async getBankDebits(accountId, cardId) {
-    const bankDebitsUrl = getBankDebitsUrl(accountId, cardId);
+  async getBankDebits(accountId) {
+    const bankDebitsUrl = getBankDebitsUrl(accountId);
     return fetchGet(bankDebitsUrl, this.createAuthHeader());
   }
 
