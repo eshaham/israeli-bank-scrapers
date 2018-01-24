@@ -12,6 +12,7 @@ import {
   DOLLAR_CURRENCY_SYMBOL,
   DOLLAR_CURRENCY } from '../constants';
 import { fetchGet, fetchPost } from '../helpers/fetch';
+import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
 
 const BASE_URL = 'https://restservices.cal-online.co.il/Cal4U';
 const DATE_FORMAT = 'DD/MM/YYYY';
@@ -100,6 +101,16 @@ function convertTransactions(txns) {
   });
 }
 
+function prepareTransactions(txns, startMoment, combineInstallments) {
+  let clonedTxns = Array.from(txns);
+  if (!combineInstallments) {
+    clonedTxns = fixInstallments(clonedTxns);
+  }
+  clonedTxns = sortTransactionsByDate(clonedTxns);
+  clonedTxns = filterOldTransactions(clonedTxns, startMoment, combineInstallments);
+  return clonedTxns;
+}
+
 class VisaCalScraper extends BaseScraper {
   async login(credentials) {
     const authUrl = `${BASE_URL}/CalAuthenticator`;
@@ -128,6 +139,10 @@ class VisaCalScraper extends BaseScraper {
   }
 
   async fetchData() {
+    const defaultStartMoment = moment().subtract(1, 'years');
+    const startDate = this.options.startDate || defaultStartMoment.toDate();
+    const startMoment = moment.max(defaultStartMoment, moment(startDate));
+
     const cardsByAccountUrl = `${BASE_URL}/CardsByAccounts`;
     const banksResponse = await fetchGet(cardsByAccountUrl, this.createAuthHeader());
 
@@ -140,7 +155,8 @@ class VisaCalScraper extends BaseScraper {
           for (let j = 0; j < bank.Cards.length; j += 1) {
             const rawTxns = await this.getTxnsOfCard(bank.Cards[j], bankDebits.Debits);
             if (rawTxns) {
-              const txns = convertTransactions(rawTxns);
+              let txns = convertTransactions(rawTxns);
+              txns = prepareTransactions(txns, startMoment, this.options.combineInstallments);
               const result = {
                 accountNumber: bank.Cards[j].LastFourDigits,
                 txns,
