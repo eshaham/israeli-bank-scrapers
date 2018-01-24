@@ -111,6 +111,77 @@ function prepareTransactions(txns, startMoment, combineInstallments) {
   return clonedTxns;
 }
 
+async function getBankDebits(authHeader, accountId) {
+  const bankDebitsUrl = getBankDebitsUrl(accountId);
+  return fetchGet(bankDebitsUrl, authHeader);
+}
+
+async function getTransactionsNextPage(authHeader) {
+  const hasNextPageUrl = `${BASE_URL}/CalTransNextPage`;
+  return fetchGet(hasNextPageUrl, authHeader);
+}
+
+async function fetchTxns(authHeader, cardId, debitDates) {
+  const txns = [];
+  for (const date of debitDates) {
+    const fetchTxnUrl = getTransactionsUrl(cardId, date);
+    let txnResponse = await fetchGet(fetchTxnUrl, authHeader);
+    if (txnResponse.Transactions) {
+      txns.push(...txnResponse.Transactions);
+    }
+    while (txnResponse.HasNextPage) {
+      txnResponse = await getTransactionsNextPage(authHeader);
+      if (txnResponse.Transactions != null) {
+        txns.push(...txnResponse.Transactions);
+      }
+    }
+  }
+  return txns;
+}
+
+async function getTxnsOfCard(authHeader, card, bankDebits) {
+  const cardId = card.Id;
+  const cardDebitDates = bankDebits.filter((bankDebit) => {
+    return bankDebit.CardId === cardId;
+  }).map((cardDebit) => {
+    return cardDebit.Date;
+  });
+  return fetchTxns(authHeader, cardId, cardDebitDates);
+}
+
+async function getTransactionsForAllAccounts(authHeader, startMoment, options) {
+  const cardsByAccountUrl = `${BASE_URL}/CardsByAccounts`;
+  const banksResponse = await fetchGet(cardsByAccountUrl, authHeader);
+
+  if (_.get(banksResponse, 'Response.Status.Succeeded')) {
+    const accounts = [];
+    for (let i = 0; i < banksResponse.BankAccounts.length; i += 1) {
+      const bank = banksResponse.BankAccounts[i];
+      const bankDebits = await getBankDebits(authHeader, bank.AccountID);
+      if (_.get(bankDebits, 'Response.Status.Succeeded')) {
+        for (let j = 0; j < bank.Cards.length; j += 1) {
+          const rawTxns = await getTxnsOfCard(authHeader, bank.Cards[j], bankDebits.Debits);
+          if (rawTxns) {
+            let txns = convertTransactions(rawTxns);
+            txns = prepareTransactions(txns, startMoment, options.combineInstallments);
+            const result = {
+              accountNumber: bank.Cards[j].LastFourDigits,
+              txns,
+            };
+            accounts.push(result);
+          }
+        }
+      }
+    }
+    return {
+      success: true,
+      accounts,
+    };
+  }
+
+  return { success: false };
+}
+
 class VisaCalScraper extends BaseScraper {
   async login(credentials) {
     const authUrl = `${BASE_URL}/CalAuthenticator`;
@@ -143,73 +214,8 @@ class VisaCalScraper extends BaseScraper {
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-    const cardsByAccountUrl = `${BASE_URL}/CardsByAccounts`;
-    const banksResponse = await fetchGet(cardsByAccountUrl, this.createAuthHeader());
-
-    if (_.get(banksResponse, 'Response.Status.Succeeded')) {
-      const accounts = [];
-      for (let i = 0; i < banksResponse.BankAccounts.length; i += 1) {
-        const bank = banksResponse.BankAccounts[i];
-        const bankDebits = await this.getBankDebits(bank.AccountID);
-        if (_.get(bankDebits, 'Response.Status.Succeeded')) {
-          for (let j = 0; j < bank.Cards.length; j += 1) {
-            const rawTxns = await this.getTxnsOfCard(bank.Cards[j], bankDebits.Debits);
-            if (rawTxns) {
-              let txns = convertTransactions(rawTxns);
-              txns = prepareTransactions(txns, startMoment, this.options.combineInstallments);
-              const result = {
-                accountNumber: bank.Cards[j].LastFourDigits,
-                txns,
-              };
-              accounts.push(result);
-            }
-          }
-        }
-      }
-      return {
-        success: true,
-        accounts,
-      };
-    }
-    return { success: false };
-  }
-
-  async getTxnsOfCard(card, bankDebits) {
-    const cardId = card.Id;
-    const cardDebitDates = bankDebits.filter((bankDebit) => {
-      return bankDebit.CardId === cardId;
-    }).map((cardDebit) => {
-      return cardDebit.Date;
-    });
-    return this.fetchTxns(cardId, cardDebitDates);
-  }
-
-  async fetchTxns(cardId, debitDates) {
-    const txns = [];
-    for (const date of debitDates) {
-      const fetchTxnUrl = getTransactionsUrl(cardId, date);
-      let txnResponse = await fetchGet(fetchTxnUrl, this.createAuthHeader());
-      if (txnResponse.Transactions) {
-        txns.push(...txnResponse.Transactions);
-      }
-      while (txnResponse.HasNextPage) {
-        txnResponse = await this.getTransactionsNextPage();
-        if (txnResponse.Transactions != null) {
-          txns.push(...txnResponse.Transactions);
-        }
-      }
-    }
-    return txns;
-  }
-
-  async getTransactionsNextPage() {
-    const hasNextPageUrl = `${BASE_URL}/CalTransNextPage`;
-    return fetchGet(hasNextPageUrl, this.createAuthHeader());
-  }
-
-  async getBankDebits(accountId) {
-    const bankDebitsUrl = getBankDebitsUrl(accountId);
-    return fetchGet(bankDebitsUrl, this.createAuthHeader());
+    const authHeader = { Authorization: this.authHeader };
+    return getTransactionsForAllAccounts(authHeader, startMoment, this.options);
   }
 
   createAuthHeader() {
