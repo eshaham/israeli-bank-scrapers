@@ -41,10 +41,10 @@ function getLoginOptions(credentials) {
   return {
     loginUrl: <LOGIN_URL>,
     fields: [
-      { id: '<USER_NAME_FIELD>', value: credentials.username },
-      { id: `<PASSWORD_FIELD>`, value: credentials.password },
+      { selector: '<USER_NAME_FIELD>', value: credentials.username },
+      { selector: `<PASSWORD_FIELD>`, value: credentials.password },
     ],
-    submitButtonId: '<SUBMIT_BUTTON>',
+    submitButtonSelector: '<SUBMIT_BUTTON>',
     possibleResults: getPossibleLoginResults(),
   };
 }
