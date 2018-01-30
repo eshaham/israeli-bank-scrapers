@@ -67,9 +67,9 @@ function getPossibleLoginResults() {
 
 function createLoginFields(credentials) {
   return [
-    { id: 'tzId', value: credentials.id },
-    { id: 'tzPassword', value: credentials.password },
-    { id: 'aidnum', value: credentials.num },
+    { selector: '#tzId', value: credentials.id },
+    { selector: '#tzPassword', value: credentials.password },
+    { selector: '#aidnum', value: credentials.num },
   ];
 }
 
@@ -78,7 +78,7 @@ class DiscountScraper extends BaseScraper {
     return {
       loginUrl: `${BASE_URL}/LoginPages/Logon?multilang=he&t=P&pageKey=home&bank=d`,
       fields: createLoginFields(credentials),
-      submitButtonId: 'submitButton',
+      submitButtonSelector: '#submitButton',
       postAction: async () => waitForRedirect(this.page),
       possibleResults: getPossibleLoginResults(),
     };
