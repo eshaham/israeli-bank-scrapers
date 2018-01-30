@@ -1,13 +1,13 @@
-async function waitUntilElementFound(page, elementName, hasToBeVisible = false) {
-  await page.waitForSelector(`#${elementName}`, { visible: hasToBeVisible });
+async function waitUntilElementFound(page, elementSelector, hasToBeVisible = false) {
+  await page.waitForSelector(elementSelector, { visible: hasToBeVisible });
 }
 
-async function fillInput(page, inputName, inputValue) {
-  await page.type(`#${inputName}`, inputValue);
+async function fillInput(page, inputSelector, inputValue) {
+  await page.type(inputSelector, inputValue);
 }
 
-async function clickButton(page, buttonName) {
-  const button = await page.$(`#${buttonName}`);
+async function clickButton(page, buttonSelector) {
+  const button = await page.$(buttonSelector);
   await button.click();
 }
 

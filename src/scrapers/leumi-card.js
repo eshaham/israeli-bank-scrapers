@@ -19,7 +19,7 @@ const POSTPONED_TYPE_NAME = 'דחוי חודש';
 function redirectOrDialog(page) {
   return Promise.race([
     waitForRedirect(page),
-    waitUntilElementFound(page, 'popupWrongDetails', true),
+    waitUntilElementFound(page, '#popupWrongDetails', true),
   ]);
 }
 
@@ -250,8 +250,8 @@ function getPossibleLoginResults() {
 
 function createLoginFields(inputGroupName, credentials) {
   return [
-    { id: `${inputGroupName}_txtUserName`, value: credentials.username },
-    { id: `${inputGroupName}_txtPassword`, value: credentials.password },
+    { selector: `#${inputGroupName}_txtUserName`, value: credentials.username },
+    { selector: `#${inputGroupName}_txtPassword`, value: credentials.password },
   ];
 }
 
@@ -261,7 +261,7 @@ class LeumiCardScraper extends BaseScraper {
     return {
       loginUrl: `${BASE_URL}/Anonymous/Login/CardHoldersLogin.aspx`,
       fields: createLoginFields(inputGroupName, credentials),
-      submitButtonId: `${inputGroupName}_btnLogin`,
+      submitButtonSelector: `#${inputGroupName}_btnLogin`,
       postAction: async () => redirectOrDialog(this.page),
       possibleResults: getPossibleLoginResults(),
     };
