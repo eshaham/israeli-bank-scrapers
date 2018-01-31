@@ -36,7 +36,7 @@
     "babel-plugin-transform-es2015-block-scoping": "^6.26.0",
     "babel-plugin-transform-es2015-shorthand-properties": "^6.24.1",
     "babel-preset-env": "^1.6.1",
-    "eslint": "^4.13.1",
+    "eslint": "^4.16.0",
     "eslint-config-airbnb-base": "^12.1.0",
     "eslint-plugin-import": "^2.8.0",
     "pre-commit": "^1.2.2"
@@ -47,6 +47,6 @@
     "lodash": "^4.17.4",
     "moment": "^2.20.1",
     "node-fetch": "^1.7.3",
-    "puppeteer": "^0.13.0"
+    "puppeteer": "^1.0.0"
   }
 }
