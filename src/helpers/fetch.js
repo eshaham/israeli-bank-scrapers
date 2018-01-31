@@ -1,4 +1,4 @@
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 
 const JSON_CONTENT_TYPE = 'application/json';
 
@@ -18,7 +18,7 @@ export async function fetchGet(url, extraHeaders) {
     method: 'GET',
     headers,
   };
-  const result = await fetch(url, request);
+  const result = await nodeFetch(url, request);
   return result.json();
 }
 
@@ -32,7 +32,7 @@ export async function fetchPost(url, data, extraHeaders) {
     headers,
     body: JSON.stringify(data),
   };
-  const result = await fetch(url, request);
+  const result = await nodeFetch(url, request);
   return result.json();
 }
 
