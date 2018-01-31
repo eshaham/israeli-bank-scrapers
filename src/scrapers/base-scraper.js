@@ -2,7 +2,7 @@ import { EventEmitter } from 'events';
 import puppeteer from 'puppeteer';
 
 import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT, GENERAL_ERROR } from '../constants';
-import { waitForNavigation, NAVIGATION_ERRORS } from '../helpers/navigation';
+import { waitForNavigation, getCurrentUrl, NAVIGATION_ERRORS } from '../helpers/navigation';
 import { waitUntilElementFound, fillInput, clickButton } from '../helpers/elements-interactions';
 
 const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';
@@ -123,7 +123,11 @@ class BaseScraper {
     const loginOptions = this.getLoginOptions(credentials);
 
     await this.page.goto(loginOptions.loginUrl);
-    await waitUntilElementFound(this.page, loginOptions.submitButtonSelector);
+    if (loginOptions.checkReadiness) {
+      await loginOptions.checkReadiness();
+    } else {
+      await waitUntilElementFound(this.page, loginOptions.submitButtonSelector);
+    }
 
     await this.fillInputs(loginOptions.fields);
     await clickButton(this.page, loginOptions.submitButtonSelector);
@@ -135,7 +139,7 @@ class BaseScraper {
       await waitForNavigation(this.page);
     }
 
-    const current = await this.page.url();
+    const current = await getCurrentUrl(this.page);
     const loginResult = getKeyByValue(loginOptions.possibleResults, current);
     return handleLoginResult(this, loginResult);
   }
