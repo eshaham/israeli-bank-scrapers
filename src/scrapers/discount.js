@@ -1,7 +1,8 @@
 import moment from 'moment';
 
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
-import { waitForRedirect } from '../helpers/navigation';
+import { waitUntilElementFound } from '../helpers/elements-interactions';
+import { waitForNavigation } from '../helpers/navigation';
 import { fetchGetWithinPage } from '../helpers/fetch';
 import { NORMAL_TXN_TYPE } from '../constants';
 
@@ -57,11 +58,19 @@ async function fetchAccountData(page, options) {
   return accountData;
 }
 
+async function navigateOrErrorLabel(page) {
+  try {
+    await waitForNavigation(page);
+  } catch (e) {
+    await waitUntilElementFound(page, '#general-error', false, 100);
+  }
+}
+
 function getPossibleLoginResults() {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = `${BASE_URL}/apollo/core/templates/default/masterPage.html`;
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = `${BASE_URL}/LoginPages/Logon?multilang=he&t=P&pagekey=home&bank=d#`;
-  urls[LOGIN_RESULT.CHANGE_PASSWORD] = `${BASE_URL}/LoginPages/Logon`;
+  urls[LOGIN_RESULT.SUCCESS] = `${BASE_URL}/apollo/core/templates/default/masterPage.html#/MY_ACCOUNT_HOMEPAGE`;
+  urls[LOGIN_RESULT.INVALID_PASSWORD] = `${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/LOGIN_PAGE`;
+  urls[LOGIN_RESULT.CHANGE_PASSWORD] = `${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/PWD_RENEW`;
   return urls;
 }
 
@@ -76,10 +85,11 @@ function createLoginFields(credentials) {
 class DiscountScraper extends BaseScraper {
   getLoginOptions(credentials) {
     return {
-      loginUrl: `${BASE_URL}/LoginPages/Logon?multilang=he&t=P&pageKey=home&bank=d`,
+      loginUrl: `${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/LOGIN_PAGE`,
+      checkReadiness: async () => waitUntilElementFound(this.page, '#tzId'),
       fields: createLoginFields(credentials),
-      submitButtonSelector: '#submitButton',
-      postAction: async () => waitForRedirect(this.page),
+      submitButtonSelector: '.sendBtn',
+      postAction: async () => navigateOrErrorLabel(this.page),
       possibleResults: getPossibleLoginResults(),
     };
   }
