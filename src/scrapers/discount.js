@@ -2,7 +2,7 @@ import moment from 'moment';
 
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
-import { waitForRedirect } from '../helpers/navigation';
+import { waitForNavigation } from '../helpers/navigation';
 import { fetchGetWithinPage } from '../helpers/fetch';
 import { NORMAL_TXN_TYPE } from '../constants';
 
@@ -58,16 +58,17 @@ async function fetchAccountData(page, options) {
   return accountData;
 }
 
-function redirectOrErrorLabel(page) {
-  return Promise.race([
-    waitForRedirect(page),
-    waitUntilElementFound(page, '#general-error'),
-  ]);
+async function navigateOrErrorLabel(page) {
+  try {
+    await waitForNavigation(page);
+  } catch (e) {
+    await waitUntilElementFound(page, '#general-error', false, 100);
+  }
 }
 
 function getPossibleLoginResults() {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = `${BASE_URL}/apollo/core/templates/default/masterPage.html`;
+  urls[LOGIN_RESULT.SUCCESS] = `${BASE_URL}/apollo/core/templates/default/masterPage.html#/MY_ACCOUNT_HOMEPAGE`;
   urls[LOGIN_RESULT.INVALID_PASSWORD] = `${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/LOGIN_PAGE`;
   urls[LOGIN_RESULT.CHANGE_PASSWORD] = `${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/PWD_RENEW`;
   return urls;
@@ -88,7 +89,7 @@ class DiscountScraper extends BaseScraper {
       checkReadiness: async () => waitUntilElementFound(this.page, '#tzId'),
       fields: createLoginFields(credentials),
       submitButtonSelector: '.sendBtn',
-      postAction: async () => redirectOrErrorLabel(this.page),
+      postAction: async () => navigateOrErrorLabel(this.page),
       possibleResults: getPossibleLoginResults(),
     };
   }
