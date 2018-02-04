@@ -1,6 +1,10 @@
 export const PASSWORD_FIELD = 'password';
 
 export const SCRAPERS = {
+  hapoalim: {
+    name: 'Bank Hapoalim',
+    loginFields: ['userCode', PASSWORD_FIELD],
+  },
   discount: {
     name: 'Discount Bank',
     loginFields: ['id', PASSWORD_FIELD, 'num'],
@@ -20,9 +24,5 @@ export const SCRAPERS = {
   amex: {
     name: 'Amex',
     loginFields: ['id', 'card6Digits', PASSWORD_FIELD],
-  },
-  hapoalim: {
-    name: 'Bank Hapoalim',
-    loginFields: ['userCode', PASSWORD_FIELD],
   },
 };
