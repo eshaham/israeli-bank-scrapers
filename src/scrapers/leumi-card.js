@@ -12,13 +12,14 @@ const BASE_URL = 'https://online.leumi-card.co.il';
 const DATE_FORMAT = 'DD/MM/YYYY';
 const NORMAL_TYPE_NAME = 'רגילה';
 const ATM_TYPE_NAME = 'חיוב עסקות מיידי';
+const INTERNET_SHOPPING_TYPE_NAME = 'אינטרנט/חו"ל';
 const INSTALLMENTS_TYPE_NAME = 'תשלומים';
 const POSTPONED_TYPE_NAME = 'דחוי חודש';
 
 function redirectOrDialog(page) {
   return Promise.race([
     waitForRedirect(page),
-    waitUntilElementFound(page, 'popupWrongDetails', true),
+    waitUntilElementFound(page, '#popupWrongDetails', true),
   ]);
 }
 
@@ -47,6 +48,7 @@ function getTransactionType(txnTypeStr) {
     case ATM_TYPE_NAME:
     case NORMAL_TYPE_NAME:
     case POSTPONED_TYPE_NAME:
+    case INTERNET_SHOPPING_TYPE_NAME:
       return NORMAL_TXN_TYPE;
     case INSTALLMENTS_TYPE_NAME:
       return INSTALLMENTS_TXN_TYPE;
@@ -248,8 +250,8 @@ function getPossibleLoginResults() {
 
 function createLoginFields(inputGroupName, credentials) {
   return [
-    { id: `${inputGroupName}_txtUserName`, value: credentials.username },
-    { id: `${inputGroupName}_txtPassword`, value: credentials.password },
+    { selector: `#${inputGroupName}_txtUserName`, value: credentials.username },
+    { selector: `#${inputGroupName}_txtPassword`, value: credentials.password },
   ];
 }
 
@@ -259,7 +261,7 @@ class LeumiCardScraper extends BaseScraper {
     return {
       loginUrl: `${BASE_URL}/Anonymous/Login/CardHoldersLogin.aspx`,
       fields: createLoginFields(inputGroupName, credentials),
-      submitButtonId: `${inputGroupName}_btnLogin`,
+      submitButtonSelector: `#${inputGroupName}_btnLogin`,
       postAction: async () => redirectOrDialog(this.page),
       possibleResults: getPossibleLoginResults(),
     };

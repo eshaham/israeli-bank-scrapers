@@ -10,6 +10,7 @@ Israeli Bank Scrapers - Get closer to your own data
 What you can find here is scrapers for all major Israeli banks and credit card companies. That's the plan at least.
 Currently only the following banks are supported:
 - Discount Bank
+- Visa Cal (thanks [@nirgin](https://github.com/nirgin))
 - Leumi Card
 - Isracard
 - Amex (thanks [@erezd](https://github.com/erezd))
@@ -101,6 +102,16 @@ const credentials = {
 };
 ```
 This scraper supports fetching transaction from up to one year (minus 1 day).
+
+## Visa Cal scraper
+This scraper expects the following credentials object:
+```node
+const credentials = {
+  username: <user name>,
+  password: <user password>
+};
+```
+This scraper supports fetching transaction from up to one year.
 
 ## Leumi-Card scraper
 This scraper expects the following credentials object:

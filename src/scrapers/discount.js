@@ -1,8 +1,9 @@
 import moment from 'moment';
 
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
-import { waitForRedirect } from '../helpers/navigation';
-import { fetchGet } from '../helpers/fetch';
+import { waitUntilElementFound } from '../helpers/elements-interactions';
+import { waitForNavigation } from '../helpers/navigation';
+import { fetchGetWithinPage } from '../helpers/fetch';
 import { NORMAL_TXN_TYPE } from '../constants';
 
 const BASE_URL = 'https://start.telebank.co.il';
@@ -27,7 +28,7 @@ async function fetchAccountData(page, options) {
   const apiSiteUrl = `${BASE_URL}/Titan/gatewayAPI`;
 
   const accountDataUrl = `${apiSiteUrl}/userAccountsData`;
-  const accountInfo = await fetchGet(page, accountDataUrl);
+  const accountInfo = await fetchGetWithinPage(page, accountDataUrl);
   const accountNumber = accountInfo.UserAccountsData.DefaultAccountNumber;
 
   const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
@@ -36,7 +37,7 @@ async function fetchAccountData(page, options) {
 
   const startDateStr = startMoment.format(DATE_FORMAT);
   const txnsUrl = `${apiSiteUrl}/lastTransactions/${accountNumber}/Date?IsCategoryDescCode=True&IsTransactionDetails=True&IsEventNames=True&FromDate=${startDateStr}`;
-  const txnsResult = await fetchGet(page, txnsUrl);
+  const txnsResult = await fetchGetWithinPage(page, txnsUrl);
   if (txnsResult.Error) {
     return {
       success: false,
@@ -57,29 +58,38 @@ async function fetchAccountData(page, options) {
   return accountData;
 }
 
+async function navigateOrErrorLabel(page) {
+  try {
+    await waitForNavigation(page);
+  } catch (e) {
+    await waitUntilElementFound(page, '#general-error', false, 100);
+  }
+}
+
 function getPossibleLoginResults() {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = `${BASE_URL}/apollo/core/templates/default/masterPage.html`;
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = `${BASE_URL}/LoginPages/Logon?multilang=he&t=P&pagekey=home&bank=d#`;
-  urls[LOGIN_RESULT.CHANGE_PASSWORD] = `${BASE_URL}/LoginPages/Logon`;
+  urls[LOGIN_RESULT.SUCCESS] = `${BASE_URL}/apollo/core/templates/default/masterPage.html#/MY_ACCOUNT_HOMEPAGE`;
+  urls[LOGIN_RESULT.INVALID_PASSWORD] = `${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/LOGIN_PAGE`;
+  urls[LOGIN_RESULT.CHANGE_PASSWORD] = `${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/PWD_RENEW`;
   return urls;
 }
 
 function createLoginFields(credentials) {
   return [
-    { id: 'tzId', value: credentials.id },
-    { id: 'tzPassword', value: credentials.password },
-    { id: 'aidnum', value: credentials.num },
+    { selector: '#tzId', value: credentials.id },
+    { selector: '#tzPassword', value: credentials.password },
+    { selector: '#aidnum', value: credentials.num },
   ];
 }
 
 class DiscountScraper extends BaseScraper {
   getLoginOptions(credentials) {
     return {
-      loginUrl: `${BASE_URL}/LoginPages/Logon?multilang=he&t=P&pageKey=home&bank=d`,
+      loginUrl: `${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/LOGIN_PAGE`,
+      checkReadiness: async () => waitUntilElementFound(this.page, '#tzId'),
       fields: createLoginFields(credentials),
-      submitButtonId: 'submitButton',
-      postAction: async () => waitForRedirect(this.page),
+      submitButtonSelector: '.sendBtn',
+      postAction: async () => navigateOrErrorLabel(this.page),
       possibleResults: getPossibleLoginResults(),
     };
   }

@@ -9,6 +9,10 @@ export const SCRAPERS = {
     name: 'Leumi Card',
     loginFields: ['username', PASSWORD_FIELD],
   },
+  visaCal: {
+    name: 'Visa Cal',
+    loginFields: ['username', PASSWORD_FIELD],
+  },
   isracard: {
     name: 'Isracard',
     loginFields: ['id', 'card6Digits', PASSWORD_FIELD],
