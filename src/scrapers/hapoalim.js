@@ -2,8 +2,8 @@ import moment from 'moment';
 
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { waitForRedirect } from '../helpers/navigation';
-import { fetchGet } from '../helpers/fetch';
 import { NORMAL_TXN_TYPE } from '../constants';
+import { fetchGetWithinPage } from '../helpers/fetch';
 
 const BASE_URL = 'https://login.bankhapoalim.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
@@ -26,9 +26,8 @@ function convertTransactions(txns) {
 
 async function fetchAccountData(page, options) {
   const apiSiteUrl = `${BASE_URL}/ServerServices`;
-
   const accountDataUrl = `${apiSiteUrl}/general/accounts`;
-  const accountInfo = await fetchGet(page, accountDataUrl);
+  const accountInfo = await fetchGetWithinPage(page, accountDataUrl);
   const accountNumber = `${accountInfo[0].bankNumber}-${accountInfo[0].branchNumber}-${accountInfo[0].accountNumber}`;
 
   const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
@@ -39,7 +38,7 @@ async function fetchAccountData(page, options) {
   const endDateStr = moment().format(DATE_FORMAT);
   const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
 
-  const txnsResult = await fetchGet(page, txnsUrl);
+  const txnsResult = await fetchGetWithinPage(page, txnsUrl);
 
   if (txnsResult.Error) {
     return {
