@@ -9,12 +9,13 @@ Israeli Bank Scrapers - Get closer to your own data
 # What's here?
 What you can find here is scrapers for all major Israeli banks and credit card companies. That's the plan at least.
 Currently only the following banks are supported:
+- Bank Hapoalim (thanks [@sebikaplun](https://github.com/sebikaplun))
 - Discount Bank
 - Visa Cal (thanks [@nirgin](https://github.com/nirgin))
 - Leumi Card
 - Isracard
 - Amex (thanks [@erezd](https://github.com/erezd))
-- Bank Hapoalim (thanks [@sebikaplun](https://github.com/sebikaplun))
+
 # Prerequisites
 To use this you will need to have [Node.js](https://nodejs.org) >= 6 installed.
 
@@ -92,6 +93,17 @@ The return value is a list of scraper metadata:
 ```
 
 # Specific definitions per scraper
+
+## Bank Hapoalim scraper
+This scraper expects the following credentials object:
+```node
+const credentials = {
+  userCode: <user identification code>,
+  password: <user password>
+};
+```
+This scraper supports fetching transaction from up to one year.
+
 ## Discount scraper
 This scraper expects the following credentials object:
 ```node
@@ -140,16 +152,6 @@ This scraper expects the following credentials object:
 const credentials = {
   id: <user identification number>,
   card6Digits: <6 last digits of card>
-  password: <user password>
-};
-```
-This scraper supports fetching transaction from up to one year.
-
-## Bank Hapoalim scraper
-This scraper expects the following credentials object:
-```node
-const credentials = {
-  userCode: <user identification code>,
   password: <user password>
 };
 ```
