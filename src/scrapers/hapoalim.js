@@ -71,8 +71,8 @@ function getPossibleLoginResults() {
 
 function createLoginFields(credentials) {
   return [
-    { id: 'userID', value: credentials.userCode },
-    { id: 'userPassword', value: credentials.password },
+    { selector: '#userID', value: credentials.userCode },
+    { selector: '#userPassword', value: credentials.password },
   ];
 }
 
@@ -81,7 +81,7 @@ class HapoalimScraper extends BaseScraper {
     return {
       loginUrl: `${BASE_URL}/cgi-bin/poalwwwc?reqName=getLogonPage`,
       fields: createLoginFields(credentials),
-      submitButtonId: 'inputSend',
+      submitButtonSelector: '#inputSend',
       postAction: async () => waitForRedirect(this.page),
       possibleResults: getPossibleLoginResults(),
     };
