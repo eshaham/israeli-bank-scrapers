@@ -139,7 +139,7 @@ class BaseScraper {
       await waitForNavigation(this.page);
     }
 
-    const current = await getCurrentUrl(this.page);
+    const current = await getCurrentUrl(this.page, true);
     const loginResult = getKeyByValue(loginOptions.possibleResults, current);
     return handleLoginResult(this, loginResult);
   }
