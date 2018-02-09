@@ -14,7 +14,8 @@ const NORMAL_TYPE_NAME = 'רגילה';
 const ATM_TYPE_NAME = 'חיוב עסקות מיידי';
 const INTERNET_SHOPPING_TYPE_NAME = 'אינטרנט/חו"ל';
 const INSTALLMENTS_TYPE_NAME = 'תשלומים';
-const POSTPONED_TYPE_NAME = 'דחוי חודש';
+const ONE_MONTH_POSTPONED_TYPE_NAME = 'דחוי חודש';
+const TWO_MONTHS_POSTPONED_TYPE_NAME = 'דחוי חודשיים';
 
 function redirectOrDialog(page) {
   return Promise.race([
@@ -47,7 +48,8 @@ function getTransactionType(txnTypeStr) {
   switch (txnTypeStr.trim()) {
     case ATM_TYPE_NAME:
     case NORMAL_TYPE_NAME:
-    case POSTPONED_TYPE_NAME:
+    case ONE_MONTH_POSTPONED_TYPE_NAME:
+    case TWO_MONTHS_POSTPONED_TYPE_NAME:
     case INTERNET_SHOPPING_TYPE_NAME:
       return NORMAL_TXN_TYPE;
     case INSTALLMENTS_TYPE_NAME:
