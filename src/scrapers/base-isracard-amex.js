@@ -2,7 +2,7 @@ import _ from 'lodash';
 import buildUrl from 'build-url';
 import moment from 'moment';
 
-import { BaseScraper, LOGIN_RESULT } from './base-scraper';
+import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import { SCRAPE_PROGRESS_TYPES, NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_KEYWORD, SHEKEL_CURRENCY } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
@@ -179,7 +179,7 @@ async function fetchAllTransactions(page, options, startMoment) {
   };
 }
 
-class IsracardAmexBaseScraper extends BaseScraper {
+class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
   constructor(options, baseUrl, companyCode) {
     const clonedOptions = Object.assign(options, {
       baseUrl,

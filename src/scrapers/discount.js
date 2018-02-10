@@ -1,6 +1,6 @@
 import moment from 'moment';
 
-import { BaseScraper, LOGIN_RESULT } from './base-scraper';
+import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { fetchGetWithinPage } from '../helpers/fetch';
@@ -82,7 +82,7 @@ function createLoginFields(credentials) {
   ];
 }
 
-class DiscountScraper extends BaseScraper {
+class DiscountScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials) {
     return {
       loginUrl: `${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/LOGIN_PAGE`,

@@ -1,7 +1,7 @@
 import buildUrl from 'build-url';
 import moment from 'moment';
 
-import { BaseScraper, LOGIN_RESULT } from './base-scraper';
+import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_SYMBOL, SHEKEL_CURRENCY } from '../constants';
@@ -257,7 +257,7 @@ function createLoginFields(inputGroupName, credentials) {
   ];
 }
 
-class LeumiCardScraper extends BaseScraper {
+class LeumiCardScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials) {
     const inputGroupName = 'PlaceHolderMain_CardHoldersLogin1';
     return {

@@ -53,7 +53,7 @@ function createGeneralError() {
   return createErrorResult(GENERAL_ERROR);
 }
 
-class BaseScraper {
+class BaseScraperWithBrowser {
   constructor(options) {
     this.options = options;
     this.eventEmitter = new EventEmitter();
@@ -165,4 +165,4 @@ class BaseScraper {
   }
 }
 
-export { BaseScraper, LOGIN_RESULT };
+export { BaseScraperWithBrowser, LOGIN_RESULT };

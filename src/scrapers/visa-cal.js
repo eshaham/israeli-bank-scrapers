@@ -2,7 +2,7 @@ import _ from 'lodash';
 import buildUrl from 'build-url';
 import moment from 'moment';
 
-import { BaseScraper, LOGIN_RESULT } from './base-scraper';
+import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import {
   SCRAPE_PROGRESS_TYPES,
   NORMAL_TXN_TYPE,
@@ -186,7 +186,7 @@ async function getTransactionsForAllAccounts(authHeader, startMoment, options) {
   return { success: false };
 }
 
-class VisaCalScraper extends BaseScraper {
+class VisaCalScraper extends BaseScraperWithBrowser {
   async login(credentials) {
     const authUrl = `${BASE_URL}/CalAuthenticator`;
     const authRequest = {

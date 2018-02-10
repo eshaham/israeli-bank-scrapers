@@ -1,6 +1,6 @@
 import moment from 'moment';
 
-import { BaseScraper, LOGIN_RESULT } from './base-scraper';
+import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { waitForRedirect } from '../helpers/navigation';
 import { NORMAL_TXN_TYPE } from '../constants';
 import { fetchGetWithinPage } from '../helpers/fetch';
@@ -75,7 +75,7 @@ function createLoginFields(credentials) {
   ];
 }
 
-class HapoalimScraper extends BaseScraper {
+class HapoalimScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials) {
     return {
       loginUrl: `${BASE_URL}/cgi-bin/poalwwwc?reqName=getLogonPage`,
