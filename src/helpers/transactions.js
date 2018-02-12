@@ -1,4 +1,6 @@
 import moment from 'moment';
+import orderBy from 'lodash/orderBy';
+
 import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE } from '../constants';
 
 function isNormalTransaction(txn) {
@@ -30,15 +32,7 @@ export function fixInstallments(txns) {
 }
 
 export function sortTransactionsByDate(txns) {
-  const cloned = Array.from(txns);
-  cloned.sort((txn1, txn2) => {
-    if (txn1.date.getTime() === txn2.date.getTime()) {
-      return 0;
-    }
-    return txn1.date < txn2.date ? -1 : 1;
-  });
-
-  return cloned;
+  return orderBy(txns, 'date', 'asc');
 }
 
 export function filterOldTransactions(txns, startMoment, combineInstallments) {
