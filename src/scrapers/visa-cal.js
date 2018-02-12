@@ -94,8 +94,8 @@ function convertTransactions(txns) {
   return txns.map((txn) => {
     return {
       type: convertTransactionType(txn.TransType),
-      date: moment(txn.Date, DATE_FORMAT).toDate(),
-      processedDate: moment(txn.DebitDate, DATE_FORMAT).toDate(),
+      date: moment(txn.Date, DATE_FORMAT).toISOString(),
+      processedDate: moment(txn.DebitDate, DATE_FORMAT).toISOString(),
       originalAmount: -txn.Amount.Value,
       originalCurrency: convertCurrency(txn.Amount.Symbol),
       chargedAmount: -txn.DebitAmount.Value,
