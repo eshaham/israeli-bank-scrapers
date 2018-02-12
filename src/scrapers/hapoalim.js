@@ -20,6 +20,7 @@ function convertTransactions(txns) {
       originalCurrency: 'ILS',
       chargedAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
       description: txn.activityDescription,
+      status: txn.serialNumber === 0 ? 'pending' : 'posted',
     };
   });
 }
