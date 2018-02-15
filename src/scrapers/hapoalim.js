@@ -14,8 +14,8 @@ function convertTransactions(txns) {
     return {
       type: NORMAL_TXN_TYPE,
       identifier: txn.referenceNumber,
-      date: moment(txn.eventDate, DATE_FORMAT).toDate(),
-      processedDate: moment(txn.valueDate, DATE_FORMAT).toDate(),
+      date: moment(txn.eventDate, DATE_FORMAT).toISOString(),
+      processedDate: moment(txn.valueDate, DATE_FORMAT).toISOString(),
       originalAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
       originalCurrency: 'ILS',
       chargedAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,

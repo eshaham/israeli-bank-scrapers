@@ -36,7 +36,7 @@ async function fetchAccounts(page, servicesUrl, monthMoment) {
         return {
           index: parseInt(cardCharge.cardIndex, 10),
           accountNumber: cardCharge.cardNumber,
-          processedDate: moment(cardCharge.billingDate, DATE_FORMAT).toDate(),
+          processedDate: moment(cardCharge.billingDate, DATE_FORMAT).toISOString(),
         };
       });
     }
@@ -97,7 +97,7 @@ function convertTransactions(txns, processedDate) {
     return {
       type: getTransactionType(txn),
       identifier: isOutbound ? txn.voucherNumberRatzOutbound : txn.voucherNumberRatz,
-      date: txnMoment.toDate(),
+      date: txnMoment.toISOString(),
       processedDate,
       originalAmount: isOutbound ? -txn.dealSumOutbound : -txn.dealSum,
       originalCurrency: convertCurrency(txn.currencyId),
