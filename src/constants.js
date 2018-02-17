@@ -3,6 +3,7 @@ export const INSTALLMENTS_TXN_TYPE = 'installments';
 
 export const SHEKEL_CURRENCY_SYMBOL = '₪';
 export const SHEKEL_CURRENCY_KEYWORD = 'ש"ח';
+export const ALT_SHEKEL_CURRENCY = 'NIS';
 export const SHEKEL_CURRENCY = 'ILS';
 
 export const DOLLAR_CURRENCY_SYMBOL = '$';

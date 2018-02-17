@@ -4,7 +4,7 @@ import moment from 'moment';
 
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
-import { SCRAPE_PROGRESS_TYPES, NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_KEYWORD, SHEKEL_CURRENCY } from '../constants';
+import { SCRAPE_PROGRESS_TYPES, NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_KEYWORD, SHEKEL_CURRENCY, ALT_SHEKEL_CURRENCY } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, filterOldTransactions } from '../helpers/transactions';
 
@@ -59,7 +59,7 @@ function getTransactionsUrl(servicesUrl, monthMoment) {
 }
 
 function convertCurrency(currencyStr) {
-  if (currencyStr === SHEKEL_CURRENCY_KEYWORD) {
+  if (currencyStr === SHEKEL_CURRENCY_KEYWORD || currencyStr === ALT_SHEKEL_CURRENCY) {
     return SHEKEL_CURRENCY;
   }
   return currencyStr;
