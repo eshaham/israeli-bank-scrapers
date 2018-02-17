@@ -1,5 +1,5 @@
 import moment from 'moment';
-import orderBy from 'lodash/orderBy';
+import _ from 'lodash';
 
 import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE } from '../constants';
 
@@ -32,7 +32,7 @@ export function fixInstallments(txns) {
 }
 
 export function sortTransactionsByDate(txns) {
-  return orderBy(txns, ['date']);
+  return _.sortBy(txns, ['date']);
 }
 
 export function filterOldTransactions(txns, startMoment, combineInstallments) {
