@@ -14,8 +14,8 @@ function convertTransactions(txns) {
     return {
       type: NORMAL_TXN_TYPE,
       identifier: txn.OperationNumber,
-      date: moment(txn.OperationDate, DATE_FORMAT).toDate(),
-      processedDate: moment(txn.ValueDate, DATE_FORMAT).toDate(),
+      date: moment(txn.OperationDate, DATE_FORMAT).toISOString(),
+      processedDate: moment(txn.ValueDate, DATE_FORMAT).toISOString(),
       originalAmount: txn.OperationAmount,
       originalCurrency: 'ILS',
       chargedAmount: txn.OperationAmount,

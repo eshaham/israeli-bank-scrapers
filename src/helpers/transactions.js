@@ -25,7 +25,7 @@ export function fixInstallments(txns) {
     if (isNonInitialInstallmentTransaction(clonedTxn)) {
       const dateMoment = moment(clonedTxn.date);
       const actualDateMoment = dateMoment.add(clonedTxn.installments.number - 1, 'month');
-      clonedTxn.date = actualDateMoment.toDate();
+      clonedTxn.date = actualDateMoment.toISOString();
     }
     return clonedTxn;
   });

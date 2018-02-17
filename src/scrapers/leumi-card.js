@@ -99,8 +99,8 @@ function convertTransactions(rawTxns) {
     const chargedAmountData = getAmountData(txn.chargedAmountStr);
     return {
       type: getTransactionType(txn.typeStr),
-      date: moment(txn.dateStr, DATE_FORMAT).toDate(),
-      processedDate: moment(txn.processedDateStr, DATE_FORMAT).toDate(),
+      date: moment(txn.dateStr, DATE_FORMAT).toISOString(),
+      processedDate: moment(txn.processedDateStr, DATE_FORMAT).toISOString(),
       originalAmount: -originalAmountData.amount,
       originalCurrency: originalAmountData.currency,
       chargedAmount: -chargedAmountData.amount,
