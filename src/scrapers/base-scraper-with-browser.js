@@ -5,6 +5,9 @@ import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT, GENERAL_ERROR } from '../constants
 import { waitForNavigation, getCurrentUrl } from '../helpers/navigation';
 import { waitUntilElementFound, fillInput, clickButton } from '../helpers/elements-interactions';
 
+const VIEWPORT_WIDTH = 1024;
+const VIEWPORT_HEIGHT = 768;
+
 function getKeyByValue(object, value) {
   return Object.keys(object).find(key => object[key] === value);
 }
@@ -46,8 +49,12 @@ class BaseScraperWithBrowser extends BaseScraper {
     if (this.options.verbose) {
       env = Object.assign({ DEBUG: '*' }, process.env);
     }
-    this.browser = await puppeteer.launch({ env });
+    this.browser = await puppeteer.launch({ env, headless: !this.options.showBrowser });
     this.page = await this.browser.newPage();
+    await this.page.setViewport({
+      width: VIEWPORT_WIDTH,
+      height: VIEWPORT_HEIGHT,
+    });
   }
 
   getLoginOptions() {
