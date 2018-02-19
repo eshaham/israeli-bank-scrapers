@@ -2,7 +2,7 @@ import moment from 'moment';
 
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { waitForRedirect } from '../helpers/navigation';
-import { NORMAL_TXN_TYPE } from '../constants';
+import { NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
 import { fetchGetWithinPage } from '../helpers/fetch';
 
 const BASE_URL = 'https://login.bankhapoalim.co.il';
@@ -20,7 +20,7 @@ function convertTransactions(txns) {
       originalCurrency: 'ILS',
       chargedAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
       description: txn.activityDescription,
-      status: txn.serialNumber === 0 ? 'pending' : 'posted',
+      status: txn.serialNumber === 0 ? TRANSACTION_STATUS.PENDING : TRANSACTION_STATUS.COMPLETED,
     };
   });
 }
