@@ -1,7 +1,7 @@
 import moment from 'moment';
 
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
-import { waitForRedirect } from '../helpers/navigation';
+import { waitForRedirect, getCurrentUrl } from '../helpers/navigation';
 import { NORMAL_TXN_TYPE } from '../constants';
 import { fetchGetWithinPage } from '../helpers/fetch';
 
@@ -25,8 +25,10 @@ function convertTransactions(txns) {
 }
 
 async function fetchAccountData(page, options) {
-  const apiSiteUrl = `${BASE_URL}/ServerServices`;
-  const accountDataUrl = `${apiSiteUrl}/general/accounts`;
+  const currentUrl = await getCurrentUrl(page, true);
+  const subfolder = (currentUrl.includes('portalserver')) ? 'portalserver' : 'ssb';
+  const apiSiteUrl = `${BASE_URL}/${subfolder}`;
+  const accountDataUrl = `${BASE_URL}/ServerServices/general/accounts`;
   const accountInfo = await fetchGetWithinPage(page, accountDataUrl);
   const accountNumber = `${accountInfo[0].bankNumber}-${accountInfo[0].branchNumber}-${accountInfo[0].accountNumber}`;
 
@@ -62,7 +64,7 @@ async function fetchAccountData(page, options) {
 
 function getPossibleLoginResults() {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = `${BASE_URL}/portalserver/HomePage`;
+  urls[LOGIN_RESULT.SUCCESS] = [`${BASE_URL}/portalserver/HomePage`, `${BASE_URL}/ng-portals-bt/rb/he/homepage`];
   urls[LOGIN_RESULT.INVALID_PASSWORD] = `${BASE_URL}/AUTHENTICATE/LOGON?flow=AUTHENTICATE&state=LOGON&errorcode=1.6&callme=false`;
   urls[LOGIN_RESULT.CHANGE_PASSWORD] = `${BASE_URL}/MCP/START?flow=MCP&state=START&expiredDate=null`;
   return urls;
