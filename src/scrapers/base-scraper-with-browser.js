@@ -9,7 +9,7 @@ const VIEWPORT_WIDTH = 1024;
 const VIEWPORT_HEIGHT = 768;
 
 function getKeyByValue(object, value) {
-  return Object.keys(object).find(key => object[key] === value);
+  return Object.keys(object).find(key => object[key].indexOf(value) > -1);
 }
 
 function handleLoginResult(scraper, loginResult) {
