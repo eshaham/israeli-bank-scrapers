@@ -2,12 +2,13 @@ import moment from 'moment';
 import { scrape } from './scraper';
 
 const credentials = {
-  username: '_replace_with_actual_user',
-  password: '_replace_with_actual_password',
+  id: '_replace_with_actual_id_',
+  password: '_replace_with_actual_password_',
+  num: '_replace_with_actual_num',
 };
 
 const options = {
-  companyId: 'leumi',
+  companyId: 'discount',
   startDate: moment('2017-08-01'),
   combineInstallments: false,
   showBrowser: true,

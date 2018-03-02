@@ -1,2 +1,5 @@
-*.js
+**/*
 !*.tpl.js
+!utils.js
+!scraper.js
+!.gitignore
