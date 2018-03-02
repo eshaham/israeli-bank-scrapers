@@ -4,6 +4,7 @@ import LeumiCardScraper from './leumi-card';
 import VisaCalScraper from './visa-cal';
 import IsracardScraper from './isracard';
 import AmexScraper from './amex';
+import LeumiScraper from './leumi';
 
 export default function createScraper(options) {
   switch (options.companyId) {
@@ -19,6 +20,8 @@ export default function createScraper(options) {
       return new IsracardScraper(options);
     case 'amex':
       return new AmexScraper(options);
+    case 'leumi':
+      return new LeumiScraper(options);
     default:
       throw new Error(`unknown company id ${options.companyId}`);
   }

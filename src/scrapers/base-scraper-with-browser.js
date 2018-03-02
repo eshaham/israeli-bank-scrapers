@@ -9,7 +9,18 @@ const VIEWPORT_WIDTH = 1024;
 const VIEWPORT_HEIGHT = 768;
 
 function getKeyByValue(object, value) {
-  return Object.keys(object).find(key => object[key] === value);
+  return Object.keys(object).find((key) => {
+    const compareTo = object[key];
+    let result = false;
+
+    if (compareTo instanceof RegExp) {
+      result = compareTo.test(value);
+    } else if (typeof compareTo === 'string') {
+      result = value === compareTo;
+    }
+
+    return result;
+  });
 }
 
 function handleLoginResult(scraper, loginResult) {
@@ -94,7 +105,6 @@ class BaseScraperWithBrowser extends BaseScraper {
     } else {
       await waitForNavigation(this.page);
     }
-
     const current = await getCurrentUrl(this.page, true);
     const loginResult = getKeyByValue(loginOptions.possibleResults, current);
     return handleLoginResult(this, loginResult);

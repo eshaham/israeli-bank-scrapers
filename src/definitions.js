@@ -25,4 +25,8 @@ export const SCRAPERS = {
     name: 'Amex',
     loginFields: ['id', 'card6Digits', PASSWORD_FIELD],
   },
+  leumi: {
+    name: 'Leumi',
+    loginFields: ['id', PASSWORD_FIELD],
+  },
 };
