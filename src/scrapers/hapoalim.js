@@ -27,8 +27,7 @@ function convertTransactions(txns) {
 async function fetchAccountData(page, options) {
   const apiSiteUrl = `${BASE_URL}/ServerServices`;
   const accountDataUrl = `${apiSiteUrl}/general/accounts`;
-  const accountInfo = await fetchGetWithinPage(page, accountDataUrl);
-  const accountNumber = `${accountInfo[0].bankNumber}-${accountInfo[0].branchNumber}-${accountInfo[0].accountNumber}`;
+  const accountsInfo = await fetchGetWithinPage(page, accountDataUrl);
 
   const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
   const startDate = options.startDate || defaultStartMoment.toDate();
@@ -36,25 +35,30 @@ async function fetchAccountData(page, options) {
 
   const startDateStr = startMoment.format(DATE_FORMAT);
   const endDateStr = moment().format(DATE_FORMAT);
-  const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
 
-  const txnsResult = await fetchGetWithinPage(page, txnsUrl);
+  const accounts = [];
+  for (let accountIndex = 0; accountIndex < accountsInfo.length; accountIndex += 1) {
+    const accountNumber = `${accountsInfo[accountIndex].bankNumber}-${accountsInfo[accountIndex].branchNumber}-${accountsInfo[accountIndex].accountNumber}`;
 
-  if (txnsResult.Error) {
-    return {
-      success: false,
-      errorType: 'generic',
-      errorMessage: txnsResult.Error.MsgText,
-    };
+    const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
+
+    let txns;
+    try {
+      const txnsResult = await fetchGetWithinPage(page, txnsUrl);
+      txns = convertTransactions(txnsResult.transactions);
+    } catch (err) {
+      txns = [];
+    }
+
+    accounts.push({
+      accountNumber,
+      txns,
+    });
   }
-  const txns = convertTransactions(txnsResult.transactions);
 
   const accountData = {
     success: true,
-    accounts: [{
-      accountNumber,
-      txns,
-    }],
+    accounts,
   };
 
   return accountData;
