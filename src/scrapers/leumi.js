@@ -53,7 +53,7 @@ function convertTransactions(txns) {
       originalCurrency: SHEKEL_CURRENCY,
       chargedAmount: amount,
       description: txn.description,
-      memo: txn.memo,
+      /* memo: txn.memo, TODO add this line to export transaction memo */
     };
   });
 }

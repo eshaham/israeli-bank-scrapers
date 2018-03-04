@@ -50,9 +50,11 @@ export async function exportAccountData(scraperId, account, saveLocation) {
       originalCurrency: txn.originalCurrency,
       chargedAmount: txn.chargedAmount,
       description: txn.description,
-      memo: txn.memo,
+      /* memo: txn.memo, TODO add this line to export transaction memo */
     }));
-  const fields = ['type', 'identifier', 'date', 'processedDate', 'originalAmount', 'originalCurrency', 'chargedAmount', 'description', 'memo'];
+
+  // TODO add 'memo' to the list of fields to save memo once added to the transaction item
+  const fields = ['type', 'identifier', 'date', 'processedDate', 'originalAmount', 'originalCurrency', 'chargedAmount', 'description'];
   const csv = json2csv({ data: txns, fields, withBOM: true });
   await writeFile(`${saveLocation}/${scraperId} (${account.accountNumber}).csv`, csv);
 }
