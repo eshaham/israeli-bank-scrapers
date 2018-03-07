@@ -24,6 +24,7 @@ const WITHDRAWAL_TYPE_CODE = '7';
 const INSTALLMENTS_TYPE_CODE = '8';
 const CANCEL_TYPE_CODE = '25';
 const WITHDRAWAL_TYPE_CODE_2 = '27';
+const REFUND_TYPE_CODE_2 = '76';
 
 function getBankDebitsUrl(accountId) {
   const toDate = new Date();
@@ -61,6 +62,7 @@ function convertTransactionType(txnType) {
     case CANCEL_TYPE_CODE:
     case WITHDRAWAL_TYPE_CODE:
     case WITHDRAWAL_TYPE_CODE_2:
+    case REFUND_TYPE_CODE_2:
       return NORMAL_TXN_TYPE;
     case INSTALLMENTS_TYPE_CODE:
       return INSTALLMENTS_TXN_TYPE;
@@ -95,8 +97,8 @@ function convertTransactions(txns) {
   return txns.map((txn) => {
     return {
       type: convertTransactionType(txn.TransType),
-      date: moment(txn.Date, DATE_FORMAT).toDate(),
-      processedDate: moment(txn.DebitDate, DATE_FORMAT).toDate(),
+      date: moment(txn.Date, DATE_FORMAT).toISOString(),
+      processedDate: moment(txn.DebitDate, DATE_FORMAT).toISOString(),
       originalAmount: -txn.Amount.Value,
       originalCurrency: convertCurrency(txn.Amount.Symbol),
       chargedAmount: -txn.DebitAmount.Value,

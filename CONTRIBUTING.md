@@ -31,9 +31,10 @@ Unless you plan to override the entire `login()` function, You can override this
 ```node
 function getPossibleLoginResults() {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = '<SUCCESS_URL>';
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = '<INVALID_PASSWORD_URL>';
-  urls[LOGIN_RESULT.CHANGE_PASSWORD] = '<CHANGE_PASSWORD_URL>';
+  // in case of multiple possible login results, add them to the arrays as items
+  urls[LOGIN_RESULT.SUCCESS] = ['<SUCCESS_URL>'];
+  urls[LOGIN_RESULT.INVALID_PASSWORD] = ['<INVALID_PASSWORD_URL>'];
+  urls[LOGIN_RESULT.CHANGE_PASSWORD] = ['<CHANGE_PASSWORD_URL>'];
   return urls;
 }
 

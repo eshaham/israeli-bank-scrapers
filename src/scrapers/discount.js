@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import moment from 'moment';
 
-import { BaseScraper, LOGIN_RESULT } from './base-scraper';
+import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { fetchGetWithinPage } from '../helpers/fetch';
@@ -18,8 +18,8 @@ function convertTransactions(txns, txnStatus) {
     return {
       type: NORMAL_TXN_TYPE,
       identifier: txn.OperationNumber,
-      date: moment(txn.OperationDate, DATE_FORMAT).toDate(),
-      processedDate: moment(txn.ValueDate, DATE_FORMAT).toDate(),
+      date: moment(txn.OperationDate, DATE_FORMAT).toISOString(),
+      processedDate: moment(txn.ValueDate, DATE_FORMAT).toISOString(),
       originalAmount: txn.OperationAmount,
       originalCurrency: 'ILS',
       chargedAmount: txn.OperationAmount,
@@ -79,9 +79,9 @@ async function navigateOrErrorLabel(page) {
 
 function getPossibleLoginResults() {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = `${BASE_URL}/apollo/core/templates/default/masterPage.html#/MY_ACCOUNT_HOMEPAGE`;
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = `${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/LOGIN_PAGE`;
-  urls[LOGIN_RESULT.CHANGE_PASSWORD] = `${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/PWD_RENEW`;
+  urls[LOGIN_RESULT.SUCCESS] = [`${BASE_URL}/apollo/core/templates/default/masterPage.html#/MY_ACCOUNT_HOMEPAGE`];
+  urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/LOGIN_PAGE`];
+  urls[LOGIN_RESULT.CHANGE_PASSWORD] = [`${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/PWD_RENEW`];
   return urls;
 }
 
@@ -93,7 +93,7 @@ function createLoginFields(credentials) {
   ];
 }
 
-class DiscountScraper extends BaseScraper {
+class DiscountScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials) {
     return {
       loginUrl: `${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/LOGIN_PAGE`,

@@ -2,9 +2,9 @@ import _ from 'lodash';
 import buildUrl from 'build-url';
 import moment from 'moment';
 
-import { BaseScraper, LOGIN_RESULT } from './base-scraper';
+import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
-import { SCRAPE_PROGRESS_TYPES, NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_KEYWORD, SHEKEL_CURRENCY, TRANSACTION_STATUS } from '../constants';
+import { SCRAPE_PROGRESS_TYPES, NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_KEYWORD, SHEKEL_CURRENCY, ALT_SHEKEL_CURRENCY, TRANSACTION_STATUS } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, filterOldTransactions } from '../helpers/transactions';
 
@@ -36,7 +36,7 @@ async function fetchAccounts(page, servicesUrl, monthMoment) {
         return {
           index: parseInt(cardCharge.cardIndex, 10),
           accountNumber: cardCharge.cardNumber,
-          processedDate: moment(cardCharge.billingDate, DATE_FORMAT).toDate(),
+          processedDate: moment(cardCharge.billingDate, DATE_FORMAT).toISOString(),
         };
       });
     }
@@ -59,7 +59,7 @@ function getTransactionsUrl(servicesUrl, monthMoment) {
 }
 
 function convertCurrency(currencyStr) {
-  if (currencyStr === SHEKEL_CURRENCY_KEYWORD) {
+  if (currencyStr === SHEKEL_CURRENCY_KEYWORD || currencyStr === ALT_SHEKEL_CURRENCY) {
     return SHEKEL_CURRENCY;
   }
   return currencyStr;
@@ -97,7 +97,7 @@ function convertTransactions(txns, processedDate) {
     return {
       type: getTransactionType(txn),
       identifier: isOutbound ? txn.voucherNumberRatzOutbound : txn.voucherNumberRatz,
-      date: txnMoment.toDate(),
+      date: txnMoment.toISOString(),
       processedDate,
       originalAmount: isOutbound ? -txn.dealSumOutbound : -txn.dealSum,
       originalCurrency: convertCurrency(txn.currencyId),
@@ -180,7 +180,7 @@ async function fetchAllTransactions(page, options, startMoment) {
   };
 }
 
-class IsracardAmexBaseScraper extends BaseScraper {
+class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
   constructor(options, baseUrl, companyCode) {
     const clonedOptions = Object.assign(options, {
       baseUrl,

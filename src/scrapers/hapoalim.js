@@ -1,7 +1,7 @@
 import moment from 'moment';
 
-import { BaseScraper, LOGIN_RESULT } from './base-scraper';
-import { waitForRedirect } from '../helpers/navigation';
+import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
+import { waitForRedirect, getCurrentUrl } from '../helpers/navigation';
 import { NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
 import { fetchGetWithinPage } from '../helpers/fetch';
 
@@ -14,8 +14,8 @@ function convertTransactions(txns) {
     return {
       type: NORMAL_TXN_TYPE,
       identifier: txn.referenceNumber,
-      date: moment(txn.eventDate, DATE_FORMAT).toDate(),
-      processedDate: moment(txn.valueDate, DATE_FORMAT).toDate(),
+      date: moment(txn.eventDate, DATE_FORMAT).toISOString(),
+      processedDate: moment(txn.valueDate, DATE_FORMAT).toISOString(),
       originalAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
       originalCurrency: 'ILS',
       chargedAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
@@ -26,10 +26,11 @@ function convertTransactions(txns) {
 }
 
 async function fetchAccountData(page, options) {
-  const apiSiteUrl = `${BASE_URL}/ServerServices`;
-  const accountDataUrl = `${apiSiteUrl}/general/accounts`;
-  const accountInfo = await fetchGetWithinPage(page, accountDataUrl);
-  const accountNumber = `${accountInfo[0].bankNumber}-${accountInfo[0].branchNumber}-${accountInfo[0].accountNumber}`;
+  const currentUrl = await getCurrentUrl(page, true);
+  const subfolder = (currentUrl.includes('portalserver')) ? 'portalserver' : 'ssb';
+  const apiSiteUrl = `${BASE_URL}/${subfolder}`;
+  const accountDataUrl = `${BASE_URL}/ServerServices/general/accounts`;
+  const accountsInfo = await fetchGetWithinPage(page, accountDataUrl);
 
   const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
   const startDate = options.startDate || defaultStartMoment.toDate();
@@ -37,25 +38,30 @@ async function fetchAccountData(page, options) {
 
   const startDateStr = startMoment.format(DATE_FORMAT);
   const endDateStr = moment().format(DATE_FORMAT);
-  const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
 
-  const txnsResult = await fetchGetWithinPage(page, txnsUrl);
+  const accounts = [];
+  for (let accountIndex = 0; accountIndex < accountsInfo.length; accountIndex += 1) {
+    const accountNumber = `${accountsInfo[accountIndex].bankNumber}-${accountsInfo[accountIndex].branchNumber}-${accountsInfo[accountIndex].accountNumber}`;
 
-  if (txnsResult.Error) {
-    return {
-      success: false,
-      errorType: 'generic',
-      errorMessage: txnsResult.Error.MsgText,
-    };
+    const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
+
+    let txns;
+    try {
+      const txnsResult = await fetchGetWithinPage(page, txnsUrl);
+      txns = convertTransactions(txnsResult.transactions);
+    } catch (err) {
+      txns = [];
+    }
+
+    accounts.push({
+      accountNumber,
+      txns,
+    });
   }
-  const txns = convertTransactions(txnsResult.transactions);
 
   const accountData = {
     success: true,
-    accounts: [{
-      accountNumber,
-      txns,
-    }],
+    accounts,
   };
 
   return accountData;
@@ -63,9 +69,9 @@ async function fetchAccountData(page, options) {
 
 function getPossibleLoginResults() {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = `${BASE_URL}/portalserver/HomePage`;
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = `${BASE_URL}/AUTHENTICATE/LOGON?flow=AUTHENTICATE&state=LOGON&errorcode=1.6&callme=false`;
-  urls[LOGIN_RESULT.CHANGE_PASSWORD] = `${BASE_URL}/MCP/START?flow=MCP&state=START&expiredDate=null`;
+  urls[LOGIN_RESULT.SUCCESS] = [`${BASE_URL}/portalserver/HomePage`, `${BASE_URL}/ng-portals-bt/rb/he/homepage`];
+  urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${BASE_URL}/AUTHENTICATE/LOGON?flow=AUTHENTICATE&state=LOGON&errorcode=1.6&callme=false`];
+  urls[LOGIN_RESULT.CHANGE_PASSWORD] = [`${BASE_URL}/MCP/START?flow=MCP&state=START&expiredDate=null`];
   return urls;
 }
 
@@ -76,7 +82,7 @@ function createLoginFields(credentials) {
   ];
 }
 
-class HapoalimScraper extends BaseScraper {
+class HapoalimScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials) {
     return {
       loginUrl: `${BASE_URL}/cgi-bin/poalwwwc?reqName=getLogonPage`,

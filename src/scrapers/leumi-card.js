@@ -1,7 +1,7 @@
 import buildUrl from 'build-url';
 import moment from 'moment';
 
-import { BaseScraper, LOGIN_RESULT } from './base-scraper';
+import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_SYMBOL, SHEKEL_CURRENCY, TRANSACTION_STATUS } from '../constants';
@@ -14,6 +14,7 @@ const NORMAL_TYPE_NAME = 'רגילה';
 const ATM_TYPE_NAME = 'חיוב עסקות מיידי';
 const INTERNET_SHOPPING_TYPE_NAME = 'אינטרנט/חו"ל';
 const INSTALLMENTS_TYPE_NAME = 'תשלומים';
+const MONTHLY_CHARGE_TYPE_NAME = 'חיוב חודשי';
 const ONE_MONTH_POSTPONED_TYPE_NAME = 'דחוי חודש';
 const TWO_MONTHS_POSTPONED_TYPE_NAME = 'דחוי חודשיים';
 
@@ -48,6 +49,7 @@ function getTransactionType(txnTypeStr) {
   switch (txnTypeStr.trim()) {
     case ATM_TYPE_NAME:
     case NORMAL_TYPE_NAME:
+    case MONTHLY_CHARGE_TYPE_NAME:
     case ONE_MONTH_POSTPONED_TYPE_NAME:
     case TWO_MONTHS_POSTPONED_TYPE_NAME:
     case INTERNET_SHOPPING_TYPE_NAME:
@@ -99,8 +101,8 @@ function convertTransactions(rawTxns) {
     const chargedAmountData = getAmountData(txn.chargedAmountStr);
     return {
       type: getTransactionType(txn.typeStr),
-      date: moment(txn.dateStr, DATE_FORMAT).toDate(),
-      processedDate: moment(txn.processedDateStr, DATE_FORMAT).toDate(),
+      date: moment(txn.dateStr, DATE_FORMAT).toISOString(),
+      processedDate: moment(txn.processedDateStr, DATE_FORMAT).toISOString(),
       originalAmount: -originalAmountData.amount,
       originalCurrency: originalAmountData.currency,
       chargedAmount: -chargedAmountData.amount,
@@ -246,8 +248,8 @@ async function getAccountData(page, options) {
 
 function getPossibleLoginResults() {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = `${BASE_URL}/Registred/HomePage.aspx`;
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = `${BASE_URL}/Anonymous/Login/CardHoldersLogin.aspx`;
+  urls[LOGIN_RESULT.SUCCESS] = [`${BASE_URL}/Registred/HomePage.aspx`];
+  urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${BASE_URL}/Anonymous/Login/CardHoldersLogin.aspx`];
   return urls;
 }
 
@@ -258,7 +260,7 @@ function createLoginFields(inputGroupName, credentials) {
   ];
 }
 
-class LeumiCardScraper extends BaseScraper {
+class LeumiCardScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials) {
     const inputGroupName = 'PlaceHolderMain_CardHoldersLogin1';
     return {

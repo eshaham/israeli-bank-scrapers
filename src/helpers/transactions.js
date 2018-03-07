@@ -1,4 +1,6 @@
 import moment from 'moment';
+import _ from 'lodash';
+
 import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE } from '../constants';
 
 function isNormalTransaction(txn) {
@@ -23,22 +25,14 @@ export function fixInstallments(txns) {
     if (isNonInitialInstallmentTransaction(clonedTxn)) {
       const dateMoment = moment(clonedTxn.date);
       const actualDateMoment = dateMoment.add(clonedTxn.installments.number - 1, 'month');
-      clonedTxn.date = actualDateMoment.toDate();
+      clonedTxn.date = actualDateMoment.toISOString();
     }
     return clonedTxn;
   });
 }
 
 export function sortTransactionsByDate(txns) {
-  const cloned = Array.from(txns);
-  cloned.sort((txn1, txn2) => {
-    if (txn1.date.getTime() === txn2.date.getTime()) {
-      return 0;
-    }
-    return txn1.date < txn2.date ? -1 : 1;
-  });
-
-  return cloned;
+  return _.sortBy(txns, ['date']);
 }
 
 export function filterOldTransactions(txns, startMoment, combineInstallments) {

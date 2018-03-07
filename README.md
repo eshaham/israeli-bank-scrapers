@@ -48,6 +48,7 @@ The definition of the `options` object is as follows:
   companyId: string, // mandatory; one of 'hapoalim', 'discount', 'leumiCard', 'isracard', 'amex'
   startDate: Date, // the date to fetch transactions from (can't be before the minimum allowed time difference for the scraper)
   combineInstallments: boolean, // if set to true, all installment transactions will be combine into the first one
+  showBrowser: boolean, // shows the browser while scraping, good for debugging (default false)
   verbose: boolean // include more debug info about in the output
 }
 ```
@@ -157,6 +158,12 @@ const credentials = {
 };
 ```
 This scraper supports fetching transaction from up to one year.
+
+# Known projects
+These are the projects known to be using this module:
+- [Israeli YNAB updater](https://github.com/eshaham/israeli-ynab-updater) - A command line tool for exporting banks data to CSVs, formatted specifically for [YNAB](https://www.youneedabudget.com)
+
+Built something interesting you want to share here? [Let me know](https://goo.gl/forms/5Fb9JAjvzMIpmzqo2).
 
 # License
 The MIT License
