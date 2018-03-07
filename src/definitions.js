@@ -5,6 +5,10 @@ export const SCRAPERS = {
     name: 'Bank Hapoalim',
     loginFields: ['userCode', PASSWORD_FIELD],
   },
+  leumi: {
+    name: 'Bank Leumi',
+    loginFields: ['username', PASSWORD_FIELD],
+  },
   discount: {
     name: 'Discount Bank',
     loginFields: ['id', PASSWORD_FIELD, 'num'],
