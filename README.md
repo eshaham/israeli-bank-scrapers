@@ -61,8 +61,8 @@ The structure of the result object is as follows:
     txns: [{
       type: string, // can be either 'normal' or 'installments'
       identifier: int, // only if exists
-      date: Date,
-      processedDate: Date,
+      date: string, // ISO date string
+      processedDate: string, // ISO date string
       originalAmount: double,
       originalCurrency: string,
       chargedAmount: double,
