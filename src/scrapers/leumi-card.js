@@ -4,7 +4,7 @@ import moment from 'moment';
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
-import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_SYMBOL, SHEKEL_CURRENCY } from '../constants';
+import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_SYMBOL, SHEKEL_CURRENCY, TRANSACTION_STATUS } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
 
@@ -106,6 +106,7 @@ function convertTransactions(rawTxns) {
       chargedAmount: -chargedAmountData.amount,
       description: txn.description.trim(),
       installments: getInstallmentsInfo(txn.comments),
+      status: TRANSACTION_STATUS.COMPLETED,
     };
   });
 }

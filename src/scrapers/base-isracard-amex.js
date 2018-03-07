@@ -4,7 +4,7 @@ import moment from 'moment';
 
 import { BaseScraper, LOGIN_RESULT } from './base-scraper';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
-import { SCRAPE_PROGRESS_TYPES, NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_KEYWORD, SHEKEL_CURRENCY } from '../constants';
+import { SCRAPE_PROGRESS_TYPES, NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_KEYWORD, SHEKEL_CURRENCY, TRANSACTION_STATUS } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, filterOldTransactions } from '../helpers/transactions';
 
@@ -104,6 +104,7 @@ function convertTransactions(txns, processedDate) {
       chargedAmount: isOutbound ? -txn.paymentSumOutbound : -txn.paymentSum,
       description: isOutbound ? txn.fullSupplierNameOutbound : txn.fullSupplierNameHeb,
       installments: getInstallmentsInfo(txn),
+      status: TRANSACTION_STATUS.COMPLETED,
     };
   });
 }
