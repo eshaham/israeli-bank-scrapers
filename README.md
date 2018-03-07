@@ -158,6 +158,16 @@ const credentials = {
 ```
 This scraper supports fetching transaction from up to one year.
 
+## Bank Leumi scraper
+This scraper expects the following credentials object:
+```node
+const credentials = {
+  username: <user name>,
+  password: <user password>
+};
+```
+This scraper supports fetching transaction from up to one year.
+
 # Known projects
 These are the projects known to be using this module:
 - [Israeli YNAB updater](https://github.com/eshaham/israeli-ynab-updater) - A command line tool for exporting banks data to CSVs, formatted specifically for [YNAB](https://www.youneedabudget.com)
