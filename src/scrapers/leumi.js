@@ -59,7 +59,6 @@ function convertTransactions(txns) {
 }
 
 async function fetchTransactionsForAccount(page, startDate) {
-  // TODO provide actual start date
   await dropdownSelect(page, 'select#ddlTransactionPeriod', '004');
   await waitUntilElementFound(page, 'select#ddlTransactionPeriod');
   await fillInput(
@@ -136,7 +135,6 @@ async function getAccountData(page, options) {
   const startDate = options.startDate || defaultStartMoment.toDate();
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-
   const url = getTransactionsUrl();
   await page.goto(url);
 
@@ -149,7 +147,6 @@ async function getAccountData(page, options) {
 }
 
 async function waitForPostLogin(page) {
-  // TODO replace 'div.leumi-container' with wait for SOA page
   // TODO check for condition to provide new password
   return Promise.race([
     waitUntilElementFound(page, 'div.leumi-container', true),

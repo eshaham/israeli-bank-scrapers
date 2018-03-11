@@ -3,18 +3,11 @@ async function waitUntilElementFound(page, elementSelector, onlyVisible = false,
 }
 
 async function fillInput(page, inputSelector, inputValue) {
-  await page.$eval(inputSelector, (input) => { input.value = ''; }); // eslint-disable-line no-param-reassign
+  await page.$eval(inputSelector, (input) => {
+    const inputElement = input;
+    inputElement.value = '';
+  });
   await page.type(inputSelector, inputValue);
-}
-
-async function fillInputs(page, fields) {
-  const modified = [...fields];
-  const input = modified.shift();
-  await fillInput(page, input.selector, input.value);
-  if (modified.length) {
-    return fillInputs(page, modified);
-  }
-  return null;
 }
 
 async function clickButton(page, buttonSelector) {
@@ -26,4 +19,4 @@ async function dropdownSelect(page, selectSelector, value) {
   await page.select(selectSelector, value);
 }
 
-export { waitUntilElementFound, fillInput, clickButton, fillInputs, dropdownSelect };
+export { waitUntilElementFound, fillInput, clickButton, dropdownSelect };
