@@ -105,6 +105,16 @@ const credentials = {
 ```
 This scraper supports fetching transaction from up to one year.
 
+## Bank Leumi scraper
+This scraper expects the following credentials object:
+```node
+const credentials = {
+  username: <user name>,
+  password: <user password>
+};
+```
+This scraper supports fetching transaction from up to one year.
+
 ## Discount scraper
 This scraper expects the following credentials object:
 ```node

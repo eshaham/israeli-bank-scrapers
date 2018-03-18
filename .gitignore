@@ -59,3 +59,6 @@ typings/
 
 # NPM package related
 lib/
+
+# IDEs
+.idea

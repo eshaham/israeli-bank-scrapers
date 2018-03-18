@@ -10,7 +10,8 @@ import {
   SHEKEL_CURRENCY_SYMBOL,
   SHEKEL_CURRENCY,
   DOLLAR_CURRENCY_SYMBOL,
-  DOLLAR_CURRENCY } from '../constants';
+  DOLLAR_CURRENCY,
+} from '../constants';
 import { fetchGet, fetchPost } from '../helpers/fetch';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
 
