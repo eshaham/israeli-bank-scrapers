@@ -72,7 +72,7 @@ async function fetchTransactionsForAccount(page, startDate) {
   await clickButton(page, 'a#lnkCtlExpandAll');
 
   const selectedSnifAccount = await page.$eval('#ddlAccounts_m_ddl option[selected="selected"]', (option) => {
-    return $(option).text(); // eslint-disable-line no-undef
+    return option.innerText;
   });
 
   const accountNumber = selectedSnifAccount.replace('/', '_');
