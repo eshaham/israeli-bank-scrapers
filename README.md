@@ -10,6 +10,7 @@ Israeli Bank Scrapers - Get closer to your own data
 What you can find here is scrapers for all major Israeli banks and credit card companies. That's the plan at least.
 Currently only the following banks are supported:
 - Bank Hapoalim (thanks [@sebikaplun](https://github.com/sebikaplun))
+- Leumi Bank (thanks [@esakal](https://github.com/esakal))
 - Discount Bank
 - Visa Cal (thanks [@nirgin](https://github.com/nirgin))
 - Leumi Card
