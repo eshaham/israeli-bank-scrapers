@@ -1,0 +1,9 @@
+# ignore all files to prevent commiting a file with institude credentials
+/*
+
+
+# accept tpl files and some helper files
+!.gitignore
+!*.tpl.js
+!/helpers
+

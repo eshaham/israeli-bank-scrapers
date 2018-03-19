@@ -10,7 +10,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint src",
-    "prepublishOnly": "babel src --out-dir lib"
+    "prepublishOnly": "babel src --out-dir lib",
+    "build:playground": "babel src --out-dir .tmp/src && babel playground --out-dir .tmp/playground"
   },
   "pre-commit": [
     "lint"
@@ -44,6 +45,7 @@
   "dependencies": {
     "babel-polyfill": "^6.26.0",
     "build-url": "^1.0.10",
+    "json2csv": "^3.11.5",
     "lodash": "^4.17.5",
     "moment": "^2.21.0",
     "node-fetch": "^2.1.1",
