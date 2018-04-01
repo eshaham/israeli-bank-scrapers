@@ -2,7 +2,7 @@ import buildUrl from 'build-url';
 import moment from 'moment';
 
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
-import { waitForRedirect } from '../helpers/navigation';
+import { waitForNavigationAndDomLoad, waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_SYMBOL, SHEKEL_CURRENCY } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
@@ -112,63 +112,114 @@ function convertTransactions(rawTxns) {
   });
 }
 
+async function getCardContainers(page) {
+  return page.$$('.infoList_holder');
+}
+
+async function getCardContainer(page, cardIndex) {
+  const cardContainers = await getCardContainers(page);
+  const cardContainer = cardContainers[cardIndex];
+  return cardContainer;
+}
+
+async function getCardSections(page, cardIndex) {
+  const cardContainer = await getCardContainer(page, cardIndex);
+  const cardSections = await cardContainer.$$('.NotPaddingTable');
+  return cardSections;
+}
+
+async function getAccountNumber(page, cardIndex) {
+  const cardContainer = await getCardContainer(page, cardIndex);
+  const infoContainer = await cardContainer.$('.creditCard_name');
+  const numberListItems = await infoContainer.$$('li');
+  const numberListItem = numberListItems[1];
+  const accountNumberStr = await page.evaluate((li) => {
+    return li.innerText;
+  }, numberListItem);
+  const accountNumber = accountNumberStr.replace('(', '').replace(')', '');
+
+  return accountNumber;
+}
+
+async function getTransactionsForSection(page, cardIndex, sectionIndex) {
+  const cardSections = await getCardSections(page, cardIndex);
+  const txnsRows = await cardSections[sectionIndex].$$('.jobs_regular');
+  const txns = [];
+  for (let txnIndex = 0; txnIndex < txnsRows.length; txnIndex += 1) {
+    const txnColumns = await txnsRows[txnIndex].$$('td');
+
+    const typeStr = await page.evaluate((td) => {
+      return td.innerText;
+    }, txnColumns[4]);
+
+    const dateStr = await page.evaluate((td) => {
+      return td.innerText;
+    }, txnColumns[1]);
+
+    const processedDateStr = await page.evaluate((td) => {
+      return td.innerText;
+    }, txnColumns[2]);
+
+    const originalAmountStr = await page.evaluate((td) => {
+      return td.innerText;
+    }, txnColumns[5]);
+
+    const chargedAmountStr = await page.evaluate((td) => {
+      return td.innerText;
+    }, txnColumns[6]);
+
+    const description = await page.evaluate((td) => {
+      return td.innerText;
+    }, txnColumns[3]);
+
+    const comments = await page.evaluate((td) => {
+      return td.innerText;
+    }, txnColumns[7]);
+
+    const txn = {
+      typeStr,
+      dateStr,
+      processedDateStr,
+      originalAmountStr,
+      chargedAmountStr,
+      description,
+      comments,
+    };
+    txns.push(txn);
+  }
+
+  return txns;
+}
+
+async function getNextPageButtonForSection(page, cardIndex, sectionIndex) {
+  const cardSections = await getCardSections(page, cardIndex);
+  return cardSections[sectionIndex].$('.difdufLeft a');
+}
+
 async function getCurrentTransactions(page) {
   const result = {};
-  const cardContainers = await page.$$('.infoList_holder');
+  const cardContainers = await getCardContainers(page);
+
   for (let cardIndex = 0; cardIndex < cardContainers.length; cardIndex += 1) {
-    const cardContainer = cardContainers[cardIndex];
-    const infoContainer = await cardContainer.$('.creditCard_name');
-    const numberListItems = await infoContainer.$$('li');
-    const numberListItem = numberListItems[1];
-    const accountNumberStr = await page.evaluate((li) => {
-      return li.innerText;
-    }, numberListItem);
-    const accountNumber = accountNumberStr.replace('(', '').replace(')', '');
-
     const txns = [];
-    const txnsRows = await cardContainer.$$('.jobs_regular');
-    for (let txnIndex = 0; txnIndex < txnsRows.length; txnIndex += 1) {
-      const txnColumns = await txnsRows[txnIndex].$$('td');
-      const typeStr = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[4]);
+    const cardSections = await getCardSections(page, cardIndex);
+    for (let sectionIndex = 0; sectionIndex < cardSections.length; sectionIndex += 1) {
+      let hasNext = true;
+      while (hasNext) {
+        const sectionTxns = await getTransactionsForSection(page, cardIndex, sectionIndex);
+        txns.push(...sectionTxns);
 
-      const dateStr = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[1]);
-
-      const processedDateStr = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[2]);
-
-      const originalAmountStr = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[5]);
-
-      const chargedAmountStr = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[6]);
-
-      const description = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[3]);
-
-      const comments = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[7]);
-
-      const txn = {
-        typeStr,
-        dateStr,
-        processedDateStr,
-        originalAmountStr,
-        chargedAmountStr,
-        description,
-        comments,
-      };
-      txns.push(txn);
+        const nextPageBtn = await getNextPageButtonForSection(page, cardIndex, sectionIndex);
+        if (nextPageBtn) {
+          await nextPageBtn.click();
+          await waitForNavigationAndDomLoad(page);
+        } else {
+          hasNext = false;
+        }
+      }
     }
 
+    const accountNumber = await getAccountNumber(page, cardIndex);
     result[accountNumber] = convertTransactions(txns);
   }
 
