@@ -18,6 +18,8 @@ import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '
 const BASE_URL = 'https://restservices.cal-online.co.il/Cal4U';
 const DATE_FORMAT = 'DD/MM/YYYY';
 
+const PASSWORD_EXPIRED_MSG = 'תוקף הסיסמא פג';
+
 const NORMAL_TYPE_CODE = '5';
 const REFUND_TYPE_CODE = '6';
 const WITHDRAWAL_TYPE_CODE = '7';
@@ -201,6 +203,13 @@ class VisaCalScraper extends BaseScraper {
 
     const authResponse = await fetchPost(authUrl, authRequest);
     if (!authResponse || !authResponse.AuthenticationToken) {
+      if (_.get(authResponse, 'Response.Status.Message') === PASSWORD_EXPIRED_MSG) {
+        return {
+          success: false,
+          errorType: LOGIN_RESULT.CHANGE_PASSWORD,
+        };
+      }
+
       throw new Error('unknown error during login');
     }
 
