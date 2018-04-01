@@ -24,6 +24,15 @@ function convertTransactions(txns) {
   });
 }
 
+function fetchSummary(balanceCreditResult) {
+  return {
+    balance: parseFloat(parseFloat(balanceCreditResult.currentBalance).toFixed(2)),
+    creditLimit: parseFloat(parseFloat(balanceCreditResult.currentAccountLimitsAmount).toFixed(2)),
+    creditUtilization: parseFloat(parseFloat(balanceCreditResult.withdrawalBalance).toFixed(2)),
+    balanceCurrency: 'ILS',
+  };
+}
+
 async function fetchAccountData(page, options) {
   const currentUrl = await getCurrentUrl(page, true);
   const subfolder = (currentUrl.includes('portalserver')) ? 'portalserver' : 'ssb';
@@ -42,8 +51,16 @@ async function fetchAccountData(page, options) {
   for (let accountIndex = 0; accountIndex < accountsInfo.length; accountIndex += 1) {
     const accountNumber = `${accountsInfo[accountIndex].bankNumber}-${accountsInfo[accountIndex].branchNumber}-${accountsInfo[accountIndex].accountNumber}`;
 
-    const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
+    const balanceCreditUrl = `${apiSiteUrl}/current-account/composite/balanceAndCreditLimit?accountId=${accountNumber}&view=details`;
+    let summary;
+    try {
+      const balanceCreditResult = await fetchGetWithinPage(page, balanceCreditUrl);
+      summary = fetchSummary(balanceCreditResult);
+    } catch (e) {
+      summary = {};
+    }
 
+    const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
     let txns;
     try {
       const txnsResult = await fetchGetWithinPage(page, txnsUrl);
@@ -54,6 +71,7 @@ async function fetchAccountData(page, options) {
 
     accounts.push({
       accountNumber,
+      summary,
       txns,
     });
   }
