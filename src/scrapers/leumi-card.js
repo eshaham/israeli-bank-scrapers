@@ -279,9 +279,6 @@ async function fetchTransactions(page, options) {
 }
 
 async function getAccountData(page, options) {
-  const accountsPage = `${BASE_URL}/Registred/Transactions/ChargesDeals.aspx`;
-  await page.goto(accountsPage);
-
   const results = await fetchTransactions(page, options);
   const accounts = Object.keys(results).map((accountNumber) => {
     return {
