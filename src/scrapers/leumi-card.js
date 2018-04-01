@@ -3,7 +3,7 @@ import moment from 'moment';
 
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { waitForNavigationAndDomLoad, waitForRedirect } from '../helpers/navigation';
-import { waitUntilElementFound, clickButton } from '../helpers/elements-interactions';
+import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_SYMBOL, SHEKEL_CURRENCY } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
@@ -288,89 +288,12 @@ async function fetchTransactions(browser, options) {
   return allResults;
 }
 
-async function fetchAccountsData(browser) {
-  function parseFloatValue(value) {
-    return parseFloat(value.replace(',', ''));
-  }
-
-  const homePageUrl = `${BASE_URL}/Registred/HomePage.aspx`;
-  const page = await browser.newPage();
-  await page.goto(homePageUrl);
-
-  const results = {};
-  await clickButton(page, 'a#PlaceHolderMain_HomePage1_HomePageTop1_lnkShowListDisplay');
-  await page.waitForNavigation({ waitUntil: 'load' });
-
-  const cardsContainers = await page.$$('.newCreditCard_bg');
-  for (let cardIndex = 0; cardIndex < cardsContainers.length; cardIndex += 1) {
-    const cardContainer = cardsContainers[cardIndex];
-
-    const cardTop = await cardContainer.$('.newCreditCard_top');
-    const cardNameContainer = await cardTop.$('.creditCard_name');
-    const cardNameDetails = await cardNameContainer.$$('li');
-    const cardName = await page.evaluate((li) => {
-      return li.innerText;
-    }, cardNameDetails[0]);
-    const cardNumber = await page.evaluate((li) => {
-      return li.innerText.replace('(', '').replace(')', '');
-    }, cardNameDetails[1]);
-
-    const cardMiddle = await cardContainer.$('.newCreditCard_listInfo');
-    const cardCharges = await cardMiddle.$$('ul');
-    const cardLocalCharges = await cardCharges[0].$$('li');
-    const cardLocalChargeSpans = await cardLocalCharges[0].$$('span');
-    const chargedDate = await page.evaluate((span) => {
-      return span.innerText.replace('(', '').replace(')', '').trim();
-    }, cardLocalChargeSpans[1]);
-    let chargedDayOfMonth = null;
-    if (chargedDate.length > 0) {
-      chargedDayOfMonth = parseInt(chargedDate.split('/')[0], 10);
-    }
-    let upcomingCardLocalCharge = await page.evaluate((span, SHEKEL_CURRENCY_SYMBOL) => {
-      return span.innerText.replace(SHEKEL_CURRENCY_SYMBOL, '').trim();
-    }, cardLocalChargeSpans[0], SHEKEL_CURRENCY_SYMBOL);
-    upcomingCardLocalCharge = parseFloatValue(upcomingCardLocalCharge);
-
-    const cardForeignCharges = await cardCharges[1].$$('li');
-    const cardForeignChargeSpans = await cardForeignCharges[0].$$('span');
-    let upcomingCardForeignChargeInILS = await page.evaluate((span, SHEKEL_CURRENCY_SYMBOL) => {
-      return span.innerText.replace(SHEKEL_CURRENCY_SYMBOL, '').trim();
-    }, cardForeignChargeSpans[0], SHEKEL_CURRENCY_SYMBOL);
-    upcomingCardForeignChargeInILS = parseFloatValue(upcomingCardForeignChargeInILS);
-
-    const cardBottom = await cardContainer.$('.creditFrame_width');
-    const creditUtilizationContainer = await cardBottom.$('a');
-    let creditUtilization = await page.evaluate((a, SHEKEL_CURRENCY_SYMBOL) => {
-      return a.innerText.replace(SHEKEL_CURRENCY_SYMBOL, '').trim();
-    }, creditUtilizationContainer, SHEKEL_CURRENCY_SYMBOL);
-    creditUtilization = parseFloatValue(creditUtilization);
-
-    const creditLimitContainer = await cardBottom.$('span');
-    let creditLimit = await page.evaluate((span, SHEKEL_CURRENCY_SYMBOL) => {
-      return span.innerText.replace('מתוך', '').replace(SHEKEL_CURRENCY_SYMBOL, '').trim();
-    }, creditLimitContainer, SHEKEL_CURRENCY_SYMBOL);
-    creditLimit = parseFloatValue(creditLimit);
-
-    results[cardNumber] = {
-      cardName,
-      creditLimit,
-      creditUtilization,
-      chargedDayOfMonth,
-      upcomingCardLocalCharge,
-      upcomingCardForeignChargeInILS,
-    };
-  }
-  return results;
-}
-
 async function getAccountData(browser, options) {
-  const accountsData = await fetchAccountsData(browser);
-  const txnsResults = await fetchTransactions(browser, options);
-  const accounts = Object.keys(txnsResults).map((accountNumber) => {
+  const results = await fetchTransactions(browser, options);
+  const accounts = Object.keys(results).map((accountNumber) => {
     return {
       accountNumber,
-      summary: accountsData[accountNumber],
-      txns: txnsResults[accountNumber],
+      txns: results[accountNumber],
     };
   });
 
