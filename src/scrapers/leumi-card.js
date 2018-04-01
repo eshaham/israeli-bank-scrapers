@@ -226,11 +226,16 @@ async function getCurrentTransactions(page) {
   return result;
 }
 
-async function fetchTransactionsForMonth(page, monthMoment) {
+async function fetchTransactionsForMonth(browser, monthMoment) {
+  const page = await browser.newPage();
+
   const url = getTransactionsUrl(monthMoment);
   await page.goto(url);
 
-  return getCurrentTransactions(page);
+  const txns = await getCurrentTransactions(page);
+  await page.close();
+
+  return txns;
 }
 
 function addResult(allResults, result) {
@@ -254,20 +259,25 @@ function prepareTransactions(txns, startMoment, combineInstallments) {
   return clonedTxns;
 }
 
-async function fetchTransactions(page, options) {
+async function fetchTransactions(browser, options) {
   const defaultStartMoment = moment().subtract(1, 'years');
   const startDate = options.startDate || defaultStartMoment.toDate();
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
   const allMonths = getAllMonthMoments(startMoment, false);
 
-  let allResults = {};
+  const allTasks = [];
   for (let i = 0; i < allMonths.length; i += 1) {
-    const result = await fetchTransactionsForMonth(page, allMonths[i]);
-    allResults = addResult(allResults, result);
+    const task = fetchTransactionsForMonth(browser, allMonths[i]);
+    allTasks.push(task);
   }
 
-  const result = await fetchTransactionsForMonth(page);
-  allResults = addResult(allResults, result);
+  const task = fetchTransactionsForMonth(browser);
+  allTasks.push(task);
+
+  const allTasksResults = await Promise.all(allTasks);
+  const allResults = allTasksResults.reduce((obj, result) => {
+    return addResult(obj, result);
+  }, {});
 
   Object.keys(allResults).forEach((accountNumber) => {
     let txns = allResults[accountNumber];
@@ -278,11 +288,8 @@ async function fetchTransactions(page, options) {
   return allResults;
 }
 
-async function getAccountData(page, options) {
-  const accountsPage = `${BASE_URL}/Registred/Transactions/ChargesDeals.aspx`;
-  await page.goto(accountsPage);
-
-  const results = await fetchTransactions(page, options);
+async function getAccountData(browser, options) {
+  const results = await fetchTransactions(browser, options);
   const accounts = Object.keys(results).map((accountNumber) => {
     return {
       accountNumber,
@@ -323,7 +330,7 @@ class LeumiCardScraper extends BaseScraperWithBrowser {
   }
 
   async fetchData() {
-    return getAccountData(this.page, this.options);
+    return getAccountData(this.browser, this.options);
   }
 }
 
