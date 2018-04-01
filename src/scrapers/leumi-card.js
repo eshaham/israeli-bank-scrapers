@@ -107,6 +107,7 @@ function convertTransactions(rawTxns) {
       originalCurrency: originalAmountData.currency,
       chargedAmount: -chargedAmountData.amount,
       description: txn.description.trim(),
+      memo: txn.comments,
       installments: getInstallmentsInfo(txn.comments),
     };
   });
