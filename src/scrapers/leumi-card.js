@@ -126,47 +126,50 @@ async function getCurrentTransactions(page) {
     const accountNumber = accountNumberStr.replace('(', '').replace(')', '');
 
     const txns = [];
-    const txnsRows = await cardContainer.$$('.jobs_regular');
-    for (let txnIndex = 0; txnIndex < txnsRows.length; txnIndex += 1) {
-      const txnColumns = await txnsRows[txnIndex].$$('td');
-      const typeStr = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[4]);
+    const cardSections = await cardContainer.$$('.NotPaddingTable');
+    for (let sectionIndex = 0; sectionIndex < cardSections.length; sectionIndex += 1) {
+      const txnsRows = await cardSections[sectionIndex].$$('.jobs_regular');
+      for (let txnIndex = 0; txnIndex < txnsRows.length; txnIndex += 1) {
+        const txnColumns = await txnsRows[txnIndex].$$('td');
+        const typeStr = await page.evaluate((td) => {
+          return td.innerText;
+        }, txnColumns[4]);
 
-      const dateStr = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[1]);
+        const dateStr = await page.evaluate((td) => {
+          return td.innerText;
+        }, txnColumns[1]);
 
-      const processedDateStr = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[2]);
+        const processedDateStr = await page.evaluate((td) => {
+          return td.innerText;
+        }, txnColumns[2]);
 
-      const originalAmountStr = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[5]);
+        const originalAmountStr = await page.evaluate((td) => {
+          return td.innerText;
+        }, txnColumns[5]);
 
-      const chargedAmountStr = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[6]);
+        const chargedAmountStr = await page.evaluate((td) => {
+          return td.innerText;
+        }, txnColumns[6]);
 
-      const description = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[3]);
+        const description = await page.evaluate((td) => {
+          return td.innerText;
+        }, txnColumns[3]);
 
-      const comments = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[7]);
+        const comments = await page.evaluate((td) => {
+          return td.innerText;
+        }, txnColumns[7]);
 
-      const txn = {
-        typeStr,
-        dateStr,
-        processedDateStr,
-        originalAmountStr,
-        chargedAmountStr,
-        description,
-        comments,
-      };
-      txns.push(txn);
+        const txn = {
+          typeStr,
+          dateStr,
+          processedDateStr,
+          originalAmountStr,
+          chargedAmountStr,
+          description,
+          comments,
+        };
+        txns.push(txn);
+      }
     }
 
     result[accountNumber] = convertTransactions(txns);
