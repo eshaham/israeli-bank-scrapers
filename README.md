@@ -68,6 +68,7 @@ The structure of the result object is as follows:
       originalCurrency: string,
       chargedAmount: double,
       description: string,
+      memo: string, // can be null or empty
       installments: {
         number: int, // the current installment number
         total: int, // the total number of installments
@@ -126,6 +127,9 @@ const credentials = {
 };
 ```
 This scraper supports fetching transaction from up to one year (minus 1 day).
+
+### Known Limitations
+- Missing memo field
 
 ## Visa Cal scraper
 This scraper expects the following credentials object:
