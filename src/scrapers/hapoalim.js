@@ -2,7 +2,7 @@ import moment from 'moment';
 
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { waitForRedirect, getCurrentUrl } from '../helpers/navigation';
-import { NORMAL_TXN_TYPE } from '../constants';
+import { NORMAL_TXN_TYPE, SHEKEL_CURRENCY } from '../constants';
 import { fetchGetWithinPage } from '../helpers/fetch';
 
 const BASE_URL = 'https://login.bankhapoalim.co.il';
@@ -24,12 +24,12 @@ function convertTransactions(txns) {
   });
 }
 
-function fetchSummary(balanceCreditResult) {
+function convertToSummary(balanceCreditResult) {
   return {
-    balance: parseFloat(parseFloat(balanceCreditResult.currentBalance).toFixed(2)),
-    creditLimit: parseFloat(parseFloat(balanceCreditResult.currentAccountLimitsAmount).toFixed(2)),
-    creditUtilization: parseFloat(parseFloat(balanceCreditResult.withdrawalBalance).toFixed(2)),
-    balanceCurrency: 'ILS',
+    balance: balanceCreditResult.currentBalance,
+    creditLimit: balanceCreditResult.currentAccountLimitsAmount,
+    creditUtilization: balanceCreditResult.creditLimitUtilizationAmount,
+    balanceCurrency: SHEKEL_CURRENCY,
   };
 }
 
@@ -55,25 +55,25 @@ async function fetchAccountData(page, options) {
     let summary;
     try {
       const balanceCreditResult = await fetchGetWithinPage(page, balanceCreditUrl);
-      summary = fetchSummary(balanceCreditResult);
+      summary = convertToSummary(balanceCreditResult);
+
+      const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
+      let txns;
+      try {
+        const txnsResult = await fetchGetWithinPage(page, txnsUrl);
+        txns = convertTransactions(txnsResult.transactions);
+      } catch (err) {
+        txns = [];
+      }
+
+      accounts.push({
+        accountNumber,
+        summary,
+        txns,
+      });
     } catch (e) {
-      summary = {};
+      // won't push the account to accountData
     }
-
-    const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
-    let txns;
-    try {
-      const txnsResult = await fetchGetWithinPage(page, txnsUrl);
-      txns = convertTransactions(txnsResult.transactions);
-    } catch (err) {
-      txns = [];
-    }
-
-    accounts.push({
-      accountNumber,
-      summary,
-      txns,
-    });
   }
 
   const accountData = {
