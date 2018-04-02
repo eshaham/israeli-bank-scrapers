@@ -62,8 +62,8 @@ You can override this async function however way you want, as long as your retur
     txns: [{
       type: string, // can be either 'normal' or 'installments'
       identifier: int, // only if exists
-      date: Date,
-      processedDate: Date,
+      date: string, // ISO date string
+      processedDate: string, // ISO date string
       originalAmount: double,
       originalCurrency: string,
       chargedAmount: double,

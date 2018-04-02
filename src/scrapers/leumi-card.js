@@ -2,7 +2,7 @@ import buildUrl from 'build-url';
 import moment from 'moment';
 
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
-import { waitForRedirect } from '../helpers/navigation';
+import { waitForNavigationAndDomLoad, waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_SYMBOL, SHEKEL_CURRENCY, TRANSACTION_STATUS } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
@@ -113,74 +113,130 @@ function convertTransactions(rawTxns) {
   });
 }
 
+async function getCardContainers(page) {
+  return page.$$('.infoList_holder');
+}
+
+async function getCardContainer(page, cardIndex) {
+  const cardContainers = await getCardContainers(page);
+  const cardContainer = cardContainers[cardIndex];
+  return cardContainer;
+}
+
+async function getCardSections(page, cardIndex) {
+  const cardContainer = await getCardContainer(page, cardIndex);
+  const cardSections = await cardContainer.$$('.NotPaddingTable');
+  return cardSections;
+}
+
+async function getAccountNumber(page, cardIndex) {
+  const cardContainer = await getCardContainer(page, cardIndex);
+  const infoContainer = await cardContainer.$('.creditCard_name');
+  const numberListItems = await infoContainer.$$('li');
+  const numberListItem = numberListItems[1];
+  const accountNumberStr = await page.evaluate((li) => {
+    return li.innerText;
+  }, numberListItem);
+  const accountNumber = accountNumberStr.replace('(', '').replace(')', '');
+
+  return accountNumber;
+}
+
+async function getTransactionsForSection(page, cardIndex, sectionIndex) {
+  const cardSections = await getCardSections(page, cardIndex);
+  const txnsRows = await cardSections[sectionIndex].$$('.jobs_regular');
+  const txns = [];
+  for (let txnIndex = 0; txnIndex < txnsRows.length; txnIndex += 1) {
+    const txnColumns = await txnsRows[txnIndex].$$('td');
+
+    const typeStr = await page.evaluate((td) => {
+      return td.innerText;
+    }, txnColumns[4]);
+
+    const dateStr = await page.evaluate((td) => {
+      return td.innerText;
+    }, txnColumns[1]);
+
+    const processedDateStr = await page.evaluate((td) => {
+      return td.innerText;
+    }, txnColumns[2]);
+
+    const originalAmountStr = await page.evaluate((td) => {
+      return td.innerText;
+    }, txnColumns[5]);
+
+    const chargedAmountStr = await page.evaluate((td) => {
+      return td.innerText;
+    }, txnColumns[6]);
+
+    const description = await page.evaluate((td) => {
+      return td.innerText;
+    }, txnColumns[3]);
+
+    const comments = await page.evaluate((td) => {
+      return td.innerText;
+    }, txnColumns[7]);
+
+    const txn = {
+      typeStr,
+      dateStr,
+      processedDateStr,
+      originalAmountStr,
+      chargedAmountStr,
+      description,
+      comments,
+    };
+    txns.push(txn);
+  }
+
+  return txns;
+}
+
+async function getNextPageButtonForSection(page, cardIndex, sectionIndex) {
+  const cardSections = await getCardSections(page, cardIndex);
+  return cardSections[sectionIndex].$('.difdufLeft a');
+}
+
 async function getCurrentTransactions(page) {
   const result = {};
-  const cardContainers = await page.$$('.infoList_holder');
+  const cardContainers = await getCardContainers(page);
+
   for (let cardIndex = 0; cardIndex < cardContainers.length; cardIndex += 1) {
-    const cardContainer = cardContainers[cardIndex];
-    const infoContainer = await cardContainer.$('.creditCard_name');
-    const numberListItems = await infoContainer.$$('li');
-    const numberListItem = numberListItems[1];
-    const accountNumberStr = await page.evaluate((li) => {
-      return li.innerText;
-    }, numberListItem);
-    const accountNumber = accountNumberStr.replace('(', '').replace(')', '');
-
     const txns = [];
-    const txnsRows = await cardContainer.$$('.jobs_regular');
-    for (let txnIndex = 0; txnIndex < txnsRows.length; txnIndex += 1) {
-      const txnColumns = await txnsRows[txnIndex].$$('td');
-      const typeStr = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[4]);
+    const cardSections = await getCardSections(page, cardIndex);
+    for (let sectionIndex = 0; sectionIndex < cardSections.length; sectionIndex += 1) {
+      let hasNext = true;
+      while (hasNext) {
+        const sectionTxns = await getTransactionsForSection(page, cardIndex, sectionIndex);
+        txns.push(...sectionTxns);
 
-      const dateStr = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[1]);
-
-      const processedDateStr = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[2]);
-
-      const originalAmountStr = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[5]);
-
-      const chargedAmountStr = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[6]);
-
-      const description = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[3]);
-
-      const comments = await page.evaluate((td) => {
-        return td.innerText;
-      }, txnColumns[7]);
-
-      const txn = {
-        typeStr,
-        dateStr,
-        processedDateStr,
-        originalAmountStr,
-        chargedAmountStr,
-        description,
-        comments,
-      };
-      txns.push(txn);
+        const nextPageBtn = await getNextPageButtonForSection(page, cardIndex, sectionIndex);
+        if (nextPageBtn) {
+          await nextPageBtn.click();
+          await waitForNavigationAndDomLoad(page);
+        } else {
+          hasNext = false;
+        }
+      }
     }
 
+    const accountNumber = await getAccountNumber(page, cardIndex);
     result[accountNumber] = convertTransactions(txns);
   }
 
   return result;
 }
 
-async function fetchTransactionsForMonth(page, monthMoment) {
+async function fetchTransactionsForMonth(browser, monthMoment) {
+  const page = await browser.newPage();
+
   const url = getTransactionsUrl(monthMoment);
   await page.goto(url);
 
-  return getCurrentTransactions(page);
+  const txns = await getCurrentTransactions(page);
+  await page.close();
+
+  return txns;
 }
 
 function addResult(allResults, result) {
@@ -204,20 +260,25 @@ function prepareTransactions(txns, startMoment, combineInstallments) {
   return clonedTxns;
 }
 
-async function fetchTransactions(page, options) {
+async function fetchTransactions(browser, options) {
   const defaultStartMoment = moment().subtract(1, 'years');
   const startDate = options.startDate || defaultStartMoment.toDate();
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
   const allMonths = getAllMonthMoments(startMoment, false);
 
-  let allResults = {};
+  const allTasks = [];
   for (let i = 0; i < allMonths.length; i += 1) {
-    const result = await fetchTransactionsForMonth(page, allMonths[i]);
-    allResults = addResult(allResults, result);
+    const task = fetchTransactionsForMonth(browser, allMonths[i]);
+    allTasks.push(task);
   }
 
-  const result = await fetchTransactionsForMonth(page);
-  allResults = addResult(allResults, result);
+  const task = fetchTransactionsForMonth(browser);
+  allTasks.push(task);
+
+  const allTasksResults = await Promise.all(allTasks);
+  const allResults = allTasksResults.reduce((obj, result) => {
+    return addResult(obj, result);
+  }, {});
 
   Object.keys(allResults).forEach((accountNumber) => {
     let txns = allResults[accountNumber];
@@ -228,11 +289,8 @@ async function fetchTransactions(page, options) {
   return allResults;
 }
 
-async function getAccountData(page, options) {
-  const accountsPage = `${BASE_URL}/Registred/Transactions/ChargesDeals.aspx`;
-  await page.goto(accountsPage);
-
-  const results = await fetchTransactions(page, options);
+async function getAccountData(browser, options) {
+  const results = await fetchTransactions(browser, options);
   const accounts = Object.keys(results).map((accountNumber) => {
     return {
       accountNumber,
@@ -273,7 +331,7 @@ class LeumiCardScraper extends BaseScraperWithBrowser {
   }
 
   async fetchData() {
-    return getAccountData(this.page, this.options);
+    return getAccountData(this.browser, this.options);
   }
 }
 

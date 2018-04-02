@@ -9,7 +9,20 @@ const VIEWPORT_WIDTH = 1024;
 const VIEWPORT_HEIGHT = 768;
 
 function getKeyByValue(object, value) {
-  return Object.keys(object).find(key => object[key].includes(value));
+  return Object.keys(object).find((key) => {
+    const compareTo = object[key];
+    let result = false;
+
+    if (compareTo instanceof RegExp) {
+      result = compareTo.test(value);
+    } else if (compareTo instanceof Array) {
+      result = compareTo.includes(value);
+    } else {
+      result = value === compareTo;
+    }
+
+    return result;
+  });
 }
 
 function handleLoginResult(scraper, loginResult) {
@@ -50,7 +63,12 @@ class BaseScraperWithBrowser extends BaseScraper {
       env = Object.assign({ DEBUG: '*' }, process.env);
     }
     this.browser = await puppeteer.launch({ env, headless: !this.options.showBrowser });
-    this.page = await this.browser.newPage();
+    const pages = await this.browser.pages();
+    if (pages.length) {
+      [this.page] = pages;
+    } else {
+      this.page = await this.browser.newPage();
+    }
     await this.page.setViewport({
       width: VIEWPORT_WIDTH,
       height: VIEWPORT_HEIGHT,
