@@ -167,9 +167,11 @@ async function fetchTransactionsForAccount(page, startDate) {
 
   const accountNumber = selectedSnifAccount.replace('/', '_');
 
+  const pendingTxns = await extractPendingTransactionsFromPage(page);
+  const completedTxns = await extractCompletedTransactionsFromPage(page);
   const txns = [
-    ...await extractPendingTransactionsFromPage(page),
-    ...await extractCompletedTransactionsFromPage(page),
+    ...pendingTxns,
+    ...completedTxns,
   ];
 
   return {
