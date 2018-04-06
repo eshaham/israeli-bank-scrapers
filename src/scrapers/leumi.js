@@ -53,7 +53,7 @@ function convertTransactions(txns) {
       originalCurrency: SHEKEL_CURRENCY,
       chargedAmount: amount,
       description: txn.description,
-      /* memo: txn.memo, TODO add this line to export transaction memo */
+      memo: txn.memo,
     };
   });
 }
@@ -114,7 +114,7 @@ async function fetchTransactionsForAccount(page, startDate) {
       txns.push(changedTransaction);
     } else if (element.classList.includes('tdDepositRowAdded')) {
       const changedTransaction = txns.pop();
-      changedTransaction.memo = element.innerText;
+      changedTransaction.memo = (element.innerText || '').trim();
       txns.push(changedTransaction);
     }
   }
