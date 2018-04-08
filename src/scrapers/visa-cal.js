@@ -11,6 +11,7 @@ import {
   SHEKEL_CURRENCY,
   DOLLAR_CURRENCY_SYMBOL,
   DOLLAR_CURRENCY,
+  TRANSACTION_STATUS,
 } from '../constants';
 import { fetchGet, fetchPost } from '../helpers/fetch';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
@@ -107,6 +108,7 @@ function convertTransactions(txns) {
       chargedAmount: -txn.DebitAmount.Value,
       description: txn.MerchantDetails.Name,
       installments: getInstallmentsInfo(txn),
+      status: TRANSACTION_STATUS.COMPLETED,
     };
   });
 }

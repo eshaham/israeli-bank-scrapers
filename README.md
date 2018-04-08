@@ -71,8 +71,9 @@ The structure of the result object is as follows:
       installments: {
         number: int, // the current installment number
         total: int, // the total number of installments
-      }
-    }],  
+      },
+      status: string //can either be 'completed' or 'pending'
+    }],
   }],
   errorType: "invalidPassword"|"changePassword"|"timeout"|"generic", // only on success=false
   errorMessage: string, // only on success=false
