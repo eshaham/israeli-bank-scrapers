@@ -154,7 +154,7 @@ async function fetchTransactionsForAccount(page, startDate) {
   await fillInput(
     page,
     'input#dtFromDate_textBox',
-    startDate.format('DD/MM/YY'),
+    startDate.format(DATE_FORMAT),
   );
   await clickButton(page, 'input#btnDisplayDates');
   await waitForNavigation(page);
