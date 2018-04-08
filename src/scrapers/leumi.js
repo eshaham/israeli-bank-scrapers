@@ -52,30 +52,15 @@ function convertTransactions(txns) {
       originalAmount: amount,
       originalCurrency: SHEKEL_CURRENCY,
       chargedAmount: amount,
+      status: txn.status,
       description: txn.description,
       /* memo: txn.memo, TODO add this line to export transaction memo */
     };
   });
 }
 
-async function fetchTransactionsForAccount(page, startDate) {
-  await dropdownSelect(page, 'select#ddlTransactionPeriod', '004');
-  await waitUntilElementFound(page, 'select#ddlTransactionPeriod');
-  await fillInput(
-    page,
-    'input#dtFromDate_textBox',
-    startDate.format('DD/MM/YY'),
-  );
-  await clickButton(page, 'input#btnDisplayDates');
-  await waitForNavigation(page);
-  await waitUntilElementFound(page, 'table#WorkSpaceBox table#ctlActivityTable');
-  await clickButton(page, 'a#lnkCtlExpandAll');
-
-  const selectedSnifAccount = await page.$eval('#ddlAccounts_m_ddl option[selected="selected"]', (option) => {
-    return (option.innerText || '').trim().replace(/&lrm;|\u200E/gi, '');
-  });
-
-  const accountNumber = selectedSnifAccount.replace('/', '_');
+async function extractCompletedTransactionsFromPage(page) {
+  const txns = [];
 
   const tdsValues = await page.$$eval('#WorkSpaceBox #ctlActivityTable tr td', (tds) => {
     return tds.map(td =>
@@ -85,14 +70,13 @@ async function fetchTransactionsForAccount(page, startDate) {
       }));
   });
 
-  const txns = [];
   for (const element of tdsValues) {
     if (element.classList.includes('ExtendedActivityColumnDate')) {
-      const newTransaction = {};
+      const newTransaction = { status: 'completed' };
       newTransaction.date = (element.innerText || '').trim();
       txns.push(newTransaction);
     } else if (element.classList.includes('ActivityTableColumn1LTR')
-        || element.classList.includes('ActivityTableColumn1')) {
+      || element.classList.includes('ActivityTableColumn1')) {
       const changedTransaction = txns.pop();
       changedTransaction.description = element.innerText;
       txns.push(changedTransaction);
@@ -118,6 +102,77 @@ async function fetchTransactionsForAccount(page, startDate) {
       txns.push(changedTransaction);
     }
   }
+
+  return txns;
+}
+
+async function extractPendingTransactionsFromPage(page) {
+  const txns = [];
+
+  const tdsValues = await page.$$eval('#WorkSpaceBox #trTodayActivityNapaTableUpper tr td', (tds) => {
+    return tds.map(td =>
+      ({
+        classList: td.getAttribute('class'),
+        innerText: td.innerText,
+      }));
+  });
+
+  for (const element of tdsValues) {
+    if (element.classList.includes('Colume1Width')) {
+      const newTransaction = { status: 'pending' };
+      newTransaction.date = (element.innerText || '').trim();
+      txns.push(newTransaction);
+    } else if (element.classList.includes('Colume2Width')) {
+      const changedTransaction = txns.pop();
+      changedTransaction.description = element.innerText;
+      txns.push(changedTransaction);
+    } else if (element.classList.includes('Colume3Width')) {
+      const changedTransaction = txns.pop();
+      changedTransaction.reference = element.innerText;
+      txns.push(changedTransaction);
+    } else if (element.classList.includes('Colume4Width')) {
+      const changedTransaction = txns.pop();
+      changedTransaction.debit = element.innerText;
+      txns.push(changedTransaction);
+    } else if (element.classList.includes('Colume5Width')) {
+      const changedTransaction = txns.pop();
+      changedTransaction.credit = element.innerText;
+      txns.push(changedTransaction);
+    } else if (element.classList.includes('Colume6Width')) {
+      const changedTransaction = txns.pop();
+      changedTransaction.balance = element.innerText;
+      txns.push(changedTransaction);
+    }
+  }
+
+  return txns;
+}
+
+async function fetchTransactionsForAccount(page, startDate) {
+  await dropdownSelect(page, 'select#ddlTransactionPeriod', '004');
+  await waitUntilElementFound(page, 'select#ddlTransactionPeriod');
+  await fillInput(
+    page,
+    'input#dtFromDate_textBox',
+    startDate.format(DATE_FORMAT),
+  );
+  await clickButton(page, 'input#btnDisplayDates');
+  await waitForNavigation(page);
+  await waitUntilElementFound(page, 'table#WorkSpaceBox table#ctlActivityTable');
+  await clickButton(page, 'a#lnkCtlExpandAll');
+
+  const selectedSnifAccount = await page.$eval('#ddlAccounts_m_ddl option[selected="selected"]', (option) => {
+    return option.innerText;
+  });
+
+  const accountNumber = selectedSnifAccount.replace('/', '_');
+
+  const pendingTxns = await extractPendingTransactionsFromPage(page);
+  const completedTxns = await extractCompletedTransactionsFromPage(page);
+  const txns = [
+    ...pendingTxns,
+    ...completedTxns,
+  ];
 
   return {
     accountNumber,
