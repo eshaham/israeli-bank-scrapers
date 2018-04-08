@@ -114,7 +114,7 @@ async function fetchTransactionsForAccount(page, startDate) {
       txns.push(changedTransaction);
     } else if (element.classList.includes('tdDepositRowAdded')) {
       const changedTransaction = txns.pop();
-      changedTransaction.memo = element.innerText;
+      changedTransaction.memo = (element.innerText || '').trim();
       txns.push(changedTransaction);
     }
   }
