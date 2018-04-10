@@ -307,6 +307,7 @@ async function getAccountData(browser, options) {
 function getPossibleLoginResults() {
   const urls = {};
   urls[LOGIN_RESULT.SUCCESS] = [`${BASE_URL}/Registred/HomePage.aspx`];
+  urls[LOGIN_RESULT.CHANGE_PASSWORD] = [`${BASE_URL}/Anonymous/Login/PasswordExpired.aspx`];
   urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${BASE_URL}/Anonymous/Login/CardHoldersLogin.aspx`];
   return urls;
 }
