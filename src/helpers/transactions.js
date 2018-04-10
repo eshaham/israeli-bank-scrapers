@@ -39,7 +39,7 @@ export function filterOldTransactions(txns, startMoment, combineInstallments) {
   return txns.filter((txn) => {
     const combineNeededAndInitialOrNormal =
       combineInstallments && (isNormalTransaction(txn) || isInitialInstallmentTransaction(txn));
-    return (!combineInstallments && startMoment.isSameOrBefore(txn.processedDate)) ||
+    return (!combineInstallments && startMoment.isSameOrBefore(txn.date)) ||
            (combineNeededAndInitialOrNormal && startMoment.isSameOrBefore(txn.date));
   });
 }
