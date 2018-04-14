@@ -84,7 +84,7 @@ async function readPage(page) {
         changedTransaction.credit = innerText;
       } else if (classList.includes('debit')) {
         changedTransaction.debit = innerText;
-      } else if (classList.includes('balanc')) {
+      } else if (classList.includes('balance')) {
         changedTransaction.balance = innerText;
       }
       txns.push(changedTransaction);
@@ -134,7 +134,7 @@ async function fetchTransactionsForAccount(page, startDate) {
       await waitUntilElementFound(page, 'table#dataTable077');
     }
   }
-  console.log(txns);
+
   return {
     accountNumber,
     txns: convertTransactions(txns.slice(1)), // Remove first line which is "opening balance"
