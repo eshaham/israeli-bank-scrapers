@@ -1,2 +1,5 @@
 # Remove ES6 source
 src/
+
+# Remove Playground
+playground/
