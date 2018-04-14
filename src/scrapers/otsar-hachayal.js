@@ -142,7 +142,7 @@ async function fetchTransactionsForAccount(page, startDate) {
   const accountNmbr = await page.$eval('.acc_num', (span) => {
     return span.innerText;
   });
-  const accountNumber = `${snifNmbr}-${accountNmbr}`;
+  const accountNumber = `14-${snifNmbr}-${accountNmbr}`;
   // Search for relavant transaction from startDate
   await clickButton(page, '#tabHeader4');
   await fillInput(
