@@ -153,23 +153,26 @@ async function fetchTransactionsForAccount(page, startDate) {
 
   await clickButton(page, '#fibi_tab_dates .fibi_btn:nth-child(2)');
   await waitForNavigation(page);
-  await waitUntilElementFound(page, 'table#dataTable077');
+  await waitUntilElementFound(page, 'table#dataTable077, #NO_DATA077');
   let hasNextPage = true;
   let txns = [];
 
-  // Scape transactions (this maybe spanned on multiple pages)
-  while (hasNextPage) {
-    const pageTxns = await readPage(page);
-    txns = txns.concat(pageTxns);
-    const button = await page.$('#Npage');
-    hasNextPage = false;
-    if (button != null) {
-      hasNextPage = true;
-    }
-    if (hasNextPage) {
-      await clickButton(page, '#Npage');
-      await waitForNavigation(page);
-      await waitUntilElementFound(page, 'table#dataTable077');
+  const noTransactionElm = await page.$('#NO_DATA077');
+  if (noTransactionElm == null) {
+    // Scape transactions (this maybe spanned on multiple pages)
+    while (hasNextPage) {
+      const pageTxns = await readPage(page);
+      txns = txns.concat(pageTxns);
+      const button = await page.$('#Npage');
+      hasNextPage = false;
+      if (button != null) {
+        hasNextPage = true;
+      }
+      if (hasNextPage) {
+        await clickButton(page, '#Npage');
+        await waitForNavigation(page);
+        await waitUntilElementFound(page, 'table#dataTable077');
+      }
     }
   }
 
