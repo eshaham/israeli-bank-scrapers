@@ -25,9 +25,18 @@ function convertTransactions(txns) {
   });
 }
 
+function getSubFolder(currentUrl) {
+  if (currentUrl.includes('portalserver')) {
+    return 'portalserver';
+  } else if (currentUrl.includes('ng-portals')) {
+    return 'ServerServices';
+  }
+  return 'ssb';
+}
+
 async function fetchAccountData(page, options) {
   const currentUrl = await getCurrentUrl(page, true);
-  const subfolder = (currentUrl.includes('portalserver')) ? 'portalserver' : 'ssb';
+  const subfolder = getSubFolder(currentUrl);
   const apiSiteUrl = `${BASE_URL}/${subfolder}`;
   const accountDataUrl = `${BASE_URL}/ServerServices/general/accounts`;
   const accountsInfo = await fetchGetWithinPage(page, accountDataUrl);
@@ -45,13 +54,8 @@ async function fetchAccountData(page, options) {
 
     const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
 
-    let txns;
-    try {
-      const txnsResult = await fetchGetWithinPage(page, txnsUrl);
-      txns = convertTransactions(txnsResult.transactions);
-    } catch (err) {
-      txns = [];
-    }
+    const txnsResult = await fetchGetWithinPage(page, txnsUrl);
+    const txns = convertTransactions(txnsResult.transactions);
 
     accounts.push({
       accountNumber,
@@ -69,7 +73,7 @@ async function fetchAccountData(page, options) {
 
 function getPossibleLoginResults() {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = [`${BASE_URL}/portalserver/HomePage`, `${BASE_URL}/ng-portals-bt/rb/he/homepage`];
+  urls[LOGIN_RESULT.SUCCESS] = [`${BASE_URL}/portalserver/HomePage`, `${BASE_URL}/ng-portals-bt/rb/he/homepage`, `${BASE_URL}/ng-portals/rb/he/homepage`];
   urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${BASE_URL}/AUTHENTICATE/LOGON?flow=AUTHENTICATE&state=LOGON&errorcode=1.6&callme=false`];
   urls[LOGIN_RESULT.CHANGE_PASSWORD] = [`${BASE_URL}/MCP/START?flow=MCP&state=START&expiredDate=null`];
   return urls;
