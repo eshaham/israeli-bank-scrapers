@@ -1,5 +1,7 @@
 Israeli Bank Scrapers - Get closer to your own data
 ========
+<img src="./logo.png" width="100" height="100" alt="Logo" align="left" />
+
 [![NPM](https://nodei.co/npm/israeli-bank-scrapers.png)](https://nodei.co/npm/israeli-bank-scrapers/)
 
 [![npm version](https://badge.fury.io/js/israeli-bank-scrapers.svg)](https://badge.fury.io/js/israeli-bank-scrapers)
