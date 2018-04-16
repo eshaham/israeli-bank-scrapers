@@ -2,7 +2,7 @@ import moment from 'moment';
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { dropdownSelect, fillInput, clickButton, waitUntilElementFound } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
-import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE } from '../constants';
+import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
 
 const BASE_URL = 'https://hb2.bankleumi.co.il/';
 const DATE_FORMAT = 'DD/MM/YY';
@@ -72,7 +72,7 @@ async function extractCompletedTransactionsFromPage(page) {
 
   for (const element of tdsValues) {
     if (element.classList.includes('ExtendedActivityColumnDate')) {
-      const newTransaction = { status: 'completed' };
+      const newTransaction = { status: TRANSACTION_STATUS.COMPLETED };
       newTransaction.date = (element.innerText || '').trim();
       txns.push(newTransaction);
     } else if (element.classList.includes('ActivityTableColumn1LTR')
@@ -119,7 +119,7 @@ async function extractPendingTransactionsFromPage(page) {
 
   for (const element of tdsValues) {
     if (element.classList.includes('Colume1Width')) {
-      const newTransaction = { status: 'pending' };
+      const newTransaction = { status: TRANSACTION_STATUS.PENDING };
       newTransaction.date = (element.innerText || '').trim();
       txns.push(newTransaction);
     } else if (element.classList.includes('Colume2Width')) {

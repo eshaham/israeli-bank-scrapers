@@ -35,6 +35,6 @@ export const NAVIGATION_ERRORS = {
 export const GENERAL_ERROR = 'GENERAL_ERROR';
 
 export const TRANSACTION_STATUS = {
-  COMPLETED: 'COMPLETED',
-  PENDING: 'PENDING',
+  COMPLETED: 'completed',
+  PENDING: 'pending',
 };
