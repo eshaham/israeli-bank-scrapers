@@ -1,6 +1,6 @@
 import moment from 'moment';
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
-import { waitForRedirect, waitForNavigation } from '../helpers/navigation';
+import { waitForNavigation } from '../helpers/navigation';
 import { fillInput, clickButton, waitUntilElementFound } from '../helpers/elements-interactions';
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, SHEKEL_CURRENCY_SYMBOL } from '../constants';
 
@@ -204,13 +204,21 @@ async function getAccountData(page, options) {
   };
 }
 
+async function waitForPostLogin(page) {
+  // TODO check for condition to provide new password
+  return Promise.race([
+    waitUntilElementFound(page, 'div.lotusFrame', true),
+    waitUntilElementFound(page, 'div.fibi_pwd_error', true),
+  ]);
+}
+
 class OtsarHachayalScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials) {
     return {
       loginUrl: `${BASE_URL}/LoginServices/login2.do?bankId=OTSARPRTAL`,
       fields: createLoginFields(credentials),
       submitButtonSelector: '#login_btn',
-      postAction: async () => waitForRedirect(this.page),
+      postAction: async () => waitForPostLogin(this.page),
       possibleResults: getPossibleLoginResults(),
     };
   }
