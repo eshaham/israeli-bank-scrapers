@@ -33,9 +33,18 @@ function convertToSummary(balanceCreditResult) {
   };
 }
 
+function getSubFolder(currentUrl) {
+  if (currentUrl.includes('portalserver')) {
+    return 'portalserver';
+  } else if (currentUrl.includes('ng-portals')) {
+    return 'ServerServices';
+  }
+  return 'ssb';
+}
+
 async function fetchAccountData(page, options) {
   const currentUrl = await getCurrentUrl(page, true);
-  const subfolder = (currentUrl.includes('portalserver')) ? 'portalserver' : 'ssb';
+  const subfolder = getSubFolder(currentUrl);
   const apiSiteUrl = `${BASE_URL}/${subfolder}`;
   const accountDataUrl = `${BASE_URL}/ServerServices/general/accounts`;
   const accountsInfo = await fetchGetWithinPage(page, accountDataUrl);
@@ -53,12 +62,16 @@ async function fetchAccountData(page, options) {
 
     const balanceCreditUrl = `${apiSiteUrl}/current-account/composite/balanceAndCreditLimit?accountId=${accountNumber}&view=details`;
     let summary;
+    // used try... catch to avoid scraper failure in case of inactive accounts
+    // which copied between branches
     try {
       const balanceCreditResult = await fetchGetWithinPage(page, balanceCreditUrl);
       summary = convertToSummary(balanceCreditResult);
 
       const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
       let txns;
+      // used try... catch to avoid scraper failure in case of accounts
+      // without transactions in the time window
       try {
         const txnsResult = await fetchGetWithinPage(page, txnsUrl);
         txns = convertTransactions(txnsResult.transactions);
@@ -86,7 +99,7 @@ async function fetchAccountData(page, options) {
 
 function getPossibleLoginResults() {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = [`${BASE_URL}/portalserver/HomePage`, `${BASE_URL}/ng-portals-bt/rb/he/homepage`];
+  urls[LOGIN_RESULT.SUCCESS] = [`${BASE_URL}/portalserver/HomePage`, `${BASE_URL}/ng-portals-bt/rb/he/homepage`, `${BASE_URL}/ng-portals/rb/he/homepage`];
   urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${BASE_URL}/AUTHENTICATE/LOGON?flow=AUTHENTICATE&state=LOGON&errorcode=1.6&callme=false`];
   urls[LOGIN_RESULT.CHANGE_PASSWORD] = [`${BASE_URL}/MCP/START?flow=MCP&state=START&expiredDate=null`];
   return urls;
