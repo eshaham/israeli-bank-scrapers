@@ -22,24 +22,23 @@ function getTransactionsUrl() {
 
 function createLoginFields(credentials) {
   return [
-    { selector: '#username', value: credentials.userCode },
+    { selector: '#username', value: credentials.username },
     { selector: '#password', value: credentials.password },
   ];
 }
 
 function getAmountData(amountStr, hasCurrency = false) {
-  const amountStrCopy = amountStr.replace(',', '');
+  const amountStrCln = amountStr.replace(',', '');
   let currency = null;
   let amount = null;
   if (!hasCurrency) {
-    const amountStrCopy = amountStr.replace(',', '');
-    amount = parseFloat(amountStrCopy);
+    amount = parseFloat(amountStrCln);
     currency = SHEKEL_CURRENCY;
-  } else if (amountStrCopy.includes(SHEKEL_CURRENCY_SYMBOL)) {
-    amount = parseFloat(amountStrCopy.replace(SHEKEL_CURRENCY_SYMBOL, ''));
+  } else if (amountStrCln.includes(SHEKEL_CURRENCY_SYMBOL)) {
+    amount = parseFloat(amountStrCln.replace(SHEKEL_CURRENCY_SYMBOL, ''));
     currency = SHEKEL_CURRENCY;
   } else {
-    const parts = amountStrCopy.split(' ');
+    const parts = amountStrCln.split(' ');
     amount = parseFloat(parts[0]);
     [, currency] = parts;
   }
@@ -53,10 +52,10 @@ function getAmountData(amountStr, hasCurrency = false) {
 function convertTransactions(txns) {
   return txns.map((txn) => {
     const txnDate = moment(txn.date, DATE_FORMAT).toISOString();
-
     const credit = getAmountData(txn.credit).amount;
     const debit = getAmountData(txn.debit).amount;
     const amount = (Number.isNaN(credit) ? 0 : credit) - (Number.isNaN(debit) ? 0 : debit);
+
     return {
       type: NORMAL_TXN_TYPE,
       identifier: txn.reference ? parseInt(txn.reference, 10) : null,
@@ -70,7 +69,7 @@ function convertTransactions(txns) {
   });
 }
 
-async function readPage(page) {
+async function parseTransactionPage(page) {
   const tdsValues = await page.$$eval('#dataTable077 tbody tr td', (tds) => {
     return tds.map(td =>
       ({
@@ -107,42 +106,31 @@ async function readPage(page) {
 }
 
 async function getAccountSummary(page) {
-  let summary;
-  try {
-    const balanceElm = await page.$('.current_balance');
-    const balance = await balanceElm.getProperty('innerText');
-    const balanceValue = getAmountData(await balance.jsonValue(), true);
-    // TODO: Find the credit field in bank website (could see it in my account)
-    summary = {
-      balance: Number.isNaN(balanceValue.amount) ? 0 : balanceValue.amount,
-      creditLimit: 0.0,
-      creditUtilization: 0.0,
-      balanceCurrency: balanceValue.currency,
-    };
-  } catch (err) {
-    // Just in case
-    summary = {
-      balance: 0.0,
-      creditLimit: 0.0,
-      creditUtilization: 0.0,
-      balanceCurrency: 'ILS',
-    };
-  }
-  return summary;
+  const balanceElm = await page.$('.current_balance');
+  const balanceInnerTextElm = await balanceElm.getProperty('innerText');
+  const balanceText = await balanceInnerTextElm.jsonValue();
+  const balanceValue = getAmountData(balanceText, true);
+  // TODO: Find the credit field in bank website (could see it in my account)
+  return {
+    balance: Number.isNaN(balanceValue.amount) ? 0 : balanceValue.amount,
+    creditLimit: 0.0,
+    creditUtilization: 0.0,
+    balanceCurrency: balanceValue.currency,
+  };
 }
 
 async function fetchTransactionsForAccount(page, startDate) {
   const summary = await getAccountSummary(page);
   await waitUntilElementFound(page, 'input#fromDate');
   // Get account number
-  const snifNmbr = await page.$eval('.branch_num', (span) => {
+  const branchNum = await page.$eval('.branch_num', (span) => {
     return span.innerText;
   });
 
   const accountNmbr = await page.$eval('.acc_num', (span) => {
     return span.innerText;
   });
-  const accountNumber = `14-${snifNmbr}-${accountNmbr}`;
+  const accountNumber = `14-${branchNum}-${accountNmbr}`;
   // Search for relavant transaction from startDate
   await clickButton(page, '#tabHeader4');
   await fillInput(
@@ -161,7 +149,7 @@ async function fetchTransactionsForAccount(page, startDate) {
   if (noTransactionElm == null) {
     // Scape transactions (this maybe spanned on multiple pages)
     while (hasNextPage) {
-      const pageTxns = await readPage(page);
+      const pageTxns = await parseTransactionPage(page);
       txns = txns.concat(pageTxns);
       const button = await page.$('#Npage');
       hasNextPage = false;
@@ -212,7 +200,7 @@ async function waitForPostLogin(page) {
   ]);
 }
 
-class OtsarHachayalScraper extends BaseScraperWithBrowser {
+class OtsarHahayalScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials) {
     return {
       loginUrl: `${BASE_URL}/LoginServices/login2.do?bankId=OTSARPRTAL`,
@@ -227,4 +215,4 @@ class OtsarHachayalScraper extends BaseScraperWithBrowser {
   }
 }
 
-export default OtsarHachayalScraper;
+export default OtsarHahayalScraper;
