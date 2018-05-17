@@ -62,6 +62,6 @@ export default async function () {
   settings.saveLocation = result.saveLocation;
   await writeSettingsFile(settings);
 
-  console.log('playground options saved, to start scraping run "npm run playground"');
+  console.log('playground options saved, to start scraping run "npm start"');
 }
 
