@@ -1,4 +1,5 @@
 import moment from 'moment';
+import uuid4 from 'uuid/v4';
 
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { waitForRedirect, getCurrentUrl } from '../helpers/navigation';
@@ -42,7 +43,7 @@ async function fetchPoalimXSRFWithinPage(page, url, pageUuid) {
     headers['X-XSRF-TOKEN'] = XSRFCookie.value;
   }
   headers.pageUuid = pageUuid;
-  headers.uuid = 'd41f5901-30fb-4f30-b6d5-f9d2999d6ad8';
+  headers.uuid = uuid4();
   headers['Content-Type'] = 'application/json;charset=UTF-8';
   return fetchPostWithinPage(page, url, [], headers);
 }

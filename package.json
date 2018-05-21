@@ -47,6 +47,7 @@
     "lodash": "^4.17.5",
     "moment": "^2.21.0",
     "node-fetch": "^2.1.1",
-    "puppeteer": "^1.0.0"
+    "puppeteer": "^1.0.0",
+    "uuid": "^3.2.1"
   }
 }
