@@ -50,19 +50,24 @@ export async function fetchGetWithinPage(page, url) {
   }, url);
 }
 
-export async function fetchPostWithinPage(page, url, data) {
-  return page.evaluate((url, data) => {
+export async function fetchPostWithinPage(page, url, data, extraHeaders = {}) {
+  return page.evaluate((url, data, extraHeaders) => {
     return new Promise((resolve, reject) => {
       fetch(url, {
         method: 'POST',
         body: JSON.stringify(data),
         credentials: 'include',
-        headers: new Headers({ 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }),
+        headers: new Headers(Object.assign({ 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, extraHeaders)),
       }).then((result) => {
-        resolve(result.json());
+        if (result.status === 204) {
+          // No content response
+          resolve(null);
+        } else {
+          resolve(result.json());
+        }
       }).catch((e) => {
         reject(e);
       });
     });
-  }, url, data);
+  }, url, data, extraHeaders);
 }
