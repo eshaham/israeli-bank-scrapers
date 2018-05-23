@@ -71,8 +71,9 @@ You can override this async function however way you want, as long as your retur
       installments: {
         number: int, // the current installment number
         total: int, // the total number of installments
-      }
-    }],  
+      },
+      status: string //can either be 'completed' or 'pending'
+    }],
   }],
   errorType: "invalidPassword"|"changePassword"|"timeout"|"generic", // only on success=false
   errorMessage: string, // only on success=false

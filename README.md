@@ -1,5 +1,7 @@
 Israeli Bank Scrapers - Get closer to your own data
 ========
+<img src="./logo.png" width="100" height="100" alt="Logo" align="left" />
+
 [![NPM](https://nodei.co/npm/israeli-bank-scrapers.png)](https://nodei.co/npm/israeli-bank-scrapers/)
 
 [![npm version](https://badge.fury.io/js/israeli-bank-scrapers.svg)](https://badge.fury.io/js/israeli-bank-scrapers)
@@ -12,6 +14,7 @@ Currently only the following banks are supported:
 - Bank Hapoalim (thanks [@sebikaplun](https://github.com/sebikaplun))
 - Leumi Bank (thanks [@esakal](https://github.com/esakal))
 - Discount Bank
+- Otsar Hahayal Bank (thanks [@matanelgabsi](https://github.com/matanelgabsi))
 - Visa Cal (thanks [@nirgin](https://github.com/nirgin))
 - Leumi Card
 - Isracard
@@ -46,7 +49,7 @@ else {
 The definition of the `options` object is as follows:
 ```node
 {
-  companyId: string, // mandatory; one of 'hapoalim', 'discount', 'leumiCard', 'isracard', 'amex'
+  companyId: string, // mandatory; one of 'hapoalim', 'discount', 'otsarHahayal', 'leumiCard', 'isracard', 'amex'
   startDate: Date, // the date to fetch transactions from (can't be before the minimum allowed time difference for the scraper)
   combineInstallments: boolean, // if set to true, all installment transactions will be combine into the first one
   showBrowser: boolean, // shows the browser while scraping, good for debugging (default false)
@@ -72,8 +75,9 @@ The structure of the result object is as follows:
       installments: {
         number: int, // the current installment number
         total: int, // the total number of installments
-      }
-    }],  
+      },
+      status: string //can either be 'completed' or 'pending'
+    }],
   }],
   errorType: "invalidPassword"|"changePassword"|"timeout"|"generic", // only on success=false
   errorMessage: string, // only on success=false
@@ -130,6 +134,16 @@ This scraper supports fetching transaction from up to one year (minus 1 day).
 
 ### Known Limitations
 - Missing memo field
+
+## Bank Otsar Hahayal scraper
+This scraper expects the following credentials object:
+```node
+const credentials = {
+  username: <user name>,
+  password: <user password>
+};
+```
+This scraper supports fetching transaction from up to one year.
 
 ## Visa Cal scraper
 This scraper expects the following credentials object:

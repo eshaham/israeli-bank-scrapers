@@ -1,15 +1,19 @@
+import _ from 'lodash';
 import moment from 'moment';
 
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { fetchGetWithinPage } from '../helpers/fetch';
-import { NORMAL_TXN_TYPE } from '../constants';
+import { NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
 
 const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
 
-function convertTransactions(txns) {
+function convertTransactions(txns, txnStatus) {
+  if (!txns) {
+    return [];
+  }
   return txns.map((txn) => {
     return {
       type: NORMAL_TXN_TYPE,
@@ -20,6 +24,7 @@ function convertTransactions(txns) {
       originalCurrency: 'ILS',
       chargedAmount: txn.OperationAmount,
       description: txn.OperationDescriptionToDisplay,
+      status: txnStatus,
     };
   });
 }
@@ -36,7 +41,7 @@ async function fetchAccountData(page, options) {
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
   const startDateStr = startMoment.format(DATE_FORMAT);
-  const txnsUrl = `${apiSiteUrl}/lastTransactions/${accountNumber}/Date?IsCategoryDescCode=True&IsTransactionDetails=True&IsEventNames=True&FromDate=${startDateStr}`;
+  const txnsUrl = `${apiSiteUrl}/lastTransactions/${accountNumber}/Date?IsCategoryDescCode=True&IsTransactionDetails=True&IsEventNames=True&IsFutureTransactionFlag=True&FromDate=${startDateStr}`;
   const txnsResult = await fetchGetWithinPage(page, txnsUrl);
   if (txnsResult.Error) {
     return {
@@ -45,13 +50,19 @@ async function fetchAccountData(page, options) {
       errorMessage: txnsResult.Error.MsgText,
     };
   }
-  const txns = convertTransactions(txnsResult.CurrentAccountLastTransactions.OperationEntry);
+
+  const completedTxns = convertTransactions(
+    txnsResult.CurrentAccountLastTransactions.OperationEntry,
+    TRANSACTION_STATUS.COMPLETED,
+  );
+  const rawFutureTxns = _.get(txnsResult, 'CurrentAccountLastTransactions.FutureTransactionsBlock.FutureTransactionEntry');
+  const pendingTxns = convertTransactions(rawFutureTxns, TRANSACTION_STATUS.PENDING);
 
   const accountData = {
     success: true,
     accounts: [{
       accountNumber,
-      txns,
+      txns: [...completedTxns, ...pendingTxns],
     }],
   };
 

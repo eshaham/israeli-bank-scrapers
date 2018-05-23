@@ -4,7 +4,7 @@ import moment from 'moment';
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { waitForNavigationAndDomLoad, waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
-import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_SYMBOL, SHEKEL_CURRENCY } from '../constants';
+import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_SYMBOL, SHEKEL_CURRENCY, TRANSACTION_STATUS } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
 
@@ -109,6 +109,7 @@ function convertTransactions(rawTxns) {
       description: txn.description.trim(),
       memo: txn.comments,
       installments: getInstallmentsInfo(txn.comments),
+      status: TRANSACTION_STATUS.COMPLETED,
     };
   });
 }
@@ -307,6 +308,7 @@ async function getAccountData(browser, options) {
 function getPossibleLoginResults() {
   const urls = {};
   urls[LOGIN_RESULT.SUCCESS] = [`${BASE_URL}/Registred/HomePage.aspx`];
+  urls[LOGIN_RESULT.CHANGE_PASSWORD] = [`${BASE_URL}/Anonymous/Login/PasswordExpired.aspx`];
   urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${BASE_URL}/Anonymous/Login/CardHoldersLogin.aspx`];
   return urls;
 }

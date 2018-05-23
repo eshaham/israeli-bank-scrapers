@@ -42,7 +42,11 @@ export async function fetchGetWithinPage(page, url) {
       fetch(url, {
         credentials: 'include',
       }).then((result) => {
-        resolve(result.json());
+        if (result.status === 204) {
+          resolve(null);
+        } else {
+          resolve(result.json());
+        }
       }).catch((e) => {
         reject(e);
       });
