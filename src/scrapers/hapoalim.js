@@ -55,7 +55,7 @@ async function fetchAccountData(page, options) {
     const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
 
     const txnsResult = await fetchGetWithinPage(page, txnsUrl);
-    const txns = convertTransactions(txnsResult.transactions);
+    const txns = txnsResult ? convertTransactions(txnsResult.transactions) : [];
 
     accounts.push({
       accountNumber,
