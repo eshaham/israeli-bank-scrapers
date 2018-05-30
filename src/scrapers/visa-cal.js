@@ -97,6 +97,18 @@ function getInstallmentsInfo(txn) {
   };
 }
 
+function getTransactionMemo(txn) {
+  const { TransType: txnType, TransTypeDesc: txnTypeDescription } = txn;
+  switch (txnType) {
+    case NORMAL_TYPE_CODE:
+      return txnTypeDescription === 'רכישה רגילה' ? '' : txnTypeDescription;
+    case INSTALLMENTS_TYPE_CODE:
+      return `תשלום ${txn.CurrentPayment} מתוך ${txn.TotalPayments}`;
+    default:
+      return txn.TransTypeDesc;
+  }
+}
+
 function convertTransactions(txns) {
   return txns.map((txn) => {
     return {
@@ -107,6 +119,7 @@ function convertTransactions(txns) {
       originalCurrency: convertCurrency(txn.Amount.Symbol),
       chargedAmount: -txn.DebitAmount.Value,
       description: txn.MerchantDetails.Name,
+      memo: getTransactionMemo(txn),
       installments: getInstallmentsInfo(txn),
       status: TRANSACTION_STATUS.COMPLETED,
     };
