@@ -29,7 +29,7 @@ const INSTALLMENTS_TYPE_CODE = '8';
 const CANCEL_TYPE_CODE = '25';
 const WITHDRAWAL_TYPE_CODE_2 = '27';
 const REFUND_TYPE_CODE_2 = '76';
-const NORMAL_TYPE_CODE_3 = '67';
+const MEMBERSHIP_FEE_TYPE_CODE = '67';
 
 
 function getBankDebitsUrl(accountId) {
@@ -69,7 +69,7 @@ function convertTransactionType(txnType) {
     case WITHDRAWAL_TYPE_CODE:
     case WITHDRAWAL_TYPE_CODE_2:
     case REFUND_TYPE_CODE_2:
-    case NORMAL_TYPE_CODE_3:
+    case MEMBERSHIP_FEE_TYPE_CODE:
       return NORMAL_TXN_TYPE;
     case INSTALLMENTS_TYPE_CODE:
       return INSTALLMENTS_TXN_TYPE;
