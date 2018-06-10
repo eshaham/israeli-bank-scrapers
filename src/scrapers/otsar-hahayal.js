@@ -176,22 +176,6 @@ async function fetchTransactions(page, startDate) {
   return [await fetchTransactionsForAccount(page, startDate)];
 }
 
-async function getAccountData(page, options) {
-  const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
-  const startDate = options.startDate || defaultStartMoment.toDate();
-  const startMoment = moment.max(defaultStartMoment, moment(startDate));
-
-  const url = getTransactionsUrl();
-  await page.goto(url);
-
-  const accounts = await fetchTransactions(page, startMoment);
-
-  return {
-    success: true,
-    accounts,
-  };
-}
-
 async function waitForPostLogin(page) {
   // TODO check for condition to provide new password
   return Promise.race([
@@ -211,7 +195,19 @@ class OtsarHahayalScraper extends BaseScraperWithBrowser {
     };
   }
   async fetchData() {
-    return getAccountData(this.page, this.options);
+    const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
+    const startDate = this.options.startDate || defaultStartMoment.toDate();
+    const startMoment = moment.max(defaultStartMoment, moment(startDate));
+
+    const url = getTransactionsUrl();
+    await this.navigateTo(url);
+
+    const accounts = await fetchTransactions(this.page, startMoment);
+
+    return {
+      success: true,
+      accounts,
+    };
   }
 }
 
