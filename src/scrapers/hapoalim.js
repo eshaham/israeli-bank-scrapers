@@ -1,9 +1,10 @@
 import moment from 'moment';
+import uuid4 from 'uuid/v4';
 
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { waitForRedirect, getCurrentUrl } from '../helpers/navigation';
 import { NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
-import { fetchGetWithinPage } from '../helpers/fetch';
+import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 
 const BASE_URL = 'https://login.bankhapoalim.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
@@ -34,6 +35,19 @@ function getSubFolder(currentUrl) {
   return 'ssb';
 }
 
+async function fetchPoalimXSRFWithinPage(page, url, pageUuid) {
+  const cookies = await page.cookies();
+  const XSRFCookie = cookies.find(cookie => cookie.name === 'XSRF-TOKEN');
+  const headers = {};
+  if (XSRFCookie != null) {
+    headers['X-XSRF-TOKEN'] = XSRFCookie.value;
+  }
+  headers.pageUuid = pageUuid;
+  headers.uuid = uuid4();
+  headers['Content-Type'] = 'application/json;charset=UTF-8';
+  return fetchPostWithinPage(page, url, [], headers);
+}
+
 async function fetchAccountData(page, options) {
   const currentUrl = await getCurrentUrl(page, true);
   const subfolder = getSubFolder(currentUrl);
@@ -54,8 +68,11 @@ async function fetchAccountData(page, options) {
 
     const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
 
-    const txnsResult = await fetchGetWithinPage(page, txnsUrl);
-    const txns = txnsResult ? convertTransactions(txnsResult.transactions) : [];
+    const txnsResult = await fetchPoalimXSRFWithinPage(page, txnsUrl, '/current-account/transactions');
+    let txns = [];
+    if (txnsResult) {
+      txns = convertTransactions(txnsResult.transactions);
+    }
 
     accounts.push({
       accountNumber,
