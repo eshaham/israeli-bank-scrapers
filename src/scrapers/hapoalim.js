@@ -12,6 +12,37 @@ const DATE_FORMAT = 'YYYYMMDD';
 function convertTransactions(txns) {
   return txns.map((txn) => {
     const isOutbound = txn.eventActivityTypeCode === 2;
+
+    let memo = null;
+    if (txn.beneficiaryDetailsData) {
+      const {
+        partyHeadline,
+        partyName,
+        messageHeadline,
+        messageDetail,
+      } = txn.beneficiaryDetailsData;
+      const memoLines = [];
+      if (partyHeadline) {
+        memoLines.push(partyHeadline);
+      }
+
+      if (partyName) {
+        memoLines.push(`${partyName}.`);
+      }
+
+      if (messageHeadline) {
+        memoLines.push(messageHeadline);
+      }
+
+      if (messageDetail) {
+        memoLines.push(`${messageDetail}.`);
+      }
+
+      if (memoLines.length) {
+        memo = memoLines.join(' ');
+      }
+    }
+
     return {
       type: NORMAL_TXN_TYPE,
       identifier: txn.referenceNumber,
@@ -22,6 +53,7 @@ function convertTransactions(txns) {
       chargedAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
       description: txn.activityDescription,
       status: txn.serialNumber === 0 ? TRANSACTION_STATUS.PENDING : TRANSACTION_STATUS.COMPLETED,
+      memo,
     };
   });
 }
