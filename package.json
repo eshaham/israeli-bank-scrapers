@@ -9,7 +9,9 @@
   "main": "lib/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint src",
+    "lint": "eslint src playground",
+    "start": "node -r babel-register playground/scrape.js",
+    "setup": "node -r babel-register playground/setup.js",
     "prepublishOnly": "babel src --out-dir lib"
   },
   "pre-commit": [
@@ -36,9 +38,13 @@
     "babel-plugin-transform-es2015-block-scoping": "^6.26.0",
     "babel-plugin-transform-es2015-shorthand-properties": "^6.24.1",
     "babel-preset-env": "^1.6.1",
+    "babel-register": "^6.26.0",
     "eslint": "^4.18.2",
     "eslint-config-airbnb-base": "^12.1.0",
     "eslint-plugin-import": "^2.9.0",
+    "inquirer": "^5.2.0",
+    "json2csv": "^3.11.5",
+    "jsonfile": "^4.0.0",
     "pre-commit": "^1.2.2"
   },
   "dependencies": {

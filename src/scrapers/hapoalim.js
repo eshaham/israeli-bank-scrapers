@@ -70,7 +70,7 @@ async function fetchAccountData(page, options) {
 
     const txnsResult = await fetchPoalimXSRFWithinPage(page, txnsUrl, '/current-account/transactions');
     let txns = [];
-    if (txnsResult != null) {
+    if (txnsResult) {
       txns = convertTransactions(txnsResult.transactions);
     }
 

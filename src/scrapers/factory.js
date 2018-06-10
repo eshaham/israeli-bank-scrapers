@@ -1,4 +1,5 @@
 import HapoalimScraper from './hapoalim';
+import OtsarHahayalScraper from './otsar-hahayal';
 import LeumiScraper from './leumi';
 import DiscountScraper from './discount';
 import LeumiCardScraper from './leumi-card';
@@ -14,6 +15,8 @@ export default function createScraper(options) {
       return new LeumiScraper(options);
     case 'discount':
       return new DiscountScraper(options);
+    case 'otsarHahayal':
+      return new OtsarHahayalScraper(options);
     case 'visaCal':
       return new VisaCalScraper(options);
     case 'leumiCard':
