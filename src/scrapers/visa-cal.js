@@ -28,10 +28,11 @@ const WITHDRAWAL_TYPE_CODE = '7';
 const INSTALLMENTS_TYPE_CODE = '8';
 const CANCEL_TYPE_CODE = '25';
 const WITHDRAWAL_TYPE_CODE_2 = '27';
+const CREDIT_PAYMENTS_CODE = '59';
 const MEMBERSHIP_FEE_TYPE_CODE = '67';
+const SERVICES_REFUND_TYPE_CODE = '71';
 const SERVICES_TYPE_CODE = '72';
 const REFUND_TYPE_CODE_2 = '76';
-const SERVICES_REFUND_TYPE_CODE = '71';
 
 function getBankDebitsUrl(accountId) {
   const toDate = new Date();
@@ -75,6 +76,7 @@ function convertTransactionType(txnType) {
     case SERVICES_TYPE_CODE:
       return NORMAL_TXN_TYPE;
     case INSTALLMENTS_TYPE_CODE:
+    case CREDIT_PAYMENTS_CODE:
       return INSTALLMENTS_TXN_TYPE;
     default:
       throw new Error(`unknown transaction type ${txnType}`);
