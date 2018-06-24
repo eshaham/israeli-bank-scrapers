@@ -236,6 +236,10 @@ async function fetchTransactionsForMonth(browser, monthMoment) {
   const url = getTransactionsUrl(monthMoment);
   await page.goto(url);
 
+  if (page.url() !== url) {
+    throw new Error(`Error while trying to navigate to url ${url}`);
+  }
+
   const txns = await getCurrentTransactions(page);
   await page.close();
 
