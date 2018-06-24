@@ -1,6 +1,11 @@
 import moment from 'moment';
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
-import { dropdownSelect, fillInput, clickButton, waitUntilElementFound } from '../helpers/elements-interactions';
+import {
+  dropdownSelect,
+  fillInput,
+  clickButton,
+  waitUntilElementFound,
+} from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
 
@@ -63,11 +68,10 @@ async function extractCompletedTransactionsFromPage(page) {
   const txns = [];
 
   const tdsValues = await page.$$eval('#WorkSpaceBox #ctlActivityTable tr td', (tds) => {
-    return tds.map(td =>
-      ({
-        classList: td.getAttribute('class'),
-        innerText: td.innerText,
-      }));
+    return tds.map(td => ({
+      classList: td.getAttribute('class'),
+      innerText: td.innerText,
+    }));
   });
 
   for (const element of tdsValues) {
@@ -75,8 +79,7 @@ async function extractCompletedTransactionsFromPage(page) {
       const newTransaction = { status: TRANSACTION_STATUS.COMPLETED };
       newTransaction.date = (element.innerText || '').trim();
       txns.push(newTransaction);
-    } else if (element.classList.includes('ActivityTableColumn1LTR')
-      || element.classList.includes('ActivityTableColumn1')) {
+    } else if (element.classList.includes('ActivityTableColumn1LTR') || element.classList.includes('ActivityTableColumn1')) {
       const changedTransaction = txns.pop();
       changedTransaction.description = element.innerText;
       txns.push(changedTransaction);
@@ -110,11 +113,10 @@ async function extractPendingTransactionsFromPage(page) {
   const txns = [];
 
   const tdsValues = await page.$$eval('#WorkSpaceBox #trTodayActivityNapaTableUpper tr td', (tds) => {
-    return tds.map(td =>
-      ({
-        classList: td.getAttribute('class'),
-        innerText: td.innerText,
-      }));
+    return tds.map(td => ({
+      classList: td.getAttribute('class'),
+      innerText: td.innerText,
+    }));
   });
 
   for (const element of tdsValues) {

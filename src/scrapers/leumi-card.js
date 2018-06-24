@@ -4,7 +4,13 @@ import moment from 'moment';
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { waitForNavigationAndDomLoad, waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
-import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE, SHEKEL_CURRENCY_SYMBOL, SHEKEL_CURRENCY, TRANSACTION_STATUS } from '../constants';
+import {
+  NORMAL_TXN_TYPE,
+  INSTALLMENTS_TXN_TYPE,
+  SHEKEL_CURRENCY_SYMBOL,
+  SHEKEL_CURRENCY,
+  TRANSACTION_STATUS,
+} from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
 

@@ -19,4 +19,9 @@ async function dropdownSelect(page, selectSelector, value) {
   await page.select(selectSelector, value);
 }
 
-export { waitUntilElementFound, fillInput, clickButton, dropdownSelect };
+export {
+  waitUntilElementFound,
+  fillInput,
+  clickButton,
+  dropdownSelect,
+};

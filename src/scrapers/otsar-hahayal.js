@@ -71,11 +71,10 @@ function convertTransactions(txns) {
 
 async function parseTransactionPage(page) {
   const tdsValues = await page.$$eval('#dataTable077 tbody tr td', (tds) => {
-    return tds.map(td =>
-      ({
-        classList: td.getAttribute('class'),
-        innerText: td.innerText,
-      }));
+    return tds.map(td => ({
+      classList: td.getAttribute('class'),
+      innerText: td.innerText,
+    }));
   });
 
   const txns = [];
@@ -194,6 +193,7 @@ class OtsarHahayalScraper extends BaseScraperWithBrowser {
       possibleResults: getPossibleLoginResults(),
     };
   }
+
   async fetchData() {
     const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();

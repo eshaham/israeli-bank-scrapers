@@ -8,7 +8,8 @@
       "ForInStatement",
       "LabeledStatement",
       "WithStatement",
-    ]
+    ],
+    "operator-linebreak": ["error", "after"]
   },
   "globals": {
     "document": true,

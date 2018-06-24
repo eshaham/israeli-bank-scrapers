@@ -64,4 +64,3 @@ export default async function () {
 
   console.log('playground options saved, to start scraping run "npm start"');
 }
-
