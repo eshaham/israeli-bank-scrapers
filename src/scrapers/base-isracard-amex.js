@@ -192,7 +192,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
   }
 
   async login(credentials) {
-    await this.page.goto(`${this.options.baseUrl}/personalarea/Login`);
+    await this.navigateTo(`${this.options.baseUrl}/personalarea/Login`);
 
     this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGGING_IN);
 

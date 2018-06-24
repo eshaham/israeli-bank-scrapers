@@ -230,11 +230,11 @@ async function getCurrentTransactions(page) {
   return result;
 }
 
-async function fetchTransactionsForMonth(browser, monthMoment) {
+async function fetchTransactionsForMonth(browser, navigateToFunc, monthMoment) {
   const page = await browser.newPage();
 
   const url = getTransactionsUrl(monthMoment);
-  await page.goto(url);
+  await navigateToFunc(url, page);
 
   if (page.url() !== url) {
     throw new Error(`Error while trying to navigate to url ${url}`);
@@ -267,7 +267,7 @@ function prepareTransactions(txns, startMoment, combineInstallments) {
   return clonedTxns;
 }
 
-async function fetchTransactions(browser, options) {
+async function fetchTransactions(browser, options, navigateToFunc) {
   const defaultStartMoment = moment().subtract(1, 'years');
   const startDate = options.startDate || defaultStartMoment.toDate();
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
@@ -275,11 +275,11 @@ async function fetchTransactions(browser, options) {
 
   const allTasks = [];
   for (let i = 0; i < allMonths.length; i += 1) {
-    const task = fetchTransactionsForMonth(browser, allMonths[i]);
+    const task = fetchTransactionsForMonth(browser, navigateToFunc, allMonths[i]);
     allTasks.push(task);
   }
 
-  const task = fetchTransactionsForMonth(browser);
+  const task = fetchTransactionsForMonth(browser, navigateToFunc);
   allTasks.push(task);
 
   const allTasksResults = await Promise.all(allTasks);
@@ -294,21 +294,6 @@ async function fetchTransactions(browser, options) {
   });
 
   return allResults;
-}
-
-async function getAccountData(browser, options) {
-  const results = await fetchTransactions(browser, options);
-  const accounts = Object.keys(results).map((accountNumber) => {
-    return {
-      accountNumber,
-      txns: results[accountNumber],
-    };
-  });
-
-  return {
-    success: true,
-    accounts,
-  };
 }
 
 function getPossibleLoginResults() {
@@ -339,7 +324,18 @@ class LeumiCardScraper extends BaseScraperWithBrowser {
   }
 
   async fetchData() {
-    return getAccountData(this.browser, this.options);
+    const results = await fetchTransactions(this.browser, this.options, this.navigateTo);
+    const accounts = Object.keys(results).map((accountNumber) => {
+      return {
+        accountNumber,
+        txns: results[accountNumber],
+      };
+    });
+
+    return {
+      success: true,
+      accounts,
+    };
   }
 }
 

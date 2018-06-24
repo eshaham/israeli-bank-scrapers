@@ -7,6 +7,7 @@ import { waitUntilElementFound, fillInput, clickButton } from '../helpers/elemen
 
 const VIEWPORT_WIDTH = 1024;
 const VIEWPORT_HEIGHT = 768;
+const OK_STATUS = 200;
 
 function getKeyByValue(object, value) {
   return Object.keys(object).find((key) => {
@@ -75,6 +76,14 @@ class BaseScraperWithBrowser extends BaseScraper {
     });
   }
 
+  async navigateTo(url, page) {
+    const pageToUse = page || this.page;
+    const response = await pageToUse.goto(url);
+    if (!response || response.status() !== OK_STATUS) {
+      throw new Error(`Error while trying to navigate to url ${url}`);
+    }
+  }
+
   getLoginOptions() {
     throw new Error(`getLoginOptions() is not created in ${this.options.companyId}`);
   }
@@ -96,7 +105,7 @@ class BaseScraperWithBrowser extends BaseScraper {
 
     const loginOptions = this.getLoginOptions(credentials);
 
-    await this.page.goto(loginOptions.loginUrl);
+    await this.navigateTo(loginOptions.loginUrl);
     if (loginOptions.checkReadiness) {
       await loginOptions.checkReadiness();
     } else {
