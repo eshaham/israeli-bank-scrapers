@@ -2,7 +2,8 @@ import moment from 'moment';
 import uuid4 from 'uuid/v4';
 
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
-import { waitForRedirect, getCurrentUrl } from '../helpers/navigation';
+import { waitForRedirect } from '../helpers/navigation';
+import waitUntil from '../helpers/waiting';
 import { NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 
@@ -58,13 +59,16 @@ function convertTransactions(txns) {
   });
 }
 
-function getSubFolder(currentUrl) {
-  if (currentUrl.includes('portalserver')) {
-    return 'portalserver';
-  } else if (currentUrl.includes('ng-portals')) {
-    return 'ServerServices';
-  }
-  return 'ssb';
+async function getRestContext(page) {
+  await waitUntil(async () => {
+    return page.evaluate(() => !!window.bnhpApp);
+  }, 'waiting for app data load');
+
+  const result = await page.evaluate(() => {
+    return window.bnhpApp.restContext;
+  });
+
+  return result.slice(1);
 }
 
 async function fetchPoalimXSRFWithinPage(page, url, pageUuid) {
@@ -81,9 +85,8 @@ async function fetchPoalimXSRFWithinPage(page, url, pageUuid) {
 }
 
 async function fetchAccountData(page, options) {
-  const currentUrl = await getCurrentUrl(page, true);
-  const subfolder = getSubFolder(currentUrl);
-  const apiSiteUrl = `${BASE_URL}/${subfolder}`;
+  const restContext = await getRestContext(page);
+  const apiSiteUrl = `${BASE_URL}/${restContext}`;
   const accountDataUrl = `${BASE_URL}/ServerServices/general/accounts`;
   const accountsInfo = await fetchGetWithinPage(page, accountDataUrl);
 
