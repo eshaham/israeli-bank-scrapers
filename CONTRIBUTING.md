@@ -10,6 +10,24 @@ Any kind of help is welcome, even if you just discover an issue and don't have t
 ## Filing issues
 While there's no specific template for creating a new issue, please take the time to create a clear description so that it is easy to understand the problem.
 
+## Using the playground 
+> With the integrated playground support, you can easily extend the scrapers and also enjoy the IDE debug feature if needed.
+
+Once you prepare the playground environment you will be able to set scraping options, debug using the IDE and get the scraped transactions as generated csv files.
+ 
+### Setup playground options & credentials
+run `npm run setup` and use the interactive menu to setup both playground options and relevant scrapers credentials.
+
+### Run a scraper
+run `npm start` to execute the playground scraper.
+
+### Debug your changes using the IDE
+To run the playground scripts within your IDE debugger, make sure you configure debug node with the following parameters:
+ - *Node Parameters:* `-r babel-register`
+ - *Javascript file :* `playground/scrape.js`
+
+Feel free to add breakpoints in the `src` folder, it should work smoothly. 
+
 ## Submitting PRs
 Again, no template, but please try to create something of the form:
 

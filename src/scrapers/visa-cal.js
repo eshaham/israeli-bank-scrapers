@@ -28,9 +28,9 @@ const WITHDRAWAL_TYPE_CODE = '7';
 const INSTALLMENTS_TYPE_CODE = '8';
 const CANCEL_TYPE_CODE = '25';
 const WITHDRAWAL_TYPE_CODE_2 = '27';
-const REFUND_TYPE_CODE_2 = '76';
 const MEMBERSHIP_FEE_TYPE_CODE = '67';
-
+const SERVICES_TYPE_CODE = '72';
+const REFUND_TYPE_CODE_2 = '76';
 
 function getBankDebitsUrl(accountId) {
   const toDate = new Date();
@@ -70,6 +70,7 @@ function convertTransactionType(txnType) {
     case WITHDRAWAL_TYPE_CODE_2:
     case REFUND_TYPE_CODE_2:
     case MEMBERSHIP_FEE_TYPE_CODE:
+    case SERVICES_TYPE_CODE:
       return NORMAL_TXN_TYPE;
     case INSTALLMENTS_TYPE_CODE:
       return INSTALLMENTS_TXN_TYPE;
@@ -100,6 +101,18 @@ function getInstallmentsInfo(txn) {
   };
 }
 
+function getTransactionMemo(txn) {
+  const { TransType: txnType, TransTypeDesc: txnTypeDescription } = txn;
+  switch (txnType) {
+    case NORMAL_TYPE_CODE:
+      return txnTypeDescription === 'רכישה רגילה' ? '' : txnTypeDescription;
+    case INSTALLMENTS_TYPE_CODE:
+      return `תשלום ${txn.CurrentPayment} מתוך ${txn.TotalPayments}`;
+    default:
+      return txn.TransTypeDesc;
+  }
+}
+
 function convertTransactions(txns) {
   return txns.map((txn) => {
     return {
@@ -110,6 +123,7 @@ function convertTransactions(txns) {
       originalCurrency: convertCurrency(txn.Amount.Symbol),
       chargedAmount: -txn.DebitAmount.Value,
       description: txn.MerchantDetails.Name,
+      memo: getTransactionMemo(txn),
       installments: getInstallmentsInfo(txn),
       status: TRANSACTION_STATUS.COMPLETED,
     };
