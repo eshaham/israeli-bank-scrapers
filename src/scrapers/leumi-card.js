@@ -17,6 +17,7 @@ const INSTALLMENTS_TYPE_NAME = 'תשלומים';
 const MONTHLY_CHARGE_TYPE_NAME = 'חיוב חודשי';
 const ONE_MONTH_POSTPONED_TYPE_NAME = 'דחוי חודש';
 const TWO_MONTHS_POSTPONED_TYPE_NAME = 'דחוי חודשיים';
+const MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME = 'חודשי + ריבית';
 
 function redirectOrDialog(page) {
   return Promise.race([
@@ -53,6 +54,7 @@ function getTransactionType(txnTypeStr) {
     case ONE_MONTH_POSTPONED_TYPE_NAME:
     case TWO_MONTHS_POSTPONED_TYPE_NAME:
     case INTERNET_SHOPPING_TYPE_NAME:
+    case MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME:
       return NORMAL_TXN_TYPE;
     case INSTALLMENTS_TYPE_NAME:
       return INSTALLMENTS_TXN_TYPE;
@@ -107,6 +109,7 @@ function convertTransactions(rawTxns) {
       originalCurrency: originalAmountData.currency,
       chargedAmount: -chargedAmountData.amount,
       description: txn.description.trim(),
+      memo: txn.comments,
       installments: getInstallmentsInfo(txn.comments),
       status: TRANSACTION_STATUS.COMPLETED,
     };

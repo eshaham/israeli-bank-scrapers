@@ -54,7 +54,7 @@ function convertTransactions(txns) {
       chargedAmount: amount,
       status: txn.status,
       description: txn.description,
-      /* memo: txn.memo, TODO add this line to export transaction memo */
+      memo: txn.memo,
     };
   });
 }
@@ -98,7 +98,7 @@ async function extractCompletedTransactionsFromPage(page) {
       txns.push(changedTransaction);
     } else if (element.classList.includes('tdDepositRowAdded')) {
       const changedTransaction = txns.pop();
-      changedTransaction.memo = element.innerText;
+      changedTransaction.memo = (element.innerText || '').trim();
       txns.push(changedTransaction);
     }
   }

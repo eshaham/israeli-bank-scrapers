@@ -103,6 +103,7 @@ function convertTransactions(txns, processedDate) {
       originalCurrency: convertCurrency(txn.currencyId),
       chargedAmount: isOutbound ? -txn.paymentSumOutbound : -txn.paymentSum,
       description: isOutbound ? txn.fullSupplierNameOutbound : txn.fullSupplierNameHeb,
+      memo: txn.moreInfo,
       installments: getInstallmentsInfo(txn),
       status: TRANSACTION_STATUS.COMPLETED,
     };
