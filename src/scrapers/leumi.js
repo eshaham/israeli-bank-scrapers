@@ -112,7 +112,7 @@ async function extractCompletedTransactionsFromPage(page) {
 async function extractPendingTransactionsFromPage(page) {
   const txns = [];
 
-  const tdsValues = await page.$$eval('#WorkSpaceBox #trTodayActivityNapaTableUpper tr td', (tds) => {
+  const tdsValues = await page.$$eval('#WorkSpaceBox #ctlActivityTable tr td', (tds) => {
     return tds.map(td => ({
       classList: td.getAttribute('class'),
       innerText: td.innerText,
