@@ -50,9 +50,9 @@ Unless you plan to override the entire `login()` function, You can override this
 function getPossibleLoginResults() {
   const urls = {};
   // in case of multiple possible login results, add them to the arrays as items
-  urls[LOGIN_RESULT.SUCCESS] = ['<SUCCESS_URL>'];
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = ['<INVALID_PASSWORD_URL>'];
-  urls[LOGIN_RESULT.CHANGE_PASSWORD] = ['<CHANGE_PASSWORD_URL>'];
+  urls[LOGIN_RESULT.SUCCESS] = ['<SUCCESS_URL>' | <SUCCESS_REGEXP>];
+  urls[LOGIN_RESULT.INVALID_PASSWORD] = ['<INVALID_PASSWORD_URL>' | <INVALID_PASSWORD_REGEXP>];
+  urls[LOGIN_RESULT.CHANGE_PASSWORD] = ['<CHANGE_PASSWORD_URL>' | <CHANGE_PASSWORD_REGEXP>];
   return urls;
 }
 

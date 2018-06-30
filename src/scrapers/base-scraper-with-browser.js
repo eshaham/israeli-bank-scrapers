@@ -14,15 +14,15 @@ function getKeyByValue(object, value) {
     const compareTo = object[key];
     let result = false;
 
-    if (compareTo instanceof RegExp) {
-      result = compareTo.test(value);
-    } else if (compareTo instanceof Array) {
-      result = compareTo.includes(value);
-    } else {
-      result = value === compareTo;
-    }
+    result = compareTo.find((item) => {
+      if (item instanceof RegExp) {
+        return item.test(value);
+      }
 
-    return result;
+      return value === item;
+    });
+
+    return !!result;
   });
 }
 
