@@ -129,7 +129,7 @@ function getPossibleLoginResults() {
   urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${BASE_URL}/AUTHENTICATE/LOGON?flow=AUTHENTICATE&state=LOGON&errorcode=1.6&callme=false`];
   urls[LOGIN_RESULT.CHANGE_PASSWORD] = [
     `${BASE_URL}/MCP/START?flow=MCP&state=START&expiredDate=null`,
-    /[.]co[.]il\/ABOUTTOEXPIRE\/START/i,
+    /\/ABOUTTOEXPIRE\/START/i,
   ];
   return urls;
 }
