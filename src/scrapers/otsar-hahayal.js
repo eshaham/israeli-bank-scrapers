@@ -1,7 +1,12 @@
 import moment from 'moment';
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { waitForNavigation } from '../helpers/navigation';
-import { fillInput, clickButton, waitUntilElementFound } from '../helpers/elements-interactions';
+import {
+  fillInput,
+  clickButton,
+  waitUntilElementFound,
+  pageEvalAll,
+} from '../helpers/elements-interactions';
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, SHEKEL_CURRENCY_SYMBOL } from '../constants';
 
 const BASE_URL = 'https://online.bankotsar.co.il';
@@ -70,23 +75,12 @@ function convertTransactions(txns) {
 }
 
 async function parseTransactionPage(page) {
-  let tdsValues;
-  try {
-    tdsValues = await page.$$eval('#dataTable077 tbody tr td', (tds) => {
-      return tds.map(td => ({
-        classList: td.getAttribute('class'),
-        innerText: td.innerText,
-      }));
-    });
-  } catch (e) {
-    if (e.message.indexOf('Error: failed to find elements matching selector') === 0) {
-      // temporary workaround to puppeteer@1.5.0 which breaks $$eval bevahvior until
-      // they will release a new version.
-      tdsValues = [];
-    } else {
-      throw e;
-    }
-  }
+  const tdsValues = await pageEvalAll(page, '#dataTable077 tbody tr td', [], (tds) => {
+    return tds.map(td => ({
+      classList: td.getAttribute('class'),
+      innerText: td.innerText,
+    }));
+  });
 
   const txns = [];
   for (const element of tdsValues) {

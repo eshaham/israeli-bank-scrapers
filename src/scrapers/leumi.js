@@ -5,6 +5,7 @@ import {
   fillInput,
   clickButton,
   waitUntilElementFound,
+  pageEvalAll,
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
@@ -66,24 +67,12 @@ function convertTransactions(txns) {
 
 async function extractCompletedTransactionsFromPage(page) {
   const txns = [];
-
-  let tdsValues;
-  try {
-    tdsValues = await page.$$eval('#WorkSpaceBox #ctlActivityTable tr td', (tds) => {
-      return tds.map(td => ({
-        classList: td.getAttribute('class'),
-        innerText: td.innerText,
-      }));
-    });
-  } catch (e) {
-    if (e.message.indexOf('Error: failed to find elements matching selector') === 0) {
-      // temporary workaround to puppeteer@1.5.0 which breaks $$eval bevahvior until
-      // they will release a new version.
-      tdsValues = [];
-    } else {
-      throw e;
-    }
-  }
+  const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #ctlActivityTable tr td', [], (tds) => {
+    return tds.map(td => ({
+      classList: td.getAttribute('class'),
+      innerText: td.innerText,
+    }));
+  });
 
   for (const element of tdsValues) {
     if (element.classList.includes('ExtendedActivityColumnDate')) {
@@ -122,24 +111,12 @@ async function extractCompletedTransactionsFromPage(page) {
 
 async function extractPendingTransactionsFromPage(page) {
   const txns = [];
-
-  let tdsValues;
-  try {
-    tdsValues = await page.$$eval('#WorkSpaceBox #trTodayActivityNapaTableUpper tr td', (tds) => {
-      return tds.map(td => ({
-        classList: td.getAttribute('class'),
-        innerText: td.innerText,
-      }));
-    });
-  } catch (e) {
-    if (e.message.indexOf('Error: failed to find elements matching selector') === 0) {
-      // temporary workaround to puppeteer@1.5.0 which breaks $$eval bevahvior until
-      // they will release a new version.
-      tdsValues = [];
-    } else {
-      throw e;
-    }
-  }
+  const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #trTodayActivityNapaTableUpper tr td', [], (tds) => {
+    return tds.map(td => ({
+      classList: td.getAttribute('class'),
+      innerText: td.innerText,
+    }));
+  });
 
   for (const element of tdsValues) {
     if (element.classList.includes('Colume1Width')) {
