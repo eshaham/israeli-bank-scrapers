@@ -67,12 +67,18 @@ function convertTransactions(txns) {
 async function extractCompletedTransactionsFromPage(page) {
   const txns = [];
 
-  const tdsValues = await page.$$eval('#WorkSpaceBox #ctlActivityTable tr td', (tds) => {
-    return tds.map(td => ({
-      classList: td.getAttribute('class'),
-      innerText: td.innerText,
-    }));
-  });
+  let tdsValues = null;
+  try {
+    tdsValues = await page.$$eval('#WorkSpaceBox #ctlActivityTable tr td', (tds) => {
+      return tds.map(td => ({
+        classList: td.getAttribute('class'),
+        innerText: td.innerText,
+      }));
+    });
+  } catch (err) {
+    // it's possible that no completed transactions are available yet.
+    return txns;
+  }
 
   for (const element of tdsValues) {
     if (element.classList.includes('ExtendedActivityColumnDate')) {
@@ -112,12 +118,18 @@ async function extractCompletedTransactionsFromPage(page) {
 async function extractPendingTransactionsFromPage(page) {
   const txns = [];
 
-  const tdsValues = await page.$$eval('#WorkSpaceBox #trTodayActivityNapaTableUpper tr td', (tds) => {
-    return tds.map(td => ({
-      classList: td.getAttribute('class'),
-      innerText: td.innerText,
-    }));
-  });
+  let tdsValues = null;
+  try {
+    tdsValues = await page.$$eval('#WorkSpaceBox #trTodayActivityNapaTableUpper tr td', (tds) => {
+      return tds.map(td => ({
+        classList: td.getAttribute('class'),
+        innerText: td.innerText,
+      }));
+    });
+  } catch (err) {
+    // it's possible that no pending transactions are available yet
+    return txns;
+  }
 
   for (const element of tdsValues) {
     if (element.classList.includes('Colume1Width')) {
