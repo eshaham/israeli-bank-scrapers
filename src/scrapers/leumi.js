@@ -5,6 +5,7 @@ import {
   fillInput,
   clickButton,
   waitUntilElementFound,
+  pageEvalAll,
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
@@ -66,8 +67,7 @@ function convertTransactions(txns) {
 
 async function extractCompletedTransactionsFromPage(page) {
   const txns = [];
-
-  const tdsValues = await page.$$eval('#WorkSpaceBox #ctlActivityTable tr td', (tds) => {
+  const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #ctlActivityTable tr td', [], (tds) => {
     return tds.map(td => ({
       classList: td.getAttribute('class'),
       innerText: td.innerText,
@@ -111,8 +111,7 @@ async function extractCompletedTransactionsFromPage(page) {
 
 async function extractPendingTransactionsFromPage(page) {
   const txns = [];
-
-  const tdsValues = await page.$$eval('#WorkSpaceBox #trTodayActivityNapaTableUpper tr td', (tds) => {
+  const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #trTodayActivityNapaTableUpper tr td', [], (tds) => {
     return tds.map(td => ({
       classList: td.getAttribute('class'),
       innerText: td.innerText,

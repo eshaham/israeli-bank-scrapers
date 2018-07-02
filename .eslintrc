@@ -7,9 +7,16 @@
       "error",
       "ForInStatement",
       "LabeledStatement",
-      "WithStatement",
+      "WithStatement"
     ],
-    "operator-linebreak": ["error", "after"]
+    "operator-linebreak": ["error", "after"],
+    "max-len": ["error", 100, 2, {
+      "ignoreUrls": true,
+      "ignoreComments": true,
+      "ignoreRegExpLiterals": true,
+      "ignoreStrings": true,
+      "ignoreTemplateLiterals": true
+    }]
   },
   "globals": {
     "document": true,
