@@ -14,7 +14,7 @@ async function exportAccountData(scraperId, account, saveLocation) {
       processedDate: moment(txn.processedDate).format('DD/MM/YYYY'),
     });
   });
-  const csv = json2csv({ data, withBOM: true });
+  const csv = json2csv.parse(data, { withBOM: true });
   await writeFile(`${saveLocation}/${SCRAPERS[scraperId].name} (${account.accountNumber}).csv`, csv);
 }
 
