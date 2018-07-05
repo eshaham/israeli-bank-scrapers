@@ -204,6 +204,10 @@ async function getTransactionsForAllAccounts(authHeader, startMoment, options) {
             accounts.push(result);
           }
         }
+      } else {
+        const { Description, Message } = bankDebits.Response.Status;
+        const message = `${Description}. ${Message}`;
+        throw new Error(message);
       }
     }
     return {
