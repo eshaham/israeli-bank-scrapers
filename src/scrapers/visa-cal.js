@@ -35,20 +35,18 @@ const SERVICES_TYPE_CODE = '72';
 const REFUND_TYPE_CODE_2 = '76';
 
 function getBankDebitsUrl(accountId) {
-  const toDate = new Date();
-  const fromDate = new Date();
-  toDate.setMonth(toDate.getMonth() + 2);
-  fromDate.setMonth(fromDate.getMonth() - 6);
+  const toDate = moment().add(2, 'months');
+  const fromDate = moment().subtract(6, 'months');
 
   return buildUrl(BASE_URL, {
     path: `CalBankDebits/${accountId}`,
     queryParams: {
       DebitLevel: 'A',
       DebitType: '2',
-      FromMonth: fromDate.getMonth().toString(),
-      FromYear: fromDate.getFullYear().toString(),
-      ToMonth: toDate.getMonth().toString(),
-      ToYear: toDate.getFullYear().toString(),
+      FromMonth: (fromDate.month() + 1).toString().padStart(2, '0'),
+      FromYear: fromDate.year().toString(),
+      ToMonth: (toDate.month() + 1).toString().padStart(2, '0'),
+      ToYear: toDate.year().toString(),
     },
   });
 }
