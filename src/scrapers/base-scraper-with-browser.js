@@ -63,7 +63,12 @@ class BaseScraperWithBrowser extends BaseScraper {
     if (this.options.verbose) {
       env = Object.assign({ DEBUG: '*' }, process.env);
     }
-    this.browser = await puppeteer.launch({ env, headless: !this.options.showBrowser });
+    if (this.options.browser != null) {
+      this.browser = this.options.browser;
+    } else {
+      this.browser = await puppeteer.launch({ env, headless: !this.options.showBrowser });
+    }
+
     const pages = await this.browser.pages();
     if (pages.length) {
       [this.page] = pages;
