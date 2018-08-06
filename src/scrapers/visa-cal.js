@@ -21,6 +21,7 @@ const DATE_FORMAT = 'DD/MM/YYYY';
 
 const PASSWORD_EXPIRED_MSG = 'תוקף הסיסמא פג';
 const INVALID_CREDENTIALS = 'שם משתמש או הסיסמא שהוזנו שגויים';
+const NO_DATA_FOUND_MSG = 'לא נמצאו חיובים לטווח תאריכים זה';
 
 const NORMAL_TYPE_CODE = '5';
 const REFUND_TYPE_CODE = '6';
@@ -204,8 +205,11 @@ async function getTransactionsForAllAccounts(authHeader, startMoment, options) {
         }
       } else {
         const { Description, Message } = bankDebits.Response.Status;
-        const message = `${Description}. ${Message}`;
-        throw new Error(message);
+
+        if (Message !== NO_DATA_FOUND_MSG) {
+          const message = `${Description}. ${Message}`;
+          throw new Error(message);
+        }
       }
     }
     return {
