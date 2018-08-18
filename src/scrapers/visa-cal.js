@@ -190,29 +190,28 @@ async function getTransactionsForAllAccounts(authHeader, startMoment, options) {
     for (let i = 0; i < banksResponse.BankAccounts.length; i += 1) {
       const bank = banksResponse.BankAccounts[i];
       const bankDebits = await getBankDebits(authHeader, bank.AccountID);
-      if (bank.Cards.every(function (element){
-        return element.IsEffectiveInd === false;
-      }))
-          continue;
-      if (_.get(bankDebits, 'Response.Status.Succeeded')) {
-        for (let j = 0; j < bank.Cards.length; j += 1) {
-          const rawTxns = await getTxnsOfCard(authHeader, bank.Cards[j], bankDebits.Debits);
-          if (rawTxns) {
-            let txns = convertTransactions(rawTxns);
-            txns = prepareTransactions(txns, startMoment, options.combineInstallments);
-            const result = {
-              accountNumber: bank.Cards[j].LastFourDigits,
-              txns,
-            };
-            accounts.push(result);
+      //Check that the bank has an active card to scrape
+      if (bank.Cards.some(_ => _.IsEffectiveInd)) {
+        if (_.get(bankDebits, 'Response.Status.Succeeded')) {
+          for (let j = 0; j < bank.Cards.length; j += 1) {
+            const rawTxns = await getTxnsOfCard(authHeader, bank.Cards[j], bankDebits.Debits);
+            if (rawTxns) {
+              let txns = convertTransactions(rawTxns);
+              txns = prepareTransactions(txns, startMoment, options.combineInstallments);
+              const result = {
+                accountNumber: bank.Cards[j].LastFourDigits,
+                txns,
+              };
+              accounts.push(result);
+            }
           }
-        }
-      } else {
-        const { Description, Message } = bankDebits.Response.Status;
+        } else {
+          const { Description, Message } = bankDebits.Response.Status;
 
-        if (Message !== NO_DATA_FOUND_MSG) {
-          const message = `${Description}. ${Message}`;
-          throw new Error(message);
+          if (Message !== NO_DATA_FOUND_MSG) {
+            const message = `${Description}. ${Message}`;
+            throw new Error(message);
+          }
         }
       }
     }
