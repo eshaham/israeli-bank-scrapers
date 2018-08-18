@@ -191,7 +191,7 @@ async function getTransactionsForAllAccounts(authHeader, startMoment, options) {
       const bank = banksResponse.BankAccounts[i];
       const bankDebits = await getBankDebits(authHeader, bank.AccountID);
       //Check that the bank has an active card to scrape
-      if (bank.Cards.some(_ => _.IsEffectiveInd)) {
+      if (bank.Cards.some(card => card.IsEffectiveInd)) {
         if (_.get(bankDebits, 'Response.Status.Succeeded')) {
           for (let j = 0; j < bank.Cards.length; j += 1) {
             const rawTxns = await getTxnsOfCard(authHeader, bank.Cards[j], bankDebits.Debits);
