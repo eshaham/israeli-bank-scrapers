@@ -39,21 +39,21 @@
     "babel-plugin-transform-es2015-shorthand-properties": "^6.24.1",
     "babel-preset-env": "^1.7.0",
     "babel-register": "^6.26.0",
-    "eslint": "^5.0.0",
-    "eslint-config-airbnb-base": "^13.0.0",
-    "eslint-plugin-import": "^2.13.0",
-    "inquirer": "^6.0.0",
-    "json2csv": "^4.1.5",
+    "eslint": "^5.4.0",
+    "eslint-config-airbnb-base": "^13.1.0",
+    "eslint-plugin-import": "^2.14.0",
+    "inquirer": "^6.1.0",
+    "json2csv": "^4.2.1",
     "jsonfile": "^4.0.0",
     "pre-commit": "^1.2.2"
   },
   "dependencies": {
     "babel-polyfill": "^6.26.0",
-    "build-url": "^1.1.1",
+    "build-url": "^1.1.2",
     "lodash": "^4.17.10",
     "moment": "^2.22.2",
-    "node-fetch": "^2.1.2",
-    "puppeteer": "^1.5.0",
-    "uuid": "^3.2.1"
+    "node-fetch": "^2.2.0",
+    "puppeteer": "^1.7.0",
+    "uuid": "^3.3.2"
   }
 }
