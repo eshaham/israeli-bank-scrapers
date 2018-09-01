@@ -31,14 +31,27 @@ function parseAmount(amountStr) {
     throw new Error('cannot resolve currency value, no currency symbol provided');
   }
 
-  const formattedAmount = amountStr.replace(',', '').replace(/[ ]{2,}/g, ' ').trim();
-  let currency = null;
+  const formattedAmount = amountStr
+    .replace(SHEKEL_CURRENCY_SYMBOL, '')
+    .replace(DOLLAR_CURRENCY_SYMBOL, '')
+    .replace(',', '')
+    .replace(/[ ]{2,}/g, ' ')
+    .trim();
+  let currency = SHEKEL_CURRENCY;
   let amount = null;
   const parts = formattedAmount.split(' ');
 
   amount = parseFloat(parts[0]);
   if (parts.length === 2) {
     currency = fromCurrencySymbolToValue(parts[1]);
+
+    if (currency === null) {
+      throw new Error(`cannot parse amount, failed to detect currency for '${amountStr}'`);
+    }
+  }
+
+  if (!Number.isFinite(amount) || Number.isNaN(amount)) {
+    throw new Error(`cannot parse amount, failed to detect amount for '${amountStr}'`);
   }
 
   return {
