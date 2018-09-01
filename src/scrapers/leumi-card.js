@@ -7,12 +7,11 @@ import { waitUntilElementFound } from '../helpers/elements-interactions';
 import {
   NORMAL_TXN_TYPE,
   INSTALLMENTS_TXN_TYPE,
-  SHEKEL_CURRENCY_SYMBOL,
-  SHEKEL_CURRENCY,
   TRANSACTION_STATUS,
 } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
+import { parseAmount, fromCurrencySymbolToValue } from '../helpers/currency';
 
 const BASE_URL = 'https://online.leumi-card.co.il';
 const DATE_FORMAT = 'DD/MM/YYYY';
@@ -69,25 +68,6 @@ function getTransactionType(txnTypeStr) {
   }
 }
 
-function getAmountData(amountStr) {
-  const amountStrCopy = amountStr.replace(',', '');
-  let currency = null;
-  let amount = null;
-  if (amountStrCopy.includes(SHEKEL_CURRENCY_SYMBOL)) {
-    amount = parseFloat(amountStrCopy.replace(SHEKEL_CURRENCY_SYMBOL, ''));
-    currency = SHEKEL_CURRENCY;
-  } else {
-    const parts = amountStrCopy.split(' ');
-    amount = parseFloat(parts[0]);
-    [, currency] = parts;
-  }
-
-  return {
-    amount,
-    currency,
-  };
-}
-
 function getInstallmentsInfo(comments) {
   if (!comments) {
     return null;
@@ -105,15 +85,14 @@ function getInstallmentsInfo(comments) {
 
 function convertTransactions(rawTxns) {
   return rawTxns.map((txn) => {
-    const originalAmountData = getAmountData(txn.originalAmountStr);
-    const chargedAmountData = getAmountData(txn.chargedAmountStr);
     return {
       type: getTransactionType(txn.typeStr),
       date: moment(txn.dateStr, DATE_FORMAT).toISOString(),
       processedDate: moment(txn.processedDateStr, DATE_FORMAT).toISOString(),
-      originalAmount: -originalAmountData.amount,
-      originalCurrency: originalAmountData.currency,
-      chargedAmount: -chargedAmountData.amount,
+      originalAmount: txn.originalAmount,
+      originalCurrency: txn.originalCurrency,
+      chargedAmount: txn.chargedAmount,
+      chargedCurrency: txn.chargedCurrency,
       description: txn.description.trim(),
       memo: txn.comments,
       installments: getInstallmentsInfo(txn.comments),
@@ -151,10 +130,23 @@ async function getAccountNumber(page, cardIndex) {
   return accountNumber;
 }
 
+async function getChargedCurrencySymbolOfSection(page, cardSection) {
+  const chargedCurrencyElement = await cardSection.$('tbody:first-child > tr:first-child > th:nth-child(7) > a');
+
+  const currencyHeaderValue = await page.evaluate((a) => {
+    return a.innerText;
+  }, chargedCurrencyElement);
+  return currencyHeaderValue.charAt(10);
+}
+
 async function getTransactionsForSection(page, cardIndex, sectionIndex) {
   const cardSections = await getCardSections(page, cardIndex);
-  const txnsRows = await cardSections[sectionIndex].$$('.jobs_regular');
+  const cardSection = await cardSections[sectionIndex];
+  const txnsRows = await cardSection.$$('.jobs_regular');
+  const chargedCurrencySymbol = await getChargedCurrencySymbolOfSection(page, cardSection);
+  const chargedCurrency = fromCurrencySymbolToValue(chargedCurrencySymbol);
   const txns = [];
+
   for (let txnIndex = 0; txnIndex < txnsRows.length; txnIndex += 1) {
     const txnColumns = await txnsRows[txnIndex].$$('td');
 
@@ -186,12 +178,16 @@ async function getTransactionsForSection(page, cardIndex, sectionIndex) {
       return td.innerText;
     }, txnColumns[7]);
 
+    const originalAmountData = parseAmount(originalAmountStr);
+    const chargedAmountData = parseAmount(chargedAmountStr);
     const txn = {
       typeStr,
       dateStr,
       processedDateStr,
-      originalAmountStr,
-      chargedAmountStr,
+      originalAmount: -originalAmountData.amount,
+      originalCurrency: originalAmountData.currency,
+      chargedAmount: -chargedAmountData.amount,
+      chargedCurrency,
       description,
       comments,
     };
