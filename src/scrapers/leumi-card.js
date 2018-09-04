@@ -7,11 +7,11 @@ import { waitUntilElementFound } from '../helpers/elements-interactions';
 import {
   NORMAL_TXN_TYPE,
   INSTALLMENTS_TXN_TYPE,
-  TRANSACTION_STATUS,
+  TRANSACTION_STATUS, SHEKEL_CURRENCY_SYMBOL, DOLLAR_CURRENCY_SYMBOL, SHEKEL_CURRENCY,
 } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
-import { parseAmount, fromCurrencySymbolToValue } from '../helpers/currency';
+import fromCurrencySymbolToValue from '../helpers/currency';
 
 const BASE_URL = 'https://online.leumi-card.co.il';
 const DATE_FORMAT = 'DD/MM/YYYY';
@@ -139,6 +139,45 @@ async function getChargedCurrencySymbolOfSection(page, cardSection) {
   return currencyHeaderValue.charAt(10);
 }
 
+function parseAmount(amountStr) {
+  if (typeof amountStr === 'number') {
+    return amountStr;
+  }
+
+  if (typeof amountStr === 'undefined' || amountStr === null ||
+    (typeof amountStr === 'string' && amountStr.trim().length === 0)) {
+    return null;
+  }
+
+  const formattedAmount = amountStr
+    .replace(SHEKEL_CURRENCY_SYMBOL, '')
+    .replace(DOLLAR_CURRENCY_SYMBOL, '')
+    .replace(',', '')
+    .replace(/[ ]{2,}/g, ' ')
+    .trim();
+  let currency = SHEKEL_CURRENCY;
+  let amount = null;
+  const parts = formattedAmount.split(' ');
+
+  amount = parseFloat(parts[0]);
+  if (parts.length === 2) {
+    currency = fromCurrencySymbolToValue(parts[1]);
+
+    if (currency === null) {
+      throw new Error(`cannot parse amount, failed to detect currency for '${amountStr}'`);
+    }
+  }
+
+  if (!Number.isFinite(amount) || Number.isNaN(amount)) {
+    throw new Error(`cannot parse amount, failed to detect amount for '${amountStr}'`);
+  }
+
+  return {
+    amount,
+    currency,
+  };
+}
+
 async function getTransactionsForSection(page, cardIndex, sectionIndex) {
   const cardSections = await getCardSections(page, cardIndex);
   const cardSection = await cardSections[sectionIndex];
@@ -184,7 +223,7 @@ async function getTransactionsForSection(page, cardIndex, sectionIndex) {
       typeStr,
       dateStr,
       processedDateStr,
-      originalAmount: -originalAmountData.amount,
+      originalAmount: originalAmountData.amount,
       originalCurrency: originalAmountData.currency,
       chargedAmount: -chargedAmountData.amount,
       chargedCurrency,
