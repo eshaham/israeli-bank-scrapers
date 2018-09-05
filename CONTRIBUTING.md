@@ -85,6 +85,7 @@ You can override this async function however way you want, as long as your retur
       originalAmount: double,
       originalCurrency: string,
       chargedAmount: double,
+      chargedCurrency: string,
       description: string,
       installments: {
         number: int, // the current installment number
