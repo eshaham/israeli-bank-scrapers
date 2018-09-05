@@ -24,7 +24,7 @@ function getPossibleLoginResults() {
   const urls = {};
   urls[LOGIN_RESULT.SUCCESS] = [/ebanking\/SO\/SPA.aspx/];
   urls[LOGIN_RESULT.INVALID_PASSWORD] = [/InternalSite\/CustomUpdate\/leumi\/LoginPage.ASP/];
-  // urls[LOGIN_RESULT.CHANGE_PASSWORD] = ``; // TODO should wait until my password expires
+  // urls[LOGIN_RESULT.CHANGE_PASSWORD] = ``; // TODO add url of change password page
   return urls;
 }
 
@@ -166,7 +166,6 @@ async function fetchPendingTransactionsForLocalAccount(page) {
 }
 
 async function fetchTransactionsForLocalAccount(page, startDate) {
-  // TODO need to extend to support multiple accounts
   const url = `${BASE_URL}/ebanking/Accounts/ExtendedActivity.aspx?WidgetPar=1#/`;
   await navigateTo(page, url);
 
@@ -225,6 +224,7 @@ async function fetchCompletedTransactionsForForeignAccount(page) {
 
   return txns;
 }
+
 async function fetchForeignAccountsList(page) {
   const accounts = [];
   const accountRows = await pageEvalAll(page, 'table#ctlForeignAccounts tr.item');
