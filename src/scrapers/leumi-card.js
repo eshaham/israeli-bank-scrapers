@@ -7,11 +7,14 @@ import { waitUntilElementFound } from '../helpers/elements-interactions';
 import {
   NORMAL_TXN_TYPE,
   INSTALLMENTS_TXN_TYPE,
-  TRANSACTION_STATUS, SHEKEL_CURRENCY_SYMBOL, DOLLAR_CURRENCY_SYMBOL, SHEKEL_CURRENCY,
+  TRANSACTION_STATUS,
+  SHEKEL_CURRENCY_SYMBOL,
+  DOLLAR_CURRENCY_SYMBOL,
+  SHEKEL_CURRENCY,
+  DOLLAR_CURRENCY,
 } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
-import fromCurrencySymbolToValue from '../helpers/currency';
 
 const BASE_URL = 'https://online.leumi-card.co.il';
 const DATE_FORMAT = 'DD/MM/YYYY';
@@ -65,6 +68,23 @@ function getTransactionType(txnTypeStr) {
       return INSTALLMENTS_TXN_TYPE;
     default:
       throw new Error(`unknown transaction type ${txnTypeStr}`);
+  }
+}
+
+function fromCurrencySymbolToValue(symbol) {
+  if (!symbol) {
+    throw new Error('cannot resolve currency value, no currency symbol provided');
+  }
+
+  switch (symbol.toUpperCase()) {
+    case SHEKEL_CURRENCY_SYMBOL:
+    case SHEKEL_CURRENCY:
+      return SHEKEL_CURRENCY;
+    case DOLLAR_CURRENCY_SYMBOL:
+    case DOLLAR_CURRENCY:
+      return DOLLAR_CURRENCY;
+    default:
+      throw new Error(`cannot resolve currency value, unknown symbol ${symbol}`);
   }
 }
 
