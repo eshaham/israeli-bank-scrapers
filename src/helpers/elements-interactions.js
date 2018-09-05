@@ -15,10 +15,15 @@ async function clickButton(page, buttonSelector) {
   await button.click();
 }
 
-async function pageEvalAll(page, selector, defaultResult, callback) {
-  let result = defaultResult;
+async function pageEvalAll(page, selector, callback) {
+  let result = [];
+
   try {
-    result = await page.$$eval(selector, callback);
+    if (callback) {
+      result = await page.$$eval(selector, callback);
+    } else {
+      result = await page.$$(selector);
+    }
   } catch (e) {
     // TODO temporary workaround to puppeteer@1.5.0 which breaks $$eval bevahvior until they will release a new version.
     if (e.message.indexOf('Error: failed to find elements matching selector') !== 0) {
@@ -28,6 +33,26 @@ async function pageEvalAll(page, selector, defaultResult, callback) {
 
   return result;
 }
+
+async function pageEval(page, selector, callback) {
+  let result = [];
+
+  try {
+    if (callback) {
+      result = await page.$eval(selector, callback);
+    } else {
+      result = await page.$(selector);
+    }
+  } catch (e) {
+    // TODO temporary workaround to puppeteer@1.5.0 which breaks $$eval bevahvior until they will release a new version.
+    if (e.message.indexOf('Error: failed to find element matching selector') !== 0) {
+      throw e;
+    }
+  }
+
+  return result;
+}
+
 
 async function dropdownSelect(page, selectSelector, value) {
   await page.select(selectSelector, value);
@@ -39,4 +64,5 @@ export {
   clickButton,
   dropdownSelect,
   pageEvalAll,
+  pageEval,
 };

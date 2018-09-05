@@ -1,13 +1,17 @@
 import puppeteer from 'puppeteer';
 
 import { BaseScraper } from './base-scraper';
-import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT, GENERAL_ERROR } from '../constants';
+import {
+  SCRAPE_PROGRESS_TYPES,
+  LOGIN_RESULT,
+  GENERAL_ERROR,
+  OK_STATUS,
+} from '../constants';
 import { waitForNavigation, getCurrentUrl } from '../helpers/navigation';
 import { waitUntilElementFound, fillInput, clickButton } from '../helpers/elements-interactions';
 
 const VIEWPORT_WIDTH = 1024;
 const VIEWPORT_HEIGHT = 768;
-const OK_STATUS = 200;
 
 function getKeyByValue(object, value) {
   return Object.keys(object).find((key) => {
