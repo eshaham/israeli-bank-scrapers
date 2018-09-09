@@ -70,6 +70,7 @@ The structure of the result object is as follows:
       originalAmount: double,
       originalCurrency: string,
       chargedAmount: double,
+      chargedCurrency: string,
       description: string,
       memo: string, // can be null or empty
       installments: {
