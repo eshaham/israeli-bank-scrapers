@@ -9,6 +9,8 @@ export const SHEKEL_CURRENCY = 'ILS';
 export const DOLLAR_CURRENCY_SYMBOL = '$';
 export const DOLLAR_CURRENCY = 'USD';
 
+export const OK_STATUS = 200;
+
 export const SCRAPE_PROGRESS_TYPES = {
   INITIALIZING: 'INITIALIZING',
   START_SCRAPING: 'START_SCRAPING',

@@ -6,22 +6,25 @@ import {
   clickButton,
   waitUntilElementFound,
   pageEvalAll,
+  pageEval,
 } from '../helpers/elements-interactions';
-import { waitForNavigation } from '../helpers/navigation';
-import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
+import { waitForNavigation, navigateTo } from '../helpers/navigation';
+import {
+  SHEKEL_CURRENCY,
+  NORMAL_TXN_TYPE,
+  TRANSACTION_STATUS,
+  DOLLAR_CURRENCY,
+} from '../constants';
 
+const DOLLAR_CURRENCY_LABEL = "דולר ארה''ב";
 const BASE_URL = 'https://hb2.bankleumi.co.il/';
 const DATE_FORMAT = 'DD/MM/YY';
-
-function getTransactionsUrl() {
-  return `${BASE_URL}/ebanking/Accounts/ExtendedActivity.aspx?WidgetPar=1#/`;
-}
 
 function getPossibleLoginResults() {
   const urls = {};
   urls[LOGIN_RESULT.SUCCESS] = [/ebanking\/SO\/SPA.aspx/];
   urls[LOGIN_RESULT.INVALID_PASSWORD] = [/InternalSite\/CustomUpdate\/leumi\/LoginPage.ASP/];
-  // urls[LOGIN_RESULT.CHANGE_PASSWORD] = ``; // TODO should wait until my password expires
+  // urls[LOGIN_RESULT.CHANGE_PASSWORD] = ``; // TODO add url of change password page
   return urls;
 }
 
@@ -32,23 +35,35 @@ function createLoginFields(credentials) {
   ];
 }
 
-function getAmountData(amountStr) {
-  const amountStrCopy = amountStr.replace(',', '');
-  const amount = parseFloat(amountStrCopy);
-  const currency = SHEKEL_CURRENCY;
+function parseAmount(amountStr) {
+  if (typeof amountStr === 'number') {
+    return amountStr;
+  }
 
-  return {
-    amount,
-    currency,
-  };
+  if (typeof amountStr === 'undefined' || amountStr === null ||
+    (typeof amountStr === 'string' && amountStr.trim().length === 0)) {
+    return null;
+  }
+
+  const formattedAmount = amountStr
+    .replace(',', '')
+    .trim();
+
+  const amount = parseFloat(formattedAmount);
+
+  if (!Number.isFinite(amount) || Number.isNaN(amount)) {
+    throw new Error(`cannot parse amount, failed to parse amount '${amountStr}'`);
+  }
+
+  return amount;
 }
 
-function convertTransactions(txns) {
+function convertTransactions(txns, currency) {
   return txns.map((txn) => {
     const txnDate = moment(txn.date, DATE_FORMAT).toISOString();
 
-    const credit = getAmountData(txn.credit).amount;
-    const debit = getAmountData(txn.debit).amount;
+    const credit = parseAmount(txn.credit);
+    const debit = parseAmount(txn.debit);
     const amount = (Number.isNaN(credit) ? 0 : credit) - (Number.isNaN(debit) ? 0 : debit);
     return {
       type: NORMAL_TXN_TYPE,
@@ -56,8 +71,9 @@ function convertTransactions(txns) {
       date: txnDate,
       processedDate: txnDate,
       originalAmount: amount,
-      originalCurrency: SHEKEL_CURRENCY,
+      originalCurrency: currency,
       chargedAmount: amount,
+      chargedCurrency: currency,
       status: txn.status,
       description: txn.description,
       memo: txn.memo,
@@ -65,9 +81,9 @@ function convertTransactions(txns) {
   });
 }
 
-async function extractCompletedTransactionsFromPage(page) {
+async function fetchCompletedTransactionsForLocalAccount(page) {
   const txns = [];
-  const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #ctlActivityTable tr td', [], (tds) => {
+  const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #ctlActivityTable tr td', (tds) => {
     return tds.map(td => ({
       classList: td.getAttribute('class'),
       innerText: td.innerText,
@@ -109,9 +125,9 @@ async function extractCompletedTransactionsFromPage(page) {
   return txns;
 }
 
-async function extractPendingTransactionsFromPage(page) {
+async function fetchPendingTransactionsForLocalAccount(page) {
   const txns = [];
-  const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #trTodayActivityNapaTableUpper tr td', [], (tds) => {
+  const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #trTodayActivityNapaTableUpper tr td', (tds) => {
     return tds.map(td => ({
       classList: td.getAttribute('class'),
       innerText: td.innerText,
@@ -149,7 +165,10 @@ async function extractPendingTransactionsFromPage(page) {
   return txns;
 }
 
-async function fetchTransactionsForAccount(page, startDate) {
+async function fetchTransactionsForLocalAccount(page, startDate) {
+  const url = `${BASE_URL}/ebanking/Accounts/ExtendedActivity.aspx?WidgetPar=1#/`;
+  await navigateTo(page, url);
+
   await dropdownSelect(page, 'select#ddlTransactionPeriod', '004');
   await waitUntilElementFound(page, 'select#ddlTransactionPeriod');
   await fillInput(
@@ -168,8 +187,8 @@ async function fetchTransactionsForAccount(page, startDate) {
 
   const accountNumber = selectedSnifAccount.replace('/', '_');
 
-  const pendingTxns = await extractPendingTransactionsFromPage(page);
-  const completedTxns = await extractCompletedTransactionsFromPage(page);
+  const pendingTxns = await fetchPendingTransactionsForLocalAccount(page);
+  const completedTxns = await fetchCompletedTransactionsForLocalAccount(page);
   const txns = [
     ...pendingTxns,
     ...completedTxns,
@@ -177,13 +196,111 @@ async function fetchTransactionsForAccount(page, startDate) {
 
   return {
     accountNumber,
-    txns: convertTransactions(txns),
+    txns: convertTransactions(txns, SHEKEL_CURRENCY),
   };
 }
 
+async function fetchCompletedTransactionsForForeignAccount(page) {
+  const txns = [];
+  const txnsRows = await pageEvalAll(page, 'table#ctlActivityTable tr');
+
+  for (let txnIndex = 0; txnIndex < txnsRows.length; txnIndex += 1) {
+    const txnColumns = await pageEvalAll(txnsRows[txnIndex], 'td', (tds) => {
+      return tds.map(td => (td.innerText || '').trim());
+    });
+
+    if (txnColumns.length > 0) {
+      const txn = {
+        date: txnColumns[0],
+        description: txnColumns[1],
+        reference: txnColumns[2],
+        debit: txnColumns[3],
+        credit: txnColumns[4],
+        status: TRANSACTION_STATUS.COMPLETED,
+      };
+      txns.push(txn);
+    }
+  }
+
+  return txns;
+}
+
+async function fetchForeignAccountsList(page) {
+  const accounts = [];
+  const accountRows = await pageEvalAll(page, 'table#ctlForeignAccounts tr.item');
+
+  for (let accountRowIndex = 0; accountRowIndex < accountRows.length; accountRowIndex += 1) {
+    const accountUrl = await pageEval(accountRows[accountRowIndex], 'td.ForeignColumn1 a', (anchor) => {
+      return anchor.getAttribute('href');
+    });
+
+    const accountCurrencyLabel = await pageEval(accountRows[accountRowIndex], 'td.ForeignColumn2 span', (span) => {
+      return span.innerText;
+    });
+
+    let currency = null;
+    switch (accountCurrencyLabel) {
+      case DOLLAR_CURRENCY_LABEL:
+        currency = DOLLAR_CURRENCY;
+        break;
+      default:
+        throw new Error(`failed to extract foreign account transactions, unknown currency '${accountCurrencyLabel}'`);
+    }
+
+    if (accountUrl) {
+      accounts.push({
+        url: accountUrl,
+        currency,
+      });
+    }
+  }
+
+  return accounts;
+}
+
+async function fetchTransactionsForForeignAccounts(page, startDate) {
+  const result = [];
+  const url = `${BASE_URL}/ebanking/Accounts/ExtendedSummary.aspx?DisplayType=2&from=sideMenu`;
+  await navigateTo(page, url);
+
+  const selectedSnifAccount = await page.$eval('#ddlClientNumber_m_ddl option[selected="selected"]', (option) => {
+    return option.innerText;
+  });
+
+  const accountNumber = selectedSnifAccount.replace('/', '_');
+  const accounts = await fetchForeignAccountsList(page);
+
+  for (let accountIndex = 0; accountIndex < accounts.length; accountIndex += 1) {
+    const account = accounts[accountIndex];
+    await navigateTo(page, `${BASE_URL}${account.url}`);
+
+    await dropdownSelect(page, 'select#ddlTransactionPeriod', '3');
+    await waitUntilElementFound(page, 'select#ddlTransactionPeriod');
+    await fillInput(
+      page,
+      'input#dtFromDate_textBox',
+      startDate.format(DATE_FORMAT),
+    );
+    await clickButton(page, 'input#btnDisplayDates');
+    await waitForNavigation(page);
+    await waitUntilElementFound(page, 'div#WorkSpaceBox > table:first-child');
+
+    const txns = await fetchCompletedTransactionsForForeignAccount(page);
+
+    result.push({
+      accountNumber,
+      txns: convertTransactions(txns, account.currency),
+    });
+  }
+
+  return result;
+}
+
 async function fetchTransactions(page, startDate) {
-  // TODO need to extend to support multiple accounts and foreign accounts
-  return [await fetchTransactionsForAccount(page, startDate)];
+  return [
+    await fetchTransactionsForLocalAccount(page, startDate),
+    ...await fetchTransactionsForForeignAccounts(page, startDate),
+  ];
 }
 
 async function waitForPostLogin(page) {
@@ -209,9 +326,6 @@ class LeumiScraper extends BaseScraperWithBrowser {
     const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
-
-    const url = getTransactionsUrl();
-    await this.navigateTo(url);
 
     const accounts = await fetchTransactions(this.page, startMoment);
 
