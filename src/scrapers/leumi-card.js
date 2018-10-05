@@ -84,7 +84,6 @@ function fromCurrencySymbolToValue(symbol) {
     case DOLLAR_CURRENCY:
       return DOLLAR_CURRENCY;
     default:
-      console.log(`[warn] cannot resolve currency value, unknown symbol ${symbol}`);
       return null;
   }
 }
