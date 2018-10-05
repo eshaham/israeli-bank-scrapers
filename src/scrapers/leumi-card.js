@@ -73,7 +73,7 @@ function getTransactionType(txnTypeStr) {
 
 function fromCurrencySymbolToValue(symbol) {
   if (!symbol) {
-    throw new Error('cannot resolve currency value, no currency symbol provided');
+    return null;
   }
 
   switch (symbol.toUpperCase()) {
@@ -84,7 +84,8 @@ function fromCurrencySymbolToValue(symbol) {
     case DOLLAR_CURRENCY:
       return DOLLAR_CURRENCY;
     default:
-      throw new Error(`cannot resolve currency value, unknown symbol ${symbol}`);
+      console.log(`[warn] cannot resolve currency value, unknown symbol ${symbol}`);
+      return null;
   }
 }
 
@@ -181,11 +182,7 @@ function parseAmount(amountStr) {
 
   amount = parseFloat(parts[0]);
   if (parts.length === 2) {
-    currency = fromCurrencySymbolToValue(parts[1]);
-
-    if (currency === null) {
-      throw new Error(`cannot parse amount, failed to detect currency for '${amountStr}'`);
-    }
+    currency = fromCurrencySymbolToValue(parts[1]) || null;
   }
 
   if (!Number.isFinite(amount) || Number.isNaN(amount)) {
