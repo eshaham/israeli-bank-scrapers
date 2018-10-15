@@ -22,6 +22,7 @@ const INTERNET_SHOPPING_TYPE_NAME = 'אינטרנט/חו"ל';
 const INSTALLMENTS_TYPE_NAME = 'תשלומים';
 const MONTHLY_CHARGE_TYPE_NAME = 'חיוב חודשי';
 const ONE_MONTH_POSTPONED_TYPE_NAME = 'דחוי חודש';
+const THIRTY_DAYS_PLUS_TYPE_NAME = 'עסקת 30 פלוס';
 const TWO_MONTHS_POSTPONED_TYPE_NAME = 'דחוי חודשיים';
 const MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME = 'חודשי + ריבית';
 
@@ -58,6 +59,7 @@ function getTransactionType(txnTypeStr) {
     case NORMAL_TYPE_NAME:
     case MONTHLY_CHARGE_TYPE_NAME:
     case ONE_MONTH_POSTPONED_TYPE_NAME:
+    case THIRTY_DAYS_PLUS_TYPE_NAME:
     case TWO_MONTHS_POSTPONED_TYPE_NAME:
     case INTERNET_SHOPPING_TYPE_NAME:
     case MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME:
