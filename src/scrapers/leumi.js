@@ -10,7 +10,7 @@ import {
 import { waitForNavigation } from '../helpers/navigation';
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
 
-const BASE_URL = 'https://hb2.bankleumi.co.il/';
+const BASE_URL = 'https://hb2.bankleumi.co.il';
 const DATE_FORMAT = 'DD/MM/YY';
 
 function getTransactionsUrl() {
