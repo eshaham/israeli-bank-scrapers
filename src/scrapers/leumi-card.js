@@ -54,7 +54,8 @@ function getTransactionsUrl(monthMoment) {
 }
 
 function getTransactionType(txnTypeStr) {
-  switch (txnTypeStr.trim()) {
+  const cleanedUpTxnTypeStr = txnTypeStr.replace('\t').trim();
+  switch (cleanedUpTxnTypeStr) {
     case ATM_TYPE_NAME:
     case NORMAL_TYPE_NAME:
     case MONTHLY_CHARGE_TYPE_NAME:
@@ -67,7 +68,7 @@ function getTransactionType(txnTypeStr) {
     case INSTALLMENTS_TYPE_NAME:
       return INSTALLMENTS_TXN_TYPE;
     default:
-      throw new Error(`unknown transaction type ${txnTypeStr}`);
+      throw new Error(`Unknown transaction type ${cleanedUpTxnTypeStr}`);
   }
 }
 
