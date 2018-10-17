@@ -54,7 +54,7 @@ function getTransactionsUrl(monthMoment) {
 }
 
 function getTransactionType(txnTypeStr) {
-  const cleanedUpTxnTypeStr = txnTypeStr.replace('\t').trim();
+  const cleanedUpTxnTypeStr = txnTypeStr.replace('\t', ' ').trim();
   switch (cleanedUpTxnTypeStr) {
     case ATM_TYPE_NAME:
     case NORMAL_TYPE_NAME:
