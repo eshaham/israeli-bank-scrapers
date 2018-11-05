@@ -25,6 +25,7 @@ const ONE_MONTH_POSTPONED_TYPE_NAME = 'דחוי חודש';
 const THIRTY_DAYS_PLUS_TYPE_NAME = 'עסקת 30 פלוס';
 const TWO_MONTHS_POSTPONED_TYPE_NAME = 'דחוי חודשיים';
 const MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME = 'חודשי + ריבית';
+const CREDIT_TYPE_NAME = 'קרדיט';
 
 function redirectOrDialog(page) {
   return Promise.race([
@@ -66,6 +67,7 @@ function getTransactionType(txnTypeStr) {
     case MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME:
       return NORMAL_TXN_TYPE;
     case INSTALLMENTS_TYPE_NAME:
+    case CREDIT_TYPE_NAME:
       return INSTALLMENTS_TXN_TYPE;
     default:
       throw new Error(`Unknown transaction type ${cleanedUpTxnTypeStr}`);
