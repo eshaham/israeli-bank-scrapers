@@ -49,7 +49,7 @@ else {
 The definition of the `options` object is as follows:
 ```node
 {
-  companyId: string, // mandatory; one of 'hapoalim', 'discount', 'otsarHahayal', 'leumiCard', 'isracard', 'amex'
+  companyId: string, // mandatory; one of 'hapoalim', 'leumi', 'discount', 'otsarHahayal', 'visaCal', 'leumiCard', 'isracard', 'amex'
   startDate: Date, // the date to fetch transactions from (can't be before the minimum allowed time difference for the scraper)
   combineInstallments: boolean, // if set to true, all installment transactions will be combine into the first one
   showBrowser: boolean, // shows the browser while scraping, good for debugging (default false)
