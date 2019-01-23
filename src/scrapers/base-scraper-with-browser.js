@@ -117,27 +117,6 @@ class BaseScraperWithBrowser extends BaseScraper {
     return this.handleLoginResult(loginResult);
   }
 
-  async smsVerification() {
-    if (!this.options.smsVerificationHandler) {
-      throw new Error(SMS_VERIFICATION_HANDLER_MISSING);
-    }
-    const smsValue = await this.options.smsVerificationHandler();
-    const smsVerificationOptions = this.getSMSVerificationOptions(smsValue);
-    await this.fillInputs(smsVerificationOptions.fields);
-    await clickButton(this.page, smsVerificationOptions.submitButtonSelector);
-    this.emitProgress(SCRAPE_PROGRESS_TYPES.VERIFING_SMS);
-
-    if (smsVerificationOptions.postAction) {
-      await smsVerificationOptions.postAction();
-    } else {
-      await waitForNavigation(this.page);
-    }
-
-    const current = await getCurrentUrl(this.page, true);
-    const smsVerificationResult = getKeyByValue(smsVerificationOptions.possibleResults, current);
-    return this.handleSmsVerificationResult(smsVerificationResult);
-  }
-
   async handleLoginResult(loginResult) {
     switch (loginResult) {
       case LOGIN_RESULT.SUCCESS:
@@ -160,6 +139,29 @@ class BaseScraperWithBrowser extends BaseScraper {
       default:
         throw new Error(`unexpected login result "${loginResult}"`);
     }
+  }
+
+  async smsVerification() {
+    if (!this.options.smsVerificationHandler) {
+      throw new Error(SMS_VERIFICATION_HANDLER_MISSING);
+    }
+
+    const smsValue = await this.options.smsVerificationHandler();
+    const smsVerificationOptions = this.getSMSVerificationOptions(smsValue);
+
+    await this.fillInputs(smsVerificationOptions.fields);
+    await clickButton(this.page, smsVerificationOptions.submitButtonSelector);
+    this.emitProgress(SCRAPE_PROGRESS_TYPES.VERIFING_SMS);
+
+    if (smsVerificationOptions.postAction) {
+      await smsVerificationOptions.postAction();
+    } else {
+      await waitForNavigation(this.page);
+    }
+
+    const current = await getCurrentUrl(this.page, true);
+    const smsVerificationResult = getKeyByValue(smsVerificationOptions.possibleResults, current);
+    return this.handleSmsVerificationResult(smsVerificationResult);
   }
 
   async handleSmsVerificationResult(smsVerificationResult) {

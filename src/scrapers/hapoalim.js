@@ -131,15 +131,15 @@ function getPossibleLoginResults() {
     `${BASE_URL}/MCP/START?flow=MCP&state=START&expiredDate=null`,
     /\/ABOUTTOEXPIRE\/START/i,
   ];
-  urls[LOGIN_RESULT.SMS_VERIFICATION] = ['RELEVANT_URL', /OR_RELEVANT_REGEX/i]; // TODO add actual values
+  urls[LOGIN_RESULT.SMS_VERIFICATION] = ['RELEVANT_URL', /OR_RELEVANT_REGEX/i]; // TODO Urigo: replace with actual url of the sms verification page
   return urls;
 }
 
 function getPossibleSMSVerificationResults() {
   const urls = {};
-  urls[SMS_VERIFICATION_RESULT.SUCCESS] = ['RELEVANT_URL', /OR_RELEVANT_REGEX/i]; // TODO add actual values
+  urls[SMS_VERIFICATION_RESULT.SUCCESS] = ['RELEVANT_URL', /OR_RELEVANT_REGEX/i]; // TODO Urigo: replace with actual url of a successful sms code
 
-  urls[SMS_VERIFICATION_RESULT.INVALID_SMS_VALUE] = ['RELEVANT_URL', /OR_RELEVANT_REGEX/i]; // TODO add actual values
+  urls[SMS_VERIFICATION_RESULT.INVALID_SMS_VALUE] = ['RELEVANT_URL', /OR_RELEVANT_REGEX/i]; // TODO Urigo: replace with actual url of a wrong sms code
 
   return urls;
 }
@@ -153,7 +153,7 @@ function createLoginFields(credentials) {
 
 function createSMSVerificationFields(smsValue) {
   return [
-    { selector: '#TODO_ADD_SELECTOR', value: smsValue }, // TODO add actual selector
+    { selector: '#TODO_ADD_SELECTOR', value: smsValue }, // TODO Urigo: add selector id of the sms code value input field
   ];
 }
 
@@ -171,7 +171,7 @@ class HapoalimScraper extends BaseScraperWithBrowser {
   getSMSVerificationOptions(smsValue) {
     return {
       fields: createSMSVerificationFields(smsValue),
-      submitButtonSelector: '#TODO_ADD_SELECTOR', // TODO add actual selector
+      submitButtonSelector: '#TODO_ADD_SELECTOR', // TODO Urigo: add selector id of the submit button
       postAction: async () => waitForRedirect(this.page),
       possibleResults: getPossibleSMSVerificationResults(),
     };
