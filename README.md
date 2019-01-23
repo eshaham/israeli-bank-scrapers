@@ -54,7 +54,8 @@ The definition of the `options` object is as follows:
   combineInstallments: boolean, // if set to true, all installment transactions will be combine into the first one
   showBrowser: boolean, // shows the browser while scraping, good for debugging (default false)
   verbose: boolean, // include more debug info about in the output
-  browser : Browser // optional option from init puppeteer browser instance outside the libary scope. you can get browser diretly from puppeteer via `puppeteer.launch()` command. 
+  browser : Browser, // optional option from init puppeteer browser instance outside the libary scope. you can get browser diretly from puppeteer via `puppeteer.launch()` command.
+  smsVerificationHandler: () => string // prompt the user for sms verification value as part of a login process 
 }
 ```
 The structure of the result object is as follows:

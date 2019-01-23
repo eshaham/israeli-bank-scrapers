@@ -1,7 +1,13 @@
 import puppeteer from 'puppeteer';
 
 import { BaseScraper } from './base-scraper';
-import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT, GENERAL_ERROR } from '../constants';
+import {
+  SCRAPE_PROGRESS_TYPES,
+  LOGIN_RESULT,
+  GENERAL_ERROR,
+  SMS_VERIFICATION_RESULT,
+  SMS_VERIFICATION_HANDLER_MISSING,
+} from '../constants';
 import { waitForNavigation, getCurrentUrl } from '../helpers/navigation';
 import { waitUntilElementFound, fillInput, clickButton } from '../helpers/elements-interactions';
 
@@ -24,28 +30,6 @@ function getKeyByValue(object, value) {
 
     return !!result;
   });
-}
-
-function handleLoginResult(scraper, loginResult) {
-  switch (loginResult) {
-    case LOGIN_RESULT.SUCCESS:
-      scraper.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
-      return { success: true };
-    case LOGIN_RESULT.INVALID_PASSWORD:
-      scraper.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_FAILED);
-      return {
-        success: false,
-        errorType: loginResult,
-      };
-    case LOGIN_RESULT.CHANGE_PASSWORD:
-      scraper.emitProgress(SCRAPE_PROGRESS_TYPES.CHANGE_PASSWORD);
-      return {
-        success: false,
-        errorType: loginResult,
-      };
-    default:
-      throw new Error(`unexpected login result "${loginResult}"`);
-  }
 }
 
 function createGeneralError() {
@@ -130,7 +114,68 @@ class BaseScraperWithBrowser extends BaseScraper {
 
     const current = await getCurrentUrl(this.page, true);
     const loginResult = getKeyByValue(loginOptions.possibleResults, current);
-    return handleLoginResult(this, loginResult);
+    return this.handleLoginResult(loginResult);
+  }
+
+  async smsVerification() {
+    if (!this.options.smsVerificationHandler) {
+      throw new Error(SMS_VERIFICATION_HANDLER_MISSING);
+    }
+    const smsValue = await this.options.smsVerificationHandler();
+    const smsVerificationOptions = this.getSMSVerificationOptions(smsValue);
+    await this.fillInputs(smsVerificationOptions.fields);
+    await clickButton(this.page, smsVerificationOptions.submitButtonSelector);
+    this.emitProgress(SCRAPE_PROGRESS_TYPES.VERIFING_SMS);
+
+    if (smsVerificationOptions.postAction) {
+      await smsVerificationOptions.postAction();
+    } else {
+      await waitForNavigation(this.page);
+    }
+
+    const current = await getCurrentUrl(this.page, true);
+    const smsVerificationResult = getKeyByValue(smsVerificationOptions.possibleResults, current);
+    return this.handleSmsVerificationResult(smsVerificationResult);
+  }
+
+  async handleLoginResult(loginResult) {
+    switch (loginResult) {
+      case LOGIN_RESULT.SUCCESS:
+        this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
+        return { success: true };
+      case LOGIN_RESULT.INVALID_PASSWORD:
+        this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_FAILED);
+        return {
+          success: false,
+          errorType: loginResult,
+        };
+      case LOGIN_RESULT.CHANGE_PASSWORD:
+        this.emitProgress(SCRAPE_PROGRESS_TYPES.CHANGE_PASSWORD);
+        return {
+          success: false,
+          errorType: loginResult,
+        };
+      case LOGIN_RESULT.SMS_VERIFICATION:
+        return this.smsVerification();
+      default:
+        throw new Error(`unexpected login result "${loginResult}"`);
+    }
+  }
+
+  async handleSmsVerificationResult(smsVerificationResult) {
+    switch (smsVerificationResult) {
+      case SMS_VERIFICATION_RESULT.SUCCESS:
+        this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
+        return { success: true };
+      case SMS_VERIFICATION_RESULT.INVALID_SMS_VALUE:
+        this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_FAILED);
+        return {
+          success: false,
+          errorType: smsVerificationResult,
+        };
+      default:
+        throw new Error(`unexpected sms verification result "${smsVerificationResult}"`);
+    }
   }
 
   async terminate() {
@@ -139,4 +184,4 @@ class BaseScraperWithBrowser extends BaseScraper {
   }
 }
 
-export { BaseScraperWithBrowser, LOGIN_RESULT };
+export { BaseScraperWithBrowser, LOGIN_RESULT, SMS_VERIFICATION_RESULT };

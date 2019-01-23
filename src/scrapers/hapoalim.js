@@ -1,7 +1,7 @@
 import moment from 'moment';
 import uuid4 from 'uuid/v4';
 
-import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LOGIN_RESULT, SMS_VERIFICATION_RESULT } from './base-scraper-with-browser';
 import { waitForRedirect } from '../helpers/navigation';
 import waitUntil from '../helpers/waiting';
 import { NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
@@ -131,6 +131,16 @@ function getPossibleLoginResults() {
     `${BASE_URL}/MCP/START?flow=MCP&state=START&expiredDate=null`,
     /\/ABOUTTOEXPIRE\/START/i,
   ];
+  urls[LOGIN_RESULT.SMS_VERIFICATION] = ['RELEVANT_URL', /OR_RELEVANT_REGEX/i]; // TODO add actual values
+  return urls;
+}
+
+function getPossibleSMSVerificationResults() {
+  const urls = {};
+  urls[SMS_VERIFICATION_RESULT.SUCCESS] = ['RELEVANT_URL', /OR_RELEVANT_REGEX/i]; // TODO add actual values
+
+  urls[SMS_VERIFICATION_RESULT.INVALID_SMS_VALUE] = ['RELEVANT_URL', /OR_RELEVANT_REGEX/i]; // TODO add actual values
+
   return urls;
 }
 
@@ -138,6 +148,12 @@ function createLoginFields(credentials) {
   return [
     { selector: '#userID', value: credentials.userCode },
     { selector: '#userPassword', value: credentials.password },
+  ];
+}
+
+function createSMSVerificationFields(smsValue) {
+  return [
+    { selector: '#TODO_ADD_SELECTOR', value: smsValue }, // TODO add actual selector
   ];
 }
 
@@ -149,6 +165,15 @@ class HapoalimScraper extends BaseScraperWithBrowser {
       submitButtonSelector: '#inputSend',
       postAction: async () => waitForRedirect(this.page),
       possibleResults: getPossibleLoginResults(),
+    };
+  }
+
+  getSMSVerificationOptions(smsValue) {
+    return {
+      fields: createSMSVerificationFields(smsValue),
+      submitButtonSelector: '#TODO_ADD_SELECTOR', // TODO add actual selector
+      postAction: async () => waitForRedirect(this.page),
+      possibleResults: getPossibleSMSVerificationResults(),
     };
   }
 

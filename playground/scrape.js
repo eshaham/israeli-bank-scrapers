@@ -1,5 +1,6 @@
 import json2csv from 'json2csv';
 import moment from 'moment';
+import inquirer from 'inquirer';
 
 import { CONFIG_FOLDER } from './definitions';
 import { writeFile, readJsonFile } from './helpers/files';
@@ -16,6 +17,18 @@ async function exportAccountData(scraperId, account, saveLocation) {
   });
   const csv = json2csv.parse(data, { withBOM: true });
   await writeFile(`${saveLocation}/${SCRAPERS[scraperId].name} (${account.accountNumber}).csv`, csv);
+}
+
+async function smsVerificationHandler() {
+  const result = await inquirer.prompt(
+    {
+      type: 'input',
+      name: 'smsValue',
+      message: 'Please provide the sms verification code sent to your mobile',
+    },
+  );
+
+  return result.smsValue;
 }
 
 (async function scrape() {
@@ -37,6 +50,7 @@ async function exportAccountData(scraperId, account, saveLocation) {
         combineInstallments,
         showBrowser: true,
         verbose: false,
+        smsVerificationHandler,
       };
       let result;
       try {
