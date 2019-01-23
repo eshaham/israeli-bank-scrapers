@@ -6,7 +6,6 @@ import {
   LOGIN_RESULT,
   GENERAL_ERROR,
   SMS_VERIFICATION_RESULT,
-  SMS_VERIFICATION_HANDLER_MISSING,
 } from '../constants';
 import { waitForNavigation, getCurrentUrl } from '../helpers/navigation';
 import { waitUntilElementFound, fillInput, clickButton } from '../helpers/elements-interactions';
@@ -14,6 +13,8 @@ import { waitUntilElementFound, fillInput, clickButton } from '../helpers/elemen
 const VIEWPORT_WIDTH = 1024;
 const VIEWPORT_HEIGHT = 768;
 const OK_STATUS = 200;
+
+const SMS_VERIFICATION_HANDLER_MISSING = 'Scraper requires sms verification. To support manual sms verification provide an handler as part of the options';
 
 function getKeyByValue(object, value) {
   return Object.keys(object).find((key) => {
@@ -178,6 +179,10 @@ class BaseScraperWithBrowser extends BaseScraper {
       default:
         throw new Error(`unexpected sms verification result "${smsVerificationResult}"`);
     }
+  }
+
+  getSMSVerificationOptions() {
+    throw new Error(`getSMSVerificationOptions() is not created in ${this.options.companyId}`);
   }
 
   async terminate() {

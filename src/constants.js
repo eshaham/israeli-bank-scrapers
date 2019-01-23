@@ -9,8 +9,6 @@ export const SHEKEL_CURRENCY = 'ILS';
 export const DOLLAR_CURRENCY_SYMBOL = '$';
 export const DOLLAR_CURRENCY = 'USD';
 
-export const SMS_VERIFICATION_HANDLER_MISSING = 'Scraper requires sms verification. To support manual sms verification provide an handler as part of the options';
-
 export const SCRAPE_PROGRESS_TYPES = {
   INITIALIZING: 'INITIALIZING',
   START_SCRAPING: 'START_SCRAPING',
