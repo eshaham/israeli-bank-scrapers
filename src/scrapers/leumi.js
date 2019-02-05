@@ -283,9 +283,12 @@ async function fetchTransactionsForForeignAccounts(page, startDate) {
     );
     await clickButton(page, 'input#btnDisplayDates');
     await waitForNavigation(page);
-    await waitUntilElementFound(page, 'div#WorkSpaceBox > table:first-child');
+    const hasTransactions = await Promise.race([
+      waitUntilElementFound(page, 'div#WorkSpaceBox > table:first-child', true).then(() => true),
+      waitUntilElementFound(page, 'div#noData', true).then(() => false),
+    ]);
 
-    const txns = await fetchCompletedTransactionsForForeignAccount(page);
+    const txns = hasTransactions ? await fetchCompletedTransactionsForForeignAccount(page) : [];
 
     result.push({
       accountNumber,
