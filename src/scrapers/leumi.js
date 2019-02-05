@@ -17,7 +17,7 @@ import {
 } from '../constants';
 
 const DOLLAR_CURRENCY_LABEL = "דולר ארה''ב";
-const BASE_URL = 'https://hb2.bankleumi.co.il/';
+const BASE_URL = 'https://hb2.bankleumi.co.il';
 const DATE_FORMAT = 'DD/MM/YY';
 
 function getPossibleLoginResults() {
