@@ -6,6 +6,7 @@ import {
   clickButton,
   waitUntilElementFound,
   pageEvalAll,
+  elementPresentOnPage,
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
@@ -160,7 +161,12 @@ async function fetchTransactionsForAccount(page, startDate) {
   await clickButton(page, 'input#btnDisplayDates');
   await waitForNavigation(page);
   await waitUntilElementFound(page, 'table#WorkSpaceBox table#ctlActivityTable');
-  await clickButton(page, 'a#lnkCtlExpandAllInPage');
+
+  const hasExpandAllButton = await elementPresentOnPage(page, 'a#lnkCtlExpandAllInPage');
+
+  if (hasExpandAllButton) {
+    await clickButton(page, 'a#lnkCtlExpandAllInPage');
+  }
 
   const selectedSnifAccount = await page.$eval('#ddlAccounts_m_ddl option[selected="selected"]', (option) => {
     return option.innerText;

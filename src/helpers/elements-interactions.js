@@ -29,6 +29,10 @@ async function pageEvalAll(page, selector, defaultResult, callback) {
   return result;
 }
 
+async function elementPresentOnPage(page, selector) {
+  return await page.$(selector) !== null;
+}
+
 async function dropdownSelect(page, selectSelector, value) {
   await page.select(selectSelector, value);
 }
@@ -39,4 +43,5 @@ export {
   clickButton,
   dropdownSelect,
   pageEvalAll,
+  elementPresentOnPage,
 };
