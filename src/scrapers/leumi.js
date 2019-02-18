@@ -191,6 +191,7 @@ async function waitForPostLogin(page) {
   return Promise.race([
     waitUntilElementFound(page, 'div.leumi-container', true),
     waitUntilElementFound(page, '#loginErrMsg', true),
+    waitForNavigation(page),
   ]);
 }
 
