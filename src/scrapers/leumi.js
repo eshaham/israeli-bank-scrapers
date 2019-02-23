@@ -2,6 +2,7 @@ import moment from 'moment';
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import {
   dropdownSelect,
+  dropdownElements,
   fillInput,
   clickButton,
   waitUntilElementFound,
@@ -150,7 +151,8 @@ async function extractPendingTransactionsFromPage(page) {
   return txns;
 }
 
-async function fetchTransactionsForAccount(page, startDate) {
+async function fetchTransactionsForAccount(page, startDate, accountId) {
+  await dropdownSelect(page, 'select#ddlAccounts_m_ddl', accountId);
   await dropdownSelect(page, 'select#ddlTransactionPeriod', '004');
   await waitUntilElementFound(page, 'select#ddlTransactionPeriod');
   await fillInput(
@@ -188,8 +190,16 @@ async function fetchTransactionsForAccount(page, startDate) {
 }
 
 async function fetchTransactions(page, startDate) {
-  // TODO need to extend to support multiple accounts and foreign accounts
-  return [await fetchTransactionsForAccount(page, startDate)];
+  const res = [];
+  // Loop through all available accounts and collect transactions from all
+  const accounts = await dropdownElements(page, 'select#ddlAccounts_m_ddl');
+  for (const account of accounts) {
+    // Skip "All accounts" option
+    if (account.value !== '-1') {
+      res.push(await fetchTransactionsForAccount(page, startDate, account.value));
+    }
+  }
+  return res;
 }
 
 async function waitForPostLogin(page) {
