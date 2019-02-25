@@ -37,11 +37,26 @@ async function dropdownSelect(page, selectSelector, value) {
   await page.select(selectSelector, value);
 }
 
+async function dropdownElements(page, selector) {
+  const options = await page.evaluate((optionSelector) => {
+    return Array.from(document.querySelectorAll(optionSelector))
+      .filter(o => o.value)
+      .map((o) => {
+        return {
+          name: o.text,
+          value: o.value,
+        };
+      });
+  }, `${selector} > option`);
+  return options;
+}
+
 export {
   waitUntilElementFound,
   fillInput,
   clickButton,
   dropdownSelect,
+  dropdownElements,
   pageEvalAll,
   elementPresentOnPage,
 };
