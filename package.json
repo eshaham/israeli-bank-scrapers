@@ -39,7 +39,7 @@
     "babel-plugin-transform-es2015-shorthand-properties": "^6.24.1",
     "babel-preset-env": "^1.7.0",
     "babel-register": "^6.26.0",
-    "eslint": "^5.4.0",
+    "eslint": "^5.14.1",
     "eslint-config-airbnb-base": "^13.1.0",
     "eslint-plugin-import": "^2.14.0",
     "inquirer": "^6.1.0",
@@ -50,7 +50,7 @@
   "dependencies": {
     "babel-polyfill": "^6.26.0",
     "build-url": "^1.1.2",
-    "lodash": "^4.17.10",
+    "lodash": "^4.17.11",
     "moment": "^2.22.2",
     "node-fetch": "^2.2.0",
     "puppeteer": "^1.7.0",

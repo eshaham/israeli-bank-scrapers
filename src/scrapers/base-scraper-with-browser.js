@@ -27,6 +27,7 @@ function getKeyByValue(object, value) {
 }
 
 function handleLoginResult(scraper, loginResult) {
+  console.debug(`handleLoginResult -> Login result:${loginResult}`);
   switch (loginResult) {
     case LOGIN_RESULT.SUCCESS:
       scraper.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
@@ -105,10 +106,12 @@ class BaseScraperWithBrowser extends BaseScraper {
   }
 
   async login(credentials) {
+    console.debug('starting login function');
     if (!credentials) {
       return createGeneralError();
     }
 
+    console.debug('login -> get loginOptions');
     const loginOptions = this.getLoginOptions(credentials);
 
     await this.navigateTo(loginOptions.loginUrl);
@@ -118,18 +121,25 @@ class BaseScraperWithBrowser extends BaseScraper {
       await waitUntilElementFound(this.page, loginOptions.submitButtonSelector);
     }
 
+    console.debug('login -> fill input fields');
     await this.fillInputs(loginOptions.fields);
+
+    console.debug('login -> click on login button');
     await clickButton(this.page, loginOptions.submitButtonSelector);
     this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGGING_IN);
 
     if (loginOptions.postAction) {
+      console.debug('login -> postAction');
       await loginOptions.postAction();
     } else {
+      console.debug(`login -> wait for navigation: ${this.page}`);
       await waitForNavigation(this.page);
     }
 
     const current = await getCurrentUrl(this.page, true);
+    console.debug(`login -> getCurrentURL: ${current}`);
     const loginResult = getKeyByValue(loginOptions.possibleResults, current);
+    console.debug(`login -> loginResult ${loginResult}`);
     return handleLoginResult(this, loginResult);
   }
 

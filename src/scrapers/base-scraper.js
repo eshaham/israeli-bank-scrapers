@@ -38,13 +38,16 @@ class BaseScraper {
     let loginResult;
     try {
       loginResult = await this.login(credentials);
+      console.debug(`base-scraper -> loginResult: ${loginResult}`);
     } catch (e) {
+      console.debug(`base-scraper -> loginResult error: ${e}`);
       loginResult = e.timeout ?
         createTimeoutError(e.message) :
         createGenericNavigationError(e.message);
     }
 
     let scrapeResult;
+    console.debug(`base-scraper -> loginResult: ${loginResult}`);
     if (loginResult.success) {
       try {
         scrapeResult = await this.fetchData();

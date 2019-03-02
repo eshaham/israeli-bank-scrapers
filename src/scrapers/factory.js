@@ -6,6 +6,7 @@ import LeumiCardScraper from './leumi-card';
 import VisaCalScraper from './visa-cal';
 import IsracardScraper from './isracard';
 import AmexScraper from './amex';
+import MizrahiScraper from './mizrahi';
 
 export default function createScraper(options) {
   switch (options.companyId) {
@@ -13,6 +14,8 @@ export default function createScraper(options) {
       return new HapoalimScraper(options);
     case 'leumi':
       return new LeumiScraper(options);
+    case 'mizrahi':
+      return new MizrahiScraper(options);
     case 'discount':
       return new DiscountScraper(options);
     case 'otsarHahayal':
