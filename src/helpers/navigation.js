@@ -21,12 +21,13 @@ export async function getCurrentUrl(page, clientSide = false) {
   return page.url();
 }
 
-export async function waitForRedirect(page, timeout = 20000, clientSide = false) {
+export async function waitForRedirect(page, timeout = 20000, clientSide = false, ignoreList = []) {
   const initial = await getCurrentUrl(page, clientSide);
+
   try {
     await waitUntil(async () => {
       const current = await getCurrentUrl(page, clientSide);
-      return current !== initial;
+      return current !== initial && ignoreList.indexOf(current) === -1;
     }, `waiting for redirect from ${initial}`, timeout, 1000);
   } catch (e) {
     if (e && e.timeout) {
