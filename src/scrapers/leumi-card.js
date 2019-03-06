@@ -30,7 +30,7 @@ const CREDIT_TYPE_NAME = 'קרדיט';
 
 function redirectOrDialog(page) {
   return Promise.race([
-    waitForRedirect(page),
+    waitForRedirect(page, 20000, false, [BASE_WELCOME_URL, `${BASE_WELCOME_URL}/`]),
     waitUntilElementFound(page, '#popupWrongDetails', true),
   ]);
 }
