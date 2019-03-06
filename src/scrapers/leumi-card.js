@@ -287,17 +287,18 @@ async function fetchTransactions(browser, options, navigateToFunc) {
 
   const allTasks = [];
   for (let i = 0; i < allMonths.length; i += 1) {
-    const task = fetchTransactionsForMonth(browser, navigateToFunc, allMonths[i]);
+    const task = () => fetchTransactionsForMonth(browser, navigateToFunc, allMonths[i]);
     allTasks.push(task);
   }
 
-  const task = fetchTransactionsForMonth(browser, navigateToFunc);
+  const task = () => fetchTransactionsForMonth(browser, navigateToFunc);
   allTasks.push(task);
 
-  const allTasksResults = await Promise.all(allTasks);
-  const allResults = allTasksResults.reduce((obj, result) => {
-    return addResult(obj, result);
-  }, {});
+  let allResults = {};
+  for (const task of allTasks) {
+    const result = await task();
+    allResults = addResult(allResults, result);
+  }
 
   Object.keys(allResults).forEach((accountNumber) => {
     let txns = allResults[accountNumber];
