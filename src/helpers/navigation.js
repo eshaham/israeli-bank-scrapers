@@ -27,7 +27,7 @@ export async function waitForRedirect(page, timeout = 20000, clientSide = false,
   try {
     await waitUntil(async () => {
       const current = await getCurrentUrl(page, clientSide);
-      return current !== initial && ignoreList.indexOf(current) === -1;
+      return current !== initial && !ignoreList.includes(current);
     }, `waiting for redirect from ${initial}`, timeout, 1000);
   } catch (e) {
     if (e && e.timeout) {

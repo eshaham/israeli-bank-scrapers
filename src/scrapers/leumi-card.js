@@ -285,20 +285,14 @@ async function fetchTransactions(browser, options, navigateToFunc) {
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
   const allMonths = getAllMonthMoments(startMoment, false);
 
-  const allTasks = [];
-  for (let i = 0; i < allMonths.length; i += 1) {
-    const task = () => fetchTransactionsForMonth(browser, navigateToFunc, allMonths[i]);
-    allTasks.push(task);
-  }
-
-  const task = () => fetchTransactionsForMonth(browser, navigateToFunc);
-  allTasks.push(task);
-
   let allResults = {};
-  for (const task of allTasks) {
-    const result = await task();
+  for (let i = 0; i < allMonths.length; i += 1) {
+    const result = await fetchTransactionsForMonth(browser, navigateToFunc, allMonths[i]);
     allResults = addResult(allResults, result);
   }
+
+  const currentMonthResult = await fetchTransactionsForMonth(browser, navigateToFunc);
+  allResults = addResult(allResults, currentMonthResult);
 
   Object.keys(allResults).forEach((accountNumber) => {
     let txns = allResults[accountNumber];
