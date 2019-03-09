@@ -14,7 +14,8 @@ import {
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
 
-const BASE_URL = 'https://online.leumi-card.co.il';
+const BASE_ACTIONS_URL = 'https://online.max.co.il';
+const BASE_WELCOME_URL = 'https://www.max.co.il';
 const DATE_FORMAT = 'DD/MM/YYYY';
 const NORMAL_TYPE_NAME = 'רגילה';
 const ATM_TYPE_NAME = 'חיוב עסקות מיידי';
@@ -29,7 +30,7 @@ const CREDIT_TYPE_NAME = 'קרדיט';
 
 function redirectOrDialog(page) {
   return Promise.race([
-    waitForRedirect(page),
+    waitForRedirect(page, 20000, false, [BASE_WELCOME_URL, `${BASE_WELCOME_URL}/`]),
     waitUntilElementFound(page, '#popupWrongDetails', true),
   ]);
 }
@@ -44,7 +45,7 @@ function getTransactionsUrl(monthMoment) {
     monthCharge = `${year}${monthStr}`;
     actionType = 2;
   }
-  return buildUrl(BASE_URL, {
+  return buildUrl(BASE_ACTIONS_URL, {
     path: 'Registred/Transactions/ChargesDeals.aspx',
     queryParams: {
       ActionType: actionType,
@@ -284,19 +285,14 @@ async function fetchTransactions(browser, options, navigateToFunc) {
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
   const allMonths = getAllMonthMoments(startMoment, false);
 
-  const allTasks = [];
+  let allResults = {};
   for (let i = 0; i < allMonths.length; i += 1) {
-    const task = fetchTransactionsForMonth(browser, navigateToFunc, allMonths[i]);
-    allTasks.push(task);
+    const result = await fetchTransactionsForMonth(browser, navigateToFunc, allMonths[i]);
+    allResults = addResult(allResults, result);
   }
 
-  const task = fetchTransactionsForMonth(browser, navigateToFunc);
-  allTasks.push(task);
-
-  const allTasksResults = await Promise.all(allTasks);
-  const allResults = allTasksResults.reduce((obj, result) => {
-    return addResult(obj, result);
-  }, {});
+  const currentMonthResult = await fetchTransactionsForMonth(browser, navigateToFunc);
+  allResults = addResult(allResults, currentMonthResult);
 
   Object.keys(allResults).forEach((accountNumber) => {
     let txns = allResults[accountNumber];
@@ -309,9 +305,9 @@ async function fetchTransactions(browser, options, navigateToFunc) {
 
 function getPossibleLoginResults() {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = [`${BASE_URL}/Registred/HomePage.aspx`];
-  urls[LOGIN_RESULT.CHANGE_PASSWORD] = [`${BASE_URL}/Anonymous/Login/PasswordExpired.aspx`];
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${BASE_URL}/Anonymous/Login/CardHoldersLogin.aspx`];
+  urls[LOGIN_RESULT.SUCCESS] = [`${BASE_WELCOME_URL}/homepage/personal`];
+  urls[LOGIN_RESULT.CHANGE_PASSWORD] = [`${BASE_ACTIONS_URL}/Anonymous/Login/PasswordExpired.aspx`];
+  urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${BASE_ACTIONS_URL}/Anonymous/Login/CardHoldersLogin.aspx`];
   return urls;
 }
 
@@ -326,7 +322,7 @@ class LeumiCardScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials) {
     const inputGroupName = 'PlaceHolderMain_CardHoldersLogin1';
     return {
-      loginUrl: `${BASE_URL}/Anonymous/Login/CardHoldersLogin.aspx`,
+      loginUrl: `${BASE_ACTIONS_URL}/Anonymous/Login/CardholdersLogin.aspx`,
       fields: createLoginFields(inputGroupName, credentials),
       submitButtonSelector: `#${inputGroupName}_btnLogin`,
       preAction: async () => {

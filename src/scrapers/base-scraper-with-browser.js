@@ -19,7 +19,7 @@ function getKeyByValue(object, value) {
         return item.test(value);
       }
 
-      return value === item;
+      return value.toLowerCase() === item.toLowerCase();
     });
 
     return !!result;
