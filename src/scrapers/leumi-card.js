@@ -316,7 +316,7 @@ function getPossibleLoginResults() {
 function createLoginFields(inputGroupName, credentials) {
   return [
     { selector: `#${inputGroupName}_txtUserName`, value: credentials.username },
-    { selector: `#${inputGroupName}_txtPassword`, value: credentials.password },
+    { selector: '#txtPassword', value: credentials.password },
   ];
 }
 
