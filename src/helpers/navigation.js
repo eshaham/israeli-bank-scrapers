@@ -1,5 +1,7 @@
 import waitUntil from './waiting';
 
+const OK_STATUS = 200;
+
 export const NAVIGATION_ERRORS = {
   TIMEOUT: 'timeout',
   GENERIC: 'generic',
@@ -35,5 +37,12 @@ export async function waitForRedirect(page, timeout = 20000, clientSide = false,
       e.lastUrl = current;
     }
     throw e;
+  }
+}
+
+export async function navigateTo(page, url) {
+  const response = await page.goto(url);
+  if (!response || response.status() !== OK_STATUS) {
+    throw new Error(`Error while trying to navigate to url ${url}`);
   }
 }

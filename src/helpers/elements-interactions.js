@@ -10,6 +10,16 @@ async function fillInput(page, inputSelector, inputValue) {
   await page.type(inputSelector, inputValue);
 }
 
+async function fillInputs(page, fields) {
+  const modified = [...fields];
+  const input = modified.shift();
+  await fillInput(page, input.selector, input.value);
+  if (modified.length) {
+    return fillInputs(page, modified);
+  }
+  return null;
+}
+
 async function clickButton(page, buttonSelector) {
   const button = await page.$(buttonSelector);
   await button.click();
@@ -54,6 +64,7 @@ async function dropdownElements(page, selector) {
 export {
   waitUntilElementFound,
   fillInput,
+  fillInputs,
   clickButton,
   dropdownSelect,
   dropdownElements,
