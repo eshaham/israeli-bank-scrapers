@@ -1,7 +1,7 @@
 import { fillInputs, clickButton, waitUntilElementFound } from '../../helpers/elements-interactions';
 import { noop } from '../../helpers/scraping';
 import { navigateTo, getCurrentUrl } from '../../helpers/navigation';
-import BASE_URL from './definitions';
+import { BASE_URL } from './definitions';
 import getKeyByValue from '../../helpers/filters';
 import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT } from '../../constants';
 

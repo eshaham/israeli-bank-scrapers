@@ -1,23 +1,12 @@
 import moment from 'moment';
 import {
-  dropdownSelect,
-  dropdownElements,
-  fillInput,
-  clickButton,
-  waitUntilElementFound,
   pageEvalAll,
-  elementPresentOnPage,
 } from '../../helpers/elements-interactions';
-import { navigateTo, waitForNavigation } from '../../helpers/navigation';
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../../constants';
-import BASE_URL from './definitions';
+import { mapAccounts, navigateToAccountTransactions } from './helpers/accounts';
 import createGeneralError from '../../helpers/errors';
+import { DATE_FORMAT } from './definitions';
 
-const DATE_FORMAT = 'DD/MM/YY';
-
-function getTransactionsUrl() {
-  return `${BASE_URL}/ebanking/Accounts/ExtendedActivity.aspx?WidgetPar=1#/`;
-}
 
 function getAmountData(amountStr) {
   const amountStrCopy = amountStr.replace(',', '');
@@ -98,7 +87,7 @@ async function extractCompletedTransactionsFromPage(page) {
 
 async function extractPendingTransactionsFromPage(page) {
   const txns = [];
-  const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #trTodayActivityNapaTableUpper tr td', [], (tds) => {
+  const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #ctlTodayActivityTableUpper tr td', [], (tds) => {
     return tds.map(td => ({
       classList: td.getAttribute('class'),
       innerText: td.innerText,
@@ -136,31 +125,14 @@ async function extractPendingTransactionsFromPage(page) {
   return txns;
 }
 
-async function fetchTransactionsForAccount(page, startDate, accountId) {
-  await dropdownSelect(page, 'select#ddlAccounts_m_ddl', accountId);
-  await dropdownSelect(page, 'select#ddlTransactionPeriod', '004');
-  await waitUntilElementFound(page, 'select#ddlTransactionPeriod');
-  await fillInput(
-    page,
-    'input#dtFromDate_textBox',
-    startDate.format(DATE_FORMAT),
-  );
-  await clickButton(page, 'input#btnDisplayDates');
-  await waitForNavigation(page);
-  await waitUntilElementFound(page, 'table#WorkSpaceBox table#ctlActivityTable');
-
-  const hasExpandAllButton = await elementPresentOnPage(page, 'a#lnkCtlExpandAllInPage');
-
-  if (hasExpandAllButton) {
-    await clickButton(page, 'a#lnkCtlExpandAllInPage');
-  }
-
-  const selectedSnifAccount = await page.$eval('#ddlAccounts_m_ddl option[selected="selected"]', (option) => {
-    return option.innerText;
-  });
-
-  const accountNumber = selectedSnifAccount.replace('/', '_');
-
+/**
+ *
+ * @param page
+ * @param options { startDate, accountId, accountName }
+ * @returns {Promise<{accountNumber: string, txns: *}>}
+ */
+async function fetchTransactionsForAccount(page, options) {
+  await navigateToAccountTransactions(page, options);
   const pendingTxns = await extractPendingTransactionsFromPage(page);
   const completedTxns = await extractCompletedTransactionsFromPage(page);
   const txns = [
@@ -169,33 +141,22 @@ async function fetchTransactionsForAccount(page, startDate, accountId) {
   ];
 
   return {
-    accountNumber,
+    accountNumber: options.accountName,
     txns: convertTransactions(txns),
   };
 }
 
 async function fetchTransactions(page, startDate) {
-  const res = [];
-  // Loop through all available accounts and collect transactions from all
-  const accounts = await dropdownElements(page, 'select#ddlAccounts_m_ddl');
-  for (const account of accounts) {
-    // Skip "All accounts" option
-    if (account.value !== '-1') {
-      res.push(await fetchTransactionsForAccount(page, startDate, account.value));
-    }
-  }
-  return res;
+  return mapAccounts(page, async (page, { accountName, accountValue }) => {
+    return fetchTransactionsForAccount(page, { startDate, accountName, accountValue });
+  });
 }
-
 
 async function scrapeTransactions(page, options) {
   try {
     const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
     const startDate = options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
-
-    const url = getTransactionsUrl();
-    await navigateTo(page, url);
 
     const accounts = await fetchTransactions(page, startMoment);
 

@@ -188,6 +188,40 @@ const credentials = {
 ```
 This scraper supports fetching transaction from up to one year.
 
+## Building your own scraper
+TODO should provide more details and review the example code.
+
+```
+import userLogin from 'src/scrapers/leumi/user-login';
+import { getBrowser, getBrowserPage } from 'src/helpers/scraping';
+import scrapeSummary from 'src/scrapers/leumi/scrape-summary';
+
+(async function scrape() {
+    const credentials = {}; // TODO provide relevant scraper credentials
+    try {
+      const browser = await getBrowser({
+        verbose: true, // optional
+        showBrowser: true, // optional
+      });
+      const page = await getBrowserPage(browser);
+
+      const userLoginResult = await userLogin(page, {
+        credentials,
+      });
+
+      if (!userLoginResult.success) {
+        console.error(userLoginResult.error);
+        return;
+      }
+      await scrapeSummary(page);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+  }
+}());
+```
+
 # Known projects
 These are the projects known to be using this module:
 - [Israeli YNAB updater](https://github.com/eshaham/israeli-ynab-updater) - A command line tool for exporting banks data to CSVs, formatted specifically for [YNAB](https://www.youneedabudget.com)

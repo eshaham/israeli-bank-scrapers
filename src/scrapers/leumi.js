@@ -3,10 +3,10 @@ import userLogin from './leumi/user-login';
 import scrapeTransactions from './leumi/scrape-transactions';
 import { BaseScraper } from './base-scraper';
 import { SCRAPE_PROGRESS_TYPES } from '../constants';
+import scrapeSummary from './leumi/scrape-summary';
 
 class LeumiScraper extends BaseScraper {
   async initialize() {
-    this.emitProgress(SCRAPE_PROGRESS_TYPES.INITIALIZING);
     this.browser = this.options.browser || await getBrowser(this.options);
     this.page = await getBrowserPage(this.browser);
     this.extendedOptions = Object.assign(
@@ -25,6 +25,10 @@ class LeumiScraper extends BaseScraper {
       { credentials },
     );
     return userLogin(this.page, userLoginOptions);
+  }
+
+  async fetchSummary() {
+    return scrapeSummary(this.page);
   }
 
   async fetchData() {

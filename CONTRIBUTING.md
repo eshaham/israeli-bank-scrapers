@@ -77,6 +77,10 @@ You can override this async function however way you want, as long as your retur
   success: boolean,
   accounts: [{
     accountNumber: string,
+    summary: {
+        balance: number,
+        pendingBalance: number
+    },
     txns: [{
       type: string, // can be either 'normal' or 'installments'
       identifier: int, // only if exists

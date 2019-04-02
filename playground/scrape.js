@@ -14,8 +14,11 @@ async function exportAccountData(scraperId, account, saveLocation) {
       processedDate: moment(txn.processedDate).format('DD/MM/YYYY'),
     });
   });
+  const filename = account.accountNumber.replace('/', '_');
+
   const csv = json2csv.parse(data, { withBOM: true });
-  await writeFile(`${saveLocation}/${SCRAPERS[scraperId].name} (${account.accountNumber}).csv`, csv);
+  await writeFile(`${saveLocation}/${SCRAPERS[scraperId].name} (${filename})-data.csv`, csv);
+  await writeFile(`${saveLocation}/${SCRAPERS[scraperId].name} (${filename}).json`, JSON.stringify(account, null, 4));
 }
 
 (async function scrape() {
@@ -64,7 +67,7 @@ async function exportAccountData(scraperId, account, saveLocation) {
           }
         }
 
-        console.log(`${numFiles} csv files saved under ${saveLocation}`);
+        console.log(`${numFiles} account saved under ${saveLocation}`);
       } else {
         console.log(`error type: ${result.errorType}`);
         console.log('error:', result.errorMessage);
