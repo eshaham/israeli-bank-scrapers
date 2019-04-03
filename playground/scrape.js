@@ -8,16 +8,19 @@ import { SCRAPERS, createScraper } from '../src';
 import { readSettingsFile } from './helpers/settings';
 
 async function exportAccountData(scraperId, account, saveLocation) {
-  const data = account.txns.map((txn) => {
-    return Object.assign(txn, {
-      date: moment(txn.date).format('DD/MM/YYYY'),
-      processedDate: moment(txn.processedDate).format('DD/MM/YYYY'),
-    });
-  });
   const filename = account.accountNumber.replace('/', '_');
+  if (account.txns.length) {
+    const data = account.txns.map((txn) => {
+      return Object.assign(txn, {
+        date: moment(txn.date).format('DD/MM/YYYY'),
+        processedDate: moment(txn.processedDate).format('DD/MM/YYYY'),
+      });
+    });
 
-  const csv = json2csv.parse(data, { withBOM: true });
-  await writeFile(`${saveLocation}/${SCRAPERS[scraperId].name} (${filename})-data.csv`, csv);
+    const csv = json2csv.parse(data, { withBOM: true });
+    await writeFile(`${saveLocation}/${SCRAPERS[scraperId].name} (${filename})-data.csv`, csv);
+  }
+
   await writeFile(`${saveLocation}/${SCRAPERS[scraperId].name} (${filename}).json`, JSON.stringify(account, null, 4));
 }
 
@@ -38,7 +41,7 @@ async function exportAccountData(scraperId, account, saveLocation) {
         companyId: scraperId,
         startDate,
         combineInstallments,
-        showBrowser: true,
+        showBrowser: false,
         verbose: false,
       };
       let result;
@@ -58,13 +61,9 @@ async function exportAccountData(scraperId, account, saveLocation) {
         let numFiles = 0;
         for (let i = 0; i < result.accounts.length; i += 1) {
           const account = result.accounts[i];
-          if (account.txns.length) {
-            console.log(`exporting ${account.txns.length} transactions for account # ${account.accountNumber}`);
-            await exportAccountData(scraperId, account, saveLocation);
-            numFiles += 1;
-          } else {
-            console.log(`no transactions for account # ${account.accountNumber}`);
-          }
+          console.log(`exporting ${account.txns.length} transactions for account # ${account.accountNumber}`);
+          await exportAccountData(scraperId, account, saveLocation);
+          numFiles += 1;
         }
 
         console.log(`${numFiles} account saved under ${saveLocation}`);

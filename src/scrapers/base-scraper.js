@@ -21,6 +21,29 @@ function createGenericNavigationError(errorMessage) {
   return createErrorResult(NAVIGATION_ERRORS.GENERIC, errorMessage);
 }
 
+function createEmptyAccount(accountNumber) {
+  return {
+    accountNumber,
+    txns: [],
+    summary: {},
+    payments: [],
+  };
+}
+
+function mergeAccounts(accounts, newAccounts, newAccountPropertyName) {
+  newAccounts.forEach((newAccount) => {
+    let account = accounts.find(
+      account => account.accountNumber === newAccount.accountNumber,
+    );
+    if (!account) {
+      account = createEmptyAccount(newAccount.accountNumber);
+      accounts.push(account);
+    }
+
+    account[newAccountPropertyName] = newAccount[newAccountPropertyName];
+  });
+}
+
 class BaseScraper {
   constructor(options) {
     this.options = options;
@@ -30,6 +53,7 @@ class BaseScraper {
   async initialize() {
     this.emitProgress(SCRAPE_PROGRESS_TYPES.INITIALIZING);
   }
+
 
   async createResult() {
     this.emitProgress(SCRAPE_PROGRESS_TYPES.SCRAPE_DATA);
@@ -43,19 +67,17 @@ class BaseScraper {
     if (!summaryResult.success) {
       return summaryResult;
     }
-    const { accounts } = transactionsResult;
 
-    summaryResult.accounts.forEach((summaryAccount) => {
-      let account = accounts.find(
-        account => account.accountNumber === summaryAccount.accountNumber,
-      );
-      if (!account) {
-        account = { accountNumber: summaryAccount.accountNumber };
-        accounts.push(account);
-      }
+    this.emitProgress(SCRAPE_PROGRESS_TYPES.SCRAPE_PAYMENTS);
+    const paymentsResult = await this.fetchPayments();
+    if (!paymentsResult.success) {
+      return paymentsResult;
+    }
 
-      account.summary = summaryAccount.summary;
-    });
+    const accounts = [];
+    mergeAccounts(accounts, transactionsResult.accounts, 'txns');
+    mergeAccounts(accounts, summaryResult.accounts, 'txns');
+    mergeAccounts(accounts, paymentsResult.accounts, 'payments');
 
     return { success: true, accounts };
   }
@@ -99,6 +121,10 @@ class BaseScraper {
 
   async fetchData() {
     throw new Error(`fetchData() is not created in ${this.options.companyId}`);
+  }
+
+  static async fetchPayments() {
+    return [];
   }
 
   static async fetchSummary() {

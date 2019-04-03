@@ -96,6 +96,11 @@ You can override this async function however way you want, as long as your retur
       },
       status: string //can either be 'completed' or 'pending'
     }],
+    payments: [{
+        date: string, // ISO date string
+        amount: double,
+        currency: string
+    }]
   }],
   errorType: "invalidPassword"|"changePassword"|"timeout"|"generic", // only on success=false
   errorMessage: string, // only on success=false
