@@ -76,7 +76,7 @@ class BaseScraper {
 
     const accounts = [];
     mergeAccounts(accounts, transactionsResult.accounts, 'txns');
-    mergeAccounts(accounts, summaryResult.accounts, 'txns');
+    mergeAccounts(accounts, summaryResult.accounts, 'summary');
     mergeAccounts(accounts, paymentsResult.accounts, 'payments');
 
     return { success: true, accounts };
