@@ -162,6 +162,15 @@ async function getAccountNumber(page, cardIndex) {
 async function getTransactionsForSection(page, cardIndex, sectionIndex) {
   const cardSections = await getCardSections(page, cardIndex);
   const txnsRows = await cardSections[sectionIndex].$$('.jobs_regular');
+  const expandedBusinessesNamesHeaders = await cardSections[sectionIndex].$$('.openedJob .bisName');
+  let expandedBusinessesNames = await Promise.all(expandedBusinessesNamesHeaders.map(
+    header => page.evaluate(y => y.innerText, header),
+  ),
+  expandedBusinessesNamesHeaders);
+
+  // Leumicard keeps hidden open transactions without any content, filter them out
+  expandedBusinessesNames = expandedBusinessesNames.filter(x => !!x);
+
   const txns = [];
   for (let txnIndex = 0; txnIndex < txnsRows.length; txnIndex += 1) {
     const txnColumns = await txnsRows[txnIndex].$$('td');
@@ -186,9 +195,8 @@ async function getTransactionsForSection(page, cardIndex, sectionIndex) {
       return td.innerText;
     }, txnColumns[6]);
 
-    const description = await page.evaluate((td) => {
-      return td.innerText;
-    }, txnColumns[3]);
+    // take the description from the hidden expanded info-card, as the one in the table is truncated
+    const description = expandedBusinessesNames[txnIndex].replace(/\s+/g, ' ');
 
     const comments = await page.evaluate((td) => {
       return td.innerText;
