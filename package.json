@@ -44,7 +44,7 @@
     "eslint-plugin-import": "^2.14.0",
     "inquirer": "^6.1.0",
     "json2csv": "^4.2.1",
-    "jsonfile": "^4.0.0",
+    "jsonfile": "^5.0.0",
     "pre-commit": "^1.2.2"
   },
   "dependencies": {
