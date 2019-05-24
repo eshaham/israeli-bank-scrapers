@@ -57,7 +57,11 @@ class BaseScraper {
       scrapeResult = loginResult;
     }
 
-    await this.terminate();
+    try {
+      await this.terminate();
+    } catch (e) {
+      scrapeResult = createGenericError(e.message);
+    }
     this.emitProgress(SCRAPE_PROGRESS_TYPES.END_SCRAPING);
 
     return scrapeResult;
