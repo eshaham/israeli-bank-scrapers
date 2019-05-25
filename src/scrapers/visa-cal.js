@@ -253,17 +253,9 @@ class VisaCalScraper extends BaseScraper {
         };
       }
     }
-
-    const authResponseText = await authResponse.text();
-    console.log(`Auth response text: ${authResponseText}`);
-
-    if (_.get(authResponse, 'Response.Status.Succeeded')) {
-      this.authHeader = `CALAuthScheme ${authResponse.AuthenticationToken}`;
-      this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
-      return { success: true };
-    }
-
-    throw new Error('unknown error during login');
+    this.authHeader = `CALAuthScheme ${authResponse.token}`;
+    this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
+    return { success: true };
   }
 
   async fetchData() {

@@ -33,8 +33,6 @@ export async function fetchPost(url, data, extraHeaders) {
     body: JSON.stringify(data),
   };
   const result = await nodeFetch(url, request);
-  const resultText = await result.text();
-  console.log(`Auth result: ${resultText}`);
   return result.json();
 }
 
