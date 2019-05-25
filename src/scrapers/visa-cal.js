@@ -16,7 +16,7 @@ import {
 import { fetchGet, fetchPost } from '../helpers/fetch';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
 
-const BASE_URL = 'https://restservices.cal-online.co.il/Cal4U';
+const BASE_URL = 'https://cal4u.cal-online.co.il/Cal4U';
 const DATE_FORMAT = 'DD/MM/YYYY';
 
 const PASSWORD_EXPIRED_MSG = 'תוקף הסיסמא פג';
@@ -34,6 +34,8 @@ const MEMBERSHIP_FEE_TYPE_CODE = '67';
 const SERVICES_REFUND_TYPE_CODE = '71';
 const SERVICES_TYPE_CODE = '72';
 const REFUND_TYPE_CODE_2 = '76';
+
+const HEADER_SITE = { 'X-Site-Id': '8D37DF16-5812-4ACD-BAE7-CD1A5BFA2206' };
 
 function getBankDebitsUrl(accountId) {
   const toDate = moment().add(2, 'months');
@@ -145,19 +147,19 @@ function prepareTransactions(txns, startMoment, combineInstallments) {
 
 async function getBankDebits(authHeader, accountId) {
   const bankDebitsUrl = getBankDebitsUrl(accountId);
-  return fetchGet(bankDebitsUrl, authHeader);
+  return fetchGet(bankDebitsUrl, Object.assign(authHeader, HEADER_SITE));
 }
 
 async function getTransactionsNextPage(authHeader) {
   const hasNextPageUrl = `${BASE_URL}/CalTransNextPage`;
-  return fetchGet(hasNextPageUrl, authHeader);
+  return fetchGet(hasNextPageUrl, Object.assign(authHeader, HEADER_SITE));
 }
 
 async function fetchTxns(authHeader, cardId, debitDates) {
   const txns = [];
   for (const date of debitDates) {
     const fetchTxnUrl = getTransactionsUrl(cardId, date);
-    let txnResponse = await fetchGet(fetchTxnUrl, authHeader);
+    let txnResponse = await fetchGet(fetchTxnUrl, Object.assign(authHeader, HEADER_SITE));
     if (txnResponse.Transactions) {
       txns.push(...txnResponse.Transactions);
     }
@@ -183,7 +185,7 @@ async function getTxnsOfCard(authHeader, card, bankDebits) {
 
 async function getTransactionsForAllAccounts(authHeader, startMoment, options) {
   const cardsByAccountUrl = `${BASE_URL}/CardsByAccounts`;
-  const banksResponse = await fetchGet(cardsByAccountUrl, authHeader);
+  const banksResponse = await fetchGet(cardsByAccountUrl, Object.assign(authHeader, HEADER_SITE));
 
   if (_.get(banksResponse, 'Response.Status.Succeeded')) {
     const accounts = [];
@@ -226,15 +228,16 @@ async function getTransactionsForAllAccounts(authHeader, startMoment, options) {
 
 class VisaCalScraper extends BaseScraper {
   async login(credentials) {
-    const authUrl = `${BASE_URL}/CalAuthenticator`;
+    const authUrl = 'https://connect.cal-online.co.il/api/authentication/login';
     const authRequest = {
       username: credentials.username,
       password: credentials.password,
+      rememberMe: null,
     };
 
     this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGGING_IN);
 
-    const authResponse = await fetchPost(authUrl, authRequest);
+    const authResponse = await fetchPost(authUrl, authRequest, HEADER_SITE);
     if (!authResponse || !authResponse.AuthenticationToken) {
       if (_.get(authResponse, 'Response.Status.Message') === PASSWORD_EXPIRED_MSG) {
         return {
@@ -251,8 +254,11 @@ class VisaCalScraper extends BaseScraper {
       }
     }
 
+    const authResponseText = await authResponse.text();
+    console.log(`Auth response text: ${authResponseText}`);
+
     if (_.get(authResponse, 'Response.Status.Succeeded')) {
-      this.authHeader = `CalAuthScheme ${authResponse.AuthenticationToken}`;
+      this.authHeader = `CALAuthScheme ${authResponse.AuthenticationToken}`;
       this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
       return { success: true };
     }
