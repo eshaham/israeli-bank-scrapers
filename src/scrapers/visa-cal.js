@@ -147,19 +147,19 @@ function prepareTransactions(txns, startMoment, combineInstallments) {
 
 async function getBankDebits(authHeader, accountId) {
   const bankDebitsUrl = getBankDebitsUrl(accountId);
-  return fetchGet(bankDebitsUrl, Object.assign(authHeader, HEADER_SITE));
+  return fetchGet(bankDebitsUrl, authHeader);
 }
 
 async function getTransactionsNextPage(authHeader) {
   const hasNextPageUrl = `${BASE_URL}/CalTransNextPage`;
-  return fetchGet(hasNextPageUrl, Object.assign(authHeader, HEADER_SITE));
+  return fetchGet(hasNextPageUrl, authHeader);
 }
 
 async function fetchTxns(authHeader, cardId, debitDates) {
   const txns = [];
   for (const date of debitDates) {
     const fetchTxnUrl = getTransactionsUrl(cardId, date);
-    let txnResponse = await fetchGet(fetchTxnUrl, Object.assign(authHeader, HEADER_SITE));
+    let txnResponse = await fetchGet(fetchTxnUrl, authHeader);
     if (txnResponse.Transactions) {
       txns.push(...txnResponse.Transactions);
     }
@@ -185,7 +185,7 @@ async function getTxnsOfCard(authHeader, card, bankDebits) {
 
 async function getTransactionsForAllAccounts(authHeader, startMoment, options) {
   const cardsByAccountUrl = `${BASE_URL}/CardsByAccounts`;
-  const banksResponse = await fetchGet(cardsByAccountUrl, Object.assign(authHeader, HEADER_SITE));
+  const banksResponse = await fetchGet(cardsByAccountUrl, authHeader);
 
   if (_.get(banksResponse, 'Response.Status.Succeeded')) {
     const accounts = [];
@@ -238,7 +238,7 @@ class VisaCalScraper extends BaseScraper {
     this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGGING_IN);
 
     const authResponse = await fetchPost(authUrl, authRequest, HEADER_SITE);
-    if (!authResponse || !authResponse.AuthenticationToken) {
+    if (!authResponse || !authResponse.token) {
       if (_.get(authResponse, 'Response.Status.Message') === PASSWORD_EXPIRED_MSG) {
         return {
           success: false,
@@ -252,6 +252,11 @@ class VisaCalScraper extends BaseScraper {
           errorType: LOGIN_RESULT.INVALID_PASSWORD,
         };
       }
+
+      return {
+        success: false,
+        errorType: LOGIN_RESULT.UNKNOWN_ERROR,
+      };
     }
     this.authHeader = `CALAuthScheme ${authResponse.token}`;
     this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
@@ -263,14 +268,8 @@ class VisaCalScraper extends BaseScraper {
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-    const authHeader = { Authorization: this.authHeader };
+    const authHeader = Object.assign({ Authorization: this.authHeader }, HEADER_SITE);
     return getTransactionsForAllAccounts(authHeader, startMoment, this.options);
-  }
-
-  createAuthHeader() {
-    return {
-      Authorization: this.authHeader,
-    };
   }
 }
 
