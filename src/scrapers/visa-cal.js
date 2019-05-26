@@ -20,7 +20,7 @@ const BASE_URL = 'https://cal4u.cal-online.co.il/Cal4U';
 const DATE_FORMAT = 'DD/MM/YYYY';
 
 const PASSWORD_EXPIRED_MSG = 'תוקף הסיסמא פג';
-const INVALID_CREDENTIALS = 'שם משתמש או הסיסמא שהוזנו שגויים';
+const INVALID_CREDENTIALS = 'שם המשתמש או הסיסמה שהוזנו שגויים';
 const NO_DATA_FOUND_MSG = 'לא נמצאו חיובים לטווח תאריכים זה';
 
 const NORMAL_TYPE_CODE = '5';
@@ -238,21 +238,21 @@ class VisaCalScraper extends BaseScraper {
     this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGGING_IN);
 
     const authResponse = await fetchPost(authUrl, authRequest, HEADER_SITE);
+    if (authResponse === PASSWORD_EXPIRED_MSG) {
+      return {
+        success: false,
+        errorType: LOGIN_RESULT.CHANGE_PASSWORD,
+      };
+    }
+
+    if (authResponse === INVALID_CREDENTIALS) {
+      return {
+        success: false,
+        errorType: LOGIN_RESULT.INVALID_PASSWORD,
+      };
+    }
+
     if (!authResponse || !authResponse.token) {
-      if (_.get(authResponse, 'Response.Status.Message') === PASSWORD_EXPIRED_MSG) {
-        return {
-          success: false,
-          errorType: LOGIN_RESULT.CHANGE_PASSWORD,
-        };
-      }
-
-      if (_.get(authResponse, 'Response.Status.Message') === INVALID_CREDENTIALS) {
-        return {
-          success: false,
-          errorType: LOGIN_RESULT.INVALID_PASSWORD,
-        };
-      }
-
       return {
         success: false,
         errorType: LOGIN_RESULT.UNKNOWN_ERROR,
