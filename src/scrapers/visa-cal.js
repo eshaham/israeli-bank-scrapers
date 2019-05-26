@@ -256,6 +256,7 @@ class VisaCalScraper extends BaseScraper {
       return {
         success: false,
         errorType: LOGIN_RESULT.UNKNOWN_ERROR,
+        errorMessage: `No token found in authResponse: ${JSON.stringify(authResponse)}`,
       };
     }
     this.authHeader = `CALAuthScheme ${authResponse.token}`;
