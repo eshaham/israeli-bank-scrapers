@@ -17,6 +17,7 @@ import { fetchGet, fetchPost } from '../helpers/fetch';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
 
 const BASE_URL = 'https://cal4u.cal-online.co.il/Cal4U';
+const AUTH_URL = 'https://connect.cal-online.co.il/api/authentication/login';
 const DATE_FORMAT = 'DD/MM/YYYY';
 
 const PASSWORD_EXPIRED_MSG = 'תוקף הסיסמא פג';
@@ -228,7 +229,6 @@ async function getTransactionsForAllAccounts(authHeader, startMoment, options) {
 
 class VisaCalScraper extends BaseScraper {
   async login(credentials) {
-    const authUrl = 'https://connect.cal-online.co.il/api/authentication/login';
     const authRequest = {
       username: credentials.username,
       password: credentials.password,
@@ -237,7 +237,7 @@ class VisaCalScraper extends BaseScraper {
 
     this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGGING_IN);
 
-    const authResponse = await fetchPost(authUrl, authRequest, HEADER_SITE);
+    const authResponse = await fetchPost(AUTH_URL, authRequest, HEADER_SITE);
     if (authResponse === PASSWORD_EXPIRED_MSG) {
       return {
         success: false,
