@@ -16,11 +16,11 @@ import {
 import { fetchGet, fetchPost } from '../helpers/fetch';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
 
-const BASE_URL = 'https://restservices.cal-online.co.il/Cal4U';
+const BASE_URL = 'https://cal4u.cal-online.co.il/Cal4U';
 const DATE_FORMAT = 'DD/MM/YYYY';
 
 const PASSWORD_EXPIRED_MSG = 'תוקף הסיסמא פג';
-const INVALID_CREDENTIALS = 'שם משתמש או הסיסמא שהוזנו שגויים';
+const INVALID_CREDENTIALS = 'שם המשתמש או הסיסמה שהוזנו שגויים';
 const NO_DATA_FOUND_MSG = 'לא נמצאו חיובים לטווח תאריכים זה';
 
 const NORMAL_TYPE_CODE = '5';
@@ -34,6 +34,8 @@ const MEMBERSHIP_FEE_TYPE_CODE = '67';
 const SERVICES_REFUND_TYPE_CODE = '71';
 const SERVICES_TYPE_CODE = '72';
 const REFUND_TYPE_CODE_2 = '76';
+
+const HEADER_SITE = { 'X-Site-Id': '8D37DF16-5812-4ACD-BAE7-CD1A5BFA2206' };
 
 function getBankDebitsUrl(accountId) {
   const toDate = moment().add(2, 'months');
@@ -226,38 +228,40 @@ async function getTransactionsForAllAccounts(authHeader, startMoment, options) {
 
 class VisaCalScraper extends BaseScraper {
   async login(credentials) {
-    const authUrl = `${BASE_URL}/CalAuthenticator`;
+    const authUrl = 'https://connect.cal-online.co.il/api/authentication/login';
     const authRequest = {
       username: credentials.username,
       password: credentials.password,
+      rememberMe: null,
     };
 
     this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGGING_IN);
 
-    const authResponse = await fetchPost(authUrl, authRequest);
-    if (!authResponse || !authResponse.AuthenticationToken) {
-      if (_.get(authResponse, 'Response.Status.Message') === PASSWORD_EXPIRED_MSG) {
-        return {
-          success: false,
-          errorType: LOGIN_RESULT.CHANGE_PASSWORD,
-        };
-      }
-
-      if (_.get(authResponse, 'Response.Status.Message') === INVALID_CREDENTIALS) {
-        return {
-          success: false,
-          errorType: LOGIN_RESULT.INVALID_PASSWORD,
-        };
-      }
+    const authResponse = await fetchPost(authUrl, authRequest, HEADER_SITE);
+    if (authResponse === PASSWORD_EXPIRED_MSG) {
+      return {
+        success: false,
+        errorType: LOGIN_RESULT.CHANGE_PASSWORD,
+      };
     }
 
-    if (_.get(authResponse, 'Response.Status.Succeeded')) {
-      this.authHeader = `CalAuthScheme ${authResponse.AuthenticationToken}`;
-      this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
-      return { success: true };
+    if (authResponse === INVALID_CREDENTIALS) {
+      return {
+        success: false,
+        errorType: LOGIN_RESULT.INVALID_PASSWORD,
+      };
     }
 
-    throw new Error('unknown error during login');
+    if (!authResponse || !authResponse.token) {
+      return {
+        success: false,
+        errorType: LOGIN_RESULT.UNKNOWN_ERROR,
+        errorMessage: `No token found in authResponse: ${JSON.stringify(authResponse)}`,
+      };
+    }
+    this.authHeader = `CALAuthScheme ${authResponse.token}`;
+    this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
+    return { success: true };
   }
 
   async fetchData() {
@@ -265,14 +269,8 @@ class VisaCalScraper extends BaseScraper {
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-    const authHeader = { Authorization: this.authHeader };
+    const authHeader = Object.assign({ Authorization: this.authHeader }, HEADER_SITE);
     return getTransactionsForAllAccounts(authHeader, startMoment, this.options);
-  }
-
-  createAuthHeader() {
-    return {
-      Authorization: this.authHeader,
-    };
   }
 }
 
