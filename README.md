@@ -12,6 +12,7 @@ Israeli Bank Scrapers - Get closer to your own data
 What you can find here is scrapers for all major Israeli banks and credit card companies. That's the plan at least.
 Currently only the following banks are supported:
 - Bank Hapoalim (thanks [@sebikaplun](https://github.com/sebikaplun))
+- Bank Hapoalim Business (thanks [@urigo](https://github.com/urigo))
 - Leumi Bank (thanks [@esakal](https://github.com/esakal))
 - Discount Bank
 - Otsar Hahayal Bank (thanks [@matanelgabsi](https://github.com/matanelgabsi))
@@ -21,7 +22,7 @@ Currently only the following banks are supported:
 - Amex (thanks [@erezd](https://github.com/erezd))
 
 # Prerequisites
-To use this you will need to have [Node.js](https://nodejs.org) >= 6 installed.
+To use this you will need to have [Node.js](https://nodejs.org) >= 12 installed.
 
 # Getting started
 To use these scrapers you'll need to install the package from npm:
@@ -53,8 +54,8 @@ The definition of the `options` object is as follows:
   startDate: Date, // the date to fetch transactions from (can't be before the minimum allowed time difference for the scraper)
   combineInstallments: boolean, // if set to true, all installment transactions will be combine into the first one
   showBrowser: boolean, // shows the browser while scraping, good for debugging (default false)
-  verbose: boolean, // include more debug info about in the output
-  browser : Browser // optional option from init puppeteer browser instance outside the libary scope. you can get browser diretly from puppeteer via `puppeteer.launch()` command. 
+  verbose: boolean, // include more debug info about in the output. Default to 
+  browser : Browser // optional option from init puppeteer browser instance outside the libary scope. you can get browser diretly from puppeteer via `puppeteer.launch()` command. Default to
 }
 ```
 The structure of the result object is as follows:

@@ -8,9 +8,9 @@ import { NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 
 const BASE_URL = 'https://login.bankhapoalim.co.il';
-const DATE_FORMAT = 'YYYYMMDD';
+export const DATE_FORMAT = 'YYYYMMDD';
 
-function convertTransactions(txns) {
+export function convertTransactions(txns) {
   return txns.map((txn) => {
     const isOutbound = txn.eventActivityTypeCode === 2;
 
@@ -55,11 +55,15 @@ function convertTransactions(txns) {
       description: txn.activityDescription,
       status: txn.serialNumber === 0 ? TRANSACTION_STATUS.PENDING : TRANSACTION_STATUS.COMPLETED,
       memo,
+      activityTypeCode: txn.activityTypeCode,
+      textCode: txn.textCode,
+      referenceCatenatedNumber: txn.referenceCatenatedNumber,
+      transactionType: txn.transactionType,
     };
   });
 }
 
-async function getRestContext(page) {
+export async function getRestContext(page) {
   await waitUntil(async () => {
     return page.evaluate(() => !!window.bnhpApp);
   }, 'waiting for app data load');
@@ -71,7 +75,7 @@ async function getRestContext(page) {
   return result.slice(1);
 }
 
-async function fetchPoalimXSRFWithinPage(page, url, pageUuid) {
+export async function fetchPoalimXSRFWithinPage(page, url, pageUuid) {
   const cookies = await page.cookies();
   const XSRFCookie = cookies.find(cookie => cookie.name === 'XSRF-TOKEN');
   const headers = {};
@@ -82,6 +86,19 @@ async function fetchPoalimXSRFWithinPage(page, url, pageUuid) {
   headers.uuid = uuid4();
   headers['Content-Type'] = 'application/json;charset=UTF-8';
   return fetchPostWithinPage(page, url, [], headers);
+}
+
+export async function fetchPoalimXSRFWithinPageGet(page, url, pageUuid) {
+  const cookies = await page.cookies();
+  const XSRFCookie = cookies.find(cookie => cookie.name === 'XSRF-TOKEN');
+  const headers = {};
+  if (XSRFCookie != null) {
+    headers['X-XSRF-TOKEN'] = XSRFCookie.value;
+  }
+  headers.pageUuid = pageUuid;
+  headers.uuid = uuid4();
+  headers['Content-Type'] = 'application/json;charset=UTF-8';
+  return fetchGetWithinPage(page, url, [], headers);
 }
 
 async function fetchAccountData(page, options) {

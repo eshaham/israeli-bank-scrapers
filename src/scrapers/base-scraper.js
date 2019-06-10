@@ -62,23 +62,34 @@ class BaseScraper {
       return transactionsResult;
     }
 
-    this.emitProgress(SCRAPE_PROGRESS_TYPES.SCRAPE_SUMMARY);
-    const summaryResult = await this.fetchSummary();
-    if (!summaryResult.success) {
-      return summaryResult;
+    // TODO: Hack, not sure why all scrapers needs to give summary and payments....
+    if (false/* this.fetchSummary instanceof Function */) {
+      this.emitProgress(SCRAPE_PROGRESS_TYPES.SCRAPE_SUMMARY);
+      const summaryResult = await this.fetchSummary();
+      if (!summaryResult.success) {
+        return summaryResult;
+      }
     }
 
-    this.emitProgress(SCRAPE_PROGRESS_TYPES.SCRAPE_PAYMENTS);
-    const paymentsResult = await this.fetchPayments();
-    if (!paymentsResult.success) {
-      return paymentsResult;
+    // TODO: Hack, not sure why all scrapers needs to give summary and payments....
+    if (false/* this.fetchPayments instanceof Function */) {
+      this.emitProgress(SCRAPE_PROGRESS_TYPES.SCRAPE_PAYMENTS);
+      const paymentsResult = await this.fetchPayments();
+      if (!paymentsResult.success) {
+        return paymentsResult;
+      }
     }
 
     const accounts = [];
     mergeAccounts(accounts, transactionsResult.accounts, 'txns');
-    mergeAccounts(accounts, summaryResult.accounts, 'summary');
-    mergeAccounts(accounts, paymentsResult.accounts, 'payments');
-
+    // TODO: Hack, not sure why all scrapers needs to give summary and payments....
+    if (false/* summaryResult */) {
+      mergeAccounts(accounts, summaryResult.accounts, 'summary');
+    }
+    // TODO: Hack, not sure why all scrapers needs to give summary and payments....
+    if (false/* paymentsResult */) {
+      mergeAccounts(accounts, paymentsResult.accounts, 'payments');
+    }
     return { success: true, accounts };
   }
 

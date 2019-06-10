@@ -1,3 +1,5 @@
+import readline from 'readline';
+
 function timeoutPromise(ms, promise, description) {
   const timeout = new Promise((resolve, reject) => {
     const id = setTimeout(() => {
@@ -31,3 +33,15 @@ function waitUntil(asyncTest, description = null, timeout = 10000, interval = 10
 }
 
 export default waitUntil;
+
+export function askQuestion(query) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise(resolve => rl.question(query, (ans) => {
+    rl.close();
+    resolve(ans);
+  }));
+}

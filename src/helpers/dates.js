@@ -15,3 +15,8 @@ export default function getAllMonthMoments(startMoment, includeNext) {
 
   return allMonths;
 }
+
+export function addMonths(date, months) {
+  date.setMonth(date.getMonth() + months);
+  return date;
+}
