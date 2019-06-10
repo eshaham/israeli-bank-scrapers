@@ -30,7 +30,7 @@ npm install israeli-bank-scrapers --save
 ```
 Then you can simply import and use it in your node module:
 ```node
-import { createScraper } from 'israeli-bank-scrapers';
+const { createScraper } = require('israeli-bank-scrapers');
 
 const credentials = {...}; // different for each bank
 const options = {...};
@@ -86,7 +86,7 @@ The structure of the result object is as follows:
 ```
 You can also use the `SCRAPERS` list to get scraper metadata:
 ```node
-import { SCRAPERS } from 'israeli-bank-scrapers';
+const { SCRAPERS } = require('israeli-bank-scrapers');
 ```
 The return value is a list of scraper metadata:
 ```node
