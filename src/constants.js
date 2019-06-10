@@ -27,7 +27,7 @@ export const LOGIN_RESULT = {
   UNKNOWN_ERROR: 'UNKNOWN_ERROR',
 };
 
-export const NAVIGATION_ERRORS = {
+export const ERRORS = {
   TIMEOUT: 'TIMEOUT',
   GENERIC: 'GENERIC',
 };
