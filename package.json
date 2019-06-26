@@ -8,10 +8,8 @@
   },
   "main": "lib/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint src playground",
-    "start": "node -r babel-register playground/scrape.js",
-    "setup": "node -r babel-register playground/setup.js",
+    "test": "BABEL_ENV=test jest",
+    "lint": "eslint src",
     "prepublishOnly": "babel src --out-dir lib"
   },
   "pre-commit": [
