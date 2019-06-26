@@ -2,5 +2,5 @@
 try {
   require('./tests/tests-config');
 } catch (e) {
-  throw new Error(`Missing test configuration file './tests/tests-config.js' (did you remember to clone the template file './tests/tests-config.tpl.js' and set company credentials?)`);
+  throw new Error(`Missing test configuration file './tests/tests-config.js'. To troubleshot this issue open CONTRIBUTING.md file and read section 'F.A.Q regarding the tests'.`);
 }
