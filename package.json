@@ -45,7 +45,6 @@
     "pre-commit": "^1.2.2"
   },
   "dependencies": {
-    "@babel/polyfill": "^7.4.4",
     "build-url": "^1.1.2",
     "core-js": "^3.1.4",
     "lodash": "^4.17.10",
@@ -54,8 +53,7 @@
     "puppeteer": "^1.7.0",
     "uuid": "^3.3.2"
   },
-  "files":[
+  "files": [
     "lib/**/*"
   ]
-
 }
