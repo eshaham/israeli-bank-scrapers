@@ -10,23 +10,62 @@ Any kind of help is welcome, even if you just discover an issue and don't have t
 ## Filing issues
 While there's no specific template for creating a new issue, please take the time to create a clear description so that it is easy to understand the problem.
 
-## Using the playground 
-> With the integrated playground support, you can easily extend the scrapers and also enjoy the IDE debug feature if needed.
+## Testing the scrapers
+In order to run tests you need first to create test configuration file `./tests/tests-config.js` from template `./test/tests-config.tpl.js`. This file will be used by `jest` testing framework. 
 
-Once you prepare the playground environment you will be able to set scraping options, debug using the IDE and get the scraped transactions as generated csv files.
- 
-### Setup playground options & credentials
-run `npm run setup` and use the interactive menu to setup both playground options and relevant scrapers credentials.
+> IMPORTANT: Under `tests` library exists `.gitignore` file that ignore the test configuration file thus this file will not be commited to github. Still when you create new PRs make sure that you didn't explicitly added it to the PR.
 
-### Run a scraper
-run `npm start` to execute the playground scraper.
+This library support both testing against company api and also against mock data. Until we will have a good coverage of scrapers test with mock data, the default configuration is set to execute real companies api tests.
 
-### Debug your changes using the IDE
-To run the playground scripts within your IDE debugger, make sure you configure debug node with the following parameters:
- - *Node Parameters:* `-r babel-register`
- - *Javascript file :* `playground/scrape.js`
+### Changing tests options
+Modify property `options` in the test configuration file. This object is passed as-is to the scraper.
 
-Feel free to add breakpoints in the `src` folder, it should work smoothly. 
+### Testing specific companies
+Enable any company you wish to test by providing its credetials in the test configuration file under `credentials` property. 
+
+### Running tests from CLI
+> Before running any tests, make sure you created the test configuration file with relevant credentials, 
+
+To run all tests of companies that you provided credentials to:
+```
+npm test
+```
+
+To run specific `describe` (a.k.a suite), use the `testNamePattern` arg with the name of the suite. The following will run the all tests under `Leumi legacy scraper` suite.
+```
+npm test -- --testNamePattern="Leumi legacy scraper"
+```
+
+To run specific `test`, use the `testNamePattern` arg with suite name following the test name. The following will run test `should expose login fields in scrapers constant` that is part of `Leumi legacy scraper` suite.
+```
+npm test -- --testNamePattern="Leumi legacy scraper should expose login fields in scrapers constant"
+``` 
+
+### Running tests using IDE
+Many IDEs support running jest tests directly from the UI. In webstorm for example a small play icon automatically appears next to each describe/test. 
+
+**IMPORTANT Note** babel is configured to ignore tests by default. You must add an environment variable `BABEL_ENV=test` to the IDE test configuration to allow the tests to work. 
+
+### F.A.Q regarding the tests
+
+#### Trying to run the tests using the CLI fail saying the test configuration file is missing
+Make sure that you created test configuration file ./tests/tests-config.js` from template `./test/tests-config.tpl.js`.
+
+#### Trying to run the tests using the IDE fail saying the test configuration file is missing
+1. Make sure that you created test configuration file ./tests/tests-config.js` from template `./test/tests-config.tpl.js`.
+2. Make sure that you added environment variable `BABEL_ENV=test` to the IDE test configuration.
+
+#### Tests of desired company are skipped without any errors
+Make sure that you uncommented the company credentials in the test configuration file.
+
+#### Tests that are done against the company api are skipped without any errors
+1. Make sure that you uncommented the company credentials in the test configuration file.
+2. Enable company api tests in configuration file `companyAPI.enabled: true`
+
+#### Where is the playground CLI scripts that were here few versions ago?
+The playground scripts were ok at the time and allowed us to develop and test scrapers. Since then we added new types of scrapers with different public api and we needed a better solution that will catch up with those changes.
+
+In addition, the playground was offering an encryption of the passwords which lead to false sense of security since the private key was held in the source codes. Anyone could easily find the private key and decrypt those passwords. The new approach better reflect the standard way by providing a template file and ignoring the user specific configuration file . The developer "sees" the file and review its' PRs which should provide better understanding of what is going on. 
 
 ## Submitting PRs
 Again, no template, but please try to create something of the form:
