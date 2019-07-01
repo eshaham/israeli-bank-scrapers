@@ -1,10 +1,10 @@
 import LeumiScraper from './leumi';
-import testConfig from '../../tests/tests-config';
-import { maybeTestCompanyAPI, extendAsyncTimeout } from '../../tests/tests-utils';
+import { maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig } from '../../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
 import { LOGIN_RESULT } from '../constants';
 
 const COMPANY_ID = 'leumi'; // TODO this property should be hard-coded in the provider
+const testsConfig = getTestsConfig();
 
 describe('Leumi legacy scraper', () => {
   beforeAll(() => {
@@ -19,7 +19,7 @@ describe('Leumi legacy scraper', () => {
 
   maybeTestCompanyAPI(COMPANY_ID, config => config.companyAPI.invalidPassword)('should fail on invalid user/password"', async () => {
     const options = {
-      ...testConfig.options,
+      ...testsConfig.options,
       companyId: COMPANY_ID,
     };
 
@@ -34,12 +34,12 @@ describe('Leumi legacy scraper', () => {
 
   maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions"', async () => {
     const options = {
-      ...testConfig.options,
+      ...testsConfig.options,
       companyId: COMPANY_ID,
     };
 
     const scraper = new LeumiScraper(options);
-    const result = await scraper.scrape(testConfig.credentials.leumi);
+    const result = await scraper.scrape(testsConfig.credentials.leumi);
     expect(result).toBeDefined();
     expect(result.success).toBeTruthy();
   });

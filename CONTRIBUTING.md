@@ -48,6 +48,40 @@ Many IDEs support running jest tests directly from the UI. In webstorm for examp
 
 ### F.A.Q regarding the tests
 
+#### How can I run tests with CI/CD services?
+You can use environment variables instead of a local file to provide the tests configuration.
+
+copy and adjust the json below with relevant credentials and assign it to environment variable named `TESTS_CONFIG`. Note that this must be a valid json string otherwise it will fail during json parsing.
+ ```
+ {
+   "options": {
+     "startDate": "2019-06-01",
+     "combineInstallments": false,
+     "showBrowser": true,
+     "verbose": false
+   },
+   "credentials": {
+     "leumi": { "username": "demouser", "password": "demopassword" }
+   },
+   "companyAPI": {
+     "enabled": true,
+     "invalidPassword": false
+   }
+ }
+ ```
+
+If you wish to try it from cli (mac os), you should either create a one liner json configuration or use cat to provide multiline value:
+
+```
+TESTS_CONFIG=`cat <<EOF
+{
+	... replace with actual json configuration ...
+}
+EOF
+` npm run test
+```
+
+
 #### Trying to run the tests using the CLI fail saying the test configuration file is missing
 Make sure that you created test configuration file ./tests/tests-config.js` from template `./test/tests-config.tpl.js`.
 
