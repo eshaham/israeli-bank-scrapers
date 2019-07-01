@@ -13,16 +13,15 @@ export function getTestsConfig() {
   }
 
   configurationLoaded = true;
-  const environmentConfig = process.env.TESTS_CONFIG;
 
   try {
-
+    const environmentConfig = process.env.TESTS_CONFIG;
     if (environmentConfig) {
       testsConfig = JSON.parse(environmentConfig);
       return testsConfig;
     }
   } catch (e) {
-    throw new Error(`failed to parse environment variable 'TESTS_CONFIG' with error ${environmentConfig}, ${e.message}`);
+    throw new Error(`failed to parse environment variable 'TESTS_CONFIG' with error '${e.message}'`);
   }
 
   try {
