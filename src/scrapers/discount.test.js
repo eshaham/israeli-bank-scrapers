@@ -1,20 +1,21 @@
-import LeumiCardScraper from './leumi-card';
+import DiscountScraper from './discount';
 import { maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig } from '../../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
 import { LOGIN_RESULT } from '../constants';
 
-const COMPANY_ID = 'leumiCard'; // TODO this property should be hard-coded in the provider
+const COMPANY_ID = 'discount'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
 
-describe('Leumi Card legacy scraper', () => {
+describe('Discount legacy scraper', () => {
   beforeAll(() => {
     extendAsyncTimeout(); // The default timeout is 5 seconds per async test, this function extends the timeout value
   });
 
   test('should expose login fields in scrapers constant', () => {
-    expect(SCRAPERS.leumiCard).toBeDefined();
-    expect(SCRAPERS.leumiCard.loginFields).toContain('username');
-    expect(SCRAPERS.leumiCard.loginFields).toContain('password');
+    expect(SCRAPERS.discount).toBeDefined();
+    expect(SCRAPERS.discount.loginFields).toContain('id');
+    expect(SCRAPERS.discount.loginFields).toContain('password');
+    expect(SCRAPERS.discount.loginFields).toContain('num');
   });
 
   maybeTestCompanyAPI(COMPANY_ID, config => config.companyAPI.invalidPassword)('should fail on invalid user/password"', async () => {
@@ -23,7 +24,7 @@ describe('Leumi Card legacy scraper', () => {
       companyId: COMPANY_ID,
     };
 
-    const scraper = new LeumiCardScraper(options);
+    const scraper = new DiscountScraper(options);
 
     const result = await scraper.scrape({ username: 'e10s12', password: '3f3ss3d' });
 
@@ -38,8 +39,8 @@ describe('Leumi Card legacy scraper', () => {
       companyId: COMPANY_ID,
     };
 
-    const scraper = new LeumiCardScraper(options);
-    const result = await scraper.scrape(testsConfig.credentials.leumiCard);
+    const scraper = new DiscountScraper(options);
+    const result = await scraper.scrape(testsConfig.credentials.discount);
     expect(result).toBeDefined();
     expect(result.success).toBeTruthy();
   });
