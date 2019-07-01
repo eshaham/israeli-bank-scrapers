@@ -16,6 +16,7 @@ export default {
     // leumiCard: { username: '', password: '' },
     // visaCal: { username: '', password: '' },
     // isracard: { id: '', password: '', card6Digits: '' },
+    // amex: { id: '', card6Digits: '', password: ''},
   },
   companyAPI: { // enable companyAPI to execute tests against the real companies api
     enabled: true,
