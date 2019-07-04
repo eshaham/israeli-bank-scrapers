@@ -39,6 +39,13 @@ Changes:
 * etc...
 ```
 
+##  Publish `israeli-bank-scrapers-core` to NPM.
+1. Make sure everything is committed. 
+2. Run `./utils/prepare-israeli-bank-scrapers-core.js`. The script will change the name inside `package.json` to `prepare-israeli-bank-scrapers-core` and will change puppeteer dependency to `puppeteer-core`.
+3. *MANDATORY* step - bebuild library to update 'lib' files. 
+4. Run `npm publish`. This will publish `prepare-israeli-bank-scrapers-core` package.
+5. Run `git reset --hard` to reset the changes to `package.json`.
+
 ## Creating a new scraper
 It is best to look at an existing example.
 Most scrapers inherit from `BaseScraper`, notice that you need to implement the following:
