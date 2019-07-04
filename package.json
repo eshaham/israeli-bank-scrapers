@@ -13,7 +13,8 @@
     "lint": "eslint src playground",
     "start": "node -r babel-register playground/scrape.js",
     "setup": "node -r babel-register playground/setup.js",
-    "prepublishOnly": "babel src --out-dir lib"
+    "prepublishOnly": "babel src --out-dir lib",
+    "prepareCoreVariation": "node utils/prepare-israeli-bank-scrapers-core.js && npm i && npm ci && npm run prepublishOnly"
   },
   "pre-commit": [
     "lint"
