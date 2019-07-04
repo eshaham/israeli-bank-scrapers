@@ -12,7 +12,7 @@ const chromiumRevision = puppeteerJson.puppeteer.chromium_revision;
 const configPath = path.join(__dirname, '..', 'src', 'puppeteer-config.json');
 // eslint-disable-next-line import/no-dynamic-require
 const configJson = require(configPath);
-configJson.chromium_revision = chromiumRevision;
+configJson.chromiumRevision = chromiumRevision;
 
 fs.writeFileSync(configPath, JSON.stringify(configJson, null, '  '));
 
