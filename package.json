@@ -8,13 +8,14 @@
   },
   "main": "lib/index.js",
   "scripts": {
-    "postinstall": "node utils/update-puppeteer-config.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint src playground",
     "start": "node -r babel-register playground/scrape.js",
     "setup": "node -r babel-register playground/setup.js",
-    "prepublishOnly": "babel src --out-dir lib",
-    "prepareCoreVariation": "node utils/prepare-israeli-bank-scrapers-core.js && npm i && npm ci && npm run prepublishOnly"
+    "updatePuppeteerConfig": "node utils/update-puppeteer-config.js",
+    "prepublishOnly": "npm run updatePuppeteerConfig && babel src --out-dir lib --copy-files",
+    "prepareCoreVariation": "node utils/prepare-israeli-bank-scrapers-core.js && npm i && npm ci && npm run prepublishOnly",
+    "resetCoreVariation": "git reset --hard && npm ci"
   },
   "pre-commit": [
     "lint"
