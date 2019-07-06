@@ -8,9 +8,10 @@
   },
   "main": "lib/index.js",
   "scripts": {
+    "clean": "rimraf lib",
     "test": "BABEL_ENV=test jest",
     "lint": "eslint src",
-    "prepublishOnly": "babel src --out-dir lib"
+    "prepublishOnly": "npm run clean && babel src --out-dir lib"
   },
   "pre-commit": [
     "lint"
@@ -42,7 +43,8 @@
     "jest": "^24.8.0",
     "json2csv": "^4.2.1",
     "jsonfile": "^5.0.0",
-    "pre-commit": "^1.2.2"
+    "pre-commit": "^1.2.2",
+    "rimraf": "^2.6.3"
   },
   "dependencies": {
     "build-url": "^1.1.2",
