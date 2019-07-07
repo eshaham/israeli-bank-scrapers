@@ -15,7 +15,7 @@ In order to run tests you need first to create test configuration file `./tests/
 
 > IMPORTANT: Under `tests` library exists `.gitignore` file that ignore the test configuration file thus this file will not be commited to github. Still when you create new PRs make sure that you didn't explicitly added it to the PR.
 
-This library support both testing against company api and also against mock data. Until we will have a good coverage of scrapers test with mock data, the default configuration is set to execute real companies api tests.
+This library supports both testing against credit card companies / banks api and also against mock data. Until we will have a good coverage of scrapers test with mock data, the default configuration is set to execute real companies api tests.
 
 ### Changing tests options
 Modify property `options` in the test configuration file. This object is passed as-is to the scraper.
@@ -92,9 +92,9 @@ Make sure that you created test configuration file ./tests/tests-config.js` from
 #### Tests of desired company are skipped without any errors
 Make sure that you uncommented the company credentials in the test configuration file.
 
-#### Tests that are done against the company api are skipped without any errors
+#### Tests that are done against the credit cards companies / banks api are skipped without any errors
 1. Make sure that you uncommented the company credentials in the test configuration file.
-2. Enable company api tests in configuration file `companyAPI.enabled: true`
+2. Enable credit card companies / banks api tests in configuration file `companyAPI.enabled: true`
 
 #### Where is the playground CLI scripts that were here few versions ago?
 The playground scripts were ok at the time and allowed us to develop and test scrapers. Since then we added new types of scrapers with different public api and we needed a better solution that will catch up with those changes.

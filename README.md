@@ -21,7 +21,7 @@ Currently only the following banks are supported:
 - Amex (thanks [@erezd](https://github.com/erezd))
 
 # Prerequisites
-To use this you will need to have [Node.js](https://nodejs.org) >= 6 installed.
+To use this you will need to have [Node.js](https://nodejs.org) >= 8 installed.
 
 # Getting started
 To use these scrapers you'll need to install the package from npm:
