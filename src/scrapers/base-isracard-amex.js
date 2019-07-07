@@ -110,6 +110,7 @@ function convertTransactions(txns, processedDate) {
       originalAmount: isOutbound ? -txn.dealSumOutbound : -txn.dealSum,
       originalCurrency: convertCurrency(txn.currencyId),
       chargedAmount: isOutbound ? -txn.paymentSumOutbound : -txn.paymentSum,
+      chargedCurrency: convertCurrency(txn.currencyId),
       description: isOutbound ? txn.fullSupplierNameOutbound : txn.fullSupplierNameHeb,
       memo: txn.moreInfo,
       installments: getInstallmentsInfo(txn),
