@@ -36,6 +36,7 @@
     "@babel/core": "^7.4.5",
     "@babel/preset-env": "^7.4.5",
     "babel-jest": "^24.8.0",
+    "core-js": "^3.1.4",
     "eslint": "^5.4.0",
     "eslint-config-airbnb-base": "^13.1.0",
     "eslint-plugin-import": "^2.14.0",
@@ -48,7 +49,6 @@
   },
   "dependencies": {
     "build-url": "^1.1.2",
-    "core-js": "^3.1.4",
     "lodash": "^4.17.10",
     "moment": "^2.22.2",
     "node-fetch": "^2.2.0",
