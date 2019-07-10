@@ -1,3 +1,8 @@
+import fs from 'fs';
+import path from 'path';
+import moment from 'moment';
+import json2csv from 'json2csv';
+
 let testsConfig = null;
 let configurationLoaded = false;
 
@@ -33,7 +38,6 @@ export function getTestsConfig() {
 }
 
 export function maybeTestCompanyAPI(scraperId, filter) {
-
   if (!configurationLoaded) {
     getTestsConfig();
   }
@@ -44,4 +48,42 @@ export function maybeTestCompanyAPI(scraperId, filter) {
 
 export function extendAsyncTimeout(timeout = 120000) {
   jest.setTimeout(timeout);
+}
+
+export function exportTransactions(fileName, accounts) {
+  const config = getTestsConfig();
+
+  if (!config.companyAPI.enabled || !config.companyAPI.excelFilesDist || !fs.existsSync(config.companyAPI.excelFilesDist)) {
+    return;
+  }
+
+  let data = [];
+
+  for (let i = 0; i < accounts.length; i += 1) {
+    const account = accounts[i];
+
+    data = [
+      ...data,
+      ...account.txns.map((txn) => {
+        return Object.assign(
+          { account: account.accountNumber },
+          txn, {
+            date: moment(txn.date).format('DD/MM/YYYY'),
+            processedDate: moment(txn.processedDate).format('DD/MM/YYYY'),
+          },
+        );
+      })];
+  }
+
+  if (data.length === 0) {
+    data = [
+      {
+        comment: 'no transaction found for requested time frame'
+      },
+    ];
+  }
+
+  const csv = json2csv.parse(data, { withBOM: true });
+  const filePath = `${path.join(config.companyAPI.excelFilesDist, fileName)}.csv`;
+  fs.writeFileSync(filePath, csv);
 }

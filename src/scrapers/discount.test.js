@@ -1,5 +1,7 @@
 import DiscountScraper from './discount';
-import { maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig } from '../../tests/tests-utils';
+import {
+  maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
+} from '../../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
 import { LOGIN_RESULT } from '../constants';
 
@@ -45,5 +47,7 @@ describe('Discount legacy scraper', () => {
     const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
     expect(error).toBe('');
     expect(result.success).toBeTruthy();
+
+    exportTransactions(COMPANY_ID, result.accounts || []);
   });
 });

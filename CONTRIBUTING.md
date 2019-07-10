@@ -46,6 +46,20 @@ Many IDEs support running jest tests directly from the UI. In webstorm for examp
 
 **IMPORTANT Note** babel is configured to ignore tests by default. You must add an environment variable `BABEL_ENV=test` to the IDE test configuration to allow the tests to work. 
 
+### save unit test scraper results into file
+To save unit test scraper results provide a valid path in test configurations property `excelFilesDist`, for example:
+
+```
+{
+   companyAPI: { 
+      enabled: true, 
+      excelFilesDist: '/Users/xyz/Downloads/Transactions',
+      
+    },
+  
+}
+```
+
 ### F.A.Q regarding the tests
 
 #### How can I run tests with CI/CD services?

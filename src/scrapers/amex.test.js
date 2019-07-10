@@ -1,5 +1,7 @@
 import AMEXScraper from './amex';
-import { maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig } from '../../tests/tests-utils';
+import {
+  maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
+} from '../../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
 import { LOGIN_RESULT } from '../constants';
 
@@ -45,5 +47,7 @@ describe('AMEX legacy scraper', () => {
     const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
     expect(error).toBe('');
     expect(result.success).toBeTruthy();
+
+    exportTransactions(COMPANY_ID, result.accounts || []);
   });
 });
