@@ -41,6 +41,8 @@ describe('VisaCal legacy scraper', () => {
     const scraper = new VisaCalScraper(options);
     const result = await scraper.scrape(testsConfig.credentials.visaCal);
     expect(result).toBeDefined();
+    const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
+    expect(error).toBe('');
     expect(result.success).toBeTruthy();
   });
 });

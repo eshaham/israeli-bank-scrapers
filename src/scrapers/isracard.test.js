@@ -42,6 +42,8 @@ describe('Isracard legacy scraper', () => {
     const scraper = new IsracardScraper(options);
     const result = await scraper.scrape(testsConfig.credentials.isracard);
     expect(result).toBeDefined();
+    const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
+    expect(error).toBe('');
     expect(result.success).toBeTruthy();
   });
 });

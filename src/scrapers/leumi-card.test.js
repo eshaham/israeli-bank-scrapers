@@ -41,6 +41,8 @@ describe('Leumi Card legacy scraper', () => {
     const scraper = new LeumiCardScraper(options);
     const result = await scraper.scrape(testsConfig.credentials.leumiCard);
     expect(result).toBeDefined();
+    const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
+    expect(error).toBe('');
     expect(result.success).toBeTruthy();
   });
 });

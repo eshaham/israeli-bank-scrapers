@@ -41,6 +41,8 @@ describe('Leumi legacy scraper', () => {
     const scraper = new LeumiScraper(options);
     const result = await scraper.scrape(testsConfig.credentials.leumi);
     expect(result).toBeDefined();
+    const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
+    expect(error).toBe('');
     expect(result.success).toBeTruthy();
   });
 });

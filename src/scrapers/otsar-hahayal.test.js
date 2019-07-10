@@ -41,6 +41,8 @@ describe('OtsarHahayal legacy scraper', () => {
     const scraper = new OtsarHahayalScraper(options);
     const result = await scraper.scrape(testsConfig.credentials.otsarHahayal);
     expect(result).toBeDefined();
+    const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
+    expect(error).toBe('');
     expect(result.success).toBeTruthy();
   });
 });

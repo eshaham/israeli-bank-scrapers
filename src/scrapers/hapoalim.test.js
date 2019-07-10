@@ -41,6 +41,8 @@ describe('Hapoalim legacy scraper', () => {
     const scraper = new HapoalimScraper(options);
     const result = await scraper.scrape(testsConfig.credentials.hapoalim);
     expect(result).toBeDefined();
+    const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
+    expect(error).toBe('');
     expect(result.success).toBeTruthy();
   });
 });

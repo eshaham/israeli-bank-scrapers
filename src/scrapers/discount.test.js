@@ -42,6 +42,8 @@ describe('Discount legacy scraper', () => {
     const scraper = new DiscountScraper(options);
     const result = await scraper.scrape(testsConfig.credentials.discount);
     expect(result).toBeDefined();
+    const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
+    expect(error).toBe('');
     expect(result.success).toBeTruthy();
   });
 });
