@@ -91,17 +91,23 @@ function getInstallmentsInfo(comments) {
 }
 
 function mapTransaction(rawTransaction) {
+  const isPending = rawTransaction.paymentDate === null;
+  const processedDate = moment(isPending ?
+    rawTransaction.purchaseDate :
+    rawTransaction.paymentDate).toISOString();
+  const status = isPending ? TRANSACTION_STATUS.PENDING : TRANSACTION_STATUS.COMPLETED;
+
   return {
     type: getTransactionType(rawTransaction.planName),
     date: moment(rawTransaction.purchaseDate).toISOString(),
-    processedDate: moment(rawTransaction.paymentDate).toISOString(),
+    processedDate,
     originalAmount: -rawTransaction.originalAmount,
     originalCurrency: rawTransaction.originalCurrency,
     chargedAmount: -rawTransaction.actualPaymentAmount,
     description: rawTransaction.merchantName.trim(),
     memo: rawTransaction.comments,
     installments: getInstallmentsInfo(rawTransaction.comments),
-    status: TRANSACTION_STATUS.COMPLETED,
+    status,
   };
 }
 
