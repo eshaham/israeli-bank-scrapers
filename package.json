@@ -39,10 +39,8 @@
     "eslint": "^5.4.0",
     "eslint-config-airbnb-base": "^13.1.0",
     "eslint-plugin-import": "^2.14.0",
-    "inquirer": "^6.1.0",
     "jest": "^24.8.0",
     "json2csv": "^4.2.1",
-    "jsonfile": "^5.0.0",
     "pre-commit": "^1.2.2",
     "rimraf": "^2.6.3"
   },
