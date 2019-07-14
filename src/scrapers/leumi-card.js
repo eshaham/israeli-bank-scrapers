@@ -1,6 +1,6 @@
 import buildUrl from 'build-url';
 import moment from 'moment';
-
+import { fetchGetWithinPage } from '../helpers/fetch';
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound, elementPresentOnPage, clickButton } from '../helpers/elements-interactions';
@@ -44,11 +44,11 @@ function getTransactionsUrl(monthMoment) {
   const date = `${year}-${month}-01`;
 
   /**
-   * url explanation:
-   * userIndex: -1 for all account owners
-   * cardIndex: -1 for all cards under the account
-   * all other query params are static, beside the date which changes for request per month
-   */
+     * url explanation:
+     * userIndex: -1 for all account owners
+     * cardIndex: -1 for all cards under the account
+     * all other query params are static, beside the date which changes for request per month
+     */
   return buildUrl(BASE_API_ACTIONS_URL, {
     path: `/api/registered/transactionDetails/getTransactionsAndGraphs?filterData={"userIndex":-1,"cardIndex":-1,"monthView":true,"date":"${date}","dates":{"startDate":"0","endDate":"0"}}&v=V3.13-HF.6.26`,
   });
@@ -111,17 +111,13 @@ function mapTransaction(rawTransaction) {
   };
 }
 
-async function getCurrentTransactions(page) {
-  const preHtmlElement = await page.$('pre');
+async function fetchTransactionsForMonth(page, monthMoment) {
+  const url = getTransactionsUrl(monthMoment);
 
-  const strJsonResponse = await page.evaluate((item) => {
-    return item.innerText;
-  }, preHtmlElement);
-
-  const response = JSON.parse(strJsonResponse);
+  const data = await fetchGetWithinPage(page, url);
 
   const transactionsByAccount = {};
-  response.result.transactions.forEach((transaction) => {
+  data.result.transactions.forEach((transaction) => {
     if (!transactionsByAccount[transaction.shortCardNumber]) {
       transactionsByAccount[transaction.shortCardNumber] = [];
     }
@@ -131,16 +127,6 @@ async function getCurrentTransactions(page) {
   });
 
   return transactionsByAccount;
-}
-
-async function fetchTransactionsForMonth(browser, navigateToFunc, monthMoment) {
-  const page = await browser.newPage();
-  const url = getTransactionsUrl(monthMoment);
-
-  await navigateToFunc(url, page);
-  const txns = await getCurrentTransactions(page);
-  await page.close();
-  return txns;
 }
 
 function addResult(allResults, result) {
@@ -164,15 +150,15 @@ function prepareTransactions(txns, startMoment, combineInstallments) {
   return clonedTxns;
 }
 
-async function fetchTransactions(browser, options, navigateToFunc) {
+async function fetchTransactions(page, options) {
   const defaultStartMoment = moment().subtract(1, 'years');
   const startDate = options.startDate || defaultStartMoment.toDate();
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
-  const allMonths = getAllMonthMoments(startMoment, false);
+  const allMonths = getAllMonthMoments(startMoment, true);
 
   let allResults = {};
   for (let i = 0; i < allMonths.length; i += 1) {
-    const result = await fetchTransactionsForMonth(browser, navigateToFunc, allMonths[i]);
+    const result = await fetchTransactionsForMonth(page, allMonths[i]);
     allResults = addResult(allResults, result);
   }
 
@@ -223,7 +209,7 @@ class LeumiCardScraper extends BaseScraperWithBrowser {
   }
 
   async fetchData() {
-    const results = await fetchTransactions(this.browser, this.options, this.navigateTo);
+    const results = await fetchTransactions(this.page, this.options);
     const accounts = Object.keys(results).map((accountNumber) => {
       return {
         accountNumber,
