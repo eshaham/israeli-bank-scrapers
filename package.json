@@ -1,6 +1,6 @@
 {
   "name": "israeli-bank-scrapers",
-  "version": "0.6.8",
+  "version": "0.6.9",
   "description": "Provide scrapers for all major Israeli banks and credit card companies",
   "engines": {
     "node": ">= 8.2.1",
