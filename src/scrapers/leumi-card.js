@@ -1,22 +1,20 @@
 import buildUrl from 'build-url';
 import moment from 'moment';
-
+import { fetchGetWithinPage } from '../helpers/fetch';
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
-import { waitForNavigationAndDomLoad, waitForRedirect } from '../helpers/navigation';
+import { waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound, elementPresentOnPage, clickButton } from '../helpers/elements-interactions';
 import {
   NORMAL_TXN_TYPE,
   INSTALLMENTS_TXN_TYPE,
-  SHEKEL_CURRENCY_SYMBOL,
-  SHEKEL_CURRENCY,
   TRANSACTION_STATUS,
 } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
 
 const BASE_ACTIONS_URL = 'https://online.max.co.il';
+const BASE_API_ACTIONS_URL = 'https://onlinelcapi.max.co.il';
 const BASE_WELCOME_URL = 'https://www.max.co.il';
-const DATE_FORMAT = 'DD/MM/YYYY';
 const NORMAL_TYPE_NAME = 'רגילה';
 const ATM_TYPE_NAME = 'חיוב עסקות מיידי';
 const INTERNET_SHOPPING_TYPE_NAME = 'אינטרנט/חו"ל';
@@ -41,22 +39,18 @@ function redirectOrDialog(page) {
 }
 
 function getTransactionsUrl(monthMoment) {
-  let monthCharge = null;
-  let actionType = 1;
-  if (monthMoment) {
-    const month = monthMoment.month() + 1;
-    const monthStr = month < 10 ? `0${month}` : month.toString();
-    const year = monthMoment.year();
-    monthCharge = `${year}${monthStr}`;
-    actionType = 2;
-  }
-  return buildUrl(BASE_ACTIONS_URL, {
-    path: 'Registred/Transactions/ChargesDeals.aspx',
-    queryParams: {
-      ActionType: actionType,
-      MonthCharge: monthCharge,
-      Index: -2,
-    },
+  const month = monthMoment.month() + 1;
+  const year = monthMoment.year();
+  const date = `${year}-${month}-01`;
+
+  /**
+     * url explanation:
+     * userIndex: -1 for all account owners
+     * cardIndex: -1 for all cards under the account
+     * all other query params are static, beside the date which changes for request per month
+     */
+  return buildUrl(BASE_API_ACTIONS_URL, {
+    path: `/api/registered/transactionDetails/getTransactionsAndGraphs?filterData={"userIndex":-1,"cardIndex":-1,"monthView":true,"date":"${date}","dates":{"startDate":"0","endDate":"0"}}&v=V3.13-HF.6.26`,
   });
 }
 
@@ -81,25 +75,6 @@ function getTransactionType(txnTypeStr) {
   }
 }
 
-function getAmountData(amountStr) {
-  const amountStrCopy = amountStr.replace(',', '');
-  let currency = null;
-  let amount = null;
-  if (amountStrCopy.includes(SHEKEL_CURRENCY_SYMBOL)) {
-    amount = parseFloat(amountStrCopy.replace(SHEKEL_CURRENCY_SYMBOL, ''));
-    currency = SHEKEL_CURRENCY;
-  } else {
-    const parts = amountStrCopy.split(' ');
-    amount = parseFloat(parts[0]);
-    [, currency] = parts;
-  }
-
-  return {
-    amount,
-    currency,
-  };
-}
-
 function getInstallmentsInfo(comments) {
   if (!comments) {
     return null;
@@ -115,159 +90,43 @@ function getInstallmentsInfo(comments) {
   };
 }
 
-function convertTransactions(rawTxns) {
-  return rawTxns.map((txn) => {
-    const originalAmountData = getAmountData(txn.originalAmountStr);
-    const chargedAmountData = getAmountData(txn.chargedAmountStr);
-    return {
-      type: getTransactionType(txn.typeStr),
-      date: moment(txn.dateStr, DATE_FORMAT).toISOString(),
-      processedDate: moment(txn.processedDateStr, DATE_FORMAT).toISOString(),
-      originalAmount: -originalAmountData.amount,
-      originalCurrency: originalAmountData.currency,
-      chargedAmount: -chargedAmountData.amount,
-      description: txn.description.trim(),
-      memo: txn.comments,
-      installments: getInstallmentsInfo(txn.comments),
-      status: TRANSACTION_STATUS.COMPLETED,
-    };
-  });
+function mapTransaction(rawTransaction) {
+  const isPending = rawTransaction.paymentDate === null;
+  const processedDate = moment(isPending ?
+    rawTransaction.purchaseDate :
+    rawTransaction.paymentDate).toISOString();
+  const status = isPending ? TRANSACTION_STATUS.PENDING : TRANSACTION_STATUS.COMPLETED;
+
+  return {
+    type: getTransactionType(rawTransaction.planName),
+    date: moment(rawTransaction.purchaseDate).toISOString(),
+    processedDate,
+    originalAmount: -rawTransaction.originalAmount,
+    originalCurrency: rawTransaction.originalCurrency,
+    chargedAmount: -rawTransaction.actualPaymentAmount,
+    description: rawTransaction.merchantName.trim(),
+    memo: rawTransaction.comments,
+    installments: getInstallmentsInfo(rawTransaction.comments),
+    status,
+  };
 }
 
-async function getCardContainers(page) {
-  return page.$$('.infoList_holder');
-}
+async function fetchTransactionsForMonth(page, monthMoment) {
+  const url = getTransactionsUrl(monthMoment);
 
-async function getCardContainer(page, cardIndex) {
-  const cardContainers = await getCardContainers(page);
-  const cardContainer = cardContainers[cardIndex];
-  return cardContainer;
-}
+  const data = await fetchGetWithinPage(page, url);
 
-async function getCardSections(page, cardIndex) {
-  const cardContainer = await getCardContainer(page, cardIndex);
-  const cardSections = await cardContainer.$$('.NotPaddingTable');
-  return cardSections;
-}
-
-async function getAccountNumber(page, cardIndex) {
-  const cardContainer = await getCardContainer(page, cardIndex);
-  const infoContainer = await cardContainer.$('.creditCard_name');
-  const numberListItems = await infoContainer.$$('li');
-  const numberListItem = numberListItems[1];
-  const accountNumberStr = await page.evaluate((li) => {
-    return li.innerText;
-  }, numberListItem);
-  const accountNumber = accountNumberStr.replace('(', '').replace(')', '');
-
-  return accountNumber;
-}
-
-async function getTransactionsForSection(page, cardIndex, sectionIndex) {
-  const cardSections = await getCardSections(page, cardIndex);
-  const txnsRows = await cardSections[sectionIndex].$$('.jobs_regular');
-  const expandedBusinessesNamesHeaders = await cardSections[sectionIndex].$$('.openedJob .bisName');
-  let expandedBusinessesNames = await Promise.all(expandedBusinessesNamesHeaders.map(
-    header => page.evaluate(x => x.innerText, header),
-  ), expandedBusinessesNamesHeaders);
-
-  // Leumicard keeps hidden open transactions without any content, filter them out
-  expandedBusinessesNames = expandedBusinessesNames.filter(x => !!x);
-
-  const txns = [];
-  for (let txnIndex = 0; txnIndex < txnsRows.length; txnIndex += 1) {
-    const txnColumns = await txnsRows[txnIndex].$$('td');
-
-    const typeStr = await page.evaluate((td) => {
-      return td.innerText;
-    }, txnColumns[4]);
-
-    const dateStr = await page.evaluate((td) => {
-      return td.innerText;
-    }, txnColumns[1]);
-
-    const processedDateStr = await page.evaluate((td) => {
-      return td.innerText;
-    }, txnColumns[2]);
-
-    const originalAmountStr = await page.evaluate((td) => {
-      return td.innerText;
-    }, txnColumns[5]);
-
-    const chargedAmountStr = await page.evaluate((td) => {
-      return td.innerText;
-    }, txnColumns[6]);
-
-    const description = expandedBusinessesNames[txnIndex].replace(/\s+/g, ' ');
-
-    const comments = await page.evaluate((td) => {
-      return td.innerText;
-    }, txnColumns[7]);
-
-    const txn = {
-      typeStr,
-      dateStr,
-      processedDateStr,
-      originalAmountStr,
-      chargedAmountStr,
-      description,
-      comments,
-    };
-    txns.push(txn);
-  }
-
-  return txns;
-}
-
-async function getNextPageButtonForSection(page, cardIndex, sectionIndex) {
-  const cardSections = await getCardSections(page, cardIndex);
-  return cardSections[sectionIndex].$('.difdufLeft a');
-}
-
-async function getCurrentTransactions(page) {
-  const result = {};
-  const cardContainers = await getCardContainers(page);
-
-  for (let cardIndex = 0; cardIndex < cardContainers.length; cardIndex += 1) {
-    const txns = [];
-    const cardSections = await getCardSections(page, cardIndex);
-    for (let sectionIndex = 0; sectionIndex < cardSections.length; sectionIndex += 1) {
-      let hasNext = true;
-      while (hasNext) {
-        const sectionTxns = await getTransactionsForSection(page, cardIndex, sectionIndex);
-        txns.push(...sectionTxns);
-
-        const nextPageBtn = await getNextPageButtonForSection(page, cardIndex, sectionIndex);
-        if (nextPageBtn) {
-          await nextPageBtn.click();
-          await waitForNavigationAndDomLoad(page);
-        } else {
-          hasNext = false;
-        }
-      }
+  const transactionsByAccount = {};
+  data.result.transactions.forEach((transaction) => {
+    if (!transactionsByAccount[transaction.shortCardNumber]) {
+      transactionsByAccount[transaction.shortCardNumber] = [];
     }
 
-    const accountNumber = await getAccountNumber(page, cardIndex);
-    result[accountNumber] = convertTransactions(txns);
-  }
+    const mappedTransaction = mapTransaction(transaction);
+    transactionsByAccount[transaction.shortCardNumber].push(mappedTransaction);
+  });
 
-  return result;
-}
-
-async function fetchTransactionsForMonth(browser, navigateToFunc, monthMoment) {
-  const page = await browser.newPage();
-
-  const url = getTransactionsUrl(monthMoment);
-  await navigateToFunc(url, page);
-
-  if (page.url() !== url) {
-    throw new Error(`Error while trying to navigate to url ${url}`);
-  }
-
-  const txns = await getCurrentTransactions(page);
-  await page.close();
-
-  return txns;
+  return transactionsByAccount;
 }
 
 function addResult(allResults, result) {
@@ -291,20 +150,17 @@ function prepareTransactions(txns, startMoment, combineInstallments) {
   return clonedTxns;
 }
 
-async function fetchTransactions(browser, options, navigateToFunc) {
+async function fetchTransactions(page, options) {
   const defaultStartMoment = moment().subtract(1, 'years');
   const startDate = options.startDate || defaultStartMoment.toDate();
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
-  const allMonths = getAllMonthMoments(startMoment, false);
+  const allMonths = getAllMonthMoments(startMoment, true);
 
   let allResults = {};
   for (let i = 0; i < allMonths.length; i += 1) {
-    const result = await fetchTransactionsForMonth(browser, navigateToFunc, allMonths[i]);
+    const result = await fetchTransactionsForMonth(page, allMonths[i]);
     allResults = addResult(allResults, result);
   }
-
-  const currentMonthResult = await fetchTransactionsForMonth(browser, navigateToFunc);
-  allResults = addResult(allResults, currentMonthResult);
 
   Object.keys(allResults).forEach((accountNumber) => {
     let txns = allResults[accountNumber];
@@ -353,7 +209,7 @@ class LeumiCardScraper extends BaseScraperWithBrowser {
   }
 
   async fetchData() {
-    const results = await fetchTransactions(this.browser, this.options, this.navigateTo);
+    const results = await fetchTransactions(this.page, this.options);
     const accounts = Object.keys(results).map((accountNumber) => {
       return {
         accountNumber,
