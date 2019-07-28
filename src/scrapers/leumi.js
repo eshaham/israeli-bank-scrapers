@@ -153,10 +153,14 @@ async function extractPendingTransactionsFromPage(page) {
 }
 
 async function isNoTransactionInDateRangeError(page) {
-  const errorText = await page.$eval('.errInfo', (errorElement) => {
-    return errorElement.innerText;
-  });
-  return errorText === NO_TRANSACTION_IN_DATE_RANGE_TEXT;
+  const hasErrorInfoElement = await elementPresentOnPage(page, '.errInfo');
+  if (hasErrorInfoElement) {
+    const errorText = await page.$eval('.errInfo', (errorElement) => {
+      return errorElement.innerText;
+    });
+    return errorText === NO_TRANSACTION_IN_DATE_RANGE_TEXT;
+  }
+  return false;
 }
 
 async function fetchTransactionsForAccount(page, startDate, accountId) {
