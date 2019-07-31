@@ -11,9 +11,9 @@
     "clean": "rimraf lib",
     "test": "BABEL_ENV=test jest",
     "lint": "eslint src",
-    "prepublishOnly": "npm run clean && babel src --out-dir lib",
-    "updatePuppeteerConfig": "node utils/update-puppeteer-config.js",
-    "prepareCoreVariation": "node utils/prepare-israeli-bank-scrapers-core.js && npm i && npm ci && npm run prepublishOnly",
+    "build": "npm run clean && babel src --out-dir lib",
+    "prebuild": "node utils/update-puppeteer-config.js",
+    "prepareCoreVariation": "node utils/prepare-israeli-bank-scrapers-core.js && npm i && npm ci && npm run build",
     "resetCoreVariation": "git reset --hard && npm ci"
   },
   "pre-commit": [
@@ -53,8 +53,8 @@
     "lodash": "^4.17.10",
     "moment": "^2.22.2",
     "node-fetch": "^2.2.0",
-    "puppeteer": "^1.7.0",
-    "uuid": "^3.3.2"
+    "uuid": "^3.3.2",
+    "puppeteer": "^1.7.0"
   },
   "files": [
     "lib/**/*"
