@@ -181,17 +181,16 @@ async function fetchTransactionsForAccount(page, startDate, accountId) {
 
   const accountNumber = selectedSnifAccount.replace('/', '_');
 
-  try {
-    await waitUntilElementFound(page, 'table#WorkSpaceBox table#ctlActivityTable', false, 10000);
-  } catch (e) {
-    const noTransactionInDateRange = await isNoTransactionInDateRangeError(page);
-    if (noTransactionInDateRange) {
-      return {
-        accountNumber,
-        txns: [],
-      };
-    }
-    throw e;
+  await Promise.race([
+    waitUntilElementFound(page, 'table#WorkSpaceBox table#ctlActivityTable', false),
+    waitUntilElementFound(page, '.errInfo', false),
+  ]);
+
+  if (await isNoTransactionInDateRangeError(page)) {
+    return {
+      accountNumber,
+      txns: [],
+    };
   }
 
   const hasExpandAllButton = await elementPresentOnPage(page, 'a#lnkCtlExpandAllInPage');
