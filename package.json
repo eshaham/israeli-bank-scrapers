@@ -57,6 +57,7 @@
     "puppeteer": "^1.7.0"
   },
   "files": [
-    "lib/**/*"
+    "lib/**/*",
+    "puppeteer-config.json"
   ]
 }
