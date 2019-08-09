@@ -102,39 +102,37 @@ The return value is a list of scraper metadata:
 ```
 
 # Israeli-bank-scrapers-core
+
+> TL;DR Usually you will want to use the default variation, core variation is for fewer use cases.
+
 Israeli bank scrapers library is published in two variations:
- 1. [israeli-bank-scrapers]() - the default variation, great for common usage as node depdency in server application or cli.
- 2. [israeli-bank-scrapers-core]() - extremely useful for applications that bundle node_modules like Electron applications. 
+ 1. [israeli-bank-scrapers](https://www.npmjs.com/package/israeli-bank-scrapers) - the default variation, great for common usage as node depdency in server application or cli.
+ 2. [israeli-bank-scrapers-core](https://www.npmjs.com/package/israeli-bank-scrapers-core) - extremely useful for applications that bundle node_modules like Electron applications. 
+  
+ The default variation [israeli-bank-scrapers](https://www.npmjs.com/package/israeli-bank-scrapers) is using [puppeteer](https://www.npmjs.com/package/puppeteer) which handles the installation of local chroumium on its' own. This behavior is very handy since it takes care on all the hard work figuring which chromium to download and manage the actual download process.  As a side effect it increases node_modules by several hounded megabytes. 
  
-*Why?* Because both variations are using `puppeteer` to scrape many companies. `puppeteer` requires specific chromium version installed locally. 
+ The core variation [israeli-bank-scrapers-core](https://www.npmjs.com/package/israeli-bank-scrapers-core) is using [puppeteer-core](https://www.npmjs.com/package/puppeteer-core) which is has the same library as puppeteer except that it doesn't download chromium. It is up to you to make sure the specific version of chromium is installed locally and provide a path to that version. It is useful in Electron applications since it doesn't bloat the size of the application and you can provide a much friendlier experience like loading the application and download it later when needed. 
  
- The default variation [israeli-bank-scrapers]() is using [puppeteer]() which handles the installation of local chroumium on its' own. Very handy flow since it abstract the chromium installation but as a side effect it increases node_modules by several hounded megabytes. 
- The default one is depends on `puppeteer` internally which is using his own version of chroumium. Usually you will want to use the default version.
- 
- The core variation [israeli-bank-scrapers-core]() is using [puppeteer-core]() which is has the same library as [puppeteer]() except that it doesn't download chromium, it is up to you to download the specific version of chromium. It is useful in Electron applications since it doesn't bloat the size of the application and you can provide a much friendlier experience and download it later when needed. 
- 
- To install [israeli-bank-scrapers-core]():
+ To install `israeli-bank-scrapers-core]`:
 ```sh
 npm install israeli-bank-scrapers-core --save
 ```
 
-It exposes the same API as the default variation, with extra method that is needed and explained in next section.
-
 ## Getting chromium version used by puppeteer-core
-When using the [israeli-bank-scrapers-core]() library you must:
-1. query for the specific chromium revision required by this library.
+When using the `israeli-bank-scrapers-core` it is up to you to make sure the relevant chromium version exists. You must:
+1. query for the specific chromium revision required by the `puppeteer-core` library being used.
 2. make sure that you have local version of that revision.
-3. provide an absolute path to [israeli-bank-scrapers-core]().
+3. provide an absolute path to `israeli-bank-scrapers-core` scrapers.
 
 Please read the following to learn more about the process: 
-1. To get the chromium revision number use the following code:
+1. To get the required chromium revision use the following code:
 ```
 import { getPuppeteerConfig } from 'israeli-bank-scrapers-core';
 
 const chromiumVersion = getPuppeteerConfig().chromiumRevision;
 ```
 
-2. Once you have the chromium revision needed, you can either download it manually or use other liraries like [download-chromium](https://www.npmjs.com/package/download-chromium) to fetch that version. The mentioned library is very handy as it caches the download and provide useful helpers like download progress information.
+2. Once you have the chromium revision, you can either download it manually or use other liraries like [download-chromium](https://www.npmjs.com/package/download-chromium) to fetch that version. The mentioned library is very handy as it caches the download and provide useful helpers like download progress information.
  
  3. provide the path to chromium to the library using the option key `executablePath`. 
 
