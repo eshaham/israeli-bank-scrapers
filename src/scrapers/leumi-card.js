@@ -115,8 +115,10 @@ async function fetchTransactionsForMonth(page, monthMoment) {
   const url = getTransactionsUrl(monthMoment);
 
   const data = await fetchGetWithinPage(page, url);
-
   const transactionsByAccount = {};
+
+  if (!data.result) return transactionsByAccount;
+
   data.result.transactions.forEach((transaction) => {
     if (!transactionsByAccount[transaction.shortCardNumber]) {
       transactionsByAccount[transaction.shortCardNumber] = [];
