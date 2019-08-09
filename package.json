@@ -13,8 +13,8 @@
     "lint": "eslint src",
     "build": "npm run clean && babel src --out-dir lib",
     "prebuild": "node utils/update-puppeteer-config.js",
-    "prepareCoreVariation": "node utils/prepare-israeli-bank-scrapers-core.js && npm i && npm ci && npm run build",
-    "resetCoreVariation": "git reset --hard && npm ci"
+    "prepare-core": "node utils/prepare-israeli-bank-scrapers-core.js && npm i && npm ci && npm run build",
+    "reset": "git reset --hard && npm ci"
   },
   "pre-commit": [
     "lint"
