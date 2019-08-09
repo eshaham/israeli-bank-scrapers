@@ -22,7 +22,7 @@ function getPuppeteerChromiumVersion() {
   console.log('extract puppeteer chromium version from module \'puppeteer|pupetter-core\'');
 
   const chromiumRevision = getPuppeteerChromiumVersion();
-  const configPath = path.join(__dirname, '..', 'src', 'puppeteer-config.json');
+  const configPath = path.join(__dirname, '../puppeteer-config.json');
   // eslint-disable-next-line global-require,import/no-dynamic-require
   const configJson = require(configPath);
   configJson.chromiumRevision = chromiumRevision;

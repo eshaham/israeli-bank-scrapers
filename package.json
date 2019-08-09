@@ -38,6 +38,7 @@
     "@babel/cli": "^7.4.4",
     "@babel/core": "^7.4.5",
     "@babel/preset-env": "^7.4.5",
+    "babel-plugin-import-visitor": "^0.2.0",
     "babel-jest": "^24.8.0",
     "eslint": "^5.4.0",
     "eslint-config-airbnb-base": "^13.1.0",
