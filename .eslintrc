@@ -24,5 +24,8 @@
     "fetch": true,
     "Headers": true
   },
+  "env": {
+    "jest": true
+  },
   "extends": "airbnb-base"
 }

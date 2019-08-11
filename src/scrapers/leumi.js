@@ -14,6 +14,7 @@ import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constan
 
 const BASE_URL = 'https://hb2.bankleumi.co.il';
 const DATE_FORMAT = 'DD/MM/YY';
+const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא קיימות תנועות מתאימות על פי הסינון שהוגדר';
 
 function getTransactionsUrl() {
   return `${BASE_URL}/ebanking/Accounts/ExtendedActivity.aspx?WidgetPar=1#/`;
@@ -151,6 +152,17 @@ async function extractPendingTransactionsFromPage(page) {
   return txns;
 }
 
+async function isNoTransactionInDateRangeError(page) {
+  const hasErrorInfoElement = await elementPresentOnPage(page, '.errInfo');
+  if (hasErrorInfoElement) {
+    const errorText = await page.$eval('.errInfo', (errorElement) => {
+      return errorElement.innerText;
+    });
+    return errorText === NO_TRANSACTION_IN_DATE_RANGE_TEXT;
+  }
+  return false;
+}
+
 async function fetchTransactionsForAccount(page, startDate, accountId) {
   await dropdownSelect(page, 'select#ddlAccounts_m_ddl', accountId);
   await dropdownSelect(page, 'select#ddlTransactionPeriod', '004');
@@ -162,19 +174,30 @@ async function fetchTransactionsForAccount(page, startDate, accountId) {
   );
   await clickButton(page, 'input#btnDisplayDates');
   await waitForNavigation(page);
-  await waitUntilElementFound(page, 'table#WorkSpaceBox table#ctlActivityTable');
-
-  const hasExpandAllButton = await elementPresentOnPage(page, 'a#lnkCtlExpandAllInPage');
-
-  if (hasExpandAllButton) {
-    await clickButton(page, 'a#lnkCtlExpandAllInPage');
-  }
 
   const selectedSnifAccount = await page.$eval('#ddlAccounts_m_ddl option[selected="selected"]', (option) => {
     return option.innerText;
   });
 
   const accountNumber = selectedSnifAccount.replace('/', '_');
+
+  await Promise.race([
+    waitUntilElementFound(page, 'table#WorkSpaceBox table#ctlActivityTable', false),
+    waitUntilElementFound(page, '.errInfo', false),
+  ]);
+
+  if (await isNoTransactionInDateRangeError(page)) {
+    return {
+      accountNumber,
+      txns: [],
+    };
+  }
+
+  const hasExpandAllButton = await elementPresentOnPage(page, 'a#lnkCtlExpandAllInPage');
+
+  if (hasExpandAllButton) {
+    await clickButton(page, 'a#lnkCtlExpandAllInPage');
+  }
 
   const pendingTxns = await extractPendingTransactionsFromPage(page);
   const completedTxns = await extractCompletedTransactionsFromPage(page);

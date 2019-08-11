@@ -2,7 +2,9 @@ function timeoutPromise(ms, promise, description) {
   const timeout = new Promise((resolve, reject) => {
     const id = setTimeout(() => {
       clearTimeout(id);
-      reject(new Error({ timeout: true, errorMessage: description }));
+      const error = new Error(description);
+      error.timeout = true;
+      reject(error);
     }, ms);
   });
 
