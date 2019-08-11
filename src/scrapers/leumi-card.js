@@ -1,5 +1,6 @@
 import buildUrl from 'build-url';
 import moment from 'moment';
+import _ from 'lodash';
 import { fetchGetWithinPage } from '../helpers/fetch';
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { waitForRedirect } from '../helpers/navigation';
@@ -115,9 +116,10 @@ async function fetchTransactionsForMonth(page, monthMoment) {
   const url = getTransactionsUrl(monthMoment);
 
   const data = await fetchGetWithinPage(page, url);
+  const txns = _.get(data, 'result.transactions', []);
 
   const transactionsByAccount = {};
-  data.result.transactions.forEach((transaction) => {
+  txns.forEach((transaction) => {
     if (!transactionsByAccount[transaction.shortCardNumber]) {
       transactionsByAccount[transaction.shortCardNumber] = [];
     }
