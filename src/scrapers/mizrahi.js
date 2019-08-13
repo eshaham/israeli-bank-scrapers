@@ -94,7 +94,9 @@ class MizrahiScraper extends BaseScraperWithBrowser {
       loginUrl: `${LOGIN_URL}`,
       fields: createLoginFields(credentials),
       submitButtonSelector: '#ctl00_PlaceHolderLogin_ctl00_Enter',
-      postAction: async () => waitForRedirect(this.page),
+      postAction: async () => waitForRedirect(this.page, undefined, undefined,
+        ['https://mto.mizrahi-tefahot.co.il/Online/Default.aspx',
+          'https://www.mizrahi-tefahot.co.il/login/MiddlePage.aspx']),
       possibleResults: getPossibleLoginResults(),
     };
   }
