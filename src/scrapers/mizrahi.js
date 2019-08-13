@@ -16,10 +16,7 @@ const AFTER_LOGIN_BASE_URL = 'https://mto.mizrahi-tefahot.co.il/ngOnline/index.h
 const DATE_FORMAT = 'DD/MM/YY';
 
 function getTransactionsUrl() {
-  return `${AFTER_LOGIN_BASE_URL}#main/uis/legacy/Osh/P428//`;
-}
-
-function convertTransactions(txns) {
+  return `${AFTER_LOGIN_BASE_URL}#/main/uis/legacy/Osh/p428//legacy.Osh.p428`;
 }
 
 async function fetchTransactionsForAccount(page, startDate, accountId) {
