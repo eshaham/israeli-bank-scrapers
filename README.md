@@ -19,6 +19,7 @@ Currently only the following banks are supported:
 - Leumi Card
 - Isracard
 - Amex (thanks [@erezd](https://github.com/erezd))
+- Mizrahi Bank (thanks [@baruchiro](https://github.com/baruchiro))
 
 # Prerequisites
 To use this you will need to have [Node.js](https://nodejs.org) >= 8 installed.
@@ -49,7 +50,7 @@ else {
 The definition of the `options` object is as follows:
 ```node
 {
-  companyId: string, // mandatory; one of 'hapoalim', 'leumi', 'discount', 'otsarHahayal', 'visaCal', 'leumiCard', 'isracard', 'amex'
+  companyId: string, // mandatory; one of 'hapoalim', 'leumi', 'discount', 'otsarHahayal', 'visaCal', 'leumiCard', 'isracard', 'amex', 'mizrahi'
   startDate: Date, // the date to fetch transactions from (can't be before the minimum allowed time difference for the scraper)
   combineInstallments: boolean, // if set to true, all installment transactions will be combine into the first one
   showBrowser: boolean, // shows the browser while scraping, good for debugging (default false)
@@ -183,6 +184,16 @@ This scraper expects the following credentials object:
 const credentials = {
   id: <user identification number>,
   card6Digits: <6 last digits of card>
+  password: <user password>
+};
+```
+This scraper supports fetching transaction from up to one year.
+
+## Mizrahi Bank
+This scraper expects the following credentials object:
+```node
+const credentials = {
+  username: <user name>,
   password: <user password>
 };
 ```
