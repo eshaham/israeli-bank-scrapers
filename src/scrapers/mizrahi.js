@@ -15,6 +15,12 @@ const LOGIN_URL = `${BASE_URL}/he/bank/Pages/Default.aspx`;
 const AFTER_LOGIN_BASE_URL = 'https://mto.mizrahi-tefahot.co.il/ngOnline/index.html';
 const DATE_FORMAT = 'DD/MM/YY';
 
+const redirectedLoginPages = [
+  'https://www.mizrahi-tefahot.co.il/he/bank/Pages/Default.aspx',
+  'https://mto.mizrahi-tefahot.co.il/Online/Default.aspx?language=he-IL',
+  'https://www.mizrahi-tefahot.co.il/login/MiddlePage.aspx',
+];
+
 function getTransactionsUrl() {
   return `${AFTER_LOGIN_BASE_URL}#/main/uis/legacy/Osh/p428//legacy.Osh.p428`;
 }
@@ -44,7 +50,7 @@ async function fetchTransactionsForAccount(page, startDate, accountId) {
   });
 
   const accountNumber = selectedSnifAccount.replace('/', '_');
-
+  console.log(accountNumber);
   // const pendingTxns = await extractPendingTransactionsFromPage(page);
   // const completedTxns = await extractCompletedTransactionsFromPage(page);
   // const txns = [
@@ -94,9 +100,9 @@ class MizrahiScraper extends BaseScraperWithBrowser {
       loginUrl: `${LOGIN_URL}`,
       fields: createLoginFields(credentials),
       submitButtonSelector: '#ctl00_PlaceHolderLogin_ctl00_Enter',
+      // TODO Replace waitForRedirect with waitUntilElementFound from leumi
       postAction: async () => waitForRedirect(this.page, undefined, undefined,
-        ['https://mto.mizrahi-tefahot.co.il/Online/Default.aspx',
-          'https://www.mizrahi-tefahot.co.il/login/MiddlePage.aspx']),
+        redirectedLoginPages),
       possibleResults: getPossibleLoginResults(),
     };
   }
