@@ -22,7 +22,10 @@ const redirectedLoginPages = [
 ];
 
 function getTransactionsUrl() {
-  return `${AFTER_LOGIN_BASE_URL}#/main/uis/legacy/Osh/p428//legacy.Osh.p428`;
+  return `${AFTER_LOGIN_BASE_URL}#/main/uis/osh/p428/`;
+  // There is another url but I'm not sure it's different.
+  // In addition, he made navigation problems so I left him.
+  // return `${AFTER_LOGIN_BASE_URL}#/main/uis/legacy/Osh/p428//legacy.Osh.p428`;
 }
 
 async function fetchTransactionsForAccount(page, startDate, accountId) {
@@ -112,9 +115,6 @@ class MizrahiScraper extends BaseScraperWithBrowser {
     const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
-
-    const url = getTransactionsUrl();
-    await this.navigateTo(url);
 
     const accounts = await fetchTransactions(this.page, startMoment);
 
