@@ -12,21 +12,8 @@ import {
 
 const BASE_URL = 'https://www.mizrahi-tefahot.co.il';
 const LOGIN_URL = `${BASE_URL}/he/bank/Pages/Default.aspx`;
-const AFTER_LOGIN_BASE_URL = 'https://mto.mizrahi-tefahot.co.il/ngOnline/index.html';
+const AFTER_LOGIN_BASE_URL = 'https://mto.mizrahi-tefahot.co.il/ngOnline/index.html#/main/uis/osh/p428/';
 const DATE_FORMAT = 'DD/MM/YY';
-
-const redirectedLoginPages = [
-  'https://www.mizrahi-tefahot.co.il/he/bank/Pages/Default.aspx',
-  'https://mto.mizrahi-tefahot.co.il/Online/Default.aspx?language=he-IL',
-  'https://www.mizrahi-tefahot.co.il/login/MiddlePage.aspx',
-];
-
-function getTransactionsUrl() {
-  return `${AFTER_LOGIN_BASE_URL}#/main/uis/osh/p428/`;
-  // There is another url but I'm not sure it's different.
-  // In addition, he made navigation problems so I left him.
-  // return `${AFTER_LOGIN_BASE_URL}#/main/uis/legacy/Osh/p428//legacy.Osh.p428`;
-}
 
 async function fetchTransactionsForAccount(page, startDate, accountId) {
   await dropdownSelect(page, 'select#sky-account-combo', accountId);
@@ -69,6 +56,7 @@ async function fetchTransactionsForAccount(page, startDate, accountId) {
 
 async function fetchTransactions(page, startDate) {
   const res = [];
+
   // Loop through all available accounts and collect transactions from all
   const accounts = await dropdownElements(page, 'select#sky-account-combo');
   for (const account of accounts) {
@@ -97,6 +85,12 @@ function getPossibleLoginResults() {
   return urls;
 }
 
+async function waitForPostLogin(page) {
+  return Promise.race([
+    waitUntilElementFound(page, '#container', true),
+  ]);
+}
+
 class MizrahiScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials) {
     return {
@@ -104,8 +98,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
       fields: createLoginFields(credentials),
       submitButtonSelector: '#ctl00_PlaceHolderLogin_ctl00_Enter',
       // TODO Replace waitForRedirect with waitUntilElementFound from leumi
-      postAction: async () => waitForRedirect(this.page, undefined, undefined,
-        redirectedLoginPages),
+      postAction: async () => waitForPostLogin(this.page),
       possibleResults: getPossibleLoginResults(),
     };
   }
