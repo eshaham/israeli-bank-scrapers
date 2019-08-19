@@ -95,7 +95,8 @@ class BaseScraperWithBrowser extends BaseScraper {
   async navigateTo(url, page) {
     const pageToUse = page || this.page;
     const response = await pageToUse.goto(url);
-    if (!response || response.status() !== OK_STATUS) {
+
+    if (response !== null && response.status() !== OK_STATUS) {
       throw new Error(`Error while trying to navigate to url ${url}`);
     }
   }
