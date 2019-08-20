@@ -1,11 +1,15 @@
 import moment from 'moment';
 import {
+  clickButton,
+  elementPresentOnPage,
   pageEvalAll,
 } from '../../helpers/elements-interactions';
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../../constants';
 import { mapAccounts, navigateToAccountTransactions } from './helpers/accounts';
 import createGeneralError from '../../helpers/errors';
 import { DATE_FORMAT } from './definitions';
+
+const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא קיימות תנועות מתאימות על פי הסינון שהוגדר';
 
 
 function getAmountData(amountStr) {
@@ -39,6 +43,17 @@ function convertTransactions(txns) {
       memo: txn.memo,
     };
   });
+}
+
+async function isNoTransactionInDateRangeError(page) {
+  const hasErrorInfoElement = await elementPresentOnPage(page, '.errInfo');
+  if (hasErrorInfoElement) {
+    const errorText = await page.$eval('.errInfo', (errorElement) => {
+      return errorElement.innerText;
+    });
+    return errorText === NO_TRANSACTION_IN_DATE_RANGE_TEXT;
+  }
+  return false;
 }
 
 async function extractCompletedTransactionsFromPage(page) {
@@ -133,6 +148,20 @@ async function extractPendingTransactionsFromPage(page) {
  */
 async function fetchTransactionsForAccount(page, options) {
   await navigateToAccountTransactions(page, options);
+
+  if (await isNoTransactionInDateRangeError(page)) {
+    return {
+      accountNumber: options.accountName,
+      txns: [],
+    };
+  }
+
+  const hasExpandAllButton = await elementPresentOnPage(page, 'a#lnkCtlExpandAllInPage');
+
+  if (hasExpandAllButton) {
+    await clickButton(page, 'a#lnkCtlExpandAllInPage');
+  }
+
   const pendingTxns = await extractPendingTransactionsFromPage(page);
   const completedTxns = await extractCompletedTransactionsFromPage(page);
   const txns = [

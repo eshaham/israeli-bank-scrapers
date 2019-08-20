@@ -9,21 +9,29 @@ const VIEWPORT_WIDTH = 1024;
 const VIEWPORT_HEIGHT = 768;
 const OK_STATUS = 200;
 
-function getKeyByValue(object, value) {
-  return Object.keys(object).find((key) => {
-    const compareTo = object[key];
-    let result = false;
+async function getKeyByValue(object, value) {
+  const keys = Object.keys(object);
+  for (const key of keys) {
+    const conditions = object[key];
 
-    result = compareTo.find((item) => {
-      if (item instanceof RegExp) {
-        return item.test(value);
+    for (const condition of conditions) {
+      let result = false;
+
+      if (condition instanceof RegExp) {
+        result = condition.test(value);
+      } else if (typeof condition === 'function') {
+        result = await condition();
+      } else {
+        result = value.toLowerCase() === condition.toLowerCase();
       }
 
-      return value.toLowerCase() === item.toLowerCase();
-    });
+      if (result) {
+        return Promise.resolve(key);
+      }
+    }
+  }
 
-    return !!result;
-  });
+  return Promise.resolve(LOGIN_RESULT.UNKNOWN_ERROR);
 }
 
 function handleLoginResult(scraper, loginResult) {
@@ -32,6 +40,7 @@ function handleLoginResult(scraper, loginResult) {
       scraper.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
       return { success: true };
     case LOGIN_RESULT.INVALID_PASSWORD:
+    case LOGIN_RESULT.UNKNOWN_ERROR:
       scraper.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_FAILED);
       return {
         success: false,
@@ -132,7 +141,7 @@ class BaseScraperWithBrowser extends BaseScraper {
     }
 
     const current = await getCurrentUrl(this.page, true);
-    const loginResult = getKeyByValue(loginOptions.possibleResults, current);
+    const loginResult = await getKeyByValue(loginOptions.possibleResults, current);
     return handleLoginResult(this, loginResult);
   }
 

@@ -2,11 +2,6 @@ import waitUntil from './waiting';
 
 const OK_STATUS = 200;
 
-export const NAVIGATION_ERRORS = {
-  TIMEOUT: 'timeout',
-  GENERIC: 'generic',
-};
-
 export async function waitForNavigation(page, options) {
   await page.waitForNavigation(options);
 }

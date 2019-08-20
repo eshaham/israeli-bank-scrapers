@@ -1,7 +1,7 @@
 import {
   clickButton,
   dropdownElements,
-  dropdownSelect, elementPresentOnPage,
+  dropdownSelect,
   fillInput,
   waitUntilElementFound,
 } from '../../../helpers/elements-interactions';
@@ -57,12 +57,10 @@ async function navigateToAccountTransactions(page, options) {
   );
   await clickButton(page, 'input#btnDisplayDates');
   await waitForNavigation(page);
-  await waitUntilElementFound(page, 'table#WorkSpaceBox table#ctlActivityTable');
 
-  const hasExpandAllButton = await elementPresentOnPage(page, 'a#lnkCtlExpandAllInPage');
-
-  if (hasExpandAllButton) {
-    await clickButton(page, 'a#lnkCtlExpandAllInPage');
-  }
+  await Promise.race([
+    waitUntilElementFound(page, 'table#WorkSpaceBox table#ctlActivityTable', false),
+    waitUntilElementFound(page, '.errInfo', false),
+  ]);
 }
 export { mapAccounts, navigateToAccountTransactions, getTransactionsUrl };

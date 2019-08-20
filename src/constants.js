@@ -31,7 +31,7 @@ export const LOGIN_RESULT = {
   INVALID_OPTIONS: 'INVALID_OPTIONS',
 };
 
-export const NAVIGATION_ERRORS = {
+export const ERRORS = {
   TIMEOUT: 'TIMEOUT',
   GENERIC: 'GENERIC',
 };

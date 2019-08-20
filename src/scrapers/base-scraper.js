@@ -1,7 +1,6 @@
 import { EventEmitter } from 'events';
 
-import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT } from '../constants';
-import { NAVIGATION_ERRORS } from '../helpers/navigation';
+import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT, ERRORS } from '../constants';
 
 const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';
 
@@ -14,11 +13,11 @@ function createErrorResult(errorType, errorMessage) {
 }
 
 function createTimeoutError(errorMessage) {
-  return createErrorResult(NAVIGATION_ERRORS.TIMEOUT, errorMessage);
+  return createErrorResult(ERRORS.TIMEOUT, errorMessage);
 }
 
-function createGenericNavigationError(errorMessage) {
-  return createErrorResult(NAVIGATION_ERRORS.GENERIC, errorMessage);
+function createGenericError(errorMessage) {
+  return createErrorResult(ERRORS.GENERIC, errorMessage);
 }
 
 function createEmptyAccount(accountNumber) {
@@ -92,7 +91,7 @@ class BaseScraper {
     } catch (e) {
       loginResult = e.timeout ?
         createTimeoutError(e.message) :
-        createGenericNavigationError(e.message);
+        createGenericError(e.message);
     }
 
     let scrapeResult;
@@ -103,13 +102,17 @@ class BaseScraper {
         scrapeResult =
           e.timeout ?
             createTimeoutError(e.message) :
-            createGenericNavigationError(e.message);
+            createGenericError(e.message);
       }
     } else {
       scrapeResult = loginResult;
     }
 
-    await this.terminate();
+    try {
+      await this.terminate();
+    } catch (e) {
+      scrapeResult = createGenericError(e.message);
+    }
     this.emitProgress(SCRAPE_PROGRESS_TYPES.END_SCRAPING);
 
     return scrapeResult;
@@ -123,12 +126,20 @@ class BaseScraper {
     throw new Error(`fetchData() is not created in ${this.options.companyId}`);
   }
 
-  static async fetchPayments() {
-    return [];
+  // eslint-disable-next-line class-methods-use-this
+  async fetchPayments() {
+    return {
+      success: true,
+      accounts: [],
+    };
   }
 
-  static async fetchSummary() {
-    return [];
+  // eslint-disable-next-line class-methods-use-this
+  async fetchSummary() {
+    return {
+      success: true,
+      accounts: [],
+    };
   }
 
   async terminate() {
