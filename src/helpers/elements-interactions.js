@@ -11,8 +11,7 @@ async function fillInput(page, inputSelector, inputValue) {
 }
 
 async function clickButton(page, buttonSelector) {
-  const button = await page.$(buttonSelector);
-  await button.click();
+  await page.$eval(buttonSelector, el => el.click());
 }
 
 async function pageEvalAll(page, selector, defaultResult, callback) {
