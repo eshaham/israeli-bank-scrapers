@@ -16,13 +16,14 @@ const AFTER_LOGIN_BASE_URL = 'https://mto.mizrahi-tefahot.co.il/ngOnline/index.h
 const DATE_FORMAT = 'DD/MM/YY';
 
 async function fetchTransactionsForAccount(page, startDate, accountId) {
+  const btnCustomDateSelector = '.linkPannel button.ng-binding:last-of-type';
   await dropdownSelect(page, 'select#sky-account-combo', accountId);
-  await waitUntilElementFound(page, 'a#btnCustomDate');
-  await clickButton(page, 'a#btnCustomDate');
-  await waitUntilElementFound(page, 'div#dvCustomDateRange');
+  await waitUntilElementFound(page, btnCustomDateSelector);
+  await clickButton(page, btnCustomDateSelector);
+  await waitUntilElementFound(page, 'div.well > .row', true);
   await fillInput(
     page,
-    'input#ctl00_ContentPlaceHolder2_SkyDRP_SkyDatePicker1ID_radDatePickerID_dateInput',
+    'input#dpFromDateK',
     startDate.format(DATE_FORMAT),
   );
   await clickButton(page, 'input#btnShow');
