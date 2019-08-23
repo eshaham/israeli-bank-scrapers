@@ -1,13 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-
-function checkIfCoreVariation() {
-  const packagePath = path.join(__dirname, '..', 'package.json');
-  // eslint-disable-next-line import/no-dynamic-require,global-require
-  const packageJson = require(packagePath);
-
-  return (packageJson.name === 'israeli-bank-scrapers-core');
-}
+const checkIfCoreVariation = require('./core-utils');
 
 function getPuppeteerChromiumVersion() {
   const puppeteerLibrary = checkIfCoreVariation() ? 'puppeteer-core' : 'puppeteer';
@@ -30,4 +23,4 @@ function getPuppeteerChromiumVersion() {
   fs.writeFileSync(configPath, JSON.stringify(configJson, null, '  '));
 
   console.log(`update 'src/puppeteer-config.json' file with puppeteer chroumium revision '${chromiumRevision}'`);
-}())
+}());

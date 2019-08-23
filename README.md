@@ -103,7 +103,7 @@ The return value is a list of scraper metadata:
 
 # Israeli-bank-scrapers-core
 
-> TL;DR Usually you will want to use the default variation, core variation is for fewer use cases.
+> TL;DR Usually you will want to use the default variation, core variation is relevant for specific use cases.
 
 Israeli bank scrapers library is published in two variations:
  1. [israeli-bank-scrapers](https://www.npmjs.com/package/israeli-bank-scrapers) - the default variation, great for common usage as node depdency in server application or cli.
@@ -113,7 +113,7 @@ Israeli bank scrapers library is published in two variations:
  
  The core variation [israeli-bank-scrapers-core](https://www.npmjs.com/package/israeli-bank-scrapers-core) is using [puppeteer-core](https://www.npmjs.com/package/puppeteer-core) which is has the same library as puppeteer except that it doesn't download chromium. It is up to you to make sure the specific version of chromium is installed locally and provide a path to that version. It is useful in Electron applications since it doesn't bloat the size of the application and you can provide a much friendlier experience like loading the application and download it later when needed. 
  
- To install `israeli-bank-scrapers-core]`:
+ To install `israeli-bank-scrapers-core`:
 ```sh
 npm install israeli-bank-scrapers-core --save
 ```
