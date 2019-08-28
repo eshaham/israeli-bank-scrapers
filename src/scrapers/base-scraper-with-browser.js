@@ -94,9 +94,9 @@ class BaseScraperWithBrowser extends BaseScraper {
   async navigateTo(url, page) {
     const pageToUse = page || this.page;
     const response = await pageToUse.goto(url);
-    
-    // note: response will be null when navigating to same url while changing the hash part. the condition below will always accept null as valid result. 
-    if (response !== null && (response === undefined || response.status() !== OK_STATUS) ) {
+
+    // note: response will be null when navigating to same url while changing the hash part. the condition below will always accept null as valid result.
+    if (response !== null && (response === undefined || response.status() !== OK_STATUS)) {
       throw new Error(`Error while trying to navigate to url ${url}`);
     }
   }
