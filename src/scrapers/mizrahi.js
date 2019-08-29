@@ -1,6 +1,5 @@
 import moment from 'moment';
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
-import { waitForRedirect } from '../helpers/navigation';
 import {
   dropdownSelect,
   dropdownElements,
@@ -8,27 +7,29 @@ import {
   clickButton,
   waitUntilElementFound,
   elementPresentOnPage,
+  waitUntilElementIs,
 } from '../helpers/elements-interactions';
 
 const BASE_URL = 'https://www.mizrahi-tefahot.co.il';
 const LOGIN_URL = `${BASE_URL}/he/bank/Pages/Default.aspx`;
 const AFTER_LOGIN_BASE_URL = 'https://mto.mizrahi-tefahot.co.il/ngOnline/index.html#/main/uis/osh/p428/';
-const DATE_FORMAT = 'DD/MM/YY';
+const DATE_FORMAT = 'DD/MM/YYYY';
 
 async function fetchTransactionsForAccount(page, startDate, accountId) {
   const btnCustomDateSelector = '.linkPannel button.ng-binding:last-of-type';
   await dropdownSelect(page, 'select#sky-account-combo', accountId);
   await waitUntilElementFound(page, btnCustomDateSelector);
-  await clickButton(page, btnCustomDateSelector);
+  await page.$eval(btnCustomDateSelector, el => el.click());
   await waitUntilElementFound(page, 'div.well > .row', true);
   await fillInput(
     page,
     'input#dpFromDateK',
     startDate.format(DATE_FORMAT),
   );
-  await clickButton(page, 'input#btnShow');
-  // TODO: continue from here
-  await waitUntilElementFound(page, 'table#WorkSpaceBox table#ctlActivityTable');
+
+  await page.$eval('div.form-group > button', el => el.click());
+  // await page.$eval('div.from-to-datepicker > div.row > div.form-group > button', el => el.click());
+  await waitUntilElementFound(page, 'table[role="treegrid"]');
 
   const hasExpandAllButton = await elementPresentOnPage(page, 'a#lnkCtlExpandAllInPage');
 
