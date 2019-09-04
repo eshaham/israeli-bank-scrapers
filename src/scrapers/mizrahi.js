@@ -1,74 +1,12 @@
 import moment from 'moment';
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
-import {
-  dropdownSelect,
-  dropdownElements,
-  fillInput,
-  clickButton,
-  waitUntilElementFound,
-  elementPresentOnPage,
-  waitUntilElementIs,
-} from '../helpers/elements-interactions';
+import { fetchPostWithinPage } from '../helpers/fetch';
 
 const BASE_URL = 'https://www.mizrahi-tefahot.co.il';
 const LOGIN_URL = `${BASE_URL}/he/bank/Pages/Default.aspx`;
 const AFTER_LOGIN_BASE_URL = 'https://mto.mizrahi-tefahot.co.il/ngOnline/index.html#/main/uis/osh/p428/';
+const TRANSACTIONS_REQUEST_URL = 'https://mto.mizrahi-tefahot.co.il/Online/api/SkyOSH/get428Index';
 const DATE_FORMAT = 'DD/MM/YYYY';
-
-async function fetchTransactionsForAccount(page, startDate, accountId) {
-  const btnCustomDateSelector = '.linkPannel button.ng-binding:last-of-type';
-  await dropdownSelect(page, 'select#sky-account-combo', accountId);
-  await waitUntilElementFound(page, btnCustomDateSelector);
-  await page.$eval(btnCustomDateSelector, el => el.click());
-  await waitUntilElementFound(page, 'div.well > .row', true);
-  await fillInput(
-    page,
-    'input#dpFromDateK',
-    startDate.format(DATE_FORMAT),
-  );
-
-  await page.$eval('div.form-group > button', el => el.click());
-  // await page.$eval('div.from-to-datepicker > div.row > div.form-group > button', el => el.click());
-  await waitUntilElementFound(page, 'table[role="treegrid"]');
-
-  const hasExpandAllButton = await elementPresentOnPage(page, 'a#lnkCtlExpandAllInPage');
-
-  if (hasExpandAllButton) {
-    await clickButton(page, 'a#lnkCtlExpandAllInPage');
-  }
-
-  const selectedSnifAccount = await page.$eval('#ddlAccounts_m_ddl option[selected="selected"]', (option) => {
-    return option.innerText;
-  });
-
-  const accountNumber = selectedSnifAccount.replace('/', '_');
-  console.log(accountNumber);
-  // const pendingTxns = await extractPendingTransactionsFromPage(page);
-  // const completedTxns = await extractCompletedTransactionsFromPage(page);
-  // const txns = [
-  //   ...pendingTxns,
-  //   ...completedTxns,
-  // ];
-
-  // return {
-  //   accountNumber,
-  //   txns: convertTransactions(txns),
-  // };
-}
-
-async function fetchTransactions(page, startDate) {
-  const res = [];
-
-  // Loop through all available accounts and collect transactions from all
-  const accounts = await dropdownElements(page, 'select#sky-account-combo');
-  for (const account of accounts) {
-    // Skip "All accounts" option
-    if (account.value !== '-1') {
-      res.push(await fetchTransactionsForAccount(page, startDate, account.value));
-    }
-  }
-  return res;
-}
 
 function createLoginFields(credentials) {
   return [
@@ -87,20 +25,15 @@ function getPossibleLoginResults() {
   return urls;
 }
 
-async function waitForPostLogin(page) {
-  return Promise.race([
-    waitUntilElementFound(page, '#container', true),
-  ]);
-}
-
 class MizrahiScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials) {
     return {
       loginUrl: `${LOGIN_URL}`,
       fields: createLoginFields(credentials),
       submitButtonSelector: '#ctl00_PlaceHolderLogin_ctl00_Enter',
-      // TODO Replace waitForRedirect with waitUntilElementFound from leumi
-      postAction: async () => waitForPostLogin(this.page),
+      postAction: async () => {
+        this.request = await this.page.waitForRequest(TRANSACTIONS_REQUEST_URL);
+      },
       possibleResults: getPossibleLoginResults(),
     };
   }
@@ -111,7 +44,19 @@ class MizrahiScraper extends BaseScraperWithBrowser {
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-    const accounts = await fetchTransactions(this.page, startMoment);
+    const data = JSON.parse(this.request.postData());
+    data.inToDate = moment().format(DATE_FORMAT);
+    data.inFromDate = startMoment.format(DATE_FORMAT);
+
+    const headersToSend = {
+      mizrahixsrftoken: this.request.headers().mizrahixsrftoken,
+      'Content-Type': this.request.headers()['content-type'],
+    };
+
+    const response = await fetchPostWithinPage(this.page,
+      TRANSACTIONS_REQUEST_URL, data, headersToSend);
+
+    const accounts = response;
 
     return {
       success: true,
