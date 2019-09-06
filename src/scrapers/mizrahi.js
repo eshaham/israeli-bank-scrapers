@@ -1,4 +1,10 @@
 import moment from 'moment';
+import {
+  SHEKEL_CURRENCY,
+  NORMAL_TXN_TYPE,
+  TRANSACTION_STATUS,
+  ISO_DATE_FORMAT,
+} from '../constants';
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { fetchPostWithinPage } from '../helpers/fetch';
 
@@ -25,6 +31,50 @@ function getPossibleLoginResults() {
   return urls;
 }
 
+function CreateDataFromRequest(request, optionsStartDate) {
+  const defaultStartMoment = moment().subtract(1, 'years');
+  const startDate = optionsStartDate || defaultStartMoment.toDate();
+  const startMoment = moment.max(defaultStartMoment, moment(startDate));
+
+  const data = JSON.parse(request.postData());
+
+  data.inToDate = moment().format(DATE_FORMAT);
+  data.inFromDate = startMoment.format(DATE_FORMAT);
+  data.table.maxRow = 9999999999;
+
+  return data;
+}
+
+function createHeadersFromRequest(request) {
+  return {
+    mizrahixsrftoken: request.headers().mizrahixsrftoken,
+    'Content-Type': request.headers()['content-type'],
+  };
+}
+
+function convertTransactions(txns) {
+  return txns.map((row) => {
+    const txnDate = moment(row.MC02PeulaTaaEZ).format(ISO_DATE_FORMAT);
+
+    // TODO: I don't have enough sample transactions to understand the rest of the data.
+    return {
+      type: NORMAL_TXN_TYPE, // can be either 'normal' or 'installments'
+      // identifier: int, // only if exists
+      date: txnDate, // ISO date string
+      processedDate: txnDate, // ISO date string
+      originalAmount: row.MC02SchumEZ,
+      originalCurrency: SHEKEL_CURRENCY,
+      chargedAmount: row.MC02SchumEZ,
+      description: row.MC02TnuaTeurEZ,
+      // installments: {
+      //   number: int, // the current installment number
+      //   total: int, // the total number of installments
+      // },
+      status: TRANSACTION_STATUS.COMPLETED, // can either be 'completed' or 'pending'
+    };
+  });
+}
+
 class MizrahiScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials) {
     return {
@@ -39,28 +89,29 @@ class MizrahiScraper extends BaseScraperWithBrowser {
   }
 
   async fetchData() {
-    console.debug('Starting fetch Data - Mizrahi');
-    const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
-    const startDate = this.options.startDate || defaultStartMoment.toDate();
-    const startMoment = moment.max(defaultStartMoment, moment(startDate));
-
-    const data = JSON.parse(this.request.postData());
-    data.inToDate = moment().format(DATE_FORMAT);
-    data.inFromDate = startMoment.format(DATE_FORMAT);
-
-    const headersToSend = {
-      mizrahixsrftoken: this.request.headers().mizrahixsrftoken,
-      'Content-Type': this.request.headers()['content-type'],
-    };
+    const data = CreateDataFromRequest(this.request, this.options.startDate);
+    const headers = createHeadersFromRequest(this.request);
 
     const response = await fetchPostWithinPage(this.page,
-      TRANSACTIONS_REQUEST_URL, data, headersToSend);
+      TRANSACTIONS_REQUEST_URL, data, headers);
 
-    const accounts = response;
+    if (response.header.success === false) {
+      return {
+        success: false,
+        errorType: 'generic',
+        errorMessage:
+          `Error fetching transaction. Response message: "${response.header.messages[0].text}"`,
+      };
+    }
 
     return {
       success: true,
-      accounts,
+      accounts: [
+        {
+          accountNumber: response.body.fields.AccountNumber,
+          txns: convertTransactions(response.body.table.rows.filter(row => row.RecTypeSpecified)),
+        },
+      ],
     };
   }
 }

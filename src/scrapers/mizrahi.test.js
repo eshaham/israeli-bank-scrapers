@@ -3,7 +3,7 @@ import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
 } from '../../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
-import { LOGIN_RESULT } from '../constants';
+import { ISO_DATE_REGEX, LOGIN_RESULT } from '../constants';
 
 const COMPANY_ID = 'mizrahi'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
@@ -46,6 +46,9 @@ describe('Mizrahi scraper', () => {
     const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
     expect(error).toBe('');
     expect(result.success).toBeTruthy();
+    expect(result.accounts[0].accountNumber).not.toBe('');
+
+    expect(result.accounts[0].txns[0].date).toMatch(ISO_DATE_REGEX);
 
     exportTransactions(COMPANY_ID, result.accounts || []);
   });
