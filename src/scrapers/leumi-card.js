@@ -11,8 +11,6 @@ import {
 } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
-import scrapeSummary from './leumi-card/scrape-summary';
-import scrapePayments from './leumi-card/scrape-payments';
 
 const BASE_ACTIONS_URL = 'https://online.max.co.il';
 const BASE_API_ACTIONS_URL = 'https://onlinelcapi.max.co.il';
@@ -210,14 +208,6 @@ class LeumiCardScraper extends BaseScraperWithBrowser {
       postAction: async () => redirectOrDialog(this.page),
       possibleResults: getPossibleLoginResults(this.page),
     };
-  }
-
-  async fetchPayments() {
-    return scrapePayments(this.page, this.options);
-  }
-
-  async fetchSummary() {
-    return scrapeSummary(this.page);
   }
 
   async fetchData() {
