@@ -133,7 +133,6 @@ class BaseScraperWithBrowser extends BaseScraper {
       await loginOptions.preAction();
     }
     await this.fillInputs(loginOptions.fields);
-
     await clickButton(this.page, loginOptions.submitButtonSelector);
     this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGGING_IN);
 
