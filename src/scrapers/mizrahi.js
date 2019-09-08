@@ -61,18 +61,14 @@ function convertTransactions(txns) {
 
     // TODO: I don't have enough sample transactions to understand the rest of the data.
     return {
-      type: NORMAL_TXN_TYPE, // can be either 'normal' or 'installments'
-      // identifier: int, // only if exists
+      type: NORMAL_TXN_TYPE,
+      identifier: row.MC02AsmahtaMekoritEZ ? parseInt(row.MC02AsmahtaMekoritEZ, 10) : null,
       date: txnDate, // ISO date string
       processedDate: txnDate, // ISO date string
       originalAmount: row.MC02SchumEZ,
       originalCurrency: SHEKEL_CURRENCY,
       chargedAmount: row.MC02SchumEZ,
       description: row.MC02TnuaTeurEZ,
-      // installments: {
-      //   number: int, // the current installment number
-      //   total: int, // the total number of installments
-      // },
       status: TRANSACTION_STATUS.COMPLETED, // can either be 'completed' or 'pending'
     };
   });
