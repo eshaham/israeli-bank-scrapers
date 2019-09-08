@@ -15,6 +15,7 @@ const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/ngOnline\/
 const OSH_PAGE = 'https://mto.mizrahi-tefahot.co.il/ngOnline/index.html#/main/uis/osh/p428/';
 const TRANSACTIONS_REQUEST_URL = 'https://mto.mizrahi-tefahot.co.il/Online/api/SkyOSH/get428Index';
 const DATE_FORMAT = 'DD/MM/YYYY';
+const MAX_ROWS_PER_REQUEST = 10000000000;
 
 function createLoginFields(credentials) {
   return [
@@ -42,7 +43,7 @@ function CreateDataFromRequest(request, optionsStartDate) {
 
   data.inToDate = moment().format(DATE_FORMAT);
   data.inFromDate = startMoment.format(DATE_FORMAT);
-  data.table.maxRow = 9999999999;
+  data.table.maxRow = MAX_ROWS_PER_REQUEST;
 
   return data;
 }
@@ -106,7 +107,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
         success: false,
         errorType: 'generic',
         errorMessage:
-          `Error fetching transaction. Response message: "${response.header.messages[0].text}"`,
+          `Error fetching transaction. Response message: ${response.header.messages[0].text}`,
       };
     }
 
