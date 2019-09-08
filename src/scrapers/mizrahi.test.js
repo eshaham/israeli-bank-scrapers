@@ -19,7 +19,7 @@ describe('Mizrahi scraper', () => {
     expect(SCRAPERS.mizrahi.loginFields).toContain('password');
   });
 
-  maybeTestCompanyAPI(COMPANY_ID, config => config.companyAPI.invalidPassword)('should fail on invalid user/password"', async () => {
+  maybeTestCompanyAPI(COMPANY_ID, config => config.companyAPI.invalidPassword)('should fail on invalid user/password', async () => {
     const options = {
       ...testsConfig.options,
       companyId: COMPANY_ID,
@@ -34,7 +34,7 @@ describe('Mizrahi scraper', () => {
     expect(result.errorType).toBe(LOGIN_RESULT.INVALID_PASSWORD);
   });
 
-  maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions"', async () => {
+  maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions', async () => {
     const options = {
       ...testsConfig.options,
       companyId: COMPANY_ID,
