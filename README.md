@@ -10,6 +10,24 @@ Israeli Bank Scrapers - Get closer to your own data
 
 # What's here?
 What you can find here is scrapers for all major Israeli banks and credit card companies. That's the plan at least.
+
+All companies has support transactions scraping. Other types of data are added 
+
+> To learn more about additional data scraping read the [following article](./docs/additional-data-scraping.md).
+
+The following table show the support for each company:
+
+| Company | Transactions | Summary | Payments |
+| --- | --- | --- | --- |
+| Bank Hapoalim | Yes | |
+| Leumi Bank | Yes | |  
+| Discount Bank | | |
+| Otsar Hahayal Bank | | |  
+| Visa Cal | | |  
+| Leumi Card | | |  
+| Isracard | | |  
+| Amex | | |  
+
 Currently only the following banks are supported:
 - Bank Hapoalim (thanks [@sebikaplun](https://github.com/sebikaplun))
 - Leumi Bank (thanks [@esakal](https://github.com/esakal))
@@ -187,40 +205,6 @@ const credentials = {
 };
 ```
 This scraper supports fetching transaction from up to one year.
-
-## Building your own scraper
-TODO should provide more details and review the example code.
-
-```
-import userLogin from 'src/scrapers/leumi/user-login';
-import { getBrowser, getBrowserPage } from 'src/helpers/scraping';
-import scrapeSummary from 'src/scrapers/leumi/scrape-summary';
-
-(async function scrape() {
-    const credentials = {}; // TODO provide relevant scraper credentials
-    try {
-      const browser = await getBrowser({
-        verbose: true, // optional
-        showBrowser: true, // optional
-      });
-      const page = await getBrowserPage(browser);
-
-      const userLoginResult = await userLogin(page, {
-        credentials,
-      });
-
-      if (!userLoginResult.success) {
-        console.error(userLoginResult.error);
-        return;
-      }
-      await scrapeSummary(page);
-    } catch (e) {
-      console.error(e);
-      throw e;
-    }
-  }
-}());
-```
 
 # Known projects
 These are the projects known to be using this module:
