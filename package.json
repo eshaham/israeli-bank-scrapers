@@ -15,7 +15,7 @@
     "prebuild": "node utils/update-puppeteer-config.js",
     "prepare-core": "node utils/prepare-israeli-bank-scrapers-core.js && npm i && npm ci && npm run build",
     "reset": "git reset --hard && npm ci",
-    "publish-core": "npm run prepare-core && npm publish --access public && npm run reset"
+    "publish-core-to-npm": "npm run prepare-core && npm publish --access public && npm run reset"
   },
   "pre-commit": [
     "lint"
