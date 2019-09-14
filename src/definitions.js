@@ -34,3 +34,19 @@ export const SCRAPERS = {
     loginFields: ['id', 'card6Digits', PASSWORD_FIELD],
   },
 };
+
+export function isValidCredentials(scraperId, credentials) {
+  if (!scraperId || typeof credentials !== 'object') {
+    return false;
+  }
+
+  const scraperDefinitions = SCRAPERS[scraperId];
+
+  if (!scraperDefinitions || !scraperDefinitions.loginFields) {
+    return false;
+  }
+
+  const hasMissingField = scraperDefinitions.loginFields.some(field => typeof credentials[field] === 'undefined');
+
+  return !hasMissingField;
+}

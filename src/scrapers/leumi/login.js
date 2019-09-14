@@ -4,6 +4,9 @@ import { navigateTo, getCurrentUrl } from '../../helpers/navigation';
 import { BASE_URL } from './definitions';
 import getKeyByValue from '../../helpers/filters';
 import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT } from '../../constants';
+import { isValidCredentials } from '../../definitions';
+
+const SCRAPER_ID = 'leumi';
 
 const submitButtonSelector = '#enter';
 
@@ -52,9 +55,9 @@ function handleLoginResult(loginResult, emitProgress) {
   }
 }
 
-async function userLogin(page, options) {
+async function login(page, options) {
   try {
-    if (!page || !options || !options.credentials) {
+    if (!page || !options || !isValidCredentials(SCRAPER_ID, options.credentials)) {
       return {
         success: false,
         errorType: LOGIN_RESULT.INVALID_OPTIONS,
@@ -83,4 +86,4 @@ async function userLogin(page, options) {
   }
 }
 
-export default userLogin;
+export default login;

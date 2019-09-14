@@ -1,9 +1,11 @@
 import { getBrowser, getBrowserPage } from '../helpers/scraping';
-import userLogin from './leumi/user-login';
+import login from './leumi/login';
 import scrapeTransactions from './leumi/scrape-transactions';
 import { BaseScraper } from './base-scraper';
-import { SCRAPE_PROGRESS_TYPES } from '../constants';
-import scrapeSummary from './leumi/scrape-summary';
+import { GENERAL_ERROR, SCRAPE_PROGRESS_TYPES } from '../constants';
+import { isValidCredentials } from '../definitions';
+
+const SCRAPER_ID = 'leumi';
 
 class LeumiScraper extends BaseScraper {
   async initialize() {
@@ -19,16 +21,19 @@ class LeumiScraper extends BaseScraper {
   }
 
   async login(credentials) {
+    if (!isValidCredentials(SCRAPER_ID, credentials)) {
+      return {
+        success: false,
+        errorType: GENERAL_ERROR,
+      };
+    }
+
     const userLoginOptions = Object.assign(
       {},
       this.extendedOptions,
       { credentials },
     );
-    return userLogin(this.page, userLoginOptions);
-  }
-
-  async fetchSummary() {
-    return scrapeSummary(this.page);
+    return login(this.page, userLoginOptions);
   }
 
   async fetchData() {
