@@ -13,9 +13,12 @@
     "lint": "eslint src",
     "build": "npm run clean && babel src --out-dir lib",
     "prebuild": "node utils/update-puppeteer-config.js",
-    "prepare-core": "node utils/prepare-israeli-bank-scrapers-core.js && npm i && npm ci && npm run build",
+    "prepare:core": "node utils/prepare-israeli-bank-scrapers-core.js && npm i --package-lock-only && npm ci && npm run build",
+    "prepare:default": "npm ci && npm run build",
     "reset": "git reset --hard && npm ci",
-    "publish-core-to-npm": "npm run prepare-core && npm publish --access public && npm run reset"
+    "publish:core": "npm run prepare:core && npm test && npm publish --access public && npm run reset",
+    "publish:default": "npm run prepare:default && npm test && npm publish --access public && npm run reset",
+    "publish:all": "npm run publish:default && npm run publish:core"
   },
   "pre-commit": [
     "lint"

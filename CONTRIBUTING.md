@@ -128,7 +128,7 @@ Changes:
 
 ##  Publish `israeli-bank-scrapers-core` to NPM.
 1. Make sure everything is committed. 
-2. Run `npm run prepare-core`. The script will change the name inside `package.json` to `prepare-israeli-bank-scrapers-core`, change puppeteer dependency to `puppeteer-core`, reinstall dependencies and rebuild the library. 
+2. Run `npm run prepare:core`. The script will change the name inside `package.json` to `prepare-israeli-bank-scrapers-core`, change puppeteer dependency to `puppeteer-core`, reinstall dependencies and rebuild the library. 
 3. Run `npm publish`. This will publish `prepare-israeli-bank-scrapers-core` package.
 4. Run `npm run reset` to reset the changes.
 
