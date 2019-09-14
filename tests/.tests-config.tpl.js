@@ -22,5 +22,6 @@ export default {
     enabled: true,
     excelFilesDist: '', // optional - provide valid path to save scraper results (csv format)
     invalidPassword: false, // enable to execute tests that execute with invalid credentials
+    checks: false, // enable to execute tests to scrape checks
   },
 };
