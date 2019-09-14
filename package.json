@@ -16,7 +16,7 @@
     "prepare:core": "node utils/prepare-israeli-bank-scrapers-core.js && npm i --package-lock-only && npm ci && npm run build",
     "prepare:default": "npm ci && npm run build",
     "reset": "git reset --hard && npm ci",
-    "publish:core": "npm run prepare:core && npm test && npm publish --access public && npm run reset",
+    "publish:core": "npm run prepare:core && npm publish --access public && npm run reset",
     "publish:default": "npm run prepare:default && npm test && npm publish --access public && npm run reset",
     "publish:all": "npm run publish:default && npm run publish:core"
   },
