@@ -34,17 +34,25 @@ const { createScraper } = require('israeli-bank-scrapers');
 
 const credentials = {...}; // different for each bank
 const options = {...};
-const scraper = createScraper(options);
-const scrapeResult = await scraper.scrape(credentials);
 
-if (scrapeResult.success) {
-  scrapeResult.accounts.forEach((account) => {
-    console.log(`found ${account.txns.length} transactions for account number ${account.accountNumber}`);
-  });
-}
-else {
-  console.error(`scraping failed for the following reason: ${scrapeResult.errorType}`);
-}
+(async function() {
+   try {
+      const scraper = createScraper(options);
+      const scrapeResult = await scraper.scrape(credentials);
+   
+      if (scrapeResult.success) {
+        scrapeResult.accounts.forEach((account) => {
+           console.log(`found ${account.txns.length} transactions for account number 
+            ${account.accountNumber}`);
+        });
+      }
+      else {
+         throw new Error(scrapeResult.errorType);
+      }
+   } catch(e) {
+      console.error(`scraping failed for the following reason: ${e.message}`);
+   }
+})();
 ```
 The definition of the `options` object is as follows:
 ```node
