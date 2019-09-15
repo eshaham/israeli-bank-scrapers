@@ -11,7 +11,14 @@
     "clean": "rimraf lib",
     "test": "BABEL_ENV=test jest",
     "lint": "eslint src",
-    "prepublishOnly": "npm run clean && babel src --out-dir lib"
+    "build": "npm run clean && babel src --out-dir lib",
+    "prebuild": "node utils/update-puppeteer-config.js",
+    "prepare:core": "node utils/prepare-israeli-bank-scrapers-core.js && npm i --package-lock-only && npm ci && npm run build",
+    "prepare:default": "npm ci && npm run build",
+    "reset": "git reset --hard && npm ci",
+    "publish:core": "npm run prepare:core && npm publish --access public && npm run reset",
+    "publish:default": "npm run prepare:default && npm test && npm publish --access public && npm run reset",
+    "publish:all": "npm run publish:default && npm run publish:core"
   },
   "pre-commit": [
     "lint"
@@ -35,6 +42,7 @@
     "@babel/cli": "^7.4.4",
     "@babel/core": "^7.4.5",
     "@babel/preset-env": "^7.4.5",
+    "babel-plugin-import-visitor": "^0.2.0",
     "babel-jest": "^24.8.0",
     "eslint": "^5.4.0",
     "eslint-config-airbnb-base": "^13.1.0",
@@ -50,10 +58,11 @@
     "lodash": "^4.17.10",
     "moment": "^2.22.2",
     "node-fetch": "^2.2.0",
-    "puppeteer": "^1.7.0",
-    "uuid": "^3.3.2"
+    "uuid": "^3.3.2",
+    "puppeteer": "^1.7.0"
   },
   "files": [
-    "lib/**/*"
+    "lib/**/*",
+    "puppeteer-config.json"
   ]
 }
