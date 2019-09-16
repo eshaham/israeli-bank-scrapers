@@ -132,7 +132,7 @@ async function fetchTransactionsForMonth(page, monthMoment) {
 }
 
 function addResult(allResults, result) {
-  const clonedResults = Object.assign({}, allResults);
+  const clonedResults = { ...allResults };
   Object.keys(result).forEach((accountNumber) => {
     if (!clonedResults[accountNumber]) {
       clonedResults[accountNumber] = [];

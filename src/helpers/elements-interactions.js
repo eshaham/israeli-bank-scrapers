@@ -50,7 +50,7 @@ async function dropdownSelect(page, selectSelector, value) {
 async function dropdownElements(page, selector) {
   const options = await page.evaluate((optionSelector) => {
     return Array.from(document.querySelectorAll(optionSelector))
-      .filter(o => o.value)
+      .filter((o) => o.value)
       .map((o) => {
         return {
           name: o.text,

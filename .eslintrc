@@ -16,7 +16,8 @@
       "ignoreRegExpLiterals": true,
       "ignoreStrings": true,
       "ignoreTemplateLiterals": true
-    }]
+    }],
+    "arrow-parens": ["off"]
   },
   "globals": {
     "document": true,
