@@ -21,7 +21,7 @@ function isInitialInstallmentTransaction(txn) {
 
 export function fixInstallments(txns) {
   return txns.map((txn) => {
-    const clonedTxn = Object.assign({}, txn);
+    const clonedTxn = { ...txn };
     if (isNonInitialInstallmentTransaction(clonedTxn)) {
       const dateMoment = moment(clonedTxn.date);
       const actualDateMoment = dateMoment.add(clonedTxn.installments.number - 1, 'month');

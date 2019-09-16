@@ -70,7 +70,7 @@ class BaseScraperWithBrowser extends BaseScraper {
 
     let env = null;
     if (this.options.verbose) {
-      env = Object.assign({ DEBUG: '*' }, process.env);
+      env = { DEBUG: '*', ...process.env };
     }
 
     if (typeof this.options.browser !== 'undefined' && this.options.browser !== null) {

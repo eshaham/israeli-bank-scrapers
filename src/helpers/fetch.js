@@ -61,7 +61,7 @@ export async function fetchPostWithinPage(page, url, data, extraHeaders = {}) {
         method: 'POST',
         body: JSON.stringify(data),
         credentials: 'include',
-        headers: new Headers(Object.assign({ 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, extraHeaders)),
+        headers: new Headers({ 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', ...extraHeaders }),
       }).then((result) => {
         if (result.status === 204) {
           // No content response
