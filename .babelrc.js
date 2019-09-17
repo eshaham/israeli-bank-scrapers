@@ -29,6 +29,11 @@ module.exports = {
       if (node.value === 'puppeteer') {
         node.value = 'puppeteer-core';
       }
-    })
+    }),
+    ["babel-plugin-module-resolver", {
+      "alias": {
+        "@helpers": "./src/helpers",
+      }
+    }]
   ]
 };

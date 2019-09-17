@@ -50,6 +50,16 @@ export function extendAsyncTimeout(timeout = 120000) {
   jest.setTimeout(timeout);
 }
 
+export function getDistFolder(subFolder) {
+  const config = getTestsConfig();
+
+  if (!config.companyAPI.enabled || !config.companyAPI.dist || !fs.existsSync(config.companyAPI.dist)) {
+    return '';
+  }
+
+  return `${path.resolve(config.companyAPI.dist, subFolder)}`;
+}
+
 export function exportTransactions(fileName, accounts) {
   const config = getTestsConfig();
 
@@ -65,20 +75,19 @@ export function exportTransactions(fileName, accounts) {
     data = [
       ...data,
       ...account.txns.map((txn) => {
-        return Object.assign(
-          { account: account.accountNumber },
-          txn, {
-            date: moment(txn.date).format('DD/MM/YYYY'),
-            processedDate: moment(txn.processedDate).format('DD/MM/YYYY'),
-          },
-        );
+        return {
+          account: account.accountNumber,
+          ...txn,
+          date: moment(txn.date).format('DD/MM/YYYY'),
+          processedDate: moment(txn.processedDate).format('DD/MM/YYYY'),
+        };
       })];
   }
 
   if (data.length === 0) {
     data = [
       {
-        comment: 'no transaction found for requested time frame'
+        comment: 'no transaction found for requested time frame',
       },
     ];
   }

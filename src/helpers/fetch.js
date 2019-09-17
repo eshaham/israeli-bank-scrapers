@@ -36,11 +36,16 @@ export async function fetchPost(url, data, extraHeaders) {
   return result.json();
 }
 
-export async function fetchGetWithinPage(page, url) {
-  return page.evaluate((url) => {
+// TODO es check if should keep also old implementation for existing scrapers
+export async function fetchGetWithinPage(page, url, extraHeaders = {}) {
+  return page.evaluate((url, extraHeaders) => {
+    const headers = Object.assign(
+      { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+      extraHeaders);
     return new Promise((resolve, reject) => {
       fetch(url, {
         credentials: 'include',
+        headers: new Headers(headers),
       }).then((result) => {
         if (result.status === 204) {
           resolve(null);
@@ -51,17 +56,20 @@ export async function fetchGetWithinPage(page, url) {
         reject(e);
       });
     });
-  }, url);
+  }, url, extraHeaders);
 }
 
 export async function fetchPostWithinPage(page, url, data, extraHeaders = {}) {
   return page.evaluate((url, data, extraHeaders) => {
+    const headers = Object.assign(
+      { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+      extraHeaders);
     return new Promise((resolve, reject) => {
       fetch(url, {
         method: 'POST',
         body: JSON.stringify(data),
         credentials: 'include',
-        headers: new Headers({ 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', ...extraHeaders }),
+        headers: new Headers(headers),
       }).then((result) => {
         if (result.status === 204) {
           // No content response

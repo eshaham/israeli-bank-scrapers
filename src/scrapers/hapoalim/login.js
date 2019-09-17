@@ -71,7 +71,7 @@ async function login(page, options) {
     await fillInputs(page, fields);
     await clickButton(page, submitButtonSelector);
     emitProgress(SCRAPE_PROGRESS_TYPES.LOGGING_IN);
-    waitForRedirect(page);
+    await waitForRedirect(page);
     const current = await getCurrentUrl(page, true);
     const loginResult = getKeyByValue(possibleLoginResults, current);
     return handleLoginResult(loginResult, emitProgress);
