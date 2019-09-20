@@ -106,7 +106,7 @@ class DiscountScraper extends BaseScraperWithBrowser {
   }
 
   async fetchData() {
-    return fetchAccountData(this.page, this.options, msg => this.notify(msg));
+    return fetchAccountData(this.page, this.options, (msg) => this.notify(msg));
   }
 }
 

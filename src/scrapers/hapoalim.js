@@ -73,7 +73,7 @@ async function getRestContext(page) {
 
 async function fetchPoalimXSRFWithinPage(page, url, pageUuid) {
   const cookies = await page.cookies();
-  const XSRFCookie = cookies.find(cookie => cookie.name === 'XSRF-TOKEN');
+  const XSRFCookie = cookies.find((cookie) => cookie.name === 'XSRF-TOKEN');
   const headers = {};
   if (XSRFCookie != null) {
     headers['X-XSRF-TOKEN'] = XSRFCookie.value;
@@ -153,7 +153,7 @@ class HapoalimScraper extends BaseScraperWithBrowser {
   }
 
   async fetchData() {
-    return fetchAccountData(this.page, this.options, msg => this.notify(msg));
+    return fetchAccountData(this.page, this.options, (msg) => this.notify(msg));
   }
 }
 

@@ -76,7 +76,7 @@ function convertTransactions(txns) {
 
 async function parseTransactionPage(page) {
   const tdsValues = await pageEvalAll(page, '#dataTable077 tbody tr td', [], (tds) => {
-    return tds.map(td => ({
+    return tds.map((td) => ({
       classList: td.getAttribute('class'),
       innerText: td.innerText,
     }));

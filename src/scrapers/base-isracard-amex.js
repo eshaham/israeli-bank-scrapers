@@ -93,9 +93,9 @@ function getTransactionType(txn) {
 }
 
 function convertTransactions(txns, processedDate) {
-  const filteredTxns = txns.filter(txn => txn.dealSumType !== '1' &&
-                                          txn.voucherNumberRatz !== '000000000' &&
-                                          txn.voucherNumberRatzOutbound !== '000000000');
+  const filteredTxns = txns.filter((txn) => txn.dealSumType !== '1' &&
+                                            txn.voucherNumberRatz !== '000000000' &&
+                                            txn.voucherNumberRatzOutbound !== '000000000');
 
   return filteredTxns.map((txn) => {
     const isOutbound = txn.dealSumOutbound;
