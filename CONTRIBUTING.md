@@ -47,14 +47,13 @@ Many IDEs support running jest tests directly from the UI. In webstorm for examp
 **IMPORTANT Note** babel is configured to ignore tests by default. You must add an environment variable `BABEL_ENV=test` to the IDE test configuration to allow the tests to work. 
 
 ### save unit test scraper results into file
-To save unit test scraper results provide a valid path in test configurations property `excelFilesDist`, for example:
+To save unit test scraper results provide a valid path in test configurations property `dist`, for example:
 
 ```
 {
-   companyAPI: { 
-      enabled: true, 
-      excelFilesDist: '/Users/xyz/Downloads/Transactions',
-      
+   companyAPI: {      
+      dist: '/Users/xyz/Downloads/Transactions',
+      legacy: true,
     },
   
 }
@@ -108,7 +107,7 @@ Make sure that you uncommented the company credentials in the test configuration
 
 #### Tests that are done against the credit cards companies / banks api are skipped without any errors
 1. Make sure that you uncommented the company credentials in the test configuration file.
-2. Enable credit card companies / banks api tests in configuration file `companyAPI.enabled: true`
+2. Enable credit card companies / banks api tests in configuration file `companyAPI` property.
 
 #### Where is the playground CLI scripts that were here few versions ago?
 The playground scripts were ok at the time and allowed us to develop and test scrapers. Since then we added new types of scrapers with different public api and we needed a better solution that will catch up with those changes.

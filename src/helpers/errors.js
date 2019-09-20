@@ -1,9 +1,10 @@
 import { GENERAL_ERROR } from '../constants';
 
-function createGeneralError() {
+function createGeneralError(errorMessage) {
   return {
     success: false,
     errorType: GENERAL_ERROR,
+    errorMessage,
   };
 }
 

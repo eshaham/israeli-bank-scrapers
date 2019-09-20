@@ -1,7 +1,7 @@
 import { fetchGetWithinPage } from '../../../helpers/fetch';
 import { BASE_URL } from '../definitions';
 
-export default async function getAccounts(page) {
+export async function accounts(page) {
   const accountDataUrl = `${BASE_URL}/ServerServices/general/accounts`;
   const accountsInfo = await fetchGetWithinPage(page, accountDataUrl);
 
@@ -14,4 +14,10 @@ export default async function getAccounts(page) {
   }));
 
   return accounts;
+}
+
+
+export async function getActiveAccountsInfo(page) {
+  const allAccountsInfo = await accounts(page);
+  return allAccountsInfo.filter(item => !item.isClosed);
 }

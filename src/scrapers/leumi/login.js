@@ -55,6 +55,14 @@ function handleLoginResult(loginResult, emitProgress) {
   }
 }
 
+/**
+ * login to bank leumi
+ * @param page a puppeteer page
+ * @param options login options
+ * @param [noop] options.emitProgress emit method to notify login progress
+ * @param {Object} options.credentials credentials for leumi
+ * @returns {Promise<{success}|{success, errorType}|{success: boolean, errorType: string}>}
+ */
 async function login(page, options) {
   try {
     if (!page || !options || !isValidCredentials(SCRAPER_ID, options.credentials)) {

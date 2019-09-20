@@ -1,23 +1,23 @@
-import moment from 'moment';
-import path from 'path';
 import { getBrowser, getBrowserPage } from '../../helpers/scraping';
 import login from './login';
 import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig,
-  getDistFolder, saveAccountsAsCSV,
+  getDistFolder, saveAccountsAsCSV
 } from '../../../tests/tests-utils';
-import scrapeChecks from './scrape-checks';
+import scrapeTransactions from './scrape-transactions';
 
 
-const COMPANY_ID = 'hapoalim';
+const COMPANY_ID = 'leumi';
 const testsConfig = getTestsConfig();
+const category = 'transactions';
 
-describe('Hapoalim scrape checks', () => {
+
+describe('Leumi scrape transactions', () => {
   beforeAll(() => {
     extendAsyncTimeout(); // The default timeout is 5 seconds per async test, this function extends the timeout value
   });
 
-  maybeTestCompanyAPI(COMPANY_ID, 'checks')('should scrape checks', async () => {
+  maybeTestCompanyAPI(COMPANY_ID, category)('should scrape transactions', async () => {
     // TODO use separated module
     const browser = await getBrowser({
       verbose: true, // optional
@@ -26,22 +26,18 @@ describe('Hapoalim scrape checks', () => {
     const page = await getBrowserPage(browser);
 
     const loginResult = await login(page, {
-      credentials: testsConfig.credentials.hapoalim,
+      credentials: testsConfig.credentials.leumi,
     });
 
     expect(loginResult).toBeDefined();
     expect(loginResult.success).toBeTruthy();
 
-    const subFolder = path.resolve('checks', moment().format('YYYYMMDD-HHmmss'));
-    const dist = getDistFolder(subFolder);
-
-    const result = await scrapeChecks({
+    const result = await scrapeTransactions({
       startDate: testsConfig.options.startDate,
       page,
-      imagesPath: dist,
     });
 
-
-    saveAccountsAsCSV(dist, COMPANY_ID, result.accounts || []);
+    const csvDistFolder = getDistFolder(category);
+    saveAccountsAsCSV(csvDistFolder, COMPANY_ID, result.accounts || []);
   });
 });

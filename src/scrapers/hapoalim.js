@@ -1,159 +1,48 @@
-import moment from 'moment';
-import uuid4 from 'uuid/v4';
+import { getBrowser, getBrowserPage } from '../helpers/scraping';
+import login from './hapoalim/login';
+import scrapeTransactions from './hapoalim/scrape-transactions';
+import { BaseScraper } from './base-scraper';
+import { GENERAL_ERROR, SCRAPE_PROGRESS_TYPES } from '../constants';
+import { isValidCredentials } from '../definitions';
 
-import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
-import { waitForRedirect } from '../helpers/navigation';
-import waitUntil from '../helpers/waiting';
-import { NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
-import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
+const SCRAPER_ID = 'hapoalim';
 
-const BASE_URL = 'https://login.bankhapoalim.co.il';
-const DATE_FORMAT = 'YYYYMMDD';
-
-function convertTransactions(txns) {
-  return txns.map((txn) => {
-    const isOutbound = txn.eventActivityTypeCode === 2;
-
-    let memo = null;
-    if (txn.beneficiaryDetailsData) {
-      const {
-        partyHeadline,
-        partyName,
-        messageHeadline,
-        messageDetail,
-      } = txn.beneficiaryDetailsData;
-      const memoLines = [];
-      if (partyHeadline) {
-        memoLines.push(partyHeadline);
-      }
-
-      if (partyName) {
-        memoLines.push(`${partyName}.`);
-      }
-
-      if (messageHeadline) {
-        memoLines.push(messageHeadline);
-      }
-
-      if (messageDetail) {
-        memoLines.push(`${messageDetail}.`);
-      }
-
-      if (memoLines.length) {
-        memo = memoLines.join(' ');
-      }
-    }
-
-    return {
-      type: NORMAL_TXN_TYPE,
-      identifier: txn.referenceNumber,
-      date: moment(txn.eventDate, DATE_FORMAT).toISOString(),
-      processedDate: moment(txn.valueDate, DATE_FORMAT).toISOString(),
-      originalAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
-      originalCurrency: 'ILS',
-      chargedAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
-      description: txn.activityDescription,
-      status: txn.serialNumber === 0 ? TRANSACTION_STATUS.PENDING : TRANSACTION_STATUS.COMPLETED,
-      memo,
-    };
-  });
-}
-
-async function getRestContext(page) {
-  await waitUntil(async () => {
-    return page.evaluate(() => !!window.bnhpApp);
-  }, 'waiting for app data load');
-
-  const result = await page.evaluate(() => {
-    return window.bnhpApp.restContext;
-  });
-
-  return result.slice(1);
-}
-
-async function fetchPoalimXSRFWithinPage(page, url, pageUuid) {
-  const cookies = await page.cookies();
-  const XSRFCookie = cookies.find((cookie) => cookie.name === 'XSRF-TOKEN');
-  const headers = {};
-  if (XSRFCookie != null) {
-    headers['X-XSRF-TOKEN'] = XSRFCookie.value;
-  }
-  headers.pageUuid = pageUuid;
-  headers.uuid = uuid4();
-  headers['Content-Type'] = 'application/json;charset=UTF-8';
-  return fetchPostWithinPage(page, url, [], headers);
-}
-
-async function fetchAccountData(page, options) {
-  const restContext = await getRestContext(page);
-  const apiSiteUrl = `${BASE_URL}/${restContext}`;
-  const accountDataUrl = `${BASE_URL}/ServerServices/general/accounts`;
-  const accountsInfo = await fetchGetWithinPage(page, accountDataUrl);
-
-  const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
-  const startDate = options.startDate || defaultStartMoment.toDate();
-  const startMoment = moment.max(defaultStartMoment, moment(startDate));
-
-  const startDateStr = startMoment.format(DATE_FORMAT);
-  const endDateStr = moment().format(DATE_FORMAT);
-
-  const accounts = [];
-  for (let accountIndex = 0; accountIndex < accountsInfo.length; accountIndex += 1) {
-    const accountNumber = `${accountsInfo[accountIndex].bankNumber}-${accountsInfo[accountIndex].branchNumber}-${accountsInfo[accountIndex].accountNumber}`;
-
-    const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
-
-    const txnsResult = await fetchPoalimXSRFWithinPage(page, txnsUrl, '/current-account/transactions');
-    let txns = [];
-    if (txnsResult) {
-      txns = convertTransactions(txnsResult.transactions);
-    }
-
-    accounts.push({
-      accountNumber,
-      txns,
-    });
+class HapoalimScraper extends BaseScraper {
+  async initialize() {
+    this.browser = this.options.browser || await getBrowser(this.options);
+    this.page = await getBrowserPage(this.browser);
+    this.extendedOptions = Object.assign(
+      {},
+      this.options,
+      {
+        emitProgress: this.emitProgress.bind(this),
+      },
+    );
   }
 
-  const accountData = {
-    success: true,
-    accounts,
-  };
+  async login(credentials) {
+    if (!isValidCredentials(SCRAPER_ID, credentials)) {
+      return {
+        success: false,
+        errorType: GENERAL_ERROR,
+      };
+    }
 
-  return accountData;
-}
-
-function getPossibleLoginResults() {
-  const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = [`${BASE_URL}/portalserver/HomePage`, `${BASE_URL}/ng-portals-bt/rb/he/homepage`, `${BASE_URL}/ng-portals/rb/he/homepage`];
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${BASE_URL}/AUTHENTICATE/LOGON?flow=AUTHENTICATE&state=LOGON&errorcode=1.6&callme=false`];
-  urls[LOGIN_RESULT.CHANGE_PASSWORD] = [
-    `${BASE_URL}/MCP/START?flow=MCP&state=START&expiredDate=null`,
-    /\/ABOUTTOEXPIRE\/START/i,
-  ];
-  return urls;
-}
-
-function createLoginFields(credentials) {
-  return [
-    { selector: '#userID', value: credentials.userCode },
-    { selector: '#userPassword', value: credentials.password },
-  ];
-}
-
-class HapoalimScraper extends BaseScraperWithBrowser {
-  getLoginOptions(credentials) {
-    return {
-      loginUrl: `${BASE_URL}/cgi-bin/poalwwwc?reqName=getLogonPage`,
-      fields: createLoginFields(credentials),
-      submitButtonSelector: '#inputSend',
-      postAction: async () => waitForRedirect(this.page),
-      possibleResults: getPossibleLoginResults(),
-    };
+    const userLoginOptions = Object.assign(
+      {},
+      this.extendedOptions,
+      { credentials },
+    );
+    return login(this.page, userLoginOptions);
   }
 
   async fetchData() {
-    return fetchAccountData(this.page, this.options, (msg) => this.notify(msg));
+    return scrapeTransactions(this.page, this.extendedOptions);
+  }
+
+  async terminate() {
+    this.emitProgress(SCRAPE_PROGRESS_TYPES.TERMINATING);
+    await this.browser.close();
   }
 }
 

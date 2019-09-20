@@ -181,8 +181,10 @@ async function fetchTransactions(page, startDate) {
   });
 }
 
-async function scrapeTransactions(page, options) {
+async function scrapeTransactions(options) {
   try {
+    const { page } = options;
+
     const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
     const startDate = options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));

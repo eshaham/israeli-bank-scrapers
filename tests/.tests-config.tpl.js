@@ -18,10 +18,11 @@ export default {
     // isracard: { id: '', password: '', card6Digits: '' },
     // amex: { id: '', card6Digits: '', password: ''},
   },
-  companyAPI: { // enable companyAPI to execute tests against the real companies api
-    enabled: true,
-    excelFilesDist: '', // optional - provide valid path to save scraper results (csv format)
-    invalidPassword: false, // enable to execute tests that execute with invalid credentials
-    checks: false, // enable to execute tests to scrape checks
+  companyAPI: {
+    dist: '', // optional - provide valid path to save scraper results
+    legacy: false,  // enable companyAPI to execute tests against the real companies api
+    transactions: false, // execute tests of transactions scraping
+    invalidPassword: false, // execute tests that check invalid passwords handling
+    checks: false, // execute tests of checks scraping
   },
 };

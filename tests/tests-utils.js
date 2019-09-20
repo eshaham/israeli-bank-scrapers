@@ -37,13 +37,12 @@ export function getTestsConfig() {
   }
 }
 
-export function maybeTestCompanyAPI(scraperId, filter) {
+export function maybeTestCompanyAPI(scraperId, category) {
   if (!configurationLoaded) {
     getTestsConfig();
   }
-  return testsConfig && testsConfig.companyAPI.enabled &&
-  testsConfig.credentials[scraperId] &&
-  (!filter || filter(testsConfig)) ? test : test.skip;
+  return testsConfig && !!testsConfig.companyAPI[category] &&
+  testsConfig.credentials[scraperId] ? test : test.skip;
 }
 
 export function extendAsyncTimeout(timeout = 120000) {
@@ -53,17 +52,24 @@ export function extendAsyncTimeout(timeout = 120000) {
 export function getDistFolder(subFolder) {
   const config = getTestsConfig();
 
-  if (!config.companyAPI.enabled || !config.companyAPI.dist || !fs.existsSync(config.companyAPI.dist)) {
+  if (!config.companyAPI.enabled ||
+    !config.companyAPI.dist ||
+    !fs.existsSync(config.companyAPI.dist)
+  ) {
     return '';
   }
 
-  return `${path.resolve(config.companyAPI.dist, subFolder)}`;
+  const result = `${path.resolve(config.companyAPI.dist, subFolder)}`;
+
+  if (!fs.existsSync(result)){
+    fs.mkdirSync(result);
+  }
+
+  return result;
 }
 
-export function exportTransactions(fileName, accounts) {
-  const config = getTestsConfig();
-
-  if (!config.companyAPI.enabled || !config.companyAPI.excelFilesDist || !fs.existsSync(config.companyAPI.excelFilesDist)) {
+export function saveAccountsAsCSV(distFolder, fileName, accounts) {
+  if (!distFolder) {
     return;
   }
 
@@ -93,6 +99,6 @@ export function exportTransactions(fileName, accounts) {
   }
 
   const csv = json2csv.parse(data, { withBOM: true });
-  const filePath = `${path.join(config.companyAPI.excelFilesDist, fileName)}.csv`;
+  const filePath = `${path.join(distFolder, fileName)}.csv`;
   fs.writeFileSync(filePath, csv);
 }

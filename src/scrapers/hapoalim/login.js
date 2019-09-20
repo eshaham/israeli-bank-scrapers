@@ -51,6 +51,14 @@ function handleLoginResult(loginResult, emitProgress) {
   }
 }
 
+/**
+ * login to bank hapoalim
+ * @param page a puppeteer page
+ * @param options login options
+ * @param [noop] options.emitProgress emit method to notify login progress
+ * @param {Object} options.credentials credentials for bank hapoalim
+ * @returns {Promise<{success: boolean, errorType: string}>}
+ */
 async function login(page, options) {
   try {
     if (!page || !options || !isValidCredentials(SCRAPER_ID, options.credentials)) {
