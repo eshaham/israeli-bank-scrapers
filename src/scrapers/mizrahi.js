@@ -57,7 +57,9 @@ function createHeadersFromRequest(request) {
 
 function convertTransactions(txns) {
   return txns.map((row) => {
-    const txnDate = moment(row.MC02PeulaTaaEZ).format(ISO_DATE_FORMAT);
+    // row.MC02PeulaTaaEZ: 2019-09-10T00:00:00
+    const txnDate = moment(row.MC02PeulaTaaEZ, moment.HTML5_FMT.DATETIME_LOCAL_SECONDS)
+      .format(ISO_DATE_FORMAT);
 
     // TODO: I don't have enough sample transactions to understand the rest of the data.
     return {
@@ -112,7 +114,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
       accounts: [
         {
           accountNumber: response.body.fields.AccountNumber,
-          txns: convertTransactions(response.body.table.rows.filter(row => row.RecTypeSpecified)),
+          txns: convertTransactions(response.body.table.rows.filter((row) => row.RecTypeSpecified)),
         },
       ],
     };
