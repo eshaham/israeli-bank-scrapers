@@ -8,12 +8,14 @@ import {
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { waitForNavigation } from '../helpers/navigation';
+import { pageEvalAll } from '../helpers/elements-interactions';
 
 const BASE_URL = 'https://www.mizrahi-tefahot.co.il';
 const LOGIN_URL = `${BASE_URL}/he/bank/Pages/Default.aspx`;
 const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/ngOnline\/index\.html#\/main\/uis/;
 const OSH_PAGE = 'https://mto.mizrahi-tefahot.co.il/ngOnline/index.html#/main/uis/osh/p428/';
 const TRANSACTIONS_REQUEST_URL = 'https://mto.mizrahi-tefahot.co.il/Online/api/SkyOSH/get428Index';
+const PENDING_TRANSACTIONS_PAGE = 'https://mto.mizrahi-tefahot.co.il/Online/Osh/p420.aspx';
 const DATE_FORMAT = 'DD/MM/YYYY';
 const MAX_ROWS_PER_REQUEST = 10000000000;
 
@@ -61,17 +63,38 @@ function convertTransactions(txns) {
     const txnDate = moment(row.MC02PeulaTaaEZ, moment.HTML5_FMT.DATETIME_LOCAL_SECONDS)
       .format(ISO_DATE_FORMAT);
 
-    // TODO: I don't have enough sample transactions to understand the rest of the data.
     return {
       type: NORMAL_TXN_TYPE,
       identifier: row.MC02AsmahtaMekoritEZ ? parseInt(row.MC02AsmahtaMekoritEZ, 10) : null,
-      date: txnDate, // ISO date string
-      processedDate: txnDate, // ISO date string
+      date: txnDate,
+      processedDate: txnDate,
       originalAmount: row.MC02SchumEZ,
       originalCurrency: SHEKEL_CURRENCY,
       chargedAmount: row.MC02SchumEZ,
       description: row.MC02TnuaTeurEZ,
-      status: TRANSACTION_STATUS.COMPLETED, // can either be 'completed' or 'pending'
+      status: TRANSACTION_STATUS.COMPLETED,
+    };
+  });
+}
+
+async function extractPendingTransactions(page) {
+  const pendingTxn = await pageEvalAll(page, 'tr.rgRow', [], (trs) => {
+    return trs.map((tr) => Array.from(tr.querySelectorAll('td'), (td) => td.textContent));
+  });
+
+  return pendingTxn.map((txn) => {
+    const date = moment(txn[0], 'DD/MM/YY').format(ISO_DATE_FORMAT);
+    const amount = parseInt(txn[3], 10);
+    return {
+      type: NORMAL_TXN_TYPE,
+      identifier: null,
+      date,
+      processedDate: date,
+      originalAmount: amount,
+      originalCurrency: SHEKEL_CURRENCY,
+      chargedAmount: amount,
+      description: txn[1],
+      status: TRANSACTION_STATUS.PENDING,
     };
   });
 }
@@ -109,12 +132,20 @@ class MizrahiScraper extends BaseScraperWithBrowser {
       };
     }
 
+    const relevantRows = response.body.table.rows.filter((row) => row.RecTypeSpecified);
+    const oshTxn = convertTransactions(relevantRows);
+
+    await this.navigateTo(PENDING_TRANSACTIONS_PAGE, this.page);
+    const pendingTxn = await extractPendingTransactions(this.page);
+
+    const allTxn = oshTxn.concat(pendingTxn);
+
     return {
       success: true,
       accounts: [
         {
           accountNumber: response.body.fields.AccountNumber,
-          txns: convertTransactions(response.body.table.rows.filter((row) => row.RecTypeSpecified)),
+          txns: allTxn,
         },
       ],
     };
