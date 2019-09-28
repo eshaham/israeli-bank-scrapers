@@ -62,6 +62,7 @@ export async function fetchPostWithinPage(page, url, data, extraHeaders = {}) {
         method: 'POST',
         body: JSON.stringify(data),
         credentials: 'include',
+        // eslint-disable-next-line prefer-object-spread
         headers: Object.assign({ 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'}, extraHeaders),
       }).then((result) => {
         if (result.status === 204) {
