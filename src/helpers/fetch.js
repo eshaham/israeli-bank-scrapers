@@ -1,4 +1,3 @@
-/* eslint-disable object-curly-spacing */
 import nodeFetch from 'node-fetch';
 
 const JSON_CONTENT_TYPE = 'application/json';
