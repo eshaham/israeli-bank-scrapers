@@ -8,5 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: ESLint checks
-    - uses: gimenete/eslint-action@1.0
+    - uses: actions/checkout@v1
+    - name: Run npm lint
+      run: npm run lint
