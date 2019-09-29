@@ -1,6 +1,6 @@
-import { getBrowser, getBrowserPage } from '../helpers/scraping';
-import login from './hapoalim/login';
-import scrapeTransactions from './hapoalim/scrape-transactions';
+import { getBrowser, getBrowserPage } from '../adapters/puppeteer';
+import login from '../adapters/hapoalim/login';
+import scrapeTransactions from '../adapters/hapoalim/scrape-transactions';
 import { BaseScraper } from './base-scraper';
 import { GENERAL_ERROR, SCRAPE_PROGRESS_TYPES } from '../constants';
 import { isValidCredentials } from '../definitions';

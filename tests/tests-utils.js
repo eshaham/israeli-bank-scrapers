@@ -52,7 +52,7 @@ export function extendAsyncTimeout(timeout = 120000) {
 export function getDistFolder(subFolder) {
   const config = getTestsConfig();
 
-  if (!config.companyAPI.enabled ||
+  if (!config.companyAPI ||
     !config.companyAPI.dist ||
     !fs.existsSync(config.companyAPI.dist)
   ) {
@@ -70,6 +70,7 @@ export function getDistFolder(subFolder) {
 
 export function saveAccountsAsCSV(distFolder, fileName, accounts) {
   if (!distFolder) {
+    console.error('cannot save accounts as csv, dist folder is required');
     return;
   }
 
@@ -101,4 +102,6 @@ export function saveAccountsAsCSV(distFolder, fileName, accounts) {
   const csv = json2csv.parse(data, { withBOM: true });
   const filePath = `${path.join(distFolder, fileName)}.csv`;
   fs.writeFileSync(filePath, csv);
+  console.log(`created file '${filePath}'`);
+
 }

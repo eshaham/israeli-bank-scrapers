@@ -1,6 +1,6 @@
 import moment from 'moment';
 import path from 'path';
-import { getBrowser, getBrowserPage } from '../../helpers/scraping';
+import { getBrowser, getBrowserPage } from '../puppeteer';
 import login from './login';
 import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig,

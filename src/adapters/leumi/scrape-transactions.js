@@ -181,23 +181,36 @@ async function fetchTransactions(page, startDate) {
   });
 }
 
-async function scrapeTransactions(options) {
-  try {
-    const { page } = options;
+function scrapeTransactionsAdapter(options) {
+  return {
+    name: 'scrapeTransactions(leumi)',
+    validate: (context) => {
+      if (!context.hasSessionData('puppeteer.page')) {
+        return ['expected puppeteer page to be provided by prior adapter'];
+      }
 
-    const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
-    const startDate = options.startDate || defaultStartMoment.toDate();
-    const startMoment = moment.max(defaultStartMoment, moment(startDate));
+      return [];
+    },
+    action: async (context) => {
+      const page = context.getSessionData('puppeteer.page');
 
-    const accounts = await fetchTransactions(page, startMoment);
+      const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
+      const startDate = options.startDate || defaultStartMoment.toDate();
+      const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-    return {
-      success: true,
-      accounts,
-    };
-  } catch (error) {
-    return createGeneralError();
-  }
+      const accounts = await fetchTransactions(page, startMoment);
+
+      return {
+        data: {
+          leumi: {
+            transactions: {
+              accounts,
+            },
+          },
+        },
+      };
+    },
+  };
 }
 
-export default scrapeTransactions;
+export default scrapeTransactionsAdapter;

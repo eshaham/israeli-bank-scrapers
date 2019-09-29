@@ -1,18 +1,17 @@
-import { getBrowser, getBrowserPage } from '../../helpers/scraping';
+import { getBrowser, getBrowserPage } from '../puppeteer';
 import login from './login';
 import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig,
   getDistFolder, saveAccountsAsCSV
-} from '../../../tests/tests-utils';
+} from './tests/tests-utils';
 import scrapeTransactions from './scrape-transactions';
 
 
-const COMPANY_ID = 'leumi';
+const COMPANY_ID = 'hapoalim';
 const testsConfig = getTestsConfig();
 const category = 'transactions';
 
-
-describe('Leumi scrape transactions', () => {
+describe('Hapoalim scrape transactions', () => {
   beforeAll(() => {
     extendAsyncTimeout(); // The default timeout is 5 seconds per async test, this function extends the timeout value
   });
@@ -26,7 +25,7 @@ describe('Leumi scrape transactions', () => {
     const page = await getBrowserPage(browser);
 
     const loginResult = await login(page, {
-      credentials: testsConfig.credentials.leumi,
+      credentials: testsConfig.credentials.hapoalim,
     });
 
     expect(loginResult).toBeDefined();

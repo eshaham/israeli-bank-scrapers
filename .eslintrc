@@ -4,6 +4,8 @@
     "no-shadow": 0,
     "no-continue": 0,
     "no-await-in-loop": 0,
+    "no-underscore-dangle": 0,
+    "max-classes-per-file": 0,
     "no-restricted-syntax": [
       "error",
       "ForInStatement",

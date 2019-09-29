@@ -1,4 +1,4 @@
-import { fetchGetWithinPage } from '../../../helpers/fetch';
+import { fetchGetWithinPage } from './helpers/fetch';
 import { BASE_URL } from '../definitions';
 
 export async function accounts(page) {
