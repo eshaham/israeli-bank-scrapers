@@ -1,0 +1,15 @@
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  prerelease:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Make prerelease to npm
+        uses: epeli/npm-release@v1
+        with:
+          type: prerelease
+          token: ${{ secrets.NPM_TOKEN }}
