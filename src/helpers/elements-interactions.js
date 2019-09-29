@@ -16,7 +16,7 @@ async function clickButton(page, buttonSelector) {
 }
 
 async function clickLink(page, aSelector) {
-  await page.$eval(aSelector, el => el.click());
+  await page.$eval(aSelector, (el) => el.click());
 }
 
 async function pageEvalAll(page, selector, defaultResult, callback) {
