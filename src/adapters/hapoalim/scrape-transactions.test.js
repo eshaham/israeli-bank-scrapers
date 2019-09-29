@@ -9,14 +9,14 @@ import scrapeTransactions from './scrape-transactions';
 
 const COMPANY_ID = 'hapoalim';
 const testsConfig = getTestsConfig();
-const category = 'transactions';
+const TEST_CATEGORY = 'transactions';
 
 describe('Hapoalim scrape transactions', () => {
   beforeAll(() => {
     extendAsyncTimeout(); // The default timeout is 5 seconds per async test, this function extends the timeout value
   });
 
-  maybeTestCompanyAPI(COMPANY_ID, category)('should scrape transactions', async () => {
+  maybeTestCompanyAPI(COMPANY_ID, TEST_CATEGORY)('should scrape transactions', async () => {
     // TODO use separated module
     const browser = await getBrowser({
       verbose: true, // optional
@@ -36,7 +36,7 @@ describe('Hapoalim scrape transactions', () => {
       page,
     });
 
-    const csvDistFolder = getDistFolder(category);
+    const csvDistFolder = getDistFolder(TEST_CATEGORY);
     saveAccountsAsCSV(csvDistFolder, COMPANY_ID, result.accounts || []);
   });
 });

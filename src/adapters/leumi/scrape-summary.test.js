@@ -4,14 +4,14 @@ import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig,
   getDistFolder, saveAccountsAsCSV,
 } from '../../../tests/tests-utils';
-import scrapeTransactionsAdapter from './scrape-transactions';
+import scrapeSummaryAdapter from './scrape-summary';
 import runner from '../runner';
 
 const COMPANY_ID = 'leumi';
-const TEST_CATEGORY = 'transactions';
+const TEST_CATEGORY = 'summary';
 const testsConfig = getTestsConfig();
 
-describe('Leumi scrape transactions', () => {
+describe('Leumi scrape summary', () => {
   beforeAll(() => {
     extendAsyncTimeout(); // The default timeout is 5 seconds per async test, this function extends the timeout value
   });
@@ -33,7 +33,7 @@ describe('Leumi scrape transactions', () => {
         loginAdapter({
           credentials: testsConfig.credentials.leumi,
         }),
-        scrapeTransactionsAdapter({}),
+        scrapeSummaryAdapter({}),
       ]);
 
 
@@ -41,6 +41,6 @@ describe('Leumi scrape transactions', () => {
       throw new Error(result.errorMessage);
     }
     const csvDistFolder = getDistFolder(TEST_CATEGORY);
-    saveAccountsAsCSV(csvDistFolder, COMPANY_ID, result.data.leumi.transactions.accounts || []);
+    saveAccountsAsCSV(csvDistFolder, COMPANY_ID, result.data.leumi.summary.accounts || []);
   });
 });
