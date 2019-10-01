@@ -3,15 +3,35 @@ import path from 'path';
 import moment from 'moment';
 import json2csv from 'json2csv';
 
+let testConfigErrorMessage = '';
 let testsConfig = null;
 let configurationLoaded = false;
 
-const MISSING_ERROR_MESSAGE = 'Missing environment test configuration. To troubleshot this issue open CONTRIBUTING.md file and read section "F.A.Q regarding the tests".';
+const MISSING_ERROR_MESSAGE = 'Missing environment test configuration.';
+const IRRELEVANT_MESSAGE = 'file \'tests/.tests-config.js\' schema is invalid, the \'tests/.tests-config.tpl.js\' was modified since you created the local file. please re-create local file and try again.';
+const ERROR_MESSAGE_SUFFIX = 'To troubleshot this issue open CONTRIBUTING.md file and read section "F.A.Q regarding the tests".';
+
+function decorateAndReThrow(errorMessage) {
+  testConfigErrorMessage = `${errorMessage}. ${ERROR_MESSAGE_SUFFIX}`;
+  throw new Error(testConfigErrorMessage);
+}
+
+function validateConfigVersion(testsConfig) {
+  if (typeof testsConfig.schemaVersion === 'undefined') {
+    return false;
+  }
+
+  if (testsConfig.schemaVersion < 1) {
+    return false;
+  }
+
+  return true;
+}
 
 export function getTestsConfig() {
   if (configurationLoaded) {
     if (!testsConfig) {
-      throw new Error(MISSING_ERROR_MESSAGE);
+      throw new Error(testConfigErrorMessage);
     }
 
     return testsConfig;
@@ -26,16 +46,20 @@ export function getTestsConfig() {
       return testsConfig;
     }
   } catch (e) {
-    throw new Error(`failed to parse environment variable 'TESTS_CONFIG' with error '${e.message}'`);
+    decorateAndReThrow(`failed to parse environment variable 'TESTS_CONFIG' with error '${e.message}'`);
   }
 
   try {
     // eslint-disable-next-line global-require
     testsConfig = require('./.tests-config').default;
-    return process.env;
   } catch (e) {
-    throw new Error(MISSING_ERROR_MESSAGE);
+    decorateAndReThrow(MISSING_ERROR_MESSAGE);
   }
+
+  if (!validateConfigVersion(testsConfig)) {
+    decorateAndReThrow(IRRELEVANT_MESSAGE);
+  }
+  return testsConfig;
 }
 
 export function maybeTestCompanyAPI(scraperId, category) {

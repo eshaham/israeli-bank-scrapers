@@ -2,6 +2,7 @@ const startDate = new Date();
 startDate.setMonth(startDate.getMonth() - 1);
 
 export default {
+  schemaVersion: 1, // used to validate the configuration schema. don't manually change it.
   options: { // options object that is passed to the scrapers. see more in readme.md file
     startDate,
     combineInstallments: false,
