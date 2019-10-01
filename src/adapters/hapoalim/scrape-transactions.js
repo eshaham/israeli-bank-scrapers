@@ -4,7 +4,8 @@ import {
   fetchPoalimXSRFWithinPage,
   convertTransaction,
 } from './adapterHelpers/transactions';
-import { getAPISiteUrl } from './adapterHelpers/utils';
+import { getAPISiteUrl } from './adapterHelpers/api';
+import validateStartDate from './adapterHelpers/scraping';
 
 
 async function getAccountTransactions(page, accountInfo, startDate, apiSiteUrl) {
@@ -30,8 +31,10 @@ function scrapeTransactionsAdapter(options) {
     validate: (context) => {
       const result = [];
 
-      if (!options.startDate) {
-        result.push('expected startDate to be provided by options');
+      const [startDateValidationMessage] = validateStartDate(options.startDate);
+
+      if (startDateValidationMessage) {
+        result.push(startDateValidationMessage);
       }
 
       if (!context.hasSessionData('puppeteer.page')) {

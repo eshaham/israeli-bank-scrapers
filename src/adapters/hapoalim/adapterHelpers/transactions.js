@@ -4,15 +4,12 @@ import { DATE_FORMAT } from '../definitions';
 import { fetchPostWithinPage, fetchGetWithinPage } from '../../../helpers/fetch';
 import { NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../../../constants';
 
-const DefaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
 
 export function getTransactionsUrl(page, options) {
-  const { apiSiteUrl, accountToken, filterToken } = options;
-
-  const startDate = options.startDate || DefaultStartMoment.toDate();
-  const startMoment = moment.max(DefaultStartMoment, moment(startDate));
-
-  const startDateStr = startMoment.format(DATE_FORMAT);
+  const {
+    apiSiteUrl, accountToken, filterToken, startDate,
+  } = options;
+  const startDateStr = moment(startDate).format(DATE_FORMAT);
   const endDateStr = moment().format(DATE_FORMAT);
 
   return `${apiSiteUrl}/current-account/transactions?accountId=${accountToken}${filterToken ? `&dataGroupCatenatedKey=${filterToken}` : ''}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&lang=he`;

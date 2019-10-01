@@ -1,5 +1,4 @@
 import path from 'path';
-import createGeneralError from '../../helpers/errors';
 import { getActiveAccountsInfo } from './adapterHelpers/accounts';
 import {
   getTransactionsUrl,
@@ -7,8 +6,9 @@ import {
   fetchGetPoalimXSRFWithinPage,
   convertTransaction,
 } from './adapterHelpers/transactions';
-import { getAPISiteUrl } from './adapterHelpers/utils';
+import { getAPISiteUrl } from './adapterHelpers/api';
 import { BASE_URL } from './definitions';
+import validateStartDate from './adapterHelpers/scraping';
 
 async function getAccountTransactions(page, accountInfo, startDate, apiSiteUrl) {
   const txnsUrl = getTransactionsUrl(page, {
@@ -76,8 +76,10 @@ function scrapeChecksAdapter(options) {
     validate: (context) => {
       const result = [];
 
-      if (!options.startDate) {
-        result.push('expected startDate to be provided by options');
+      const [startDateValidationMessage] = validateStartDate(options.startDate);
+
+      if (startDateValidationMessage) {
+        result.push(startDateValidationMessage);
       }
 
       if (!options.imagesPath) {
@@ -94,9 +96,6 @@ function scrapeChecksAdapter(options) {
       const page = context.getSessionData('puppeteer.page');
       const { startDate, imagesPath } = options;
 
-      if (!page || !startDate || !imagesPath) {
-        return createGeneralError('missing required options');
-      }
       const apiSiteUrl = await getAPISiteUrl(page);
       const accountsInfo = await getActiveAccountsInfo(page);
       const accounts = [];

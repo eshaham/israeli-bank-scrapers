@@ -1,9 +1,12 @@
+import moment from 'moment';
 import { BaseScraperWithBrowser } from './base-scraper-with-browser';
 import runner from '../adapters/runner';
 import { setBrowserPageAdapter } from '../adapters/puppeteer';
 import loginAdapter from '../adapters/hapoalim/login';
 import scrapeTransactionsAdapter from '../adapters/hapoalim/scrape-transactions';
 import { GENERAL_ERROR, SCRAPE_PROGRESS_TYPES } from '../constants';
+
+const DefaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
 
 class HapoalimScraper extends BaseScraperWithBrowser {
   async login(credentials) {
@@ -32,6 +35,10 @@ class HapoalimScraper extends BaseScraperWithBrowser {
   }
 
   async fetchData() {
+
+    const startDate = this.options.startDate || DefaultStartMoment.toDate();
+    const startMoment = moment.max(DefaultStartMoment, moment(startDate));
+
     return runner({
       onProgress: (name, status) => {
         this.emitProgress(status);
@@ -41,7 +48,9 @@ class HapoalimScraper extends BaseScraperWithBrowser {
       setBrowserPageAdapter({
         page: this.page,
       }),
-      scrapeTransactionsAdapter({}),
+      scrapeTransactionsAdapter({
+        startDate: startMoment,
+      }),
     ])
       .then(result => {
         if (!result.success) {

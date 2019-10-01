@@ -7,6 +7,7 @@ import {
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../../constants';
 import { mapAccounts, navigateToAccountTransactions } from './adapterHelpers/accounts';
 import { DATE_FORMAT } from './definitions';
+import validateStartDate from './adapterHelpers/scraping';
 
 const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא קיימות תנועות מתאימות על פי הסינון שהוגדר';
 
@@ -139,12 +140,6 @@ async function extractPendingTransactionsFromPage(page) {
   return txns;
 }
 
-/**
- *
- * @param page
- * @param options { startDate, accountId, accountName }
- * @returns {Promise<{accountNumber: string, txns: *}>}
- */
 async function fetchTransactionsForAccount(page, options) {
   await navigateToAccountTransactions(page, options);
 
@@ -185,9 +180,10 @@ function scrapeTransactionsAdapter(options) {
     name: 'scrapeTransactions(leumi)',
     validate: (context) => {
       const result = [];
+      const [startDateValidationMessage] = validateStartDate(options.startDate);
 
-      if (!options.startDate) {
-        result.push('expected startDate to be provided by options');
+      if (startDateValidationMessage) {
+        result.push(startDateValidationMessage);
       }
 
       if (!context.hasSessionData('puppeteer.page')) {
@@ -198,11 +194,7 @@ function scrapeTransactionsAdapter(options) {
     },
     action: async (context) => {
       const page = context.getSessionData('puppeteer.page');
-
-      const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
-      const startMoment = moment.max(defaultStartMoment, moment(options.startDate));
-
-      const accounts = await fetchTransactions(page, startMoment);
+      const accounts = await fetchTransactions(page, options.startDate);
 
       return {
         data: {

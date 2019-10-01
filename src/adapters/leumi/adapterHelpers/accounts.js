@@ -1,3 +1,4 @@
+import moment from 'moment';
 import {
   clickButton,
   dropdownElements,
@@ -12,12 +13,6 @@ function getTransactionsUrl() {
   return `${BASE_URL}/ebanking/Accounts/ExtendedActivity.aspx?WidgetPar=1#/`;
 }
 
-/**
- *
- * @param page
- * @param callback (page, account: { accountName: string, accountValue: string }) => *
- * @returns {Promise<Array>}
- */
 async function mapAccounts(page, callback) {
   const result = [];
   const url = getTransactionsUrl();
@@ -40,12 +35,6 @@ async function mapAccounts(page, callback) {
   return result;
 }
 
-/**
- *
- * @param page
- * @param options { startDate: moment, accountValue: string }
- * @returns {Promise<*>}
- */
 async function navigateToAccountTransactions(page, options) {
   await dropdownSelect(page, 'select#ddlAccounts_m_ddl', options.accountValue);
   await dropdownSelect(page, 'select#ddlTransactionPeriod', '004');
@@ -53,7 +42,7 @@ async function navigateToAccountTransactions(page, options) {
   await fillInput(
     page,
     'input#dtFromDate_textBox',
-    options.startDate.format(DATE_FORMAT),
+    moment(options.startDate).format(DATE_FORMAT),
   );
   await clickButton(page, 'input#btnDisplayDates');
   await waitForNavigation(page);
