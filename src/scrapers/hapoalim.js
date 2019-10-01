@@ -35,7 +35,6 @@ class HapoalimScraper extends BaseScraperWithBrowser {
   }
 
   async fetchData() {
-
     const startDate = this.options.startDate || DefaultStartMoment.toDate();
     const startMoment = moment.max(DefaultStartMoment, moment(startDate));
 

@@ -1,5 +1,5 @@
 import puppeteerConfig from '../puppeteer-config';
-import * as adapters from './adapters';
+import * as adapters from './adapters/public-api';
 
 export { default as createScraper } from './scrapers/factory';
 export { SCRAPERS } from './definitions';

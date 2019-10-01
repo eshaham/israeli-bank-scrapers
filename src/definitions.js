@@ -34,5 +34,3 @@ export const SCRAPERS = {
     loginFields: ['id', 'card6Digits', PASSWORD_FIELD],
   },
 };
-
-

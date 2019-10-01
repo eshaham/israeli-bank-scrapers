@@ -15,7 +15,6 @@ export function getTransactionsUrl(page, options) {
   return `${apiSiteUrl}/current-account/transactions?accountId=${accountToken}${filterToken ? `&dataGroupCatenatedKey=${filterToken}` : ''}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&lang=he`;
 }
 
-// TODO es remove duplication
 export async function fetchGetPoalimXSRFWithinPage(page, url) {
   const cookies = await page.cookies();
   const XSRFCookie = cookies.find((cookie) => cookie.name === 'XSRF-TOKEN');

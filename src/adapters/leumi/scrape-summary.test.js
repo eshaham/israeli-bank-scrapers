@@ -18,16 +18,18 @@ describe('Leumi scrape summary', () => {
   });
 
   maybeTestCompanyAPI(COMPANY_ID, DATA_TYPE)('should scrape transactions', async () => {
+    const {
+      verbose, showBrowser, onProgress,
+    } = testsConfig.options;
+
     const runnerOptions = {
-      onProgress: (name, status) => {
-        console.log(`[${name}] ${status}`);
-      },
+      onProgress,
     };
 
     const runnerAdapters = [
       createBrowserAdapter({
-        verbose: true,
-        showBrowser: true,
+        verbose,
+        showBrowser,
       }),
       createBrowserPageAdapter(),
       loginAdapter({

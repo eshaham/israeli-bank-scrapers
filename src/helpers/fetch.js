@@ -36,12 +36,13 @@ export async function fetchPost(url, data, extraHeaders) {
   return result.json();
 }
 
-// TODO es check if should keep also old implementation for existing scrapers
 export async function fetchGetWithinPage(page, url, extraHeaders = {}) {
   return page.evaluate((url, extraHeaders) => {
+    // eslint-disable-next-line prefer-object-spread
     const headers = Object.assign(
       { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-      extraHeaders);
+      extraHeaders,
+    );
     return new Promise((resolve, reject) => {
       fetch(url, {
         credentials: 'include',
@@ -61,9 +62,11 @@ export async function fetchGetWithinPage(page, url, extraHeaders = {}) {
 
 export async function fetchPostWithinPage(page, url, data, extraHeaders = {}) {
   return page.evaluate((url, data, extraHeaders) => {
+    // eslint-disable-next-line prefer-object-spread
     const headers = Object.assign(
       { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-      extraHeaders);
+      extraHeaders,
+    );
     return new Promise((resolve, reject) => {
       fetch(url, {
         method: 'POST',
