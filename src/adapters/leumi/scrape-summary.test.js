@@ -1,9 +1,10 @@
-import { createBrowser, createBrowserPage } from '../puppeteer';
-import loginAdapter from './login';
+import _ from 'lodash';
 import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig,
   getDistFolder, saveAccountsAsCSV,
 } from '../../../tests/tests-utils';
+import { createBrowserAdapter, createBrowserPageAdapter, closeBrowserAdapter } from '../puppeteer';
+import loginAdapter from './login';
 import scrapeSummaryAdapter from './scrape-summary';
 import runner from '../runner';
 
@@ -17,30 +18,39 @@ describe('Leumi scrape summary', () => {
   });
 
   maybeTestCompanyAPI(COMPANY_ID, DATA_TYPE)('should scrape transactions', async () => {
-    const options = {
+    const runnerOptions = {
       onProgress: (name, status) => {
         console.log(`[${name}] ${status}`);
       },
     };
 
-    const result = await runner(options,
-      [
-        createBrowser({
-          verbose: true,
-          showBrowser: true,
-        }),
-        createBrowserPage(),
-        loginAdapter({
-          credentials: testsConfig.credentials.leumi,
-        }),
-        scrapeSummaryAdapter({}),
-      ]);
+    const runnerAdapters = [
+      createBrowserAdapter({
+        verbose: true,
+        showBrowser: true,
+      }),
+      createBrowserPageAdapter(),
+      loginAdapter({
+        credentials: testsConfig.credentials.leumi,
+      }),
+      scrapeSummaryAdapter({}),
+      closeBrowserAdapter(),
+    ];
 
+    const result = await runner(runnerOptions, runnerAdapters);
 
     if (!result.success) {
       throw new Error(result.errorMessage);
     }
+
+    const resultDataProperty = `${COMPANY_ID}.${DATA_TYPE}`;
+    const { accounts } = _.get(result.data, resultDataProperty, {});
+
+    if (!accounts) {
+      throw new Error(`result data is missing property '${resultDataProperty}'`);
+    }
+
     const csvDistFolder = getDistFolder(DATA_TYPE);
-    saveAccountsAsCSV(csvDistFolder, COMPANY_ID, result.data.leumi.summary.accounts || []);
+    saveAccountsAsCSV(csvDistFolder, COMPANY_ID, accounts);
   });
 });

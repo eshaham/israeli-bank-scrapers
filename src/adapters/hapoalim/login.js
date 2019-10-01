@@ -48,8 +48,6 @@ function loginAdapter(options) {
       const fields = createLoginFields(options.credentials);
       const possibleLoginResults = getPossibleLoginResults();
 
-      context.notifyProgress(SCRAPE_PROGRESS_TYPES.INITIALIZING);
-
       await navigateTo(page, LOGIN_URL);
       await waitUntilElementFound(page, submitButtonSelector);
       await fillInputs(page, fields);

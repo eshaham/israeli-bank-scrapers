@@ -1,48 +1,58 @@
-import { getBrowser, getBrowserPage } from '../adapters/puppeteer';
-import login from '../adapters/hapoalim/login';
-import scrapeTransactions from '../adapters/hapoalim/scrape-transactions';
-import { BaseScraper } from './base-scraper';
+import { BaseScraperWithBrowser } from './base-scraper-with-browser';
+import runner from '../adapters/runner';
+import { setBrowserPageAdapter } from '../adapters/puppeteer';
+import loginAdapter from '../adapters/hapoalim/login';
+import scrapeTransactionsAdapter from '../adapters/hapoalim/scrape-transactions';
 import { GENERAL_ERROR, SCRAPE_PROGRESS_TYPES } from '../constants';
-import { isValidCredentials } from '../helpers/login';
 
-const SCRAPER_ID = 'hapoalim';
-
-class HapoalimScraper extends BaseScraper {
-  async initialize() {
-    this.browser = this.options.browser || await getBrowser(this.options);
-    this.page = await getBrowserPage(this.browser);
-    this.extendedOptions = Object.assign(
-      {},
-      this.options,
-      {
-        emitProgress: this.emitProgress.bind(this),
-      },
-    );
-  }
-
+class HapoalimScraper extends BaseScraperWithBrowser {
   async login(credentials) {
-    if (!isValidCredentials(SCRAPER_ID, credentials)) {
+    if (!credentials) {
       return {
         success: false,
         errorType: GENERAL_ERROR,
       };
     }
 
-    const userLoginOptions = Object.assign(
-      {},
-      this.extendedOptions,
-      { credentials },
-    );
-    return login(this.page, userLoginOptions);
+    this.emitProgress(SCRAPE_PROGRESS_TYPES.INITIALIZING);
+
+    return runner({
+      onProgress: (name, status) => {
+        this.emitProgress(status);
+      },
+    },
+    [
+      setBrowserPageAdapter({
+        page: this.page,
+      }),
+      loginAdapter({
+        credentials,
+      }),
+    ]);
   }
 
   async fetchData() {
-    return scrapeTransactions(this.page, this.extendedOptions);
-  }
+    return runner({
+      onProgress: (name, status) => {
+        this.emitProgress(status);
+      },
+    },
+    [
+      setBrowserPageAdapter({
+        page: this.page,
+      }),
+      scrapeTransactionsAdapter({}),
+    ])
+      .then(result => {
+        if (!result.success) {
+          return result;
+        }
 
-  async terminate() {
-    this.emitProgress(SCRAPE_PROGRESS_TYPES.TERMINATING);
-    await this.browser.close();
+        return {
+          success: true,
+          accounts: result.data.hapoalim.transactions.accounts,
+        };
+      });
   }
 }
 

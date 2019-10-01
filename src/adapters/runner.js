@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { GENERAL_ERROR } from '../constants';
+import { GENERAL_ERROR, SCRAPE_PROGRESS_TYPES } from '../constants';
 
 
 const noop = () => {};
@@ -47,7 +47,7 @@ class AdapterContext {
 function runAdapter(runnerContext, adapter) {
   const adapterContext = new AdapterContext(adapter.name, runnerContext);
 
-  adapterContext.notifyProgress('validating'); // todo extract to constants
+  adapterContext.notifyProgress(SCRAPE_PROGRESS_TYPES.VALIDATE_ADAPTER);
   return Promise.resolve(adapter.validate(adapterContext))
     .then((validationErrors) => {
       if (validationErrors && validationErrors.length) {
@@ -56,7 +56,7 @@ function runAdapter(runnerContext, adapter) {
         );
       }
 
-      adapterContext.notifyProgress('executing'); // todo extract to constants
+      adapterContext.notifyProgress(SCRAPE_PROGRESS_TYPES.START_ADAPTER);
       return adapter.action(adapterContext)
         .then(
           (result) => {
@@ -71,12 +71,12 @@ function runAdapter(runnerContext, adapter) {
               }
             }
 
-            adapterContext.notifyProgress('completed');
+            adapterContext.notifyProgress(SCRAPE_PROGRESS_TYPES.END_ADAPTER);
           },
         );
     })
     .catch((e) => {
-      adapterContext.notifyProgress('failed');
+      adapterContext.notifyProgress(SCRAPE_PROGRESS_TYPES.FAILED_ADAPTER);
       throw e;
     });
 }

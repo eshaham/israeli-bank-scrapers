@@ -1,9 +1,9 @@
 import { BaseScraperWithBrowser } from './base-scraper-with-browser';
 import runner from '../adapters/runner';
-import { setBrowserPage } from '../adapters/puppeteer';
+import { setBrowserPageAdapter } from '../adapters/puppeteer';
 import loginAdapter from '../adapters/leumi/login';
 import scrapeTransactionsAdapter from '../adapters/leumi/scrape-transactions';
-import { GENERAL_ERROR } from '../constants';
+import {GENERAL_ERROR, SCRAPE_PROGRESS_TYPES} from '../constants';
 
 class LeumiScraper extends BaseScraperWithBrowser {
   async login(credentials) {
@@ -14,13 +14,15 @@ class LeumiScraper extends BaseScraperWithBrowser {
       };
     }
 
+    this.emitProgress(SCRAPE_PROGRESS_TYPES.INITIALIZING);
+
     return runner({
       onProgress: (name, status) => {
         this.emitProgress(status);
       },
     },
     [
-      setBrowserPage({
+      setBrowserPageAdapter({
         page: this.page,
       }),
       loginAdapter({
@@ -36,7 +38,7 @@ class LeumiScraper extends BaseScraperWithBrowser {
       },
     },
     [
-      setBrowserPage({
+      setBrowserPageAdapter({
         page: this.page,
       }),
       scrapeTransactionsAdapter({}),

@@ -3,7 +3,7 @@ import puppeteer from 'puppeteer';
 const VIEWPORT_WIDTH = 1024;
 const VIEWPORT_HEIGHT = 768;
 
-function createBrowser(options) {
+function createBrowserAdapter(options) {
   return {
     name: 'createBrowser(puppeteer)',
     validate: () => { return []; },
@@ -25,7 +25,7 @@ function createBrowser(options) {
   };
 }
 
-function setBrowserPage(options) {
+function setBrowserPageAdapter(options) {
   return {
     name: 'setBrowserPage(puppeteer)',
     validate: () => {
@@ -41,7 +41,7 @@ function setBrowserPage(options) {
   };
 }
 
-function createBrowserPage(options = {}) {
+function createBrowserPageAdapter(options = {}) {
   return {
     name: 'createBrowserPage(puppeteer)',
     validate: (context) => {
@@ -70,4 +70,23 @@ function createBrowserPage(options = {}) {
   };
 }
 
-export { createBrowser, createBrowserPage, setBrowserPage };
+function closeBrowserAdapter(options = {}) {
+  return {
+    name: 'closeBrowser(puppeteer)',
+    validate: (context) => {
+      if (!options.browser && !context.hasSessionData('puppeteer.browser')) {
+        return ['expected puppeteer browser to be provided by option or by prior adapter'];
+      }
+
+      return [];
+    },
+    action: async (context) => {
+      const browser = options.browser || context.getSessionData('puppeteer.browser');
+      browser.close();
+    },
+  };
+}
+
+export {
+  closeBrowserAdapter, createBrowserAdapter, createBrowserPageAdapter, setBrowserPageAdapter,
+};

@@ -3,7 +3,7 @@ import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig,
   getUniqueDistFolder, saveAccountsAsCSV,
 } from '../../../tests/tests-utils';
-import { createBrowser, createBrowserPage } from '../puppeteer';
+import { createBrowserAdapter, createBrowserPageAdapter, closeBrowserAdapter } from '../puppeteer';
 import loginAdapter from './login';
 import scrapeChecksAdapter from './scrape-checks';
 import runner from '../runner';
@@ -29,11 +29,11 @@ describe('Hapoalim scrape checks', () => {
     };
 
     const runnerAdapters = [
-      createBrowser({
+      createBrowserAdapter({
         verbose,
         showBrowser,
       }),
-      createBrowserPage(),
+      createBrowserPageAdapter(),
       loginAdapter({
         credentials: testsConfig.credentials.hapoalim,
       }),
@@ -41,6 +41,7 @@ describe('Hapoalim scrape checks', () => {
         startDate,
         imagesPath: dist,
       }),
+      closeBrowserAdapter(),
     ];
 
     const result = await runner(runnerOptions, runnerAdapters);

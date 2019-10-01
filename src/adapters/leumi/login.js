@@ -52,18 +52,9 @@ function loginAdapter(options) {
     action: async (context) => {
       try {
         const page = context.getSessionData('puppeteer.page');
-        const { credentials } = options;
-        if (!page || !credentials || !isValidCredentials(SCRAPER_ID, credentials)) {
-          return {
-            success: false,
-            errorType: LOGIN_RESULT.INVALID_OPTIONS,
-          };
-        }
-
         const fields = createLoginFields(options.credentials);
         const possibleLoginResults = getPossibleLoginResults();
 
-        context.notifyProgress(SCRAPE_PROGRESS_TYPES.INITIALIZING);
         await navigateTo(page, BASE_URL);
         await waitUntilElementFound(page, submitButtonSelector);
         await fillInputs(page, fields);

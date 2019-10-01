@@ -1,9 +1,10 @@
-import { createBrowser, createBrowserPage } from '../puppeteer';
-import loginAdapter from './login';
+import _ from 'lodash';
 import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig,
   getDistFolder, saveAccountsAsCSV,
 } from '../../../tests/tests-utils';
+import { createBrowserAdapter, createBrowserPageAdapter, closeBrowserAdapter } from '../puppeteer';
+import loginAdapter from './login';
 import scrapeTransactionsAdapter from './scrape-transactions';
 import runner from '../runner';
 
@@ -17,33 +18,43 @@ describe('Leumi scrape transactions', () => {
   });
 
   maybeTestCompanyAPI(COMPANY_ID, DATA_TYPE)('should scrape transactions', async () => {
-    const { startDate, verbose, showBrowser, onProgress } = testsConfig.options;
+    const {
+      startDate, verbose, showBrowser, onProgress,
+    } = testsConfig.options;
 
-    const options = {
+    const runnerOptions = {
       onProgress,
     };
 
-    const result = await runner(options,
-      [
-        createBrowser({
-          verbose,
-          showBrowser,
-        }),
-        createBrowserPage(),
-        loginAdapter({
-          credentials: testsConfig.credentials.leumi,
-        }),
-        scrapeTransactionsAdapter({
-          startDate,
-        }),
-      ]);
+    const runnerAdapters = [
+      createBrowserAdapter({
+        verbose,
+        showBrowser,
+      }),
+      createBrowserPageAdapter(),
+      loginAdapter({
+        credentials: testsConfig.credentials.leumi,
+      }),
+      scrapeTransactionsAdapter({
+        startDate,
+      }),
+      closeBrowserAdapter(),
+    ];
 
+    const result = await runner(runnerOptions, runnerAdapters);
 
     if (!result.success) {
       throw new Error(result.errorMessage);
     }
 
+    const resultDataProperty = `${COMPANY_ID}.${DATA_TYPE}`;
+    const { accounts } = _.get(result.data, resultDataProperty, {});
+
+    if (!accounts) {
+      throw new Error(`result data is missing property '${resultDataProperty}'`);
+    }
+
     const csvDistFolder = getDistFolder(DATA_TYPE);
-    saveAccountsAsCSV(csvDistFolder, COMPANY_ID, result.data.leumi.transactions.accounts || []);
+    saveAccountsAsCSV(csvDistFolder, COMPANY_ID, accounts);
   });
 });
