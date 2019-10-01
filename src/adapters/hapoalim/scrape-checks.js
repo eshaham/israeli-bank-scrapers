@@ -1,13 +1,13 @@
 import path from 'path';
 import createGeneralError from '../../helpers/errors';
-import { getActiveAccountsInfo } from './helpers/accounts';
+import { getActiveAccountsInfo } from './adapterHelpers/accounts';
 import {
   getTransactionsUrl,
   fetchPoalimXSRFWithinPage,
   fetchGetPoalimXSRFWithinPage,
   convertTransaction,
-} from './helpers/transactions';
-import { getAPISiteUrl } from './helpers/utils';
+} from './adapterHelpers/transactions';
+import { getAPISiteUrl } from './adapterHelpers/utils';
 import { BASE_URL } from './definitions';
 
 async function getAccountTransactions(page, accountInfo, startDate, apiSiteUrl) {
@@ -50,7 +50,11 @@ async function getAccountTransactions(page, accountInfo, startDate, apiSiteUrl) 
 async function downloadCheckImages(page, txns, imagesPath) {
   for (let i = 0; i < txns.length; i += 1) {
     const transaction = txns[i];
-    const imageFileName = transaction.checkFrontUrl.match(/.*\/(.*?[.]png)/)[1];
+    const imageFileName = transaction.checkFrontUrl.match(/.*\/(.*?[.]png)/)[1].replace(' ', '');
+
+    if (!imageFileName) {
+      throw new Error('failed to extract a check image name from check front url');
+    }
 
     await page.goto(transaction.checkFrontUrl);
 
@@ -66,34 +70,60 @@ async function downloadCheckImages(page, txns, imagesPath) {
   }
 }
 
-export default async function scrapeChecks(options) {
-  try {
-    const { page, startDate, imagesPath } = options;
+function scrapeChecksAdapter(options) {
+  return {
+    name: 'scrapeChecks(hapoalim)',
+    validate: (context) => {
+      const result = [];
 
-    if (!page || !startDate || !imagesPath) {
-      return createGeneralError('missing required options');
-    }
-    const apiSiteUrl = await getAPISiteUrl(page);
-    const accountsInfo = await getActiveAccountsInfo(page);
-    const accounts = [];
+      if (!options.startDate) {
+        result.push('expected startDate to be provided by options');
+      }
 
-    for (let i = 0; i < accountsInfo.length; i += 1) {
-      const accountInfo = accountsInfo[i];
-      const transactions = await getAccountTransactions(page, accountInfo, startDate, apiSiteUrl);
+      if (!options.imagesPath) {
+        result.push('expected imagesPath to be provided by options');
+      }
 
-      await downloadCheckImages(page, transactions, imagesPath);
+      if (!context.hasSessionData('puppeteer.page')) {
+        result.push('expected puppeteer page to be provided by prior adapter');
+      }
 
-      accounts.push({
-        accountNumber: accountInfo.accountNumber,
-        transactions,
-      });
-    }
+      return result;
+    },
+    action: async (context) => {
+      const page = context.getSessionData('puppeteer.page');
+      const { startDate, imagesPath } = options;
 
-    return {
-      success: true,
-      accounts,
-    };
-  } catch (error) {
-    return createGeneralError(error.message);
-  }
+      if (!page || !startDate || !imagesPath) {
+        return createGeneralError('missing required options');
+      }
+      const apiSiteUrl = await getAPISiteUrl(page);
+      const accountsInfo = await getActiveAccountsInfo(page);
+      const accounts = [];
+
+      for (let i = 0; i < accountsInfo.length; i += 1) {
+        const accountInfo = accountsInfo[i];
+        const txns = await getAccountTransactions(page, accountInfo, startDate, apiSiteUrl);
+
+        await downloadCheckImages(page, txns, imagesPath);
+
+        accounts.push({
+          accountNumber: accountInfo.accountNumber,
+          txns,
+        });
+      }
+
+      return {
+        data: {
+          hapoalim: {
+            checks: {
+              accounts,
+            },
+          },
+        },
+      };
+    },
+  };
 }
+
+export default scrapeChecksAdapter;

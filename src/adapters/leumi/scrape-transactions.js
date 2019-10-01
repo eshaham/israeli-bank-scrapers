@@ -5,8 +5,7 @@ import {
   pageEvalAll,
 } from '../../helpers/elements-interactions';
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../../constants';
-import { mapAccounts, navigateToAccountTransactions } from './helpers/accounts';
-import createGeneralError from '../../helpers/errors';
+import { mapAccounts, navigateToAccountTransactions } from './adapterHelpers/accounts';
 import { DATE_FORMAT } from './definitions';
 
 const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא קיימות תנועות מתאימות על פי הסינון שהוגדר';
@@ -185,18 +184,23 @@ function scrapeTransactionsAdapter(options) {
   return {
     name: 'scrapeTransactions(leumi)',
     validate: (context) => {
-      if (!context.hasSessionData('puppeteer.page')) {
-        return ['expected puppeteer page to be provided by prior adapter'];
+      const result = [];
+
+      if (!options.startDate) {
+        result.push('expected startDate to be provided by options');
       }
 
-      return [];
+      if (!context.hasSessionData('puppeteer.page')) {
+        result.push('expected puppeteer page to be provided by prior adapter');
+      }
+
+      return result;
     },
     action: async (context) => {
       const page = context.getSessionData('puppeteer.page');
 
       const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
-      const startDate = options.startDate || defaultStartMoment.toDate();
-      const startMoment = moment.max(defaultStartMoment, moment(startDate));
+      const startMoment = moment.max(defaultStartMoment, moment(options.startDate));
 
       const accounts = await fetchTransactions(page, startMoment);
 

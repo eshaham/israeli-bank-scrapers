@@ -1,4 +1,4 @@
-import { mapAccounts } from './helpers/accounts';
+import { mapAccounts } from './adapterHelpers/accounts';
 import { elementPresentOnPage, pageEvalAll } from '../../helpers/elements-interactions';
 
 

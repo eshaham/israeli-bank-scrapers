@@ -8,7 +8,7 @@ import scrapeSummaryAdapter from './scrape-summary';
 import runner from '../runner';
 
 const COMPANY_ID = 'leumi';
-const TEST_CATEGORY = 'summary';
+const DATA_TYPE = 'summary';
 const testsConfig = getTestsConfig();
 
 describe('Leumi scrape summary', () => {
@@ -16,7 +16,7 @@ describe('Leumi scrape summary', () => {
     extendAsyncTimeout(); // The default timeout is 5 seconds per async test, this function extends the timeout value
   });
 
-  maybeTestCompanyAPI(COMPANY_ID, TEST_CATEGORY)('should scrape transactions', async () => {
+  maybeTestCompanyAPI(COMPANY_ID, DATA_TYPE)('should scrape transactions', async () => {
     const options = {
       onProgress: (name, status) => {
         console.log(`[${name}] ${status}`);
@@ -40,7 +40,7 @@ describe('Leumi scrape summary', () => {
     if (!result.success) {
       throw new Error(result.errorMessage);
     }
-    const csvDistFolder = getDistFolder(TEST_CATEGORY);
+    const csvDistFolder = getDistFolder(DATA_TYPE);
     saveAccountsAsCSV(csvDistFolder, COMPANY_ID, result.data.leumi.summary.accounts || []);
   });
 });

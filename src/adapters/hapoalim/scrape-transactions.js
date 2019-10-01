@@ -1,11 +1,10 @@
-import createGeneralError from '../../helpers/errors';
-import { getActiveAccountsInfo } from './helpers/accounts';
+import { getActiveAccountsInfo } from './adapterHelpers/accounts';
 import {
   getTransactionsUrl,
   fetchPoalimXSRFWithinPage,
   convertTransaction,
-} from './helpers/transactions';
-import { getAPISiteUrl } from './helpers/utils';
+} from './adapterHelpers/transactions';
+import { getAPISiteUrl } from './adapterHelpers/utils';
 
 
 async function getAccountTransactions(page, accountInfo, startDate, apiSiteUrl) {
@@ -25,40 +24,51 @@ async function getAccountTransactions(page, accountInfo, startDate, apiSiteUrl) 
   return txns;
 }
 
-/**
- * scrape transactions of bank hapoalim
- * @param options todo
- * @param options.page todo
- * @param options.startDate todo
- * @returns {Promise<{success: boolean, accounts: Array}|{success: boolean, errorType: string, errorMessage: *}>}
- */
-export default async function scrapeTransactions(options) {
-  try {
-    const { page, startDate } = options;
+function scrapeTransactionsAdapter(options) {
+  return {
+    name: 'scrapeTransactions(hapoalim)',
+    validate: (context) => {
+      const result = [];
 
-    if (!page || !startDate) {
-      return createGeneralError('missing required options');
-    }
+      if (!options.startDate) {
+        result.push('expected startDate to be provided by options');
+      }
 
-    const apiSiteUrl = await getAPISiteUrl(page);
-    const accountsInfo = await getActiveAccountsInfo(page);
-    const accounts = [];
+      if (!context.hasSessionData('puppeteer.page')) {
+        result.push('expected puppeteer page to be provided by prior adapter');
+      }
 
-    for (let i = 0; i < accountsInfo.length; i += 1) {
-      const accountInfo = accountsInfo[i];
-      const transactions = await getAccountTransactions(page, accountInfo, startDate, apiSiteUrl);
+      return result;
+    },
+    action: async (context) => {
+      const page = context.getSessionData('puppeteer.page');
+      const { startDate } = options;
 
-      accounts.push({
-        accountNumber: accountInfo.accountNumber,
-        transactions,
-      });
-    }
+      const apiSiteUrl = await getAPISiteUrl(page);
+      const accountsInfo = await getActiveAccountsInfo(page);
+      const accounts = [];
 
-    return {
-      success: true,
-      accounts,
-    };
-  } catch (error) {
-    return createGeneralError(error.message);
-  }
+      for (let i = 0; i < accountsInfo.length; i += 1) {
+        const accountInfo = accountsInfo[i];
+        const txns = await getAccountTransactions(page, accountInfo, startDate, apiSiteUrl);
+
+        accounts.push({
+          accountNumber: accountInfo.accountNumber,
+          txns,
+        });
+      }
+
+      return {
+        data: {
+          hapoalim: {
+            transactions: {
+              accounts,
+            },
+          },
+        },
+      };
+    },
+  };
 }
+
+export default scrapeTransactionsAdapter;

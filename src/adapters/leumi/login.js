@@ -3,8 +3,7 @@ import { navigateTo, getCurrentUrl } from '../../helpers/navigation';
 import { BASE_URL } from './definitions';
 import getKeyByValue from '../../helpers/filters';
 import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT } from '../../constants';
-import { isValidCredentials } from '../../definitions';
-import handleLoginResult from '../helpers/login';
+import { handleLoginResult, isValidCredentials } from '../../helpers/login';
 
 const SCRAPER_ID = 'leumi';
 
@@ -39,8 +38,9 @@ function loginAdapter(options) {
     name: `login(${SCRAPER_ID})`,
     validate: (context) => {
       const result = [];
-      if (!options.credentials || !options.credentials.username || !options.credentials.password) {
-        result.push('expected credentials object with username and password');
+
+      if (!isValidCredentials(SCRAPER_ID, options.credentials)) {
+        result.push('expected credentials object with userCode and password');
       }
 
       if (!context.hasSessionData('puppeteer.page')) {

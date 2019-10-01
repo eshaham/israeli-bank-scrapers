@@ -30,6 +30,7 @@ export function getTestsConfig() {
   }
 
   try {
+    // eslint-disable-next-line global-require
     testsConfig = require('./.tests-config').default;
     return process.env;
   } catch (e) {
@@ -49,6 +50,35 @@ export function extendAsyncTimeout(timeout = 120000) {
   jest.setTimeout(timeout);
 }
 
+function mkDirByPathSync(targetDir, { isRelativeToScript = false } = {}) {
+  const { sep } = path;
+  const initDir = path.isAbsolute(targetDir) ? sep : '';
+  const baseDir = isRelativeToScript ? __dirname : '.';
+
+  return targetDir.split(sep).reduce((parentDir, childDir) => {
+    const curDir = path.resolve(baseDir, parentDir, childDir);
+    try {
+      fs.mkdirSync(curDir);
+    } catch (err) {
+      if (err.code === 'EEXIST') { // curDir already exists!
+        return curDir;
+      }
+
+      // To avoid `EISDIR` error on Mac and `EACCES`-->`ENOENT` and `EPERM` on Windows.
+      if (err.code === 'ENOENT') { // Throw the original parentDir error on curDir `ENOENT` failure.
+        throw new Error(`EACCES: permission denied, mkdir '${parentDir}'`);
+      }
+
+      const caughtErr = ['EACCES', 'EPERM', 'EISDIR'].indexOf(err.code) > -1;
+      if (!caughtErr || (caughtErr && curDir === path.resolve(targetDir))) {
+        throw err; // Throw if it's just the last created dir.
+      }
+    }
+
+    return curDir;
+  }, initDir);
+}
+
 export function getDistFolder(subFolder) {
   const config = getTestsConfig();
 
@@ -61,11 +91,16 @@ export function getDistFolder(subFolder) {
 
   const result = `${path.resolve(config.companyAPI.dist, subFolder)}`;
 
-  if (!fs.existsSync(result)){
-    fs.mkdirSync(result);
+  if (!fs.existsSync(result)) {
+    mkDirByPathSync(result);
   }
 
   return result;
+}
+
+export function getUniqueDistFolder(subFolder) {
+  const uniqueFolder = path.join(subFolder, moment().format('YYYYMMDD-HHmmss'));
+  return getDistFolder(uniqueFolder);
 }
 
 export function saveAccountsAsCSV(distFolder, fileName, accounts) {
@@ -103,5 +138,4 @@ export function saveAccountsAsCSV(distFolder, fileName, accounts) {
   const filePath = `${path.join(distFolder, fileName)}.csv`;
   fs.writeFileSync(filePath, csv);
   console.log(`created file '${filePath}'`);
-
 }

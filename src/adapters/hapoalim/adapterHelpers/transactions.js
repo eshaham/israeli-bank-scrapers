@@ -1,8 +1,8 @@
 import uuid4 from 'uuid/v4';
 import moment from 'moment';
 import { DATE_FORMAT } from '../definitions';
-import { fetchPostWithinPage, fetchGetWithinPage } from './helpers/fetch';
-import {NORMAL_TXN_TYPE, TRANSACTION_STATUS} from "../../../constants";
+import { fetchPostWithinPage, fetchGetWithinPage } from '../../../helpers/fetch';
+import { NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../../../constants';
 
 const DefaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
 

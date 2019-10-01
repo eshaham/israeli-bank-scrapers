@@ -1,15 +1,15 @@
-import moment from 'moment';
-import path from 'path';
-import { getBrowser, getBrowserPage } from '../puppeteer';
-import login from './login';
+import _ from 'lodash';
 import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig,
-  getDistFolder, saveAccountsAsCSV,
+  getUniqueDistFolder, saveAccountsAsCSV,
 } from '../../../tests/tests-utils';
-import scrapeChecks from './scrape-checks';
-
+import { createBrowser, createBrowserPage } from '../puppeteer';
+import loginAdapter from './login';
+import scrapeChecksAdapter from './scrape-checks';
+import runner from '../runner';
 
 const COMPANY_ID = 'hapoalim';
+const DATA_TYPE = 'checks';
 const testsConfig = getTestsConfig();
 
 describe('Hapoalim scrape checks', () => {
@@ -17,31 +17,45 @@ describe('Hapoalim scrape checks', () => {
     extendAsyncTimeout(); // The default timeout is 5 seconds per async test, this function extends the timeout value
   });
 
-  maybeTestCompanyAPI(COMPANY_ID, 'checks')('should scrape checks', async () => {
-    // TODO use separated module
-    const browser = await getBrowser({
-      verbose: true, // optional
-      showBrowser: true, // optional
-    });
-    const page = await getBrowserPage(browser);
+  maybeTestCompanyAPI(COMPANY_ID, DATA_TYPE)('should scrape transactions', async () => {
+    const {
+      startDate, verbose, showBrowser, onProgress,
+    } = testsConfig.options;
 
-    const loginResult = await login(page, {
-      credentials: testsConfig.credentials.hapoalim,
-    });
+    const dist = getUniqueDistFolder(DATA_TYPE);
 
-    expect(loginResult).toBeDefined();
-    expect(loginResult.success).toBeTruthy();
+    const runnerOptions = {
+      onProgress,
+    };
 
-    const subFolder = path.resolve('checks', moment().format('YYYYMMDD-HHmmss'));
-    const dist = getDistFolder(subFolder);
+    const runnerAdapters = [
+      createBrowser({
+        verbose,
+        showBrowser,
+      }),
+      createBrowserPage(),
+      loginAdapter({
+        credentials: testsConfig.credentials.hapoalim,
+      }),
+      scrapeChecksAdapter({
+        startDate,
+        imagesPath: dist,
+      }),
+    ];
 
-    const result = await scrapeChecks({
-      startDate: testsConfig.options.startDate,
-      page,
-      imagesPath: dist,
-    });
+    const result = await runner(runnerOptions, runnerAdapters);
 
+    if (!result.success) {
+      throw new Error(result.errorMessage);
+    }
 
-    saveAccountsAsCSV(dist, COMPANY_ID, result.accounts || []);
+    const resultDataProperty = `${COMPANY_ID}.${DATA_TYPE}`;
+    const { accounts } = _.get(result.data, resultDataProperty, {});
+
+    if (!accounts) {
+      throw new Error(`result data is missing property '${resultDataProperty}'`);
+    }
+
+    saveAccountsAsCSV(dist, COMPANY_ID, accounts);
   });
 });

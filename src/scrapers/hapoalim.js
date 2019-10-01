@@ -3,7 +3,7 @@ import login from '../adapters/hapoalim/login';
 import scrapeTransactions from '../adapters/hapoalim/scrape-transactions';
 import { BaseScraper } from './base-scraper';
 import { GENERAL_ERROR, SCRAPE_PROGRESS_TYPES } from '../constants';
-import { isValidCredentials } from '../definitions';
+import { isValidCredentials } from '../helpers/login';
 
 const SCRAPER_ID = 'hapoalim';
 

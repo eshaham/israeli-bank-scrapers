@@ -8,7 +8,7 @@ import scrapeTransactionsAdapter from './scrape-transactions';
 import runner from '../runner';
 
 const COMPANY_ID = 'leumi';
-const TEST_CATEGORY = 'transactions';
+const DATA_TYPE = 'transactions';
 const testsConfig = getTestsConfig();
 
 describe('Leumi scrape transactions', () => {
@@ -16,31 +16,34 @@ describe('Leumi scrape transactions', () => {
     extendAsyncTimeout(); // The default timeout is 5 seconds per async test, this function extends the timeout value
   });
 
-  maybeTestCompanyAPI(COMPANY_ID, TEST_CATEGORY)('should scrape transactions', async () => {
+  maybeTestCompanyAPI(COMPANY_ID, DATA_TYPE)('should scrape transactions', async () => {
+    const { startDate, verbose, showBrowser, onProgress } = testsConfig.options;
+
     const options = {
-      onProgress: (name, status) => {
-        console.log(`[${name}] ${status}`);
-      },
+      onProgress,
     };
 
     const result = await runner(options,
       [
         createBrowser({
-          verbose: true,
-          showBrowser: true,
+          verbose,
+          showBrowser,
         }),
         createBrowserPage(),
         loginAdapter({
           credentials: testsConfig.credentials.leumi,
         }),
-        scrapeTransactionsAdapter({}),
+        scrapeTransactionsAdapter({
+          startDate,
+        }),
       ]);
 
 
     if (!result.success) {
       throw new Error(result.errorMessage);
     }
-    const csvDistFolder = getDistFolder(TEST_CATEGORY);
+
+    const csvDistFolder = getDistFolder(DATA_TYPE);
     saveAccountsAsCSV(csvDistFolder, COMPANY_ID, result.data.leumi.transactions.accounts || []);
   });
 });
