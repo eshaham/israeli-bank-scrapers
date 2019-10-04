@@ -45,7 +45,7 @@
     "@babel/preset-env": "^7.4.5",
     "babel-plugin-import-visitor": "^0.2.0",
     "babel-jest": "^24.8.0",
-    "eslint": "^5.4.0",
+    "eslint": "^6.5.1",
     "eslint-config-airbnb-base": "^14.0.0",
     "eslint-plugin-import": "^2.14.0",
     "jest": "^24.8.0",
