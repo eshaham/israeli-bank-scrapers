@@ -122,7 +122,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
     const response = await fetchPostWithinPage(this.page,
       TRANSACTIONS_REQUEST_URL, data, headers);
 
-    if (!response.header.success) {
+    if (response.header.success === false) {
       return {
         success: false,
         errorType: 'generic',
