@@ -15,6 +15,10 @@ async function clickButton(page, buttonSelector) {
   await button.click();
 }
 
+async function clickLink(page, aSelector) {
+  await page.$eval(aSelector, (el) => el.click());
+}
+
 async function pageEvalAll(page, selector, defaultResult, callback) {
   let result = defaultResult;
   try {
@@ -55,6 +59,7 @@ export {
   waitUntilElementFound,
   fillInput,
   clickButton,
+  clickLink,
   dropdownSelect,
   dropdownElements,
   pageEvalAll,
