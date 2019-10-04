@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: Make prerelease to npm
-        uses: epeli/npm-release@v1
+        uses: epeli/npm-release@bc78fc8
         with:
           type: prerelease
           token: ${{ secrets.NPM_TOKEN }}
