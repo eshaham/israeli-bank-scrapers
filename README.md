@@ -117,7 +117,7 @@ If you are a developer and want to access the `next` version, install the librar
 npm install israeli-bank-scrapers@next --save
 ```  
 
-> Keep in mind that although this version should be stable as it passed our code review, it was deployed automatically using github action workflow without the usual tests we run manually done before we deploy the official version.  
+> Keep in mind that although this `next` version should be stable as it passed our code review, it was deployed automatically using github action workflow without the usual tests we run manually before we deploy the official version.  
 
 # `Israeli-bank-scrapers-core` library
 
