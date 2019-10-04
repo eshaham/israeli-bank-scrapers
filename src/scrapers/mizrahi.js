@@ -3,7 +3,6 @@ import {
   SHEKEL_CURRENCY,
   NORMAL_TXN_TYPE,
   TRANSACTION_STATUS,
-  ISO_DATE_FORMAT,
 } from '../constants';
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { fetchPostWithinPage } from '../helpers/fetch';
@@ -61,7 +60,7 @@ function convertTransactions(txns) {
   return txns.map((row) => {
     // row.MC02PeulaTaaEZ: 2019-09-10T00:00:00
     const txnDate = moment(row.MC02PeulaTaaEZ, moment.HTML5_FMT.DATETIME_LOCAL_SECONDS)
-      .format(ISO_DATE_FORMAT);
+      .toISOString();
 
     return {
       type: NORMAL_TXN_TYPE,
@@ -83,7 +82,7 @@ async function extractPendingTransactions(page) {
   });
 
   return pendingTxn.map((txn) => {
-    const date = moment(txn[0], 'DD/MM/YY').format(ISO_DATE_FORMAT);
+    const date = moment(txn[0], 'DD/MM/YY').toISOString();
     const amount = parseInt(txn[3], 10);
     return {
       type: NORMAL_TXN_TYPE,
