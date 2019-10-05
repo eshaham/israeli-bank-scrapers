@@ -1,11 +1,11 @@
 import LeumiScraper from './leumi';
 import {
-  maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
+  maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, saveAccountsAsCSV, getDistFolder,
 } from '../../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
-import { LOGIN_RESULT } from '../constants';
 
-const COMPANY_ID = 'leumi'; // TODO this property should be hard-coded in the provider
+const COMPANY_ID = 'leumi';
+const DATA_TYPE = 'legacy';
 const testsConfig = getTestsConfig();
 
 describe('Leumi legacy scraper', () => {
@@ -19,22 +19,7 @@ describe('Leumi legacy scraper', () => {
     expect(SCRAPERS.leumi.loginFields).toContain('password');
   });
 
-  maybeTestCompanyAPI(COMPANY_ID, (config) => config.companyAPI.invalidPassword)('should fail on invalid user/password"', async () => {
-    const options = {
-      ...testsConfig.options,
-      companyId: COMPANY_ID,
-    };
-
-    const scraper = new LeumiScraper(options);
-
-    const result = await scraper.scrape({ username: 'e10s12', password: '3f3ss3d' });
-
-    expect(result).toBeDefined();
-    expect(result.success).toBeFalsy();
-    expect(result.errorType).toBe(LOGIN_RESULT.INVALID_PASSWORD);
-  });
-
-  maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions"', async () => {
+  maybeTestCompanyAPI(COMPANY_ID, DATA_TYPE)('should scrape transactions"', async () => {
     const options = {
       ...testsConfig.options,
       companyId: COMPANY_ID,
@@ -47,6 +32,7 @@ describe('Leumi legacy scraper', () => {
     expect(error).toBe('');
     expect(result.success).toBeTruthy();
 
-    exportTransactions(COMPANY_ID, result.accounts || []);
+    const csvDistFolder = getDistFolder(DATA_TYPE);
+    saveAccountsAsCSV(csvDistFolder, COMPANY_ID, result.accounts || []);
   });
 });
