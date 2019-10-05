@@ -38,10 +38,13 @@ describe('Hapoalim scrape transactions', () => {
       scrapeTransactionsAdapter({
         startDate,
       }),
+    ];
+
+    const cleanupAdapters = [
       closeBrowserAdapter(),
     ];
 
-    const result = await runner(runnerOptions, runnerAdapters);
+    const result = await runner(runnerOptions, runnerAdapters, cleanupAdapters);
 
     if (!result.success) {
       throw new Error(result.errorMessage);

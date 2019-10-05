@@ -110,7 +110,7 @@ function validateAdapters(adapters) {
   return errors;
 }
 
-export default async function runner(options, adapters) {
+export default async function runner(options, adapters, cleanupAdapters = []) {
   const validations = validateAdapters(adapters);
 
   if (validations.length > 0) {
@@ -125,12 +125,14 @@ export default async function runner(options, adapters) {
 
   let result = Promise.resolve();
 
+  // run adapters
   adapters.forEach(adapter => {
     result = result.then(() => {
       return runAdapter(runnerContext, adapter);
     });
   });
 
+  // prepare result
   result = result
     .then(() => {
       return {
@@ -149,6 +151,23 @@ export default async function runner(options, adapters) {
         errorMessage: e.message,
       };
     });
+
+  // run cleanup adapters
+  cleanupAdapters.forEach(adapter => {
+    result = result.then((result) => {
+      return runAdapter(runnerContext, adapter)
+        .then(() => {
+          return result; // ignore result of cleanup adapter
+        })
+        .catch(() => {
+          return result; // ignore errors origin from cleanup adapter
+        });
+    });
+  });
+
+  result = result.then((response) => {
+    return response;
+  });
 
   return result;
 }

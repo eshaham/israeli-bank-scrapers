@@ -32,10 +32,13 @@ describe('Hapoalim login', () => {
       loginAdapter({
         credentials: { username: 'e10s12', password: '3f3ss3d' },
       }),
+    ];
+
+    const cleanupAdapters = [
       closeBrowserAdapter(),
     ];
 
-    const result = await runner(runnerOptions, runnerAdapters);
+    const result = await runner(runnerOptions, runnerAdapters, cleanupAdapters);
 
     expect(result).toBeDefined();
     expect(result.success).toBe(false);
@@ -60,10 +63,14 @@ describe('Hapoalim login', () => {
       loginAdapter({
         credentials: testsConfig.credentials.hapoalim,
       }),
+    ];
+
+    const cleanupAdapters = [
       closeBrowserAdapter(),
     ];
 
-    const result = await runner(runnerOptions, runnerAdapters);
+    const result = await runner(runnerOptions, runnerAdapters, cleanupAdapters);
+
     expect(result.success).toBe(true);
   });
 });
