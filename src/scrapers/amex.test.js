@@ -1,11 +1,11 @@
 import AMEXScraper from './amex';
 import {
-  maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
+  maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, saveAccountsAsCSV, getDistFolder,
 } from '../../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
 import { LOGIN_RESULT } from '../constants';
 
-const COMPANY_ID = 'amex'; // TODO this property should be hard-coded in the provider
+const COMPANY_ID = 'amex';
 const testsConfig = getTestsConfig();
 
 describe('AMEX legacy scraper', () => {
@@ -20,7 +20,7 @@ describe('AMEX legacy scraper', () => {
     expect(SCRAPERS.amex.loginFields).toContain('password');
   });
 
-  maybeTestCompanyAPI(COMPANY_ID, (config) => config.companyAPI.invalidPassword)('should fail on invalid user/password"', async () => {
+  maybeTestCompanyAPI(COMPANY_ID, 'invalidLogin')('should fail on invalid user/password"', async () => {
     const options = {
       ...testsConfig.options,
       companyId: COMPANY_ID,
@@ -35,7 +35,7 @@ describe('AMEX legacy scraper', () => {
     expect(result.errorType).toBe(LOGIN_RESULT.INVALID_PASSWORD);
   });
 
-  maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions"', async () => {
+  maybeTestCompanyAPI(COMPANY_ID, 'legacy')('should scrape transactions"', async () => {
     const options = {
       ...testsConfig.options,
       companyId: COMPANY_ID,
@@ -48,6 +48,7 @@ describe('AMEX legacy scraper', () => {
     expect(error).toBe('');
     expect(result.success).toBeTruthy();
 
-    exportTransactions(COMPANY_ID, result.accounts || []);
+    const csvDistFolder = getDistFolder('transactions');
+    saveAccountsAsCSV(csvDistFolder, COMPANY_ID, result.accounts || []);
   });
 });
