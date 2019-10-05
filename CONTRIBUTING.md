@@ -65,24 +65,13 @@ To save unit test scraper results provide a valid path in test configurations pr
 #### How can I run tests with CI/CD services?
 You can use environment variables instead of a local file to provide the tests configuration.
 
-copy and adjust the json below with relevant credentials and assign it to environment variable named `TESTS_CONFIG`. Note that this must be a valid json string otherwise it will fail during json parsing.
- ```
- {
-   "options": {
-     "startDate": "2019-06-01",
-     "combineInstallments": false,
-     "showBrowser": true,
-     "verbose": false
-   },
-   "credentials": {
-     "leumi": { "username": "demouser", "password": "demopassword" }
-   },
-   "companyAPI": {
-     "enabled": true,
-     "invalidPassword": false
-   }
- }
- ```
+1. Copy to clipboard the exported object from file `.tests-config.tpl.js` - line 4. **Make sure you copy the template file and not the local file with your credentials.**
+2. **Read the next step before performing this one**: Paste the exported object into [this online javascript to json converter](https://www.convertonline.io/convert/js-to-json) (or [this converter](https://bl.ocks.org/domoritz/259b881c162c5618c7b8c22682521769)). 
+3. You will see a syntax error of the json file, to fix it assign value to property `startDate` like `2019-08-01`.
+4. Copy the json content and adjust it with relevant information.
+5. Assign it to environment variable named `TESTS_CONFIG`. 
+
+Make sure you perform the steps above correctlt. It must be a valid json string otherwise it will fail during json parsing.
 
 If you wish to try it from cli (mac os), you should either create a one liner json configuration or use cat to provide multiline value:
 
@@ -186,7 +175,7 @@ You can override this async function however way you want, as long as your retur
       status: string //can either be 'completed' or 'pending'
     }],
   }],
-  errorType: "invalidPassword"|"changePassword"|"timeout"|"generic", // only on success=false
-  errorMessage: string, // only on success=false
+  errorType: "INVALID_PASSWORD"|"CHANGE_PASSWORD"|"TIMEOUT"|"UNKNOWN_ERROR"|"GENERIC", // only on success=false
+    errorMessage: string, // only on success=false
 }
 ```
