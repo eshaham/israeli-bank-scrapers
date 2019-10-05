@@ -58,7 +58,6 @@ function createHeadersFromRequest(request) {
 
 function convertTransactions(txns) {
   return txns.map((row) => {
-    // row.MC02PeulaTaaEZ: 2019-09-10T00:00:00
     const txnDate = moment(row.MC02PeulaTaaEZ, moment.HTML5_FMT.DATETIME_LOCAL_SECONDS)
       .toISOString();
 
