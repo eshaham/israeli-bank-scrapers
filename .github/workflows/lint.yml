@@ -1,6 +1,6 @@
 name: lint
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   lint:
@@ -15,3 +15,4 @@ jobs:
     
     - name: Run lint
       run: npm run lint
+      
