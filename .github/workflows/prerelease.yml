@@ -8,7 +8,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - name: Make prerelease to npm
+      - name: prepare default version
+        run: npm run prepare:default
+      - name: Make prerelease of default version to npm
+        uses: epeli/npm-release@bc78fc8
+        with:
+          type: prerelease
+          token: ${{ secrets.NPM_TOKEN }}
+      - name: prepare core version
+        run: |
+          npm run reset
+          npm run prepare:core
+      - name: Make prerelease of core version to npm
         uses: epeli/npm-release@bc78fc8
         with:
           type: prerelease
