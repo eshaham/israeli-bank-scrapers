@@ -2,7 +2,10 @@
   "rules": {
     "arrow-body-style": 0,
     "no-shadow": 0,
+    "no-continue": 0,
     "no-await-in-loop": 0,
+    "no-underscore-dangle": 0,
+    "max-classes-per-file": 0,
     "no-restricted-syntax": [
       "error",
       "ForInStatement",
@@ -16,7 +19,8 @@
       "ignoreRegExpLiterals": true,
       "ignoreStrings": true,
       "ignoreTemplateLiterals": true
-    }]
+    }],
+    "arrow-parens": ["off"]
   },
   "globals": {
     "document": true,
