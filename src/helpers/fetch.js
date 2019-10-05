@@ -36,11 +36,17 @@ export async function fetchPost(url, data, extraHeaders) {
   return result.json();
 }
 
-export async function fetchGetWithinPage(page, url) {
-  return page.evaluate((url) => {
+export async function fetchGetWithinPage(page, url, extraHeaders) {
+  return page.evaluate((url, extraHeaders) => {
+    // eslint-disable-next-line prefer-object-spread
+    const headers = extraHeaders ? Object.assign(
+      { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+      extraHeaders,
+    ) : undefined;
     return new Promise((resolve, reject) => {
       fetch(url, {
         credentials: 'include',
+        headers: new Headers(headers),
       }).then((result) => {
         if (result.status === 204) {
           resolve(null);
@@ -51,7 +57,7 @@ export async function fetchGetWithinPage(page, url) {
         reject(e);
       });
     });
-  }, url);
+  }, url, extraHeaders);
 }
 
 export async function fetchPostWithinPage(page, url, data, extraHeaders = {}) {
