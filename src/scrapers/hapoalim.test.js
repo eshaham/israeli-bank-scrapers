@@ -1,11 +1,12 @@
 import HapoalimScraper from './hapoalim';
 import {
-  maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
+  maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, saveAccountsAsCSV, getDistFolder,
 } from '../../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
 import { LOGIN_RESULT } from '../constants';
 
-const COMPANY_ID = 'hapoalim'; // TODO this property should be hard-coded in the provider
+const COMPANY_ID = 'hapoalim';
+const DATA_TYPE = 'legacy';
 const testsConfig = getTestsConfig();
 
 describe('Hapoalim legacy scraper', () => {
@@ -19,7 +20,7 @@ describe('Hapoalim legacy scraper', () => {
     expect(SCRAPERS.hapoalim.loginFields).toContain('password');
   });
 
-  maybeTestCompanyAPI(COMPANY_ID, (config) => config.companyAPI.invalidPassword)('should fail on invalid user/password"', async () => {
+  maybeTestCompanyAPI(COMPANY_ID, 'invalidLogin')('should fail on invalid user/password"', async () => {
     const options = {
       ...testsConfig.options,
       companyId: COMPANY_ID,
@@ -34,7 +35,7 @@ describe('Hapoalim legacy scraper', () => {
     expect(result.errorType).toBe(LOGIN_RESULT.INVALID_PASSWORD);
   });
 
-  maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions"', async () => {
+  maybeTestCompanyAPI(COMPANY_ID, DATA_TYPE)('should scrape transactions"', async () => {
     const options = {
       ...testsConfig.options,
       companyId: COMPANY_ID,
@@ -47,6 +48,7 @@ describe('Hapoalim legacy scraper', () => {
     expect(error).toBe('');
     expect(result.success).toBeTruthy();
 
-    exportTransactions(COMPANY_ID, result.accounts || []);
+    const csvDistFolder = getDistFolder(DATA_TYPE);
+    saveAccountsAsCSV(csvDistFolder, COMPANY_ID, result.accounts || []);
   });
 });
