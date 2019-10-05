@@ -9,12 +9,13 @@ import { fetchPostWithinPage } from '../helpers/fetch';
 import { waitForNavigation } from '../helpers/navigation';
 import { pageEvalAll } from '../helpers/elements-interactions';
 
-const BASE_URL = 'https://www.mizrahi-tefahot.co.il';
-const LOGIN_URL = `${BASE_URL}/he/bank/Pages/Default.aspx`;
+const BASE_WEBSITE_URL = 'https://www.mizrahi-tefahot.co.il';
+const LOGIN_URL = `${BASE_WEBSITE_URL}/he/bank/Pages/Default.aspx`;
+const BASE_APP_URL = 'https://mto.mizrahi-tefahot.co.il/';
 const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/ngOnline\/index\.html#\/main\/uis/;
-const OSH_PAGE = 'https://mto.mizrahi-tefahot.co.il/ngOnline/index.html#/main/uis/osh/p428/';
-const TRANSACTIONS_REQUEST_URL = 'https://mto.mizrahi-tefahot.co.il/Online/api/SkyOSH/get428Index';
-const PENDING_TRANSACTIONS_PAGE = 'https://mto.mizrahi-tefahot.co.il/Online/Osh/p420.aspx';
+const OSH_PAGE = `${BASE_APP_URL}ngOnline/index.html#/main/uis/osh/p428/`;
+const TRANSACTIONS_REQUEST_URL = `${BASE_APP_URL}Online/api/SkyOSH/get428Index`;
+const PENDING_TRANSACTIONS_PAGE = `${BASE_APP_URL}Online/Osh/p420.aspx`;
 const DATE_FORMAT = 'DD/MM/YYYY';
 const MAX_ROWS_PER_REQUEST = 10000000000;
 
@@ -28,7 +29,7 @@ function createLoginFields(credentials) {
 function getPossibleLoginResults() {
   const urls = {};
   urls[LOGIN_RESULT.SUCCESS] = [AFTER_LOGIN_BASE_URL];
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${BASE_URL}/login/loginMTO.aspx`];
+  urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${BASE_WEBSITE_URL}/login/loginMTO.aspx`];
   urls[LOGIN_RESULT.CHANGE_PASSWORD] = [
     `${AFTER_LOGIN_BASE_URL}/main/uis/ge/changePassword/`,
   ];
