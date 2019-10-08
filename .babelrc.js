@@ -21,6 +21,7 @@ module.exports = {
       'tests/**/*',
     ],
   "plugins": [
+    "@babel/plugin-proposal-class-properties",
     importVisitor(node => {
       if (packageJson.name !== 'israeli-bank-scrapers-core') {
         return;
