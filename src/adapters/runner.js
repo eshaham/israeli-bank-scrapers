@@ -23,23 +23,23 @@ class AdapterContext {
     this._adapterName = adapterName;
   }
 
-  addAdapterData(adapterData) {
+  addAdapterData = (adapterData) => {
     this._runnerContext.data = _.merge(this._runnerContext.data, adapterData);
   }
 
-  hasSessionData(key) {
+  hasSessionData = (key) => {
     return typeof this._runnerContext.sessionData[key] !== 'undefined';
   }
 
-  getSessionData(key) {
+  getSessionData = (key) => {
     return this._runnerContext.sessionData[key];
   }
 
-  setSessionData(key, value) {
+  setSessionData = (key, value) => {
     this._runnerContext.sessionData[key] = value;
   }
 
-  notifyProgress(state) {
+  notifyProgress = (state) => {
     this._runnerContext.notifyProgress(this._adapterName, state);
   }
 }
