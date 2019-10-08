@@ -34,6 +34,12 @@ function handleLoginResult(loginResult, emitProgress) {
         success: false,
         errorType: loginResult,
       };
+    case LOGIN_RESULT.UNKNOWN_ERROR:
+      emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_FAILED);
+      return {
+        success: false,
+        errorType: LOGIN_RESULT.UNKNOWN_ERROR,
+      };
     default:
       throw new Error(`unexpected login result "${loginResult}"`);
   }
