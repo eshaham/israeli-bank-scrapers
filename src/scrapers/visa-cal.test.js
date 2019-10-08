@@ -3,9 +3,9 @@ import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, saveAccountsAsCSV, getDistFolder,
 } from '../../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
-import { LOGIN_RESULT } from '../constants';
 
 const COMPANY_ID = 'visaCal';
+const DATA_TYPE = 'legacy';
 const testsConfig = getTestsConfig();
 
 describe('VisaCal legacy scraper', () => {
@@ -19,22 +19,7 @@ describe('VisaCal legacy scraper', () => {
     expect(SCRAPERS.visaCal.loginFields).toContain('password');
   });
 
-  maybeTestCompanyAPI(COMPANY_ID, 'invalidLogin')('should fail on invalid user/password"', async () => {
-    const options = {
-      ...testsConfig.options,
-      companyId: COMPANY_ID,
-    };
-
-    const scraper = new VisaCalScraper(options);
-
-    const result = await scraper.scrape({ username: 'e10s12', password: '3f3ss3d' });
-
-    expect(result).toBeDefined();
-    expect(result.success).toBeFalsy();
-    expect(result.errorType).toBe(LOGIN_RESULT.INVALID_PASSWORD);
-  });
-
-  maybeTestCompanyAPI(COMPANY_ID, 'legacy')('should scrape transactions"', async () => {
+  maybeTestCompanyAPI(COMPANY_ID, DATA_TYPE)('should scrape transactions"', async () => {
     const options = {
       ...testsConfig.options,
       companyId: COMPANY_ID,
@@ -47,7 +32,7 @@ describe('VisaCal legacy scraper', () => {
     expect(error).toBe('');
     expect(result.success).toBeTruthy();
 
-    const csvDistFolder = getDistFolder('transactions');
+    const csvDistFolder = getDistFolder(DATA_TYPE);
     saveAccountsAsCSV(csvDistFolder, COMPANY_ID, result.accounts || []);
   });
 });
