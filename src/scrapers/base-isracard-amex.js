@@ -13,7 +13,7 @@ import {
   ALT_SHEKEL_CURRENCY,
   TRANSACTION_STATUS,
 } from '../constants';
-import getAllMonthMoments from '../helpers/dates';
+import { getAllMonthMoments } from '../helpers/dates';
 import { fixInstallments, filterOldTransactions } from '../helpers/transactions';
 
 const COUNTRY_CODE = '212';

@@ -9,7 +9,7 @@ import {
   INSTALLMENTS_TXN_TYPE,
   TRANSACTION_STATUS,
 } from '../constants';
-import getAllMonthMoments from '../helpers/dates';
+import { getAllMonthMoments } from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
 
 const BASE_ACTIONS_URL = 'https://online.max.co.il';
