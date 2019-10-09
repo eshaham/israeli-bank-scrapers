@@ -24,9 +24,10 @@ export default {
   },
   companyAPI: {
     dist: '', // optional - provide valid path to save scraper results
-    legacy: false,  // execute legacy scrapers
-    login: false, // execute login adapters with valid credentials
-    transactions: false, // execute scrape transactions adapters
-    invalidLogin: false, // execute login adapters with invalid credentials
+    legacy: false,  // enable legacy scrapers
+    login: false, // enable login adapters with valid credentials
+    transactions: false, // enable scrape transactions adapters
+    payments: false, // enable scrape payments adapters
+    invalidLogin: false, // enable login adapters with invalid credentials
   },
 };

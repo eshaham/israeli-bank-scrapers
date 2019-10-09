@@ -127,7 +127,7 @@ export function getUniqueDistFolder(subFolder) {
   return getDistFolder(uniqueFolder);
 }
 
-export function saveAccountsAsCSV(distFolder, fileName, accounts) {
+export function saveDataAsCSV(distFolder, fileName, accounts, accountParser) {
   if (!distFolder) {
     console.error('cannot save accounts as csv, dist folder is required');
     return;
@@ -140,14 +140,8 @@ export function saveAccountsAsCSV(distFolder, fileName, accounts) {
 
     data = [
       ...data,
-      ...account.txns.map((txn) => {
-        return {
-          account: account.accountNumber,
-          ...txn,
-          date: moment(txn.date).format('DD/MM/YYYY'),
-          processedDate: moment(txn.processedDate).format('DD/MM/YYYY'),
-        };
-      })];
+      ...accountParser(account),
+    ];
   }
 
   if (data.length === 0) {
@@ -162,4 +156,30 @@ export function saveAccountsAsCSV(distFolder, fileName, accounts) {
   const filePath = `${path.join(distFolder, fileName)}.csv`;
   fs.writeFileSync(filePath, csv);
   console.log(`created file '${filePath}'`);
+}
+
+// TODO sakal change to saveTransactionsAsCSV
+export function saveAccountsAsCSV(distFolder, fileName, accounts) {
+  return saveDataAsCSV(distFolder, fileName, accounts, account => {
+    return account.txns.map((txn) => {
+      return {
+        accountNumber: account.accountNumber,
+        ...txn,
+        date: moment(txn.date).format('DD/MM/YYYY'),
+        processedDate: moment(txn.processedDate).format('DD/MM/YYYY'),
+      };
+    });
+  });
+}
+
+export function savePaymentsAsCSV(distFolder, fileName, accounts) {
+  return saveDataAsCSV(distFolder, fileName, accounts, account => {
+    return account.payments.map((payment) => {
+      return {
+        accountNumber: account.accountNumber,
+        ...payment,
+        date: moment(payment.date).format('DD/MM/YYYY'),
+      };
+    });
+  });
 }

@@ -1,21 +1,16 @@
 import moment from 'moment';
 import _ from 'lodash';
-import buildUrl from 'build-url';
 import {
-  SHEKEL_CURRENCY,
   NORMAL_TXN_TYPE,
   TRANSACTION_STATUS,
   INSTALLMENTS_TXN_TYPE,
-  SHEKEL_CURRENCY_SYMBOL, DOLLAR_CURRENCY_SYMBOL, DOLLAR_CURRENCY,
 } from '../../constants';
-import { HEADER_SITE } from './definitions';
+import { convertCurrency } from './adapterHelpers/currency';
+import { HEADER_SITE, BASE_URL, DATE_FORMAT } from './definitions';
+import { getBankDebitsUrl, getTransactionsUrl } from './adapterHelpers/urls';
 import { filterOldTransactions, fixInstallments, sortTransactionsByDate } from '../../helpers/transactions';
 import { fetchGet } from '../../helpers/fetch';
-import { validateStartDate } from '../../helpers/dates';
-
-
-const BASE_URL = 'https://cal4u.cal-online.co.il/Cal4U';
-const DATE_FORMAT = 'DD/MM/YYYY';
+import { validateInThePastYear } from '../../helpers/dates';
 
 const NO_DATA_FOUND_MSG = 'לא נמצאו חיובים לטווח תאריכים זה';
 
@@ -30,34 +25,6 @@ const MEMBERSHIP_FEE_TYPE_CODE = '67';
 const SERVICES_REFUND_TYPE_CODE = '71';
 const SERVICES_TYPE_CODE = '72';
 const REFUND_TYPE_CODE_2 = '76';
-
-
-function getBankDebitsUrl(accountId) {
-  const toDate = moment().add(2, 'months');
-  const fromDate = moment().subtract(6, 'months');
-
-  return buildUrl(BASE_URL, {
-    path: `CalBankDebits/${accountId}`,
-    queryParams: {
-      DebitLevel: 'A',
-      DebitType: '2',
-      FromMonth: (fromDate.month() + 1).toString().padStart(2, '0'),
-      FromYear: fromDate.year().toString(),
-      ToMonth: (toDate.month() + 1).toString().padStart(2, '0'),
-      ToYear: toDate.year().toString(),
-    },
-  });
-}
-
-function getTransactionsUrl(cardId, debitDate) {
-  return buildUrl(BASE_URL, {
-    path: `CalTransactions/${cardId}`,
-    queryParams: {
-      ToDate: debitDate,
-      FromDate: debitDate,
-    },
-  });
-}
 
 function convertTransactionType(txnType) {
   switch (txnType) {
@@ -76,17 +43,6 @@ function convertTransactionType(txnType) {
       return INSTALLMENTS_TXN_TYPE;
     default:
       throw new Error(`unknown transaction type ${txnType}`);
-  }
-}
-
-function convertCurrency(currency) {
-  switch (currency) {
-    case SHEKEL_CURRENCY_SYMBOL:
-      return SHEKEL_CURRENCY;
-    case DOLLAR_CURRENCY_SYMBOL:
-      return DOLLAR_CURRENCY;
-    default:
-      return currency;
   }
 }
 
@@ -141,7 +97,8 @@ function prepareTransactions(txns, startMoment, combineInstallments) {
 }
 
 async function getBankDebits(authHeader, accountId) {
-  const bankDebitsUrl = getBankDebitsUrl(accountId);
+  const fromDate = moment().subtract(6, 'months');
+  const bankDebitsUrl = getBankDebitsUrl(accountId, fromDate);
   return fetchGet(bankDebitsUrl, authHeader);
 }
 
@@ -223,7 +180,7 @@ function scrapeTransactionsAdapter(options) {
     name: 'scrapeTransactions(visaCal)',
     validate: (context) => {
       const result = [];
-      const [startDateValidationMessage] = validateStartDate(options.startDate);
+      const [startDateValidationMessage] = validateInThePastYear(options.startDate);
 
       if (startDateValidationMessage) {
         result.push(startDateValidationMessage);
