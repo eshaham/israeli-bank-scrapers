@@ -7,7 +7,7 @@ import {
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../../constants';
 import { mapAccounts, navigateToAccountTransactions } from './adapterHelpers/accounts';
 import { DATE_FORMAT } from './definitions';
-import { validateStartDate } from '../../helpers/dates';
+import { validateInThePastYear } from '../../helpers/dates';
 
 const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא קיימות תנועות מתאימות על פי הסינון שהוגדר';
 
@@ -180,7 +180,7 @@ function scrapeTransactionsAdapter(options) {
     name: 'scrapeTransactions(leumi)',
     validate: (context) => {
       const result = [];
-      const [startDateValidationMessage] = validateStartDate(options.startDate);
+      const [startDateValidationMessage] = validateInThePastYear(options.startDate);
 
       if (startDateValidationMessage) {
         result.push(startDateValidationMessage);

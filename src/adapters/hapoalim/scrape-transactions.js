@@ -5,7 +5,7 @@ import {
   convertTransaction,
 } from './adapterHelpers/transactions';
 import { getAPISiteUrl } from './adapterHelpers/api';
-import validateStartDate from './adapterHelpers/scraping';
+import { validateInThePastYear } from '../../helpers/dates';
 
 
 async function getAccountTransactions(page, accountInfo, startDate, apiSiteUrl) {
@@ -31,7 +31,7 @@ function scrapeTransactionsAdapter(options) {
     validate: (context) => {
       const result = [];
 
-      const [startDateValidationMessage] = validateStartDate(options.startDate);
+      const [startDateValidationMessage] = validateInThePastYear(options.startDate);
 
       if (startDateValidationMessage) {
         result.push(startDateValidationMessage);
