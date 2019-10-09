@@ -1,6 +1,6 @@
 import OtsarHahayalScraper from './otsar-hahayal';
 import {
-  maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, saveAccountsAsCSV, getDistFolder,
+  maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, saveTransactionsAsCSV, getDistFolder,
 } from '../../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
 import { LOGIN_RESULT } from '../constants';
@@ -48,6 +48,6 @@ describe('OtsarHahayal legacy scraper', () => {
     expect(result.success).toBeTruthy();
 
     const csvDistFolder = getDistFolder('transactions');
-    saveAccountsAsCSV(csvDistFolder, COMPANY_ID, result.accounts || []);
+    saveTransactionsAsCSV(csvDistFolder, COMPANY_ID, result.accounts || []);
   });
 });

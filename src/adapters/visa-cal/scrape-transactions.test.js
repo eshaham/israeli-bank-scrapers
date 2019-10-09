@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig,
-  getDistFolder, saveAccountsAsCSV,
+  getDistFolder, saveTransactionsAsCSV,
 } from '../../../tests/tests-utils';
 import loginAdapter from './login';
 import scrapeTransactionsAdapter from './scrape-transactions';
@@ -48,6 +48,6 @@ describe('VisaCal scrape transactions', () => {
     }
 
     const csvDistFolder = getDistFolder(DATA_TYPE);
-    saveAccountsAsCSV(csvDistFolder, COMPANY_ID, accounts);
+    saveTransactionsAsCSV(csvDistFolder, COMPANY_ID, accounts);
   });
 });

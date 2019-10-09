@@ -158,8 +158,7 @@ export function saveDataAsCSV(distFolder, fileName, accounts, accountParser) {
   console.log(`created file '${filePath}'`);
 }
 
-// TODO sakal change to saveTransactionsAsCSV
-export function saveAccountsAsCSV(distFolder, fileName, accounts) {
+export function saveTransactionsAsCSV(distFolder, fileName, accounts) {
   return saveDataAsCSV(distFolder, fileName, accounts, account => {
     return account.txns.map((txn) => {
       return {

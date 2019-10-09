@@ -1,6 +1,6 @@
 import HapoalimScraper from './hapoalim';
 import {
-  maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, saveAccountsAsCSV, getDistFolder,
+  maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, saveTransactionsAsCSV, getDistFolder,
 } from '../../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
 import { LOGIN_RESULT } from '../constants';
@@ -49,6 +49,6 @@ describe('Hapoalim legacy scraper', () => {
     expect(result.success).toBeTruthy();
 
     const csvDistFolder = getDistFolder(DATA_TYPE);
-    saveAccountsAsCSV(csvDistFolder, COMPANY_ID, result.accounts || []);
+    saveTransactionsAsCSV(csvDistFolder, COMPANY_ID, result.accounts || []);
   });
 });

@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig,
-  getDistFolder, saveAccountsAsCSV,
+  getDistFolder, saveTransactionsAsCSV,
 } from '../../../tests/tests-utils';
 import { createBrowserAdapter, createBrowserPageAdapter, closeBrowserAdapter } from '../puppeteer';
 import loginAdapter from './login';
@@ -58,6 +58,6 @@ describe('Hapoalim scrape transactions', () => {
     }
 
     const csvDistFolder = getDistFolder(DATA_TYPE);
-    saveAccountsAsCSV(csvDistFolder, COMPANY_ID, accounts);
+    saveTransactionsAsCSV(csvDistFolder, COMPANY_ID, accounts);
   });
 });

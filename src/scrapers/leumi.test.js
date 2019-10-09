@@ -1,6 +1,6 @@
 import LeumiScraper from './leumi';
 import {
-  maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, saveAccountsAsCSV, getDistFolder,
+  maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, saveTransactionsAsCSV, getDistFolder,
 } from '../../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
 
@@ -33,6 +33,6 @@ describe('Leumi legacy scraper', () => {
     expect(result.success).toBeTruthy();
 
     const csvDistFolder = getDistFolder(DATA_TYPE);
-    saveAccountsAsCSV(csvDistFolder, COMPANY_ID, result.accounts || []);
+    saveTransactionsAsCSV(csvDistFolder, COMPANY_ID, result.accounts || []);
   });
 });
