@@ -26,7 +26,7 @@ async function waitForPostLogin(page) {
 
 function getPossibleLoginResults() {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = [/ebanking\/SO\/SPA.aspx/];
+  urls[LOGIN_RESULT.SUCCESS] = [/ebanking\/SO\/SPA.aspx/i];
   urls[LOGIN_RESULT.INVALID_PASSWORD] = [/InternalSite\/CustomUpdate\/leumi\/LoginPage.ASP/];
   // urls[LOGIN_RESULT.CHANGE_PASSWORD] = ``; // TODO should wait until my password expires
   return urls;

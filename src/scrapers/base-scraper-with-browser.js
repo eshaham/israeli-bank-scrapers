@@ -45,6 +45,7 @@ function handleLoginResult(scraper, loginResult) {
       return {
         success: false,
         errorType: loginResult,
+        errorMessage: `Login failed with ${loginResult} error`,
       };
     case LOGIN_RESULT.CHANGE_PASSWORD:
       scraper.emitProgress(SCRAPE_PROGRESS_TYPES.CHANGE_PASSWORD);
