@@ -9,6 +9,10 @@ export const SCRAPERS = {
     name: 'Bank Leumi',
     loginFields: ['username', PASSWORD_FIELD],
   },
+  mizrahi: {
+    name: 'Mizrahi Bank',
+    loginFields: ['username', PASSWORD_FIELD],
+  },
   discount: {
     name: 'Discount Bank',
     loginFields: ['id', PASSWORD_FIELD, 'num'],
