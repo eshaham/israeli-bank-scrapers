@@ -5,7 +5,7 @@ export default {
   options: { // options object that is passed to the scrapers. see more in readme.md file
     startDate,
     combineInstallments: false,
-    showBrowser: true,
+    showBrowser: false,
     verbose: false,
   },
   credentials: { // commented companies will be skipped automatically, uncomment those you wish to test
