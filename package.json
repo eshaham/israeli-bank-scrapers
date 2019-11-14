@@ -9,7 +9,7 @@
   "main": "lib/index.js",
   "scripts": {
     "clean": "rimraf lib",
-    "test": "cross-env BABEL_ENV=test jest -i --debug",
+    "test": "cross-env BABEL_ENV=test jest --maxWorkers=2 -i --debug",
     "test:ci": "ncp tests/.tests-config.tpl.js tests/.tests-config.js && npm run test",
     "lint": "eslint src",
     "build": "npm run clean && babel src --out-dir lib",
