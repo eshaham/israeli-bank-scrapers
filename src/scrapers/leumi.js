@@ -22,7 +22,7 @@ function getTransactionsUrl() {
 
 function getPossibleLoginResults() {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = [/ebanking\/SO\/SPA.aspx/];
+  urls[LOGIN_RESULT.SUCCESS] = [/ebanking\/SO\/SPA.aspx/i];
   urls[LOGIN_RESULT.INVALID_PASSWORD] = [/InternalSite\/CustomUpdate\/leumi\/LoginPage.ASP/];
   // urls[LOGIN_RESULT.CHANGE_PASSWORD] = ``; // TODO should wait until my password expires
   return urls;
@@ -71,7 +71,7 @@ function convertTransactions(txns) {
 async function extractCompletedTransactionsFromPage(page) {
   const txns = [];
   const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #ctlActivityTable tr td', [], (tds) => {
-    return tds.map(td => ({
+    return tds.map((td) => ({
       classList: td.getAttribute('class'),
       innerText: td.innerText,
     }));
@@ -115,7 +115,7 @@ async function extractCompletedTransactionsFromPage(page) {
 async function extractPendingTransactionsFromPage(page) {
   const txns = [];
   const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #trTodayActivityNapaTableUpper tr td', [], (tds) => {
-    return tds.map(td => ({
+    return tds.map((td) => ({
       classList: td.getAttribute('class'),
       innerText: td.innerText,
     }));

@@ -15,6 +15,10 @@ async function clickButton(page, buttonSelector) {
   await button.click();
 }
 
+async function clickLink(page, aSelector) {
+  await page.$eval(aSelector, (el) => el.click());
+}
+
 async function pageEvalAll(page, selector, defaultResult, callback) {
   let result = defaultResult;
   try {
@@ -40,7 +44,7 @@ async function dropdownSelect(page, selectSelector, value) {
 async function dropdownElements(page, selector) {
   const options = await page.evaluate((optionSelector) => {
     return Array.from(document.querySelectorAll(optionSelector))
-      .filter(o => o.value)
+      .filter((o) => o.value)
       .map((o) => {
         return {
           name: o.text,
@@ -55,6 +59,7 @@ export {
   waitUntilElementFound,
   fillInput,
   clickButton,
+  clickLink,
   dropdownSelect,
   dropdownElements,
   pageEvalAll,

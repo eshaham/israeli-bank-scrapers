@@ -45,6 +45,7 @@ function handleLoginResult(scraper, loginResult) {
       return {
         success: false,
         errorType: loginResult,
+        errorMessage: `Login failed with ${loginResult} error`,
       };
     case LOGIN_RESULT.CHANGE_PASSWORD:
       scraper.emitProgress(SCRAPE_PROGRESS_TYPES.CHANGE_PASSWORD);
@@ -70,13 +71,18 @@ class BaseScraperWithBrowser extends BaseScraper {
 
     let env = null;
     if (this.options.verbose) {
-      env = Object.assign({ DEBUG: '*' }, process.env);
+      env = { DEBUG: '*', ...process.env };
     }
 
     if (typeof this.options.browser !== 'undefined' && this.options.browser !== null) {
       this.browser = this.options.browser;
     } else {
-      this.browser = await puppeteer.launch({ env, headless: !this.options.showBrowser });
+      const executablePath = this.options.executablePath || undefined;
+      this.browser = await puppeteer.launch({
+        env,
+        headless: !this.options.showBrowser,
+        executablePath,
+      });
     }
 
     const pages = await this.browser.pages();
@@ -94,7 +100,9 @@ class BaseScraperWithBrowser extends BaseScraper {
   async navigateTo(url, page) {
     const pageToUse = page || this.page;
     const response = await pageToUse.goto(url);
-    if (!response || response.status() !== OK_STATUS) {
+
+    // note: response will be null when navigating to same url while changing the hash part. the condition below will always accept null as valid result.
+    if (response !== null && (response === undefined || response.status() !== OK_STATUS)) {
       throw new Error(`Error while trying to navigate to url ${url}`);
     }
   }
