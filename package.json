@@ -10,7 +10,7 @@
   "scripts": {
     "clean": "rimraf lib",
     "test": "cross-env BABEL_ENV=test jest",
-    "test:ci": "cp tests/.tests-config.tpl.js tests/.tests-config.js && npm run test",
+    "test:ci": "ncp tests/.tests-config.tpl.js tests/.tests-config.js && npm run test",
     "lint": "eslint src",
     "build": "npm run clean && babel src --out-dir lib",
     "prebuild": "node utils/update-puppeteer-config.js",
@@ -51,6 +51,7 @@
     "eslint-plugin-import": "^2.14.0",
     "jest": "^24.8.0",
     "json2csv": "^4.2.1",
+    "ncp": "^2.0.0",
     "pre-commit": "^1.2.2",
     "rimraf": "^3.0.0"
   },
