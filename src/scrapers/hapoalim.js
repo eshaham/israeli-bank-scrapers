@@ -7,7 +7,6 @@ import waitUntil from '../helpers/waiting';
 import { NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 
-const BASE_URL = 'https://login.bankhapoalim.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
 
 function convertTransactions(txns) {
@@ -84,56 +83,6 @@ async function fetchPoalimXSRFWithinPage(page, url, pageUuid) {
   return fetchPostWithinPage(page, url, [], headers);
 }
 
-async function fetchAccountData(page, options) {
-  const restContext = await getRestContext(page);
-  const apiSiteUrl = `${BASE_URL}/${restContext}`;
-  const accountDataUrl = `${BASE_URL}/ServerServices/general/accounts`;
-  const accountsInfo = await fetchGetWithinPage(page, accountDataUrl);
-
-  const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
-  const startDate = options.startDate || defaultStartMoment.toDate();
-  const startMoment = moment.max(defaultStartMoment, moment(startDate));
-
-  const startDateStr = startMoment.format(DATE_FORMAT);
-  const endDateStr = moment().format(DATE_FORMAT);
-
-  const accounts = [];
-  for (let accountIndex = 0; accountIndex < accountsInfo.length; accountIndex += 1) {
-    const accountNumber = `${accountsInfo[accountIndex].bankNumber}-${accountsInfo[accountIndex].branchNumber}-${accountsInfo[accountIndex].accountNumber}`;
-
-    const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
-
-    const txnsResult = await fetchPoalimXSRFWithinPage(page, txnsUrl, '/current-account/transactions');
-    let txns = [];
-    if (txnsResult) {
-      txns = convertTransactions(txnsResult.transactions);
-    }
-
-    accounts.push({
-      accountNumber,
-      txns,
-    });
-  }
-
-  const accountData = {
-    success: true,
-    accounts,
-  };
-
-  return accountData;
-}
-
-function getPossibleLoginResults() {
-  const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = [`${BASE_URL}/portalserver/HomePage`, `${BASE_URL}/ng-portals-bt/rb/he/homepage`, `${BASE_URL}/ng-portals/rb/he/homepage`];
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${BASE_URL}/AUTHENTICATE/LOGON?flow=AUTHENTICATE&state=LOGON&errorcode=1.6&callme=false`];
-  urls[LOGIN_RESULT.CHANGE_PASSWORD] = [
-    `${BASE_URL}/MCP/START?flow=MCP&state=START&expiredDate=null`,
-    /\/ABOUTTOEXPIRE\/START/i,
-  ];
-  return urls;
-}
-
 function createLoginFields(credentials) {
   return [
     { selector: '#userID', value: credentials.userCode },
@@ -142,18 +91,84 @@ function createLoginFields(credentials) {
 }
 
 class HapoalimScraper extends BaseScraperWithBrowser {
+  // eslint-disable-next-line class-methods-use-this
+  get baseUrl() {
+    return 'https://login.bankhapoalim.co.il';
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  get portalUrl() {
+    return 'rb';
+  }
+
   getLoginOptions(credentials) {
     return {
-      loginUrl: `${BASE_URL}/cgi-bin/poalwwwc?reqName=getLogonPage`,
+      loginUrl: `${this.baseUrl}/cgi-bin/poalwwwc?reqName=getLogonPage`,
       fields: createLoginFields(credentials),
       submitButtonSelector: '#inputSend',
       postAction: async () => waitForRedirect(this.page),
-      possibleResults: getPossibleLoginResults(),
+      possibleResults: this.getPossibleLoginResults(),
     };
   }
 
   async fetchData() {
-    return fetchAccountData(this.page, this.options, (msg) => this.notify(msg));
+    return this.fetchAccountData(this.page, this.options, (msg) => this.notify(msg));
+  }
+
+  async fetchAccountData(page, options) {
+    const restContext = await getRestContext(page);
+    const apiSiteUrl = `${this.baseUrl}/${restContext}`;
+    const accountDataUrl = `${this.baseUrl}/ServerServices/general/accounts`;
+    const accountsInfo = await fetchGetWithinPage(page, accountDataUrl);
+
+    const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
+    const startDate = options.startDate || defaultStartMoment.toDate();
+    const startMoment = moment.max(defaultStartMoment, moment(startDate));
+
+    const startDateStr = startMoment.format(DATE_FORMAT);
+    const endDateStr = moment().format(DATE_FORMAT);
+
+    const accounts = [];
+    for (let accountIndex = 0; accountIndex < accountsInfo.length; accountIndex += 1) {
+      const account = accountsInfo[accountIndex];
+      const accountNumber = `${account.bankNumber}-${account.branchNumber}-${account.accountNumber}`;
+
+      const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
+
+      const txnsResult = await fetchPoalimXSRFWithinPage(page, txnsUrl, '/current-account/transactions');
+      let txns = [];
+      if (txnsResult) {
+        txns = convertTransactions(txnsResult.transactions);
+      }
+
+      accounts.push({
+        accountNumber,
+        txns,
+      });
+    }
+
+    const accountData = {
+      success: true,
+      accounts,
+    };
+
+    return accountData;
+  }
+
+
+  // eslint-disable-next-line class-methods-use-this
+  getPossibleLoginResults() {
+    const urls = {};
+    urls[LOGIN_RESULT.SUCCESS] = [
+      `${this.baseUrl}/portalserver/HomePage`,
+      `${this.baseUrl}/ng-portals-bt/${this.portalUrl}/he/homepage`,
+      `${this.baseUrl}/ng-portals/${this.portalUrl}/he/homepage`];
+    urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${this.baseUrl}/AUTHENTICATE/LOGON?flow=AUTHENTICATE&state=LOGON&errorcode=1.6&callme=false`];
+    urls[LOGIN_RESULT.CHANGE_PASSWORD] = [
+      `${this.baseUrl}/MCP/START?flow=MCP&state=START&expiredDate=null`,
+      /\/ABOUTTOEXPIRE\/START/i,
+    ];
+    return urls;
   }
 }
 
