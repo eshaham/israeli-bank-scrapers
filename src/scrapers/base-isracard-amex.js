@@ -268,7 +268,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
   }
 
   async fetchData() {
-    const defaultStartMoment = moment().subtract(1, 'years');
+    const defaultStartMoment = moment().subtract(4, 'years');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
