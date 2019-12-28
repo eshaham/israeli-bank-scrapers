@@ -7,12 +7,12 @@ import { handleLoginResult, isValidCredentials } from '../../helpers/login';
 
 const SCRAPER_ID = 'hapoalim';
 
-const submitButtonSelector = '#inputSend';
+const submitButtonSelector = '.login-btn';
 
 function createLoginFields(credentials) {
   return [
-    { selector: '#userID', value: credentials.userCode },
-    { selector: '#userPassword', value: credentials.password },
+    { selector: '#userCode', value: credentials.userCode },
+    { selector: '#password', value: credentials.password },
   ];
 }
 
