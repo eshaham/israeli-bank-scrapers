@@ -14,6 +14,7 @@ export default {
     // leumi: { username: '', password: '' },
     // discount: { id: '', password: '', num: '' },
     // otsarHahayal: { username: '', password: '' },
+    // leumiCard: { username: '', password: '' }, //Deprecated - use 'max' instead
     // max: { username: '', password: '' },
     // visaCal: { username: '', password: '' },
     // isracard: { id: '', password: '', card6Digits: '' },

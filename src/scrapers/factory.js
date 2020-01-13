@@ -25,6 +25,9 @@ export default function createScraper(options) {
       return new OtsarHahayalScraper(options);
     case 'visaCal':
       return new VisaCalScraper(options);
+    case 'leumiCard':
+      console.warn("leumiCard is deprecated, use 'max' instead");
+      return new MaxScraper(options);
     case 'max':
       return new MaxScraper(options);
     case 'isracard':

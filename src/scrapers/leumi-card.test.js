@@ -5,18 +5,18 @@ import {
 import { SCRAPERS } from '../definitions';
 import { LOGIN_RESULT } from '../constants';
 
-const COMPANY_ID = 'max'; // TODO this property should be hard-coded in the provider
+const COMPANY_ID = 'leumiCard'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
 
-describe('Max scraper', () => {
+describe('Leumi Card legacy scraper', () => {
   beforeAll(() => {
     extendAsyncTimeout(); // The default timeout is 5 seconds per async test, this function extends the timeout value
   });
 
   test('should expose login fields in scrapers constant', () => {
-    expect(SCRAPERS.max).toBeDefined();
-    expect(SCRAPERS.max.loginFields).toContain('username');
-    expect(SCRAPERS.max.loginFields).toContain('password');
+    expect(SCRAPERS.leumiCard).toBeDefined();
+    expect(SCRAPERS.leumiCard.loginFields).toContain('username');
+    expect(SCRAPERS.leumiCard.loginFields).toContain('password');
   });
 
   maybeTestCompanyAPI(COMPANY_ID, (config) => config.companyAPI.invalidPassword)('should fail on invalid user/password"', async () => {
@@ -41,7 +41,7 @@ describe('Max scraper', () => {
     };
 
     const scraper = new MaxScraper(options);
-    const result = await scraper.scrape(testsConfig.credentials.max);
+    const result = await scraper.scrape(testsConfig.credentials.leumiCard);
     expect(result).toBeDefined();
     const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
     expect(error).toBe('');
