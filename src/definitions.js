@@ -25,8 +25,8 @@ export const SCRAPERS = {
     name: 'Bank Otsar Hahayal',
     loginFields: ['username', PASSWORD_FIELD],
   },
-  leumiCard: {
-    name: 'Leumi Card',
+  max: {
+    name: 'Max',
     loginFields: ['username', PASSWORD_FIELD],
   },
   visaCal: {
