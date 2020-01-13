@@ -26,7 +26,7 @@ export const SCRAPERS = {
     loginFields: ['username', PASSWORD_FIELD],
   },
   leumiCard: {
-    name: 'leumiCard',
+    name: 'leumi Card',
     loginFields: ['username', PASSWORD_FIELD],
   },
   max: {
