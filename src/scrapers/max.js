@@ -195,7 +195,7 @@ function createLoginFields(inputGroupName, credentials) {
   ];
 }
 
-class LeumiCardScraper extends BaseScraperWithBrowser {
+class MaxScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials) {
     const inputGroupName = 'PlaceHolderMain_CardHoldersLogin1';
     return {
@@ -228,4 +228,4 @@ class LeumiCardScraper extends BaseScraperWithBrowser {
   }
 }
 
-export default LeumiCardScraper;
+export default MaxScraper;

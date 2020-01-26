@@ -1,22 +1,22 @@
-import LeumiCardScraper from './leumi-card';
+import MaxScraper from './max';
 import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
 } from '../../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
 import { LOGIN_RESULT } from '../constants';
 
-const COMPANY_ID = 'leumiCard'; // TODO this property should be hard-coded in the provider
+const COMPANY_ID = 'max'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
 
-describe('Leumi Card legacy scraper', () => {
+describe('Max scraper', () => {
   beforeAll(() => {
     extendAsyncTimeout(); // The default timeout is 5 seconds per async test, this function extends the timeout value
   });
 
   test('should expose login fields in scrapers constant', () => {
-    expect(SCRAPERS.leumiCard).toBeDefined();
-    expect(SCRAPERS.leumiCard.loginFields).toContain('username');
-    expect(SCRAPERS.leumiCard.loginFields).toContain('password');
+    expect(SCRAPERS.max).toBeDefined();
+    expect(SCRAPERS.max.loginFields).toContain('username');
+    expect(SCRAPERS.max.loginFields).toContain('password');
   });
 
   maybeTestCompanyAPI(COMPANY_ID, (config) => config.companyAPI.invalidPassword)('should fail on invalid user/password"', async () => {
@@ -25,7 +25,7 @@ describe('Leumi Card legacy scraper', () => {
       companyId: COMPANY_ID,
     };
 
-    const scraper = new LeumiCardScraper(options);
+    const scraper = new MaxScraper(options);
 
     const result = await scraper.scrape({ username: 'e10s12', password: '3f3ss3d' });
 
@@ -40,8 +40,8 @@ describe('Leumi Card legacy scraper', () => {
       companyId: COMPANY_ID,
     };
 
-    const scraper = new LeumiCardScraper(options);
-    const result = await scraper.scrape(testsConfig.credentials.leumiCard);
+    const scraper = new MaxScraper(options);
+    const result = await scraper.scrape(testsConfig.credentials.max);
     expect(result).toBeDefined();
     const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
     expect(error).toBe('');

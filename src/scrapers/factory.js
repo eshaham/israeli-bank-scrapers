@@ -2,7 +2,7 @@ import HapoalimScraper from './hapoalim';
 import OtsarHahayalScraper from './otsar-hahayal';
 import LeumiScraper from './leumi';
 import DiscountScraper from './discount';
-import LeumiCardScraper from './leumi-card';
+import MaxScraper from './max';
 import VisaCalScraper from './visa-cal';
 import IsracardScraper from './isracard';
 import AmexScraper from './amex';
@@ -26,7 +26,10 @@ export default function createScraper(options) {
     case 'visaCal':
       return new VisaCalScraper(options);
     case 'leumiCard':
-      return new LeumiCardScraper(options);
+      console.warn("leumiCard is deprecated, use 'max' instead");
+      return new MaxScraper(options);
+    case 'max':
+      return new MaxScraper(options);
     case 'isracard':
       return new IsracardScraper(options);
     case 'amex':
