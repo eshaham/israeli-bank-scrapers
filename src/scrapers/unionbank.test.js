@@ -14,7 +14,7 @@ describe('Union bank scraper', () => {
   });
 
   test('should expose login fields in scrapers constant', () => {
-    expect(SCRAPERS.union) toBeDefined();
+    expect(SCRAPERS.union).toBeDefined();
     expect(SCRAPERS.union.loginFields).toContain('username');
     expect(SCRAPERS.union.loginFields).toContain('password');
   });
