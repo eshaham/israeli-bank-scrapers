@@ -45,4 +45,8 @@ export const SCRAPERS = {
     name: 'Amex',
     loginFields: ['id', 'card6Digits', PASSWORD_FIELD],
   },
+  union: {
+    name:'Uniom',
+    loginFields: ['username', PASSWORD_FIELD],
+  }
 };
