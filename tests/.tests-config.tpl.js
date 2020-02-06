@@ -19,6 +19,7 @@ export default {
     // isracard: { id: '', password: '', card6Digits: '' },
     // amex: { id: '', card6Digits: '', password: ''},
     // mizrahi: { username: '', password: ''},
+    //union:{username:'',password:''}
   },
   companyAPI: { // enable companyAPI to execute tests against the real companies api
     enabled: true,
