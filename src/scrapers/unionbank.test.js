@@ -5,7 +5,7 @@ import {
 import { SCRAPERS } from '../definitions';
 import { LOGIN_RESULT } from '../constants';
 
-const COMPANY_ID = 'union'; // TODO this property should be hard-coded in the provider
+const COMPANY_ID = 'Union'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
 
 describe('Union bank scraper', () => {
@@ -19,13 +19,16 @@ describe('Union bank scraper', () => {
     expect(SCRAPERS.union.loginFields).toContain('password');
   });
 
+
+
   maybeTestCompanyAPI(COMPANY_ID, (config) => config.companyAPI.invalidPassword)('should fail on invalid user/password"', async () => {
     const options = {
       ...testsConfig.options,
       companyId: COMPANY_ID,
     };
 
-    const scraper = new LeumiScraper(options);
+    const scraper = new UnionBankScraper(options);
+
 
     const result = await scraper.scrape({ username: 'e10s12', password: '3f3ss3d' });
 
@@ -40,8 +43,8 @@ describe('Union bank scraper', () => {
       companyId: COMPANY_ID,
     };
 
-    const scraper = new LeumiScraper(options);
-    const result = await scraper.scrape(testsConfig.credentials.leumi);
+    const scraper = new UnionBankScraper(options);
+    const result = await scraper.scrape(testsConfig.credentials.union);
     expect(result).toBeDefined();
     const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
     expect(error).toBe('');
