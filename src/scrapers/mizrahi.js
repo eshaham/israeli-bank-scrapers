@@ -104,16 +104,18 @@ class MizrahiScraper extends BaseScraperWithBrowser {
       loginUrl: `${LOGIN_URL}`,
       fields: createLoginFields(credentials),
       submitButtonSelector: '#ctl00_PlaceHolderLogin_ctl00_Enter',
-      postAction: async () => waitForNavigation(this.page, { waitUntil: 'networkidle0' }),
+      postAction: async () => {
+        this.request = await this.page.waitForRequest(TRANSACTIONS_REQUEST_URL);
+        waitForNavigation(this.page, { waitUntil: 'networkidle2' });
+      },
       possibleResults: getPossibleLoginResults(),
     };
   }
 
   async fetchData() {
     await this.navigateTo(OSH_PAGE, this.page);
-    const request = await this.page.waitForRequest(TRANSACTIONS_REQUEST_URL);
-    const data = CreateDataFromRequest(request, this.options.startDate);
-    const headers = createHeadersFromRequest(request);
+    const data = CreateDataFromRequest(this.request, this.options.startDate);
+    const headers = createHeadersFromRequest(this.request);
 
     const response = await fetchPostWithinPage(this.page,
       TRANSACTIONS_REQUEST_URL, data, headers);
