@@ -28,6 +28,10 @@ function getPossibleLoginResults() {
   return urls;
 }
 
+function goToLoginPage(credentials) {
+
+}
+
 function createLoginFields(credentials) {
   return [
     { selector: '#wtr_uid', value: credentials.username },

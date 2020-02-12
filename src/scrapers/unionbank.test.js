@@ -1,4 +1,4 @@
-import LeumiScraper from './unionbank';
+import UnionBankScraper from './unionbank';
 import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
 } from '../../tests/tests-utils';
