@@ -18,6 +18,7 @@ const TRANSACTIONS_REQUEST_URL = `${BASE_APP_URL}Online/api/SkyOSH/get428Index`;
 const PENDING_TRANSACTIONS_PAGE = `${BASE_APP_URL}Online/Osh/p420.aspx`;
 const DATE_FORMAT = 'DD/MM/YYYY';
 const MAX_ROWS_PER_REQUEST = 10000000000;
+const WAIT_FOR_REQUEST_TIMEOUT = 10 * 1000;
 
 function createLoginFields(credentials) {
   return [
@@ -105,7 +106,10 @@ class MizrahiScraper extends BaseScraperWithBrowser {
       fields: createLoginFields(credentials),
       submitButtonSelector: '#ctl00_PlaceHolderLogin_ctl00_Enter',
       postAction: async () => {
-        this.request = await this.page.waitForRequest(TRANSACTIONS_REQUEST_URL);
+        this.request = await this.page.waitForRequest(TRANSACTIONS_REQUEST_URL, {
+          timeout: WAIT_FOR_REQUEST_TIMEOUT,
+        })
+          .catch(() => Promise.resolve(null));
         waitForNavigation(this.page, { waitUntil: 'networkidle2' });
       },
       possibleResults: getPossibleLoginResults(),
@@ -114,6 +118,11 @@ class MizrahiScraper extends BaseScraperWithBrowser {
 
   async fetchData() {
     await this.navigateTo(OSH_PAGE, this.page);
+    if (!this.request) {
+      this.request = await this.page.waitForRequest(TRANSACTIONS_REQUEST_URL, {
+        timeout: WAIT_FOR_REQUEST_TIMEOUT,
+      });
+    }
     const data = CreateDataFromRequest(this.request, this.options.startDate);
     const headers = createHeadersFromRequest(this.request);
 
