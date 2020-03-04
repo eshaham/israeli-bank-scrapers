@@ -1,5 +1,5 @@
 {
-  "name": "israeli-bank-scrapers-core",
+  "name": "israeli-bank-scrapers",
   "version": "0.7.0",
   "description": "Provide scrapers for all major Israeli banks and credit card companies",
   "engines": {
@@ -61,8 +61,8 @@
     "lodash": "^4.17.10",
     "moment": "^2.22.2",
     "node-fetch": "^2.2.0",
-    "uuid": "^3.3.2",
-    "puppeteer-core": "^1.7.0"
+    "puppeteer": "^2.1.1",
+    "uuid": "^3.3.2"
   },
   "files": [
     "lib/**/*",
