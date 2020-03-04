@@ -12,16 +12,18 @@ Israeli Bank Scrapers - Get closer to your own data
 What you can find here is scrapers for all major Israeli banks and credit card companies. That's the plan at least.
 Currently only the following banks are supported:
 - Bank Hapoalim (thanks [@sebikaplun](https://github.com/sebikaplun))
+- Bank Hapoalim - Be Online (Digital Accounts) (thanks [@orzarchi](https://github.com/orzarchi))
 - Leumi Bank (thanks [@esakal](https://github.com/esakal))
 - Discount Bank
+- Mizrahi Bank (thanks [@baruchiro](https://github.com/baruchiro))
 - Otsar Hahayal Bank (thanks [@matanelgabsi](https://github.com/matanelgabsi))
 - Visa Cal (thanks [@nirgin](https://github.com/nirgin))
-- Leumi Card
+- Max (Formerly Leumi Card)
 - Isracard
 - Amex (thanks [@erezd](https://github.com/erezd))
 
 # Prerequisites
-To use this you will need to have [Node.js](https://nodejs.org) >= 8 installed.
+To use this you will need to have [Node.js](https://nodejs.org) >= 8.10.0 installed.
 
 # Getting started
 To use these scrapers you'll need to install the package from npm:
@@ -57,7 +59,7 @@ const options = {...};
 The definition of the `options` object is as follows:
 ```node
 {
-  companyId: string, // mandatory; one of 'hapoalim', 'leumi', 'discount', 'otsarHahayal', 'visaCal', 'leumiCard', 'isracard', 'amex'
+  companyId: string, // mandatory; one of 'hapoalim', 'hapoalimBeOnline', leumi', 'discount', 'mizrahi', 'otsarHahayal', 'visaCal', 'max', 'isracard', 'amex'
   startDate: Date, // the date to fetch transactions from (can't be before the minimum allowed time difference for the scraper)
   combineInstallments: boolean, // if set to true, all installment transactions will be combine into the first one
   showBrowser: boolean, // shows the browser while scraping, good for debugging (default false)
@@ -160,7 +162,7 @@ const chromiumVersion = getPuppeteerConfig().chromiumRevision;
 
 # Specific definitions per scraper
 
-## Bank Hapoalim scraper
+## Bank Hapoalim scraper (Including Be Online accounts)
 This scraper expects the following credentials object:
 ```node
 const credentials = {
@@ -194,6 +196,16 @@ This scraper supports fetching transaction from up to one year (minus 1 day).
 ### Known Limitations
 - Missing memo field
 
+## Mizrahi scraper
+This scraper expects the following credentials object:
+```node
+const credentials = {
+  username: <user identification number>,
+  password: <user password>
+};
+```
+This scraper supports fetching transaction from up to one year.
+
 ## Bank Otsar Hahayal scraper
 This scraper expects the following credentials object:
 ```node
@@ -214,7 +226,7 @@ const credentials = {
 ```
 This scraper supports fetching transaction from up to one year.
 
-## Leumi-Card scraper
+## Max scraper (Formerly Leumi-Card)
 This scraper expects the following credentials object:
 ```node
 const credentials = {

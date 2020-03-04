@@ -86,10 +86,10 @@ EOF
 
 
 #### Trying to run the tests using the CLI fail saying the test configuration file is missing
-Make sure that you created test configuration file ./tests/tests-config.js` from template `./test/tests-config.tpl.js`.
+Make sure that you created test configuration file `./tests/.tests-config.js` from template `./test/tests-config.tpl.js`.
 
 #### Trying to run the tests using the IDE fail saying the test configuration file is missing
-1. Make sure that you created test configuration file ./tests/tests-config.js` from template `./test/tests-config.tpl.js`.
+1. Make sure that you created test configuration file `./tests/.tests-config.js` from template `./test/tests-config.tpl.js`.
 2. Make sure that you added environment variable `BABEL_ENV=test` to the IDE test configuration.
 
 #### Tests of desired company are skipped without any errors

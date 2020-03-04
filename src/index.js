@@ -1,4 +1,4 @@
-import puppeteerConfig from '../puppeteer-config';
+import puppeteerConfig from '../puppeteer-config.json';
 import * as adapters from './adapters/public-api';
 
 export { default as createScraper } from './scrapers/factory';

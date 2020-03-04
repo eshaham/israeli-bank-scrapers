@@ -1,4 +1,4 @@
-{
+module.exports = {
   "rules": {
     "arrow-body-style": 0,
     "no-shadow": 0,
@@ -23,6 +23,7 @@
       "ignoreStrings": true,
       "ignoreTemplateLiterals": true
     }],
+    "linebreak-style": process.platform === "win32"? 0: 2,
     "arrow-parens": ["off"]
   },
   "globals": {

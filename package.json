@@ -1,6 +1,6 @@
 {
   "name": "israeli-bank-scrapers",
-  "version": "0.7.0",
+  "version": "0.8.1",
   "description": "Provide scrapers for all major Israeli banks and credit card companies",
   "engines": {
     "node": ">= 8.2.1",
@@ -9,8 +9,8 @@
   "main": "lib/index.js",
   "scripts": {
     "clean": "rimraf lib",
-    "test": "BABEL_ENV=test jest",
-    "test:ci": "cp tests/.tests-config.tpl.js tests/.tests-config.js && npm run test",
+    "test": "cross-env BABEL_ENV=test jest",
+    "test:ci": "ncp tests/.tests-config.tpl.js tests/.tests-config.js && npm run test",
     "lint": "eslint src",
     "build": "npm run clean && babel src --out-dir lib",
     "prebuild": "node utils/update-puppeteer-config.js",
@@ -47,22 +47,24 @@
     "babel-eslint": "^10.0.3",
     "babel-jest": "^24.8.0",
     "babel-plugin-import-visitor": "^0.2.0",
-    "eslint": "^5.4.0",
+    "cross-env": "^6.0.3",
+    "eslint": "^6.6.0",
     "eslint-config-airbnb-base": "^14.0.0",
     "eslint-plugin-import": "^2.14.0",
     "jest": "^24.8.0",
     "json2csv": "^4.2.1",
+    "ncp": "^2.0.0",
     "pre-commit": "^1.2.2",
     "rimraf": "^3.0.0"
   },
   "dependencies": {
-    "build-url": "^1.1.2",
+    "build-url": "^2.0.0",
     "core-js": "^3.1.4",
     "lodash": "^4.17.10",
     "moment": "^2.22.2",
     "node-fetch": "^2.2.0",
-    "puppeteer": "^2.1.1",
-    "uuid": "^3.3.2"
+    "uuid": "^3.3.2",
+    "puppeteer": "^2.0.0"
   },
   "files": [
     "lib/**/*",
