@@ -119,7 +119,7 @@ function convertTransactions(txns, processedDate) {
 }
 
 async function fetchTransactions(page, options, startMoment, monthMoment) {
-  const accounts = await fetchAccounts(page, options.servicesUrl, monthMoment);
+  const accounts = (await fetchAccounts(page, options.servicesUrl, monthMoment)) || [];
   const dataUrl = getTransactionsUrl(options.servicesUrl, monthMoment);
   const dataResult = await fetchGetWithinPage(page, dataUrl);
   if (_.get(dataResult, 'Header.Status') === '1' && dataResult.CardsTransactionsListBean) {
