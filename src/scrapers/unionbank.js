@@ -49,8 +49,8 @@ function getAmountData(amountStr) {
 }
 
 function getTxnAmount(txn) {
-    const credit = getAmountData(txn.credit).amount;
-    const debit = getAmountData(txn.debit).amount;
+    const credit = getAmountData(txn.credit);
+    const debit = getAmountData(txn.debit);
     return (Number.isNaN(credit) ? 0 : credit) - (Number.isNaN(debit) ? 0 : debit);
 }
 
@@ -73,34 +73,34 @@ function convertTransactions(txns) {
     });
 }
 
-function getTransactionDate(tds, txnDetailsObj) {
-    txnDetailsObj.date = tds[DATE_HEADER].innerText;
+function getTransactionDate(tds, txnsTableHeaders, txnDetailsObj) {
+    txnDetailsObj.date = tds[txnsTableHeaders[DATE_HEADER]].trim();
 }
 
-function getTransactionDescription(tds, txnDetailsObj) {
-    txnDetailsObj.description = tds[DESCRIPTION_HEADER].innerText;
+function getTransactionDescription(tds, txnsTableHeaders, txnDetailsObj) {
+    txnDetailsObj.description = tds[txnsTableHeaders[DESCRIPTION_HEADER]].trim();
 }
 
-function getTransactionReference(tds, txnDetailsObj) {
-    txnDetailsObj.reference = tds[REFERENCE_HEADER].innerText;
+function getTransactionReference(tds, txnsTableHeaders, txnDetailsObj) {
+    txnDetailsObj.reference = tds[txnsTableHeaders[REFERENCE_HEADER]].trim();
 }
 
-function getTransactionDebit(tds, txnDetailsObj) {
-    txnDetailsObj.debit = tds[DEBIT_HEADER].innerText;
+function getTransactionDebit(tds, txnsTableHeaders, txnDetailsObj) {
+    txnDetailsObj.debit = tds[txnsTableHeaders[DEBIT_HEADER]].trim();
 }
 
-function getTransactionCredit(tds, txnDetailsObj) {
-    txnDetailsObj.credit = tds[CREDIT_HEADER].innerText;
+function getTransactionCredit(tds, txnsTableHeaders, txnDetailsObj) {
+    txnDetailsObj.credit = tds[txnsTableHeaders[CREDIT_HEADER]].trim();
 }
 
-function extractTransactionDetails(txnRow, txnStatus) {
+function extractTransactionDetails(txnRow, txnsTableHeaders, txnStatus) {
     let txnDetailsObj = {status: txnStatus};
     let tds = txnRow.innerTds;
-    getTransactionDate(tds, txnDetailsObj);
-    getTransactionDescription(tds, txnDetailsObj);
-    getTransactionReference(tds, txnDetailsObj);
-    getTransactionDebit(tds, txnDetailsObj);
-    getTransactionCredit(tds, txnDetailsObj);
+    getTransactionDate(tds, txnsTableHeaders, txnDetailsObj);
+    getTransactionDescription(tds, txnsTableHeaders, txnDetailsObj);
+    getTransactionReference(tds, txnsTableHeaders, txnDetailsObj);
+    getTransactionDebit(tds, txnsTableHeaders, txnDetailsObj);
+    getTransactionCredit(tds, txnsTableHeaders, txnDetailsObj);
     return txnDetailsObj;
 }
 
@@ -109,7 +109,7 @@ function isExpendedDescRow(txnRow) {
 }
 
 function editLastTransactionDesc(txnRow, lastTxn) {
-    lastTxn.description = lastTxn.description + " " + txnRow.innerText;
+    lastTxn.description = lastTxn.description + " " + txnRow.innerTds[0];
     return lastTxn;
 }
 
@@ -117,21 +117,19 @@ function handleTransactionRow(txns, txnsTableHeaders, txnRow, txnType) {
     if (isExpendedDescRow(txnRow)) {
         txns.push(editLastTransactionDesc(txnRow, txns.pop()))
     } else {
-        txns.push(extractTransactionDetails(txnRow, txnType));
+        txns.push(extractTransactionDetails(txnRow, txnsTableHeaders, txnType));
     }
 }
 
 async function extractTransactionsFromTable(page, tableTypeId, txnType) {
     const txns = [];
-    if(transactionsTableHeaders === null) {
+    if(transactionsTableHeaders === null || transactionsTableHeaders.length === 0) {
         transactionsTableHeaders = await getTransactionsTableHeaders(page, tableTypeId);
     }
-    const transactionsRows = await pageEvalAll(page, `#WorkSpaceBox #${tableTypeId} tr[class!='header']`, [], (trs) => {
-        return trs.map(async (tr) => ({
+    const transactionsRows = await pageEvalAll(page, `#WorkSpaceBox #${tableTypeId} tr[class]:not([class='header'])`, [], (trs) => {
+        return trs.map( (tr) => ({
             id: tr.getAttribute('id'),
-            innerTds: await pageEvalAll(tr, 'td', [], (tds) => {
-                return tds
-            })
+            innerTds: Array.from(tr.getElementsByTagName('td')).map(td => td.innerText)
         }));
     });
 
@@ -153,11 +151,18 @@ async function isNoTransactionInDateRangeError(page) {
 }
 
 async function getTransactionsTableHeaders(page, tableTypeId) {
-    return await pageEvalAll(page, `#WorkSpaceBox #${tableTypeId} tr[class='header'] th`, [], (ths) => {
-        return ths.map(async (th, index) => (
-            ths[th.innerText] = index
-        ));
+    let headersMap = [];
+    const headersObjs = await pageEvalAll(page, `#WorkSpaceBox #${tableTypeId} tr[class='header'] th`, null, (ths) => {
+        return ths.map((th, index) => ({
+            text: th.innerText.trim(),
+            index: index
+        }));
     });
+
+    for(let headerObj of headersObjs) {
+        headersMap[headerObj.text] = headerObj.index;
+    }
+    return headersMap;
 }
 
 async function chooseAccount(page, accountId) {
@@ -205,28 +210,22 @@ async function scrapeTransactionsFromTable(page) {
 }
 
 async function getAccountTransactions(page) {
-    try {
-        // await Promise.race([
-        //     waitUntilElementFound(page, '#ctlActivityTable', false),
-        //    // waitUntilElementFound(page, '.errInfo', false),
-        // ]);
-
-        if (await isNoTransactionInDateRangeError(page)) {
-            return [];
-        }
-        await expandTransactionsTable(page);
-        return await scrapeTransactionsFromTable(page);
+    await Promise.race([
+        waitUntilElementFound(page, '#ctlActivityTable', false),
+        waitUntilElementFound(page, '.errInfo', false),
+    ]);
+    if (await isNoTransactionInDateRangeError(page)) {
+        return [];
     }
-    catch(e) {
-        console.log(e);
-    }
+    await expandTransactionsTable(page);
+    return await scrapeTransactionsFromTable(page);
 }
 
 async function fetchAccountData(page, startDate, accountId) {
     await chooseAccount(page, accountId);
     await searchByDates(page, startDate);
     const accountNumber = await getAccountNumber(page);
-    const txns = getAccountTransactions(page);
+    const txns = await getAccountTransactions(page);
     return {
         accountNumber,
         txns: txns,
