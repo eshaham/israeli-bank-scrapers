@@ -7,14 +7,14 @@ import VisaCalScraper from './visa-cal';
 import IsracardScraper from './isracard';
 import AmexScraper from './amex';
 import MizrahiScraper from './mizrahi';
-import HapoalimBeOnlineScraper from './hapoalim-beonline';
 
 export default function createScraper(options) {
   switch (options.companyId) {
     case 'hapoalim':
       return new HapoalimScraper(options);
     case 'hapoalimBeOnline':
-      return new HapoalimBeOnlineScraper(options);
+      console.warn("hapoalimBeOnline is deprecated, use 'hapoalim' instead");
+      return new HapoalimScraper(options);
     case 'leumi':
       return new LeumiScraper(options);
     case 'mizrahi':

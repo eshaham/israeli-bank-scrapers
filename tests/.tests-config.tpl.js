@@ -10,7 +10,6 @@ export default {
   },
   credentials: { // commented companies will be skipped automatically, uncomment those you wish to test
     // hapoalim: { userCode: '', password: '' },
-    // hapoalimBeOnline: { userCode: '', password: '' },
     // leumi: { username: '', password: '' },
     // discount: { id: '', password: '', num: '' },
     // otsarHahayal: { username: '', password: '' },

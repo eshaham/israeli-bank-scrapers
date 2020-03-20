@@ -122,12 +122,12 @@ async function fetchAccountData(page, baseUrl, options) {
   return accountData;
 }
 
-function getPossibleLoginResults(baseUrl, portalUrl) {
+function getPossibleLoginResults(baseUrl) {
   const urls = {};
   urls[LOGIN_RESULT.SUCCESS] = [
     `${baseUrl}/portalserver/HomePage`,
-    `${baseUrl}/ng-portals-bt/${portalUrl}/he/homepage`,
-    `${baseUrl}/ng-portals/${portalUrl}/he/homepage`];
+    `${baseUrl}/ng-portals-bt/rb/he/homepage`,
+    `${baseUrl}/ng-portals/rb/he/homepage`];
   urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${baseUrl}/AUTHENTICATE/LOGON?flow=AUTHENTICATE&state=LOGON&errorcode=1.6&callme=false`];
   urls[LOGIN_RESULT.CHANGE_PASSWORD] = [
     `${baseUrl}/MCP/START?flow=MCP&state=START&expiredDate=null`,
@@ -149,18 +149,13 @@ class HapoalimScraper extends BaseScraperWithBrowser {
     return 'https://login.bankhapoalim.co.il';
   }
 
-  // eslint-disable-next-line class-methods-use-this
-  get portalUrl() {
-    return 'rb';
-  }
-
   getLoginOptions(credentials) {
     return {
       loginUrl: `${this.baseUrl}/cgi-bin/poalwwwc?reqName=getLogonPage`,
       fields: createLoginFields(credentials),
       submitButtonSelector: '.login-btn',
       postAction: async () => waitForRedirect(this.page),
-      possibleResults: getPossibleLoginResults(this.baseUrl, this.portalUrl),
+      possibleResults: getPossibleLoginResults(this.baseUrl),
     };
   }
 
