@@ -126,7 +126,7 @@ export default async function runner(options, adapters, cleanupAdapters = []) {
   let result = Promise.resolve();
 
   // run adapters
-  adapters.forEach(adapter => {
+  adapters.forEach((adapter) => {
     result = result.then(() => {
       return runAdapter(runnerContext, adapter);
     });
@@ -153,7 +153,7 @@ export default async function runner(options, adapters, cleanupAdapters = []) {
     });
 
   // run cleanup adapters
-  cleanupAdapters.forEach(adapter => {
+  cleanupAdapters.forEach((adapter) => {
     result = result.then((result) => {
       return runAdapter(runnerContext, adapter)
         .then(() => {

@@ -12,7 +12,7 @@ function isValidCredentials(scraperId, credentials) {
     return false;
   }
 
-  const hasMissingField = scraperDefinitions.loginFields.some(field => typeof credentials[field] === 'undefined');
+  const hasMissingField = scraperDefinitions.loginFields.some((field) => typeof credentials[field] === 'undefined');
 
   return !hasMissingField;
 }

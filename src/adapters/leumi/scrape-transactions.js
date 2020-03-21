@@ -59,7 +59,7 @@ async function isNoTransactionInDateRangeError(page) {
 async function extractCompletedTransactionsFromPage(page) {
   const txns = [];
   const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #ctlActivityTable tr td', [], (tds) => {
-    return tds.map(td => ({
+    return tds.map((td) => ({
       classList: td.getAttribute('class'),
       innerText: td.innerText,
     }));
@@ -103,7 +103,7 @@ async function extractCompletedTransactionsFromPage(page) {
 async function extractPendingTransactionsFromPage(page) {
   const txns = [];
   const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #ctlTodayActivityTableUpper tr td', [], (tds) => {
-    return tds.map(td => ({
+    return tds.map((td) => ({
       classList: td.getAttribute('class'),
       innerText: td.innerText,
     }));

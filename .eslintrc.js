@@ -21,7 +21,6 @@ module.exports = {
       "ignoreTemplateLiterals": true
     }],
     "linebreak-style": process.platform === "win32"? 0: 2,
-    "arrow-parens": ["off"]
   },
   "globals": {
     "document": true,

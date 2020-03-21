@@ -19,7 +19,7 @@ async function getAccountTransactions(page, accountInfo, startDate, apiSiteUrl) 
 
   let txns = [];
   if (txnsResult) {
-    txns = txnsResult.transactions.map((transaction => convertTransaction(transaction)));
+    txns = txnsResult.transactions.map(((transaction) => convertTransaction(transaction)));
   }
 
   return txns;

@@ -61,7 +61,7 @@ class VisaCalScraper extends BaseScraper {
         startDate: startMoment,
       }),
     ])
-      .then(result => {
+      .then((result) => {
         if (!result.success) {
           return result;
         }

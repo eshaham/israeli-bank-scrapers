@@ -51,7 +51,7 @@ class LeumiScraper extends BaseScraperWithBrowser {
         startDate: startMoment,
       }),
     ])
-      .then(result => {
+      .then((result) => {
         if (!result.success) {
           return result;
         }

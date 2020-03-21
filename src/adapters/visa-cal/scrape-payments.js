@@ -42,7 +42,7 @@ async function getPaymentsForAllAccounts(authHeader, startDate) {
       Object.entries(paymentsByAccounts).forEach(([accountNumber, payments]) => {
         const result = {
           accountNumber,
-          payments: payments.map(payment => {
+          payments: payments.map((payment) => {
             const { accountNumber, ...rest } = payment;
             return rest;
           }),

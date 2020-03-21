@@ -5,7 +5,7 @@ export async function accounts(page) {
   const accountDataUrl = `${BASE_URL}/ServerServices/general/accounts`;
   const accountsInfo = await fetchGetWithinPage(page, accountDataUrl);
 
-  const accounts = accountsInfo.map(accountInfo => ({
+  const accounts = accountsInfo.map((accountInfo) => ({
     isClosed: accountInfo.accountClosingReasonCode !== 0,
     bankNumber: accountInfo.bankNumber,
     branchNumber: accountInfo.branchNumber,
@@ -19,5 +19,5 @@ export async function accounts(page) {
 
 export async function getActiveAccountsInfo(page) {
   const allAccountsInfo = await accounts(page);
-  return allAccountsInfo.filter(item => !item.isClosed);
+  return allAccountsInfo.filter((item) => !item.isClosed);
 }
