@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { GENERAL_ERROR, SCRAPE_PROGRESS_TYPES } from '../constants';
+import { GENERAL_ERROR, SCRAPE_PROGRESS_TYPES } from './constants';
 
 
 const noop = () => {};

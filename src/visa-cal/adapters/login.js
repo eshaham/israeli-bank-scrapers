@@ -1,7 +1,7 @@
 import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT } from '../../constants';
 import { isValidCredentials, handleLoginResult } from '../../helpers/login';
 import { fetchPost } from '../../helpers/fetch';
-import { HEADER_SITE } from './definitions';
+import { HEADER_SITE } from '../definitions';
 
 const SCRAPER_ID = 'visaCal';
 
@@ -10,7 +10,7 @@ export const INVALID_CREDENTIALS = 'שם המשתמש או הסיסמה שהוז
 const AUTH_URL = 'https://connect.cal-online.co.il/api/authentication/login';
 
 
-function loginAdapter(options) {
+export function loginAdapter(options) {
   return {
     name: `login(${SCRAPER_ID})`,
     validate: () => {
@@ -64,4 +64,3 @@ function loginAdapter(options) {
     },
   };
 }
-export default loginAdapter;

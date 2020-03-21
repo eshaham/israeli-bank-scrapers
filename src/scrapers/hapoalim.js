@@ -1,9 +1,9 @@
 import moment from 'moment';
 import { BaseScraperWithBrowser } from './base-scraper-with-browser';
-import runner from '../adapters/runner';
-import { setBrowserPageAdapter } from '../adapters/puppeteer';
-import loginAdapter from '../adapters/hapoalim/login';
-import scrapeTransactionsAdapter from '../adapters/hapoalim/scrape-transactions';
+import runner from '../runner';
+import { setBrowserPageAdapter } from '../puppeteer';
+import loginAdapter from '../hapoalim/adapters/login';
+import scrapeTransactionsAdapter from '../hapoalim/adapters/scrape-transactions';
 import { GENERAL_ERROR, SCRAPE_PROGRESS_TYPES } from '../constants';
 
 const DefaultStartMoment = moment().subtract(1, 'years').add(1, 'day');

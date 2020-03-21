@@ -2,9 +2,9 @@ import moment from 'moment';
 import _ from 'lodash';
 import { fetchGet } from '../../helpers/fetch';
 import { validateInThePastYear } from '../../helpers/dates';
-import { convertCurrency } from './adapter-helpers/currency';
-import { HEADER_SITE, BASE_URL, DATE_FORMAT } from './definitions';
-import { getBankDebitsUrl } from './adapter-helpers/urls';
+import { convertCurrency } from '../adapter-helpers/currency';
+import { HEADER_SITE, BASE_URL, DATE_FORMAT } from '../definitions';
+import { getBankDebitsUrl } from '../adapter-helpers/urls';
 
 function convertPayments(payments, bankAccountNumber) {
   return payments.map((payment) => {
@@ -54,7 +54,7 @@ async function getPaymentsForAllAccounts(authHeader, startDate) {
   return accounts;
 }
 
-function scrapePaymentsAdapter(options) {
+export function scrapePaymentsAdapter(options) {
   return {
     name: 'scrapePayments(visaCal)',
     validate: (context) => {
@@ -94,5 +94,3 @@ function scrapePaymentsAdapter(options) {
     },
   };
 }
-
-export default scrapePaymentsAdapter;

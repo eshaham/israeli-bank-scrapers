@@ -1,10 +1,10 @@
 import moment from 'moment';
-import runner from '../adapters/runner';
-import loginAdapter from '../adapters/visa-cal/login';
-import scrapeTransactionsAdapter from '../adapters/visa-cal/scrape-transactions';
+import runner from '../runner';
+import loginAdapter from '../visa-cal/adapters/login';
+import scrapeTransactionsAdapter from '../visa-cal/adapters/scrape-transactions';
 import { GENERAL_ERROR, SCRAPE_PROGRESS_TYPES } from '../constants';
 import { BaseScraper } from './base-scraper';
-import { setSessionData, exportSessionData } from '../adapters/session';
+import { setSessionData, exportSessionData } from '../puppeteer';
 
 const DefaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
 

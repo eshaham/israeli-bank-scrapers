@@ -1,9 +1,9 @@
 import moment from 'moment';
 import { BaseScraperWithBrowser } from './base-scraper-with-browser';
-import runner from '../adapters/runner';
-import { setBrowserPageAdapter } from '../adapters/puppeteer';
-import loginAdapter from '../adapters/leumi/login';
-import scrapeTransactionsAdapter from '../adapters/leumi/scrape-transactions';
+import runner from '../runner';
+import { setBrowserPageAdapter } from '../puppeteer';
+import loginAdapter from '../leumi/adapters/login';
+import scrapeTransactionsAdapter from '../leumi/adapters/scrape-transactions';
 import { GENERAL_ERROR, SCRAPE_PROGRESS_TYPES } from '../constants';
 
 const DefaultStartMoment = moment().subtract(1, 'years').add(1, 'day');

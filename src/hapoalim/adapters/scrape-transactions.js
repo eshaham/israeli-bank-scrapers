@@ -1,10 +1,10 @@
-import { getActiveAccountsInfo } from './adapter-helpers/accounts';
+import { getActiveAccountsInfo } from '../adapter-helpers/accounts';
 import {
   getTransactionsUrl,
   fetchPoalimXSRFWithinPage,
   convertTransaction,
-} from './adapter-helpers/transactions';
-import { getAPISiteUrl } from './adapter-helpers/api';
+} from '../adapter-helpers/transactions';
+import { getAPISiteUrl } from '../adapter-helpers/api';
 import { validateInThePastYear } from '../../helpers/dates';
 
 
@@ -25,7 +25,7 @@ async function getAccountTransactions(page, accountInfo, startDate, apiSiteUrl) 
   return txns;
 }
 
-function scrapeTransactionsAdapter(options) {
+export function scrapeTransactionsAdapter(options) {
   return {
     name: 'scrapeTransactions(hapoalim)',
     validate: (context) => {
@@ -73,5 +73,3 @@ function scrapeTransactionsAdapter(options) {
     },
   };
 }
-
-export default scrapeTransactionsAdapter;

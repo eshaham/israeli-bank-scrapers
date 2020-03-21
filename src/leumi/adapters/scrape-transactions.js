@@ -5,8 +5,8 @@ import {
   pageEvalAll,
 } from '../../helpers/elements-interactions';
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../../constants';
-import { mapAccounts, navigateToAccountTransactions } from './adapter-helpers/accounts';
-import { DATE_FORMAT } from './definitions';
+import { mapAccounts, navigateToAccountTransactions } from '../adapter-helpers/accounts';
+import { DATE_FORMAT } from '../definitions';
 import { validateInThePastYear } from '../../helpers/dates';
 
 const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא קיימות תנועות מתאימות על פי הסינון שהוגדר';
@@ -175,7 +175,7 @@ async function fetchTransactions(page, startDate) {
   });
 }
 
-function scrapeTransactionsAdapter(options) {
+export function scrapeTransactionsAdapter(options) {
   return {
     name: 'scrapeTransactions(leumi)',
     validate: (context) => {
@@ -208,5 +208,3 @@ function scrapeTransactionsAdapter(options) {
     },
   };
 }
-
-export default scrapeTransactionsAdapter;

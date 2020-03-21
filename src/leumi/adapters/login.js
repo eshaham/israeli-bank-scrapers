@@ -1,6 +1,6 @@
 import { fillInputs, clickButton, waitUntilElementFound } from '../../helpers/elements-interactions';
 import { navigateTo, getCurrentUrl } from '../../helpers/navigation';
-import { BASE_URL } from './definitions';
+import { BASE_URL } from '../definitions';
 import getKeyByValue from '../../helpers/filters';
 import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT } from '../../constants';
 import { handleLoginResult, isValidCredentials } from '../../helpers/login';
@@ -33,7 +33,7 @@ function getPossibleLoginResults() {
 }
 
 
-function loginAdapter(options) {
+export function loginAdapter(options) {
   return {
     name: `login(${SCRAPER_ID})`,
     validate: (context) => {
@@ -74,4 +74,3 @@ function loginAdapter(options) {
     },
   };
 }
-export default loginAdapter;

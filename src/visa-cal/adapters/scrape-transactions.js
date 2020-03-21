@@ -5,9 +5,9 @@ import {
   TRANSACTION_STATUS,
   INSTALLMENTS_TXN_TYPE,
 } from '../../constants';
-import { convertCurrency } from './adapter-helpers/currency';
-import { HEADER_SITE, BASE_URL, DATE_FORMAT } from './definitions';
-import { getBankDebitsUrl, getTransactionsUrl } from './adapter-helpers/urls';
+import { convertCurrency } from '../adapter-helpers/currency';
+import { HEADER_SITE, BASE_URL, DATE_FORMAT } from '../definitions';
+import { getBankDebitsUrl, getTransactionsUrl } from '../adapter-helpers/urls';
 import { filterOldTransactions, fixInstallments, sortTransactionsByDate } from '../../helpers/transactions';
 import { fetchGet } from '../../helpers/fetch';
 import { validateInThePastYear } from '../../helpers/dates';
@@ -175,7 +175,7 @@ async function getTransactionsForAllAccounts(authHeader, startMoment, options) {
   return accounts;
 }
 
-function scrapeTransactionsAdapter(options) {
+export function scrapeTransactionsAdapter(options) {
   return {
     name: 'scrapeTransactions(visaCal)',
     validate: (context) => {
@@ -216,4 +216,3 @@ function scrapeTransactionsAdapter(options) {
   };
 }
 
-export default scrapeTransactionsAdapter;
