@@ -2,9 +2,9 @@ import moment from 'moment';
 import _ from 'lodash';
 import { fetchGet } from '../../helpers/fetch';
 import { validateInThePastYear } from '../../helpers/dates';
-import { convertCurrency } from './adapterHelpers/currency';
+import { convertCurrency } from './adapter-helpers/currency';
 import { HEADER_SITE, BASE_URL, DATE_FORMAT } from './definitions';
-import { getBankDebitsUrl } from './adapterHelpers/urls';
+import { getBankDebitsUrl } from './adapter-helpers/urls';
 
 function convertPayments(payments, bankAccountNumber) {
   return payments.map((payment) => {

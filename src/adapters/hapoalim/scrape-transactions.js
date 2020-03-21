@@ -1,10 +1,10 @@
-import { getActiveAccountsInfo } from './adapterHelpers/accounts';
+import { getActiveAccountsInfo } from './adapter-helpers/accounts';
 import {
   getTransactionsUrl,
   fetchPoalimXSRFWithinPage,
   convertTransaction,
-} from './adapterHelpers/transactions';
-import { getAPISiteUrl } from './adapterHelpers/api';
+} from './adapter-helpers/transactions';
+import { getAPISiteUrl } from './adapter-helpers/api';
 import { validateInThePastYear } from '../../helpers/dates';
 
 

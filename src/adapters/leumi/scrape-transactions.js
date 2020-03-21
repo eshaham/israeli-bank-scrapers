@@ -5,7 +5,7 @@ import {
   pageEvalAll,
 } from '../../helpers/elements-interactions';
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../../constants';
-import { mapAccounts, navigateToAccountTransactions } from './adapterHelpers/accounts';
+import { mapAccounts, navigateToAccountTransactions } from './adapter-helpers/accounts';
 import { DATE_FORMAT } from './definitions';
 import { validateInThePastYear } from '../../helpers/dates';
 

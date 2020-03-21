@@ -5,9 +5,9 @@ import {
   TRANSACTION_STATUS,
   INSTALLMENTS_TXN_TYPE,
 } from '../../constants';
-import { convertCurrency } from './adapterHelpers/currency';
+import { convertCurrency } from './adapter-helpers/currency';
 import { HEADER_SITE, BASE_URL, DATE_FORMAT } from './definitions';
-import { getBankDebitsUrl, getTransactionsUrl } from './adapterHelpers/urls';
+import { getBankDebitsUrl, getTransactionsUrl } from './adapter-helpers/urls';
 import { filterOldTransactions, fixInstallments, sortTransactionsByDate } from '../../helpers/transactions';
 import { fetchGet } from '../../helpers/fetch';
 import { validateInThePastYear } from '../../helpers/dates';
