@@ -20,7 +20,7 @@ module.exports = {
       "ignoreStrings": true,
       "ignoreTemplateLiterals": true
     }],
-    "linebreak-style": process.platform === "win32"? 0: 2,
+    "linebreak-style": process.platform === "win32"? 0: 2
   },
   "globals": {
     "document": true,
