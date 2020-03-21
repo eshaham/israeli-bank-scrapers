@@ -65,13 +65,12 @@ To save unit test scraper results provide a valid path in test configurations pr
 #### How can I run tests with CI/CD services?
 You can use environment variables instead of a local file to provide the tests configuration.
 
-1. Copy to clipboard the exported object from file `.tests-config.tpl.js` - line 4. **Make sure you copy the template file and not the local file with your credentials.**
-2. **Read the next step before performing this one**: Paste the exported object into [this online javascript to json converter](https://www.convertonline.io/convert/js-to-json) (or [this converter](https://bl.ocks.org/domoritz/259b881c162c5618c7b8c22682521769)). 
-3. You will see a syntax error of the json file, to fix it assign value to property `startDate` like `2019-08-01`.
+1. Copy to clipboard the exported object from file `.tests-config.tpl.js` (copy the json object without `export default` from line 4 until the end of the file). 
+    - **Make sure you copy the template file and not the local file with your credentials.**
+2. Paste the exported object into a javascrip to json converter. If you don't have any use [this converter](https://www.convertonline.io/convert/js-to-json) or [that converter](https://bl.ocks.org/domoritz/259b881c162c5618c7b8c22682521769). 
+3. **NOTE that** you will see a syntax error of the json file as the object doesn't provide value to property `options.startDate`. To fix it assign a value to that property (ie value `2019-08-01`).
 4. Copy the json content and adjust it with relevant information.
 5. Assign it to environment variable named `TESTS_CONFIG`. 
-
-Make sure you perform the steps above correctlt. It must be a valid json string otherwise it will fail during json parsing.
 
 If you wish to try it from cli (mac os), you should either create a one liner json configuration or use cat to provide multiline value:
 
