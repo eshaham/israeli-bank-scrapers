@@ -1,5 +1,6 @@
 import puppeteerConfig from '../puppeteer-config.json';
-import * as adapters from './adapters/public-api';
+export * from './adapters/public-api';
+import * as helpers from './helpers';
 
 export { default as createScraper } from './scrapers/factory';
 export { SCRAPERS } from './definitions';
@@ -8,4 +9,4 @@ export function getPuppeteerConfig() {
   return { ...puppeteerConfig };
 }
 
-export { adapters };
+export {helpers}
