@@ -2,13 +2,10 @@ module.exports = {
   "rules": {
     "arrow-body-style": 0,
     "no-shadow": 0,
-    "no-continue": 0,
     "no-await-in-loop": 0,
     "no-underscore-dangle": 0,
     "max-classes-per-file": 0,
-    "import/no-named-as-default": 0,
     "import/prefer-default-export": 0,
-    "import/no-named-as-default-member": 0,
     "no-restricted-syntax": [
       "error",
       "ForInStatement",
