@@ -215,4 +215,3 @@ export function scrapeTransactionsAdapter(options) {
     },
   };
 }
-

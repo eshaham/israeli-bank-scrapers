@@ -3,7 +3,7 @@ import runner from '../runner';
 import { loginAdapter, scrapeTransactionsAdapter } from '../visa-cal/adapters';
 import { GENERAL_ERROR, SCRAPE_PROGRESS_TYPES } from '../constants';
 import { BaseScraper } from './base-scraper';
-import { setSessionData, exportSessionData } from '../puppeteer';
+import { setSessionData, exportSessionData } from '../session';
 
 const DefaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
 

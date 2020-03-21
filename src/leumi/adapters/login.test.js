@@ -1,9 +1,9 @@
 import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig,
 } from '../../../tests/tests-utils';
-import { createBrowserAdapter, createBrowserPageAdapter, closeBrowserAdapter } from '../puppeteer';
+import { createBrowserAdapter, createBrowserPageAdapter, closeBrowserAdapter } from '../../puppeteer';
 import loginAdapter from './login';
-import runner from '../runner';
+import runner from '../../runner';
 import { LOGIN_RESULT } from '../../constants';
 
 const COMPANY_ID = 'leumi';

@@ -5,7 +5,7 @@ import {
 } from '../../../tests/tests-utils';
 import loginAdapter from './login';
 import scrapeTransactionsAdapter from './scrape-transactions';
-import runner from '../runner';
+import runner from '../../runner';
 
 const COMPANY_ID = 'visaCal';
 const DATA_TYPE = 'transactions';
