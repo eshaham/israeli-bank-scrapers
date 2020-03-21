@@ -1,7 +1,6 @@
 import moment from 'moment';
 import runner from '../runner';
-import loginAdapter from '../visa-cal/adapters/login';
-import scrapeTransactionsAdapter from '../visa-cal/adapters/scrape-transactions';
+import { loginAdapter, scrapeTransactionsAdapter } from '../visa-cal/adapters';
 import { GENERAL_ERROR, SCRAPE_PROGRESS_TYPES } from '../constants';
 import { BaseScraper } from './base-scraper';
 import { setSessionData, exportSessionData } from '../puppeteer';
