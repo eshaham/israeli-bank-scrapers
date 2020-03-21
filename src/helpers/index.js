@@ -1,9 +1,13 @@
+import getKeyByValue from "./filters";
+export { getKeyByValue };
+import createGeneralError from "./errors";
+export { createGeneralError };
+import waitUntil from "./waiting";
+export { waitUntil };
+
 export * from './dates';
 export * from './elements-interactions';
-export * from './errors';
 export * from './fetch';
-export * from './waiting';
 export * from './transactions';
 export * from './navigation';
 export * from './login';
-export * from './filters';
