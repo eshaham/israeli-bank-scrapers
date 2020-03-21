@@ -1,14 +1,16 @@
+
 import MizrahiScraper from './mizrahi';
 import {
-  maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
+  maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, saveTransactionsAsCSV, getDistFolder,
 } from '../../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
-import { ISO_DATE_REGEX, LOGIN_RESULT } from '../constants';
+import { LOGIN_RESULT } from '../constants';
 
-const COMPANY_ID = 'mizrahi'; // TODO this property should be hard-coded in the provider
+const COMPANY_ID = 'mizrahi';
+const DATA_TYPE = 'legacy';
 const testsConfig = getTestsConfig();
 
-describe('Mizrahi scraper', () => {
+describe('Mizrahi legacy scraper', () => {
   beforeAll(() => {
     extendAsyncTimeout(); // The default timeout is 5 seconds per async test, this function extends the timeout value
   });
@@ -19,7 +21,7 @@ describe('Mizrahi scraper', () => {
     expect(SCRAPERS.mizrahi.loginFields).toContain('password');
   });
 
-  maybeTestCompanyAPI(COMPANY_ID, (config) => config.companyAPI.invalidPassword)('should fail on invalid user/password', async () => {
+  maybeTestCompanyAPI(COMPANY_ID, 'invalidLogin')('should fail on invalid user/password"', async () => {
     const options = {
       ...testsConfig.options,
       companyId: COMPANY_ID,
@@ -34,7 +36,7 @@ describe('Mizrahi scraper', () => {
     expect(result.errorType).toBe(LOGIN_RESULT.INVALID_PASSWORD);
   });
 
-  maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions', async () => {
+  maybeTestCompanyAPI(COMPANY_ID, DATA_TYPE)('should scrape transactions"', async () => {
     const options = {
       ...testsConfig.options,
       companyId: COMPANY_ID,
@@ -46,10 +48,8 @@ describe('Mizrahi scraper', () => {
     const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
     expect(error).toBe('');
     expect(result.success).toBeTruthy();
-    expect(result.accounts[0].accountNumber).not.toBe('');
 
-    expect(result.accounts[0].txns[0].date).toMatch(ISO_DATE_REGEX);
-
-    exportTransactions(COMPANY_ID, result.accounts || []);
+    const csvDistFolder = getDistFolder(DATA_TYPE);
+    saveTransactionsAsCSV(csvDistFolder, COMPANY_ID, result.accounts || []);
   });
 });
