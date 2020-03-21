@@ -1,4 +1,4 @@
-import UnionBankScraper from './unionbank';
+import UnionBankScraper from './union-bank';
 import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
 } from '../../tests/tests-utils';

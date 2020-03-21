@@ -13,8 +13,9 @@ import { waitForNavigation } from '../helpers/navigation';
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
 
 const BASE_URL = 'https://hb.unionbank.co.il';
+const TRANSACTIONS_URL = `${BASE_URL}/eBanking/Accounts/ExtendedActivity.aspx#/`;
 const DATE_FORMAT = 'DD/MM/YY';
-const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא קיימות תנועות מתאימות על פי הסינון שהוגדר ';
+const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא קיימות תנועות מתאימות על פי הסינון שהוגדר';
 const DATE_HEADER = 'תאריך';
 const DESCRIPTION_HEADER = 'תיאור';
 const REFERENCE_HEADER = 'אסמכתא';
@@ -22,17 +23,13 @@ const DEBIT_HEADER = 'חובה';
 const CREDIT_HEADER = 'זכות';
 const PENDING_TRANSACTIONS_TABLE_ID = 'trTodayActivityNapaTableUpper';
 const COMPLETED_TRANSACTIONS_TABLE_ID = 'ctlActivityTable';
-let transactionsTableHeaders = null;
-
-function getTransactionsUrl() {
-  return `${BASE_URL}/eBanking/Accounts/ExtendedActivity.aspx#/`;
-}
+const ERROR_MESSAGE_CLASS = 'errInfo';
+const ACCOUNTS_DROPDOWN_SELECTOR = 'select#ddlAccounts_m_ddl';
 
 function getPossibleLoginResults() {
   const urls = {};
   urls[LOGIN_RESULT.SUCCESS] = [/eBanking\/Accounts/];
   urls[LOGIN_RESULT.INVALID_PASSWORD] = [/InternalSite\/CustomUpdate\/leumi\/LoginPage.ASP/];
-  // urls[LOGIN_RESULT.CHANGE_PASSWORD] = ``; // TODO should wait until my password expires
   return urls;
 }
 
@@ -73,48 +70,49 @@ function convertTransactions(txns) {
     });
 }
 
-function getTransactionDate(tds, txnsTableHeaders, txnDetailsObj) {
-    txnDetailsObj.date = tds[txnsTableHeaders[DATE_HEADER]].trim();
+function getTransactionDate(tds, txnsTableHeaders) {
+    return tds[txnsTableHeaders[DATE_HEADER]].trim();
 }
 
-function getTransactionDescription(tds, txnsTableHeaders, txnDetailsObj) {
-    txnDetailsObj.description = tds[txnsTableHeaders[DESCRIPTION_HEADER]].trim();
+function getTransactionDescription(tds, txnsTableHeaders) {
+    return tds[txnsTableHeaders[DESCRIPTION_HEADER]].trim();
 }
 
-function getTransactionReference(tds, txnsTableHeaders, txnDetailsObj) {
-    txnDetailsObj.reference = tds[txnsTableHeaders[REFERENCE_HEADER]].trim();
+function getTransactionReference(tds, txnsTableHeaders) {
+    return tds[txnsTableHeaders[REFERENCE_HEADER]].trim();
 }
 
-function getTransactionDebit(tds, txnsTableHeaders, txnDetailsObj) {
-    txnDetailsObj.debit = tds[txnsTableHeaders[DEBIT_HEADER]].trim();
+function getTransactionDebit(tds, txnsTableHeaders) {
+    return tds[txnsTableHeaders[DEBIT_HEADER]].trim();
 }
 
-function getTransactionCredit(tds, txnsTableHeaders, txnDetailsObj) {
-    txnDetailsObj.credit = tds[txnsTableHeaders[CREDIT_HEADER]].trim();
+function getTransactionCredit(tds, txnsTableHeaders) {
+    return tds[txnsTableHeaders[CREDIT_HEADER]].trim();
 }
 
 function extractTransactionDetails(txnRow, txnsTableHeaders, txnStatus) {
-    let txnDetailsObj = {status: txnStatus};
     let tds = txnRow.innerTds;
-    getTransactionDate(tds, txnsTableHeaders, txnDetailsObj);
-    getTransactionDescription(tds, txnsTableHeaders, txnDetailsObj);
-    getTransactionReference(tds, txnsTableHeaders, txnDetailsObj);
-    getTransactionDebit(tds, txnsTableHeaders, txnDetailsObj);
-    getTransactionCredit(tds, txnsTableHeaders, txnDetailsObj);
-    return txnDetailsObj;
+    return {
+        status: txnStatus,
+        date: getTransactionDate(tds, txnsTableHeaders),
+        description: getTransactionDescription(tds, txnsTableHeaders),
+        reference: getTransactionReference(tds, txnsTableHeaders),
+        debit: getTransactionDebit(tds, txnsTableHeaders),
+        credit: getTransactionCredit(tds, txnsTableHeaders)
+    };
 }
 
-function isExpendedDescRow(txnRow) {
-    return txnRow.id !== undefined && txnRow.id !== null && txnRow.id === 'rowAdded';
+function isExpandedDescRow(txnRow) {
+    return txnRow.id === 'rowAdded';
 }
 
 function editLastTransactionDesc(txnRow, lastTxn) {
-    lastTxn.description = lastTxn.description + " " + txnRow.innerTds[0];
+    lastTxn.description = `${lastTxn.description} ${txnRow.innerTds[0]}`;
     return lastTxn;
 }
 
 function handleTransactionRow(txns, txnsTableHeaders, txnRow, txnType) {
-    if (isExpendedDescRow(txnRow)) {
+    if (isExpandedDescRow(txnRow)) {
         txns.push(editLastTransactionDesc(txnRow, txns.pop()))
     } else {
         txns.push(extractTransactionDetails(txnRow, txnsTableHeaders, txnType));
@@ -123,9 +121,8 @@ function handleTransactionRow(txns, txnsTableHeaders, txnRow, txnType) {
 
 async function extractTransactionsFromTable(page, tableTypeId, txnType) {
     const txns = [];
-    if(transactionsTableHeaders === null || transactionsTableHeaders.length === 0) {
-        transactionsTableHeaders = await getTransactionsTableHeaders(page, tableTypeId);
-    }
+    const transactionsTableHeaders = await getTransactionsTableHeaders(page, tableTypeId);
+
     const transactionsRows = await pageEvalAll(page, `#WorkSpaceBox #${tableTypeId} tr[class]:not([class='header'])`, [], (trs) => {
         return trs.map( (tr) => ({
             id: tr.getAttribute('id'),
@@ -140,12 +137,12 @@ async function extractTransactionsFromTable(page, tableTypeId, txnType) {
 }
 
 async function isNoTransactionInDateRangeError(page) {
-  const hasErrorInfoElement = await elementPresentOnPage(page, '.errInfo');
+  const hasErrorInfoElement = await elementPresentOnPage(page, `.${ERROR_MESSAGE_CLASS}`);
   if (hasErrorInfoElement) {
-    const errorText = await page.$eval('.errInfo', (errorElement) => {
+    const errorText = await page.$eval(`.${ERROR_MESSAGE_CLASS}`, (errorElement) => {
       return errorElement.innerText;
     });
-    return errorText === NO_TRANSACTION_IN_DATE_RANGE_TEXT;
+    return errorText.trim() === NO_TRANSACTION_IN_DATE_RANGE_TEXT;
   }
   return false;
 }
@@ -166,9 +163,9 @@ async function getTransactionsTableHeaders(page, tableTypeId) {
 }
 
 async function chooseAccount(page, accountId) {
-    const hasErrorInfoElement = await elementPresentOnPage(page, 'select#ddlAccounts_m_ddl');
+    const hasErrorInfoElement = await elementPresentOnPage(page, ACCOUNTS_DROPDOWN_SELECTOR);
     if (hasErrorInfoElement.offsetParent !== null) {
-        await dropdownSelect(page, 'select#ddlAccounts_m_ddl', accountId);
+        await dropdownSelect(page, ACCOUNTS_DROPDOWN_SELECTOR, accountId);
     }
 }
 
@@ -211,12 +208,15 @@ async function scrapeTransactionsFromTable(page) {
 
 async function getAccountTransactions(page) {
     await Promise.race([
-        waitUntilElementFound(page, '#ctlActivityTable', false),
-        waitUntilElementFound(page, '.errInfo', false),
+        waitUntilElementFound(page, `#${COMPLETED_TRANSACTIONS_TABLE_ID}`, false),
+        waitUntilElementFound(page, `.${ERROR_MESSAGE_CLASS}`, false),
     ]);
-    if (await isNoTransactionInDateRangeError(page)) {
+
+    const noTransactionInRangeError = await isNoTransactionInDateRangeError(page);
+    if (noTransactionInRangeError) {
         return [];
     }
+
     await expandTransactionsTable(page);
     return await scrapeTransactionsFromTable(page);
 }
@@ -234,17 +234,17 @@ async function fetchAccountData(page, startDate, accountId) {
 
 async function fetchAccounts(page, startDate) {
   const accounts = [];
-  const accountsList = await dropdownElements(page, 'select#ddlAccounts_m_ddl');
+  const accountsList = await dropdownElements(page, ACCOUNTS_DROPDOWN_SELECTOR);
   for (const account of accountsList) {
     if (account.value !== '-1') { // Skip "All accounts" option
-        accounts.push(await fetchAccountData(page, startDate, account.value));
+        const accountData = await fetchAccountData(page, startDate, account.value);
+        accounts.push(accountData);
     }
   }
   return accounts;
 }
 
 async function waitForPostLogin(page) {
-  // TODO check for condition to provide new password
   return Promise.race([
     waitUntilElementFound(page, '#signoff', true),
     waitUntilElementFound(page, '#restore', true),
@@ -267,8 +267,7 @@ class UnionBankScraper extends BaseScraperWithBrowser {
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-    const url = getTransactionsUrl();
-    await this.navigateTo(url);
+    await this.navigateTo(TRANSACTIONS_URL);
 
     const accounts = await fetchAccounts(this.page, startMoment);
 
