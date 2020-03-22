@@ -1,50 +1,11 @@
-import _ from 'lodash';
 import { GENERAL_ERROR, SCRAPE_PROGRESS_TYPES } from './constants';
+import { AdapterContext } from './adapter-context';
+import { RunnerContext, RunnerContextOptions } from './runner-context';
+import { Adapter } from './adapter';
 
 
-const noop = () => {};
-
-class RunnerContext {
-  constructor(options) {
-    this.data = {};
-    this.sessionData = {};
-    this.notifyProgress = options.onProgress || noop;
-    this.errorResult = null;
-  }
-
-  setErrorResult(errorResult) {
-    this.errorResult = errorResult;
-  }
-}
-
-class AdapterContext {
-  constructor(adapterName, runnerContext) {
-    this._runnerContext = runnerContext;
-    this._adapterName = adapterName;
-  }
-
-  addAdapterData = (adapterData) => {
-    this._runnerContext.data = _.merge(this._runnerContext.data, adapterData);
-  }
-
-  hasSessionData = (key) => {
-    return typeof this._runnerContext.sessionData[key] !== 'undefined';
-  }
-
-  getSessionData = (key) => {
-    return this._runnerContext.sessionData[key];
-  }
-
-  setSessionData = (key, value) => {
-    this._runnerContext.sessionData[key] = value;
-  }
-
-  notifyProgress = (state) => {
-    this._runnerContext.notifyProgress(this._adapterName, state);
-  }
-}
-
-function runAdapter(runnerContext, adapter) {
+// TODO adapter any
+function runAdapter(runnerContext: RunnerContext, adapter: any) {
   const adapterContext = new AdapterContext(adapter.name, runnerContext);
 
   adapterContext.notifyProgress(SCRAPE_PROGRESS_TYPES.VALIDATE_ADAPTER);
@@ -59,7 +20,7 @@ function runAdapter(runnerContext, adapter) {
       adapterContext.notifyProgress(SCRAPE_PROGRESS_TYPES.START_ADAPTER);
       return adapter.action(adapterContext)
         .then(
-          (result) => {
+          (result: any) => {
             if (result) {
               if (typeof result.success === 'boolean' && !result.success) {
                 runnerContext.setErrorResult(result);
@@ -82,12 +43,12 @@ function runAdapter(runnerContext, adapter) {
 }
 
 
-function validateAdapters(adapters) {
+function validateAdapters(adapters: Adapter[]) {
   if (!adapters) {
     return ['adapters list must be valid array'];
   }
 
-  const errors = [];
+  const errors: string[] = [];
   adapters.forEach((adapter, i) => {
     if (!adapter) {
       errors.push(`adapter in index ${i} cannot be null`);
@@ -110,7 +71,9 @@ function validateAdapters(adapters) {
   return errors;
 }
 
-export default async function runner(options, adapters, cleanupAdapters = []) {
+export interface RunnerOptions extends RunnerContextOptions {}
+
+export default async function runner(options: RunnerOptions, adapters: Adapter[], cleanupAdapters = []) {
   const validations = validateAdapters(adapters);
 
   if (validations.length > 0) {

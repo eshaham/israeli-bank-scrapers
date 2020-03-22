@@ -7,12 +7,17 @@
     "npm": ">= 5.3.0"
   },
   "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
     "clean": "rimraf lib",
     "test": "cross-env BABEL_ENV=test jest",
     "test:ci": "ncp tests/.tests-config.tpl.js tests/.tests-config.js && npm run test",
     "lint": "eslint src",
-    "build": "npm run clean && babel src --out-dir lib",
+    "type-check": "tsc --noEmit",
+    "type-check:watch": "npm run type-check -- --watch",
+    "build": "npm run clean && npm run build:types && npm run build:js",
+    "build:types": "tsc --emitDeclarationOnly",
+    "build:js": "babel src --out-dir lib --extensions \".js,.ts\" --source-maps inline",
     "prebuild": "node utils/update-puppeteer-config.js",
     "prepare:core": "node utils/prepare-israeli-bank-scrapers-core.js && npm i --package-lock-only && npm ci && npm run build",
     "prepare:default": "npm ci && npm run build",
@@ -44,6 +49,7 @@
     "@babel/core": "^7.4.5",
     "@babel/plugin-proposal-class-properties": "^7.5.5",
     "@babel/preset-env": "^7.4.5",
+    "@babel/preset-typescript": "^7.9.0",
     "babel-eslint": "^10.0.3",
     "babel-jest": "^24.8.0",
     "babel-plugin-import-visitor": "^0.2.0",
@@ -55,16 +61,18 @@
     "json2csv": "^4.2.1",
     "ncp": "^2.0.0",
     "pre-commit": "^1.2.2",
-    "rimraf": "^3.0.0"
+    "rimraf": "^3.0.0",
+    "typescript": "^3.8.3"
   },
   "dependencies": {
+    "@types/lodash": "^4.14.149",
     "build-url": "^2.0.0",
     "core-js": "^3.1.4",
     "lodash": "^4.17.10",
     "moment": "^2.22.2",
     "node-fetch": "^2.2.0",
-    "uuid": "^3.3.2",
-    "puppeteer": "^2.0.0"
+    "puppeteer": "^2.0.0",
+    "uuid": "^3.3.2"
   },
   "files": [
     "lib/**/*",

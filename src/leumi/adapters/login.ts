@@ -4,19 +4,21 @@ import { BASE_URL } from '../definitions';
 import getKeyByValue from '../../helpers/filters';
 import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT } from '../../constants';
 import { handleLoginResult, isValidCredentials } from '../../helpers/login';
+import { AdapterContext } from '../../adapter-context';
+import { Adapter } from '../../adapter';
 
 const SCRAPER_ID = 'leumi';
 
 const submitButtonSelector = '#enter';
 
-function createLoginFields(credentials) {
+function createLoginFields(credentials: Record<string, any>) {
   return [
     { selector: '#wtr_uid', value: credentials.username },
     { selector: '#wtr_password', value: credentials.password },
   ];
 }
 
-async function waitForPostLogin(page) {
+async function waitForPostLogin(page: any) {
   // TODO check for condition to provide new password
   return Promise.race([
     waitUntilElementFound(page, 'div.leumi-container', true),
@@ -25,18 +27,21 @@ async function waitForPostLogin(page) {
 }
 
 function getPossibleLoginResults() {
-  const urls = {};
+  const urls : Record<string, RegExp[]> = {};
   urls[LOGIN_RESULT.SUCCESS] = [/ebanking\/SO\/SPA.aspx/i];
   urls[LOGIN_RESULT.INVALID_PASSWORD] = [/InternalSite\/CustomUpdate\/leumi\/LoginPage.ASP/];
   // urls[LOGIN_RESULT.CHANGE_PASSWORD] = ``; // TODO should wait until my password expires
   return urls;
 }
 
+interface loginAdapterOptions {
+  credentials: Record<string, string>
+}
 
-export function loginAdapter(options) {
+export function loginAdapter(options: loginAdapterOptions): Adapter {
   return {
     name: `login(${SCRAPER_ID})`,
-    validate: (context) => {
+    validate: (context: AdapterContext) => {
       const result = [];
 
       if (!isValidCredentials(SCRAPER_ID, options.credentials)) {
@@ -64,7 +69,7 @@ export function loginAdapter(options) {
         const current = await getCurrentUrl(page, true);
         const loginResult = getKeyByValue(possibleLoginResults, current);
         return handleLoginResult(loginResult,
-          (status) => context.notifyProgress(status));
+          (message: string) => context.notifyProgress(message));
       } catch (error) {
         return {
           success: false,
