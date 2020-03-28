@@ -34,6 +34,6 @@ export class RunnerAdapterContext {
 export interface RunnerAdapter {
   name: string;
   validate: (context: RunnerAdapterContext) => string[];
-  action: (context: RunnerAdapterContext) => Promise<{ success: boolean; errorType?: any}>
+  action: (context: RunnerAdapterContext) => Promise<{ data?: Record<string,any>; errorType?: any}>
     | Promise<void>;
 }

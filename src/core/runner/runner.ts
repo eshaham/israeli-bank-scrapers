@@ -1,4 +1,4 @@
-import { GENERAL_ERROR, SCRAPE_PROGRESS_TYPES } from './constants';
+import { GENERAL_ERROR, SCRAPE_PROGRESS_TYPES } from '@core/constants';
 import { RunnerContext, RunnerContextOptions } from './runner-context';
 import { RunnerAdapterContext, RunnerAdapter } from './runner-adapter';
 
@@ -74,7 +74,7 @@ export interface RunnerOptions extends RunnerContextOptions {
 
 }
 
-export default async function runner(options: RunnerOptions, adapters: RunnerAdapter[], cleanupAdapters = []) {
+export async function runner(options: RunnerOptions, adapters: RunnerAdapter[], cleanupAdapters = []) {
   const validations = validateAdapters(adapters);
 
   if (validations.length > 0) {

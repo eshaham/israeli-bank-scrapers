@@ -1,12 +1,11 @@
-import { getActiveAccountsInfo } from '../adapter-helpers/accounts';
+import { getActiveAccountsInfo, getAPISiteUrl } from '../adapter-helpers';
 import {
   getTransactionsUrl,
   fetchPoalimXSRFWithinPage,
   convertTransaction,
 } from '../adapter-helpers/transactions';
-import { getAPISiteUrl } from '../adapter-helpers/api';
-import { validateInThePastYear } from '../../helpers/dates';
-import { Transaction } from '../../types';
+import { validateInThePastYear } from '@core/helpers/dates';
+import { Transaction } from '@core/types';
 
 
 async function getAccountTransactions(page, accountInfo, startDate, apiSiteUrl) {

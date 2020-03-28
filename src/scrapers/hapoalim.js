@@ -1,7 +1,7 @@
 import moment from 'moment';
 import { BaseScraperWithBrowser } from './base-scraper-with-browser';
-import runner from '../runner';
-import { setBrowserPageAdapter } from '../puppeteer';
+import { runner } from '@core/runner';
+import { setBrowserPageAdapter } from '@core/adapters/puppeteer';
 import { loginAdapter, scrapeTransactionsAdapter } from '../hapoalim/adapters';
 import { GENERAL_ERROR, SCRAPE_PROGRESS_TYPES } from '../constants';
 

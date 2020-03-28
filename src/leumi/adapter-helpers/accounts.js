@@ -5,8 +5,8 @@ import {
   dropdownSelect,
   fillInput,
   waitUntilElementFound,
-} from '../../helpers/elements-interactions';
-import { navigateTo, waitForNavigation } from '../../helpers/navigation';
+} from '@core/helpers/elements-interactions';
+import { navigateTo, waitForNavigation } from '@core/helpers/navigation';
 import { BASE_URL, DATE_FORMAT } from '../definitions';
 
 function getTransactionsUrl() {

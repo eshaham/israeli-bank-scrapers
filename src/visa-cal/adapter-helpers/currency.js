@@ -1,6 +1,6 @@
 import {
   DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,
-} from '../../constants';
+} from '@core/constants';
 
 
 export function convertCurrency(currency) {

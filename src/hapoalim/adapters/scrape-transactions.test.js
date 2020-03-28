@@ -3,10 +3,10 @@ import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig,
   getDistFolder, saveTransactionsAsCSV,
 } from '../../../tests/tests-utils';
-import { createBrowserAdapter, createBrowserPageAdapter, closeBrowserAdapter } from '../../puppeteer';
+import { createBrowserAdapter, createBrowserPageAdapter, closeBrowserAdapter } from '../../core/adapters/puppeteer';
 import loginAdapter from './login';
 import scrapeTransactionsAdapter from './scrape-transactions';
-import runner from '../../runner';
+import runner from '../../core/runner';
 
 const COMPANY_ID = 'hapoalim';
 const DATA_TYPE = 'transactions';

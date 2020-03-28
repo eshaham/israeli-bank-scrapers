@@ -24,6 +24,14 @@ module.exports = {
     ],
   "plugins": [
     "@babel/plugin-proposal-class-properties",
+    ["module-resolver", {
+      "alias": {
+        "@core/constants": () => "./src/constants",
+        "@core/helpers": "./src/helpers",
+        "@core/definitions": "./src/definitions",
+        "^@core/(.+)": "./src/core/\\1",
+      }
+    }],
     importVisitor(node => {
       if (packageJson.name !== 'israeli-bank-scrapers-core') {
         return;

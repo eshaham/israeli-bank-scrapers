@@ -1,4 +1,4 @@
-import waitUntil from '../../helpers/waiting';
+import waitUntil from '@core/helpers/waiting';
 import { BASE_URL } from '../definitions';
 
 

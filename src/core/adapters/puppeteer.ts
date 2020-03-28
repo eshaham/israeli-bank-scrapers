@@ -1,10 +1,10 @@
 import puppeteer from 'puppeteer';
-import { RunnerAdapter } from './runner-adapter';
+import { RunnerAdapter } from '../runner/runner-adapter';
 
 const VIEWPORT_WIDTH = 1024;
 const VIEWPORT_HEIGHT = 768;
 
-function createBrowserAdapter(options): RunnerAdapter {
+export function createBrowserAdapter(options): RunnerAdapter {
   return {
     name: 'createBrowser(puppeteer)',
     validate: () => { return []; },
@@ -22,13 +22,11 @@ function createBrowserAdapter(options): RunnerAdapter {
       });
 
       context.setSessionData('puppeteer.browser', browser);
-
-      return { success: true};
     },
   };
 }
 
-function setBrowserPageAdapter(options): RunnerAdapter {
+export function setBrowserPageAdapter(options): RunnerAdapter {
   return {
     name: 'setBrowserPage(puppeteer)',
     validate: () => {
@@ -40,7 +38,6 @@ function setBrowserPageAdapter(options): RunnerAdapter {
     },
     action: async (context) => {
       context.setSessionData('puppeteer.page', options.page);
-      return { success: true}
     },
   };
 }
@@ -49,7 +46,7 @@ export interface CreateBrowserPageAdapterOptions {
   browser?: any;
 }
 
-function createBrowserPageAdapter(options: CreateBrowserPageAdapterOptions = {}): RunnerAdapter {
+export function createBrowserPageAdapter(options: CreateBrowserPageAdapterOptions = {}): RunnerAdapter {
   return {
     name: 'createBrowserPage(puppeteer)',
     validate: (context) => {
@@ -74,17 +71,15 @@ function createBrowserPageAdapter(options: CreateBrowserPageAdapterOptions = {})
       });
 
       context.setSessionData('puppeteer.page', page);
-      return { success: true}
     },
   };
 }
-
 
 export interface CloseBrowserAdapterOptions {
   browser?: any;
 }
 
-function closeBrowserAdapter(options: CloseBrowserAdapterOptions = {}): RunnerAdapter {
+export function closeBrowserAdapter(options: CloseBrowserAdapterOptions = {}): RunnerAdapter {
   return {
     name: 'closeBrowser(puppeteer)',
     validate: (context) => {
@@ -97,11 +92,6 @@ function closeBrowserAdapter(options: CloseBrowserAdapterOptions = {}): RunnerAd
     action: async (context) => {
       const browser = options.browser || context.getSessionData('puppeteer.browser');
       browser.close();
-      return { success: true}
     },
   };
 }
-
-export {
-  closeBrowserAdapter, createBrowserAdapter, createBrowserPageAdapter, setBrowserPageAdapter,
-};

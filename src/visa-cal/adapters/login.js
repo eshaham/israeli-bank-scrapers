@@ -1,6 +1,6 @@
-import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT } from '../../constants';
-import { isValidCredentials, handleLoginResult } from '../../helpers/login';
-import { fetchPost } from '../../helpers/fetch';
+import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT } from '@core/constants';
+import { isValidCredentials, handleLoginResult } from '@core/helpers/login';
+import { fetchPost } from '@core/helpers/fetch';
 import { HEADER_SITE } from '../definitions';
 
 const SCRAPER_ID = 'visaCal';

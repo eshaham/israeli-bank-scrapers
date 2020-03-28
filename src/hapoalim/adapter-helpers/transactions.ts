@@ -1,9 +1,9 @@
 import uuid4 from 'uuid/v4';
 import moment from 'moment';
 import { DATE_FORMAT } from '../definitions';
-import { fetchPostWithinPage, fetchGetWithinPage } from '../../helpers/fetch';
-import { NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../../constants';
-import { Transaction } from '../../types';
+import { fetchPostWithinPage, fetchGetWithinPage } from '@core/helpers/fetch';
+import { NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '@core/constants';
+import { Transaction } from '@core/types';
 
 
 export function getTransactionsUrl(page, options) {
@@ -42,20 +42,7 @@ export async function fetchPoalimXSRFWithinPage(page, url) {
   return fetchPostWithinPage(page, url, [], headers);
 }
 
-export interface CheckTransaction {
-  type: string;
-  identifier: any;
-  date: string;
-  processedDate: string;
-  originalAmount: any;
-  originalCurrency: string;
-  chargedAmount: any;
-  description: any;
-  status: string;
-  memo: string | null;
-}
-
-export function convertTransaction(txn: Record<string, any>): CheckTransaction {
+export function convertTransaction(txn: Record<string, any>): Transaction {
   const isOutbound = txn.eventActivityTypeCode === 2;
 
   let memo: string | null = null;

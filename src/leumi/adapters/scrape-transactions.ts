@@ -3,12 +3,12 @@ import {
   clickButton,
   elementPresentOnPage,
   pageEvalAll,
-} from '../../helpers/elements-interactions';
+} from '@core/helpers/elements-interactions';
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../../constants';
-import { mapAccounts, navigateToAccountTransactions } from '../adapter-helpers/accounts';
+import { mapAccounts, navigateToAccountTransactions } from '../adapter-helpers';
 import { DATE_FORMAT } from '../definitions';
-import { validateInThePastYear } from '../../helpers/dates';
-import { Transaction } from '../../types';
+import { validateInThePastYear } from '@core/helpers/dates';
+import { Transaction } from '@core/types';
 
 const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא קיימות תנועות מתאימות על פי הסינון שהוגדר';
 

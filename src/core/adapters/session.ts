@@ -1,4 +1,4 @@
-import { RunnerAdapter } from './runner-adapter';
+import { RunnerAdapter } from '../runner/runner-adapter';
 
 export function exportSessionData(options): RunnerAdapter {
   return {
@@ -26,8 +26,6 @@ export function exportSessionData(options): RunnerAdapter {
       context.addAdapterData({
         [targetProperty]: value,
       });
-
-      return {success: true}
     },
   };
 }

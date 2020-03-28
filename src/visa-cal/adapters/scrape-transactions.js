@@ -8,9 +8,9 @@ import {
 import { convertCurrency } from '../adapter-helpers/currency';
 import { HEADER_SITE, BASE_URL, DATE_FORMAT } from '../definitions';
 import { getBankDebitsUrl, getTransactionsUrl } from '../adapter-helpers/urls';
-import { filterOldTransactions, fixInstallments, sortTransactionsByDate } from '../../helpers/transactions';
-import { fetchGet } from '../../helpers/fetch';
-import { validateInThePastYear } from '../../helpers/dates';
+import { filterOldTransactions, fixInstallments, sortTransactionsByDate } from '@core/helpers/transactions';
+import { fetchGet } from '@core/helpers/fetch';
+import { validateInThePastYear } from '@core/helpers/dates';
 
 const NO_DATA_FOUND_MSG = 'לא נמצאו חיובים לטווח תאריכים זה';
 

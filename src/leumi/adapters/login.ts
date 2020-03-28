@@ -1,10 +1,10 @@
-import { fillInputs, clickButton, waitUntilElementFound } from '../../helpers/elements-interactions';
-import { navigateTo, getCurrentUrl } from '../../helpers/navigation';
+import { fillInputs, clickButton, waitUntilElementFound } from '@core/helpers/elements-interactions';
+import { navigateTo, getCurrentUrl } from '@core/helpers/navigation';
 import { BASE_URL } from '../definitions';
-import getKeyByValue from '../../helpers/filters';
-import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT } from '../../constants';
-import { handleLoginResult, isValidCredentials } from '../../helpers/login';
-import { RunnerAdapter, RunnerAdapterContext } from '../../runner-adapter';
+import getKeyByValue from '@core/helpers/filters';
+import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT } from '@core/constants';
+import { handleLoginResult, isValidCredentials } from '@core/helpers/login';
+import { RunnerAdapter, RunnerAdapterContext } from '@core/runner';
 
 const SCRAPER_ID = 'leumi';
 
@@ -26,7 +26,7 @@ async function waitForPostLogin(page: any) {
 }
 
 function getPossibleLoginResults() {
-  const urls : Record<string, RegExp[]> = {};
+  const urls: Record<string, RegExp[]> = {};
   urls[LOGIN_RESULT.SUCCESS] = [/ebanking\/SO\/SPA.aspx/i];
   urls[LOGIN_RESULT.INVALID_PASSWORD] = [/InternalSite\/CustomUpdate\/leumi\/LoginPage.ASP/];
   // urls[LOGIN_RESULT.CHANGE_PASSWORD] = ``; // TODO should wait until my password expires
@@ -34,7 +34,7 @@ function getPossibleLoginResults() {
 }
 
 interface LoginAdapterOptions {
-  credentials: Record<string, string>
+  credentials: Record<string, string>;
 }
 
 export function loginAdapter(options: LoginAdapterOptions): RunnerAdapter {

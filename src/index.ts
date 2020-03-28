@@ -4,11 +4,6 @@ import * as constants from './constants';
 
 // Puppeteer imports
 import puppeteerConfig from './puppeteer-config.json';
-import * as puppeteerAdapters from './puppeteer';
-
-// Adapters imports
-import runner from './runner';
-import * as session from './session';
 
 // Global exports
 export { helpers };
@@ -20,16 +15,12 @@ export function getPuppeteerConfig() {
 }
 
 // Adapters exports
-export * from './runner-adapter';
-export * from './runner-context';
-export { puppeteerAdapters, runner, session };
-export * from './types';
+export * from './core';
 
 // Companies adapters exports
 export * from './visa-cal';
 export * from './leumi';
 export * from './hapoalim';
-
 
 // Scrapers exports ( Backward Compatibility )
 export { default as createScraper } from './scrapers/factory';

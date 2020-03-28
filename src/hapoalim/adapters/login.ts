@@ -1,9 +1,9 @@
-import { fillInputs, clickButton, waitUntilElementFound } from '../../helpers/elements-interactions';
-import { navigateTo, getCurrentUrl, waitForRedirect } from '../../helpers/navigation';
+import { fillInputs, clickButton, waitUntilElementFound } from '@core/helpers/elements-interactions';
+import { navigateTo, getCurrentUrl, waitForRedirect } from '@core/helpers/navigation';
 import { BASE_URL, LOGIN_URL } from '../definitions';
-import getKeyByValue from '../../helpers/filters';
-import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT } from '../../constants';
-import { handleLoginResult, isValidCredentials } from '../../helpers/login';
+import getKeyByValue from '@core/helpers/filters';
+import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT } from '@core/constants';
+import { handleLoginResult, isValidCredentials } from '@core/helpers/login';
 
 const SCRAPER_ID = 'hapoalim';
 
