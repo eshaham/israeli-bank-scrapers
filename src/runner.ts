@@ -1,12 +1,11 @@
 import { GENERAL_ERROR, SCRAPE_PROGRESS_TYPES } from './constants';
-import { AdapterContext } from './adapter-context';
 import { RunnerContext, RunnerContextOptions } from './runner-context';
-import { Adapter } from './adapter';
+import { RunnerAdapterContext, RunnerAdapter } from './runner-adapter';
 
 
 // TODO adapter any
 function runAdapter(runnerContext: RunnerContext, adapter: any) {
-  const adapterContext = new AdapterContext(adapter.name, runnerContext);
+  const adapterContext = new RunnerAdapterContext(adapter.name, runnerContext);
 
   adapterContext.notifyProgress(SCRAPE_PROGRESS_TYPES.VALIDATE_ADAPTER);
   return Promise.resolve(adapter.validate(adapterContext))
@@ -43,7 +42,7 @@ function runAdapter(runnerContext: RunnerContext, adapter: any) {
 }
 
 
-function validateAdapters(adapters: Adapter[]) {
+function validateAdapters(adapters: RunnerAdapter[]) {
   if (!adapters) {
     return ['adapters list must be valid array'];
   }
@@ -71,9 +70,11 @@ function validateAdapters(adapters: Adapter[]) {
   return errors;
 }
 
-export interface RunnerOptions extends RunnerContextOptions {}
+export interface RunnerOptions extends RunnerContextOptions {
 
-export default async function runner(options: RunnerOptions, adapters: Adapter[], cleanupAdapters = []) {
+}
+
+export default async function runner(options: RunnerOptions, adapters: RunnerAdapter[], cleanupAdapters = []) {
   const validations = validateAdapters(adapters);
 
   if (validations.length > 0) {

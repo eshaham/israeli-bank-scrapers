@@ -6,6 +6,7 @@ import {
 } from '../adapter-helpers/transactions';
 import { getAPISiteUrl } from '../adapter-helpers/api';
 import { validateInThePastYear } from '../../helpers/dates';
+import { Transaction } from '../../types';
 
 
 async function getAccountTransactions(page, accountInfo, startDate, apiSiteUrl) {
@@ -17,7 +18,7 @@ async function getAccountTransactions(page, accountInfo, startDate, apiSiteUrl) 
 
   const txnsResult = await fetchPoalimXSRFWithinPage(page, txnsUrl);
 
-  let txns = [];
+  let txns: Transaction[] = [];
   if (txnsResult) {
     txns = txnsResult.transactions.map(((transaction) => convertTransaction(transaction)));
   }
@@ -29,7 +30,7 @@ export function scrapeTransactionsAdapter(options) {
   return {
     name: 'scrapeTransactions(hapoalim)',
     validate: (context) => {
-      const result = [];
+      const result: string[] = [];
 
       const [startDateValidationMessage] = validateInThePastYear(options.startDate);
 
@@ -49,7 +50,7 @@ export function scrapeTransactionsAdapter(options) {
 
       const apiSiteUrl = await getAPISiteUrl(page);
       const accountsInfo = await getActiveAccountsInfo(page);
-      const accounts = [];
+      const accounts: { accountNumber: string; txns: Transaction[]}[]= [];
 
       for (let i = 0; i < accountsInfo.length; i += 1) {
         const accountInfo = accountsInfo[i];

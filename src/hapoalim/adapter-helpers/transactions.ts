@@ -3,6 +3,7 @@ import moment from 'moment';
 import { DATE_FORMAT } from '../definitions';
 import { fetchPostWithinPage, fetchGetWithinPage } from '../../helpers/fetch';
 import { NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../../constants';
+import { Transaction } from '../../types';
 
 
 export function getTransactionsUrl(page, options) {
@@ -18,7 +19,7 @@ export function getTransactionsUrl(page, options) {
 export async function fetchGetPoalimXSRFWithinPage(page, url) {
   const cookies = await page.cookies();
   const XSRFCookie = cookies.find((cookie) => cookie.name === 'XSRF-TOKEN');
-  const headers = {};
+  const headers: Record<string, string> = {};
   if (XSRFCookie != null) {
     headers['X-XSRF-TOKEN'] = XSRFCookie.value;
   }
@@ -31,7 +32,7 @@ export async function fetchGetPoalimXSRFWithinPage(page, url) {
 export async function fetchPoalimXSRFWithinPage(page, url) {
   const cookies = await page.cookies();
   const XSRFCookie = cookies.find((cookie) => cookie.name === 'XSRF-TOKEN');
-  const headers = {};
+  const headers: Record<string, any> = {};
   if (XSRFCookie != null) {
     headers['X-XSRF-TOKEN'] = XSRFCookie.value;
   }
@@ -41,10 +42,23 @@ export async function fetchPoalimXSRFWithinPage(page, url) {
   return fetchPostWithinPage(page, url, [], headers);
 }
 
-export function convertTransaction(txn) {
+export interface CheckTransaction {
+  type: string;
+  identifier: any;
+  date: string;
+  processedDate: string;
+  originalAmount: any;
+  originalCurrency: string;
+  chargedAmount: any;
+  description: any;
+  status: string;
+  memo: string | null;
+}
+
+export function convertTransaction(txn: Record<string, any>): CheckTransaction {
   const isOutbound = txn.eventActivityTypeCode === 2;
 
-  let memo = null;
+  let memo: string | null = null;
   if (txn.beneficiaryDetailsData) {
     const {
       partyHeadline,
@@ -52,7 +66,7 @@ export function convertTransaction(txn) {
       messageHeadline,
       messageDetail,
     } = txn.beneficiaryDetailsData;
-    const memoLines = [];
+    const memoLines: any[] = [];
     if (partyHeadline) {
       memoLines.push(partyHeadline);
     }

@@ -1,5 +1,6 @@
+import { RunnerAdapter } from './runner-adapter';
 
-export function exportSessionData(options) {
+export function exportSessionData(options): RunnerAdapter {
   return {
     name: 'exportSessionData()',
     validate: (context) => {
@@ -25,6 +26,8 @@ export function exportSessionData(options) {
       context.addAdapterData({
         [targetProperty]: value,
       });
+
+      return {success: true}
     },
   };
 }

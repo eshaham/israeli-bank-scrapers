@@ -8,6 +8,7 @@ import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../../cons
 import { mapAccounts, navigateToAccountTransactions } from '../adapter-helpers/accounts';
 import { DATE_FORMAT } from '../definitions';
 import { validateInThePastYear } from '../../helpers/dates';
+import { Transaction } from '../../types';
 
 const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא קיימות תנועות מתאימות על פי הסינון שהוגדר';
 
@@ -67,7 +68,7 @@ async function extractCompletedTransactionsFromPage(page) {
 
   for (const element of tdsValues) {
     if (element.classList.includes('ExtendedActivityColumnDate')) {
-      const newTransaction = { status: TRANSACTION_STATUS.COMPLETED };
+      const newTransaction: Partial<Transaction> = { status: TRANSACTION_STATUS.COMPLETED };
       newTransaction.date = (element.innerText || '').trim();
       txns.push(newTransaction);
     } else if (element.classList.includes('ActivityTableColumn1LTR') || element.classList.includes('ActivityTableColumn1')) {
@@ -111,7 +112,7 @@ async function extractPendingTransactionsFromPage(page) {
 
   for (const element of tdsValues) {
     if (element.classList.includes('Colume1Width')) {
-      const newTransaction = { status: TRANSACTION_STATUS.PENDING };
+      const newTransaction: Partial<Transaction> = { status: TRANSACTION_STATUS.PENDING };
       newTransaction.date = (element.innerText || '').trim();
       txns.push(newTransaction);
     } else if (element.classList.includes('Colume2Width')) {

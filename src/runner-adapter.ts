@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import { RunnerContext } from './runner-context';
 
-export class AdapterContext {
+export class RunnerAdapterContext {
   private _adapterName: string;
   private _runnerContext: any;
 
@@ -29,4 +29,11 @@ export class AdapterContext {
   notifyProgress = (state: string) => {
     this._runnerContext.notifyProgress(this._adapterName, state);
   }
+}
+
+export interface RunnerAdapter {
+  name: string;
+  validate: (context: RunnerAdapterContext) => string[];
+  action: (context: RunnerAdapterContext) => Promise<{ success: boolean; errorType?: any}>
+    | Promise<void>;
 }

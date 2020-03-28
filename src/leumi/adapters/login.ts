@@ -4,8 +4,7 @@ import { BASE_URL } from '../definitions';
 import getKeyByValue from '../../helpers/filters';
 import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT } from '../../constants';
 import { handleLoginResult, isValidCredentials } from '../../helpers/login';
-import { AdapterContext } from '../../adapter-context';
-import { Adapter } from '../../adapter';
+import { RunnerAdapter, RunnerAdapterContext } from '../../runner-adapter';
 
 const SCRAPER_ID = 'leumi';
 
@@ -34,14 +33,14 @@ function getPossibleLoginResults() {
   return urls;
 }
 
-interface loginAdapterOptions {
+interface LoginAdapterOptions {
   credentials: Record<string, string>
 }
 
-export function loginAdapter(options: loginAdapterOptions): Adapter {
+export function loginAdapter(options: LoginAdapterOptions): RunnerAdapter {
   return {
     name: `login(${SCRAPER_ID})`,
-    validate: (context: AdapterContext) => {
+    validate: (context: RunnerAdapterContext) => {
       const result = [];
 
       if (!isValidCredentials(SCRAPER_ID, options.credentials)) {

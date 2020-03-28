@@ -15,8 +15,9 @@
     "lint": "eslint src",
     "type-check": "tsc --noEmit",
     "type-check:watch": "npm run type-check -- --watch",
-    "build": "npm run clean && npm run build:types && npm run build:js",
+    "build": "npm run clean && npm run build:types && npm run build:js && npm run build:puppeteer-config",
     "build:types": "tsc --emitDeclarationOnly",
+    "build:puppeteer-config": "cp src/puppeteer-config.json lib",
     "build:js": "babel src --out-dir lib --extensions \".js,.ts\" --source-maps inline",
     "prebuild": "node utils/update-puppeteer-config.js",
     "prepare:core": "node utils/prepare-israeli-bank-scrapers-core.js && npm i --package-lock-only && npm ci && npm run build",
@@ -50,9 +51,12 @@
     "@babel/plugin-proposal-class-properties": "^7.5.5",
     "@babel/preset-env": "^7.4.5",
     "@babel/preset-typescript": "^7.9.0",
+    "@typescript-eslint/eslint-plugin": "^2.25.0",
+    "@typescript-eslint/parser": "^2.25.0",
     "babel-eslint": "^10.0.3",
     "babel-jest": "^24.8.0",
     "babel-plugin-import-visitor": "^0.2.0",
+    "cp": "^0.2.0",
     "cross-env": "^6.0.3",
     "eslint": "^6.6.0",
     "eslint-config-airbnb-base": "^14.0.0",
@@ -75,7 +79,6 @@
     "uuid": "^3.3.2"
   },
   "files": [
-    "lib/**/*",
-    "puppeteer-config.json"
+    "lib/**/*"
   ]
 }

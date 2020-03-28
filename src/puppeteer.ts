@@ -1,9 +1,10 @@
 import puppeteer from 'puppeteer';
+import { RunnerAdapter } from './runner-adapter';
 
 const VIEWPORT_WIDTH = 1024;
 const VIEWPORT_HEIGHT = 768;
 
-function createBrowserAdapter(options) {
+function createBrowserAdapter(options): RunnerAdapter {
   return {
     name: 'createBrowser(puppeteer)',
     validate: () => { return []; },
@@ -21,11 +22,13 @@ function createBrowserAdapter(options) {
       });
 
       context.setSessionData('puppeteer.browser', browser);
+
+      return { success: true};
     },
   };
 }
 
-function setBrowserPageAdapter(options) {
+function setBrowserPageAdapter(options): RunnerAdapter {
   return {
     name: 'setBrowserPage(puppeteer)',
     validate: () => {
@@ -37,11 +40,16 @@ function setBrowserPageAdapter(options) {
     },
     action: async (context) => {
       context.setSessionData('puppeteer.page', options.page);
+      return { success: true}
     },
   };
 }
 
-function createBrowserPageAdapter(options = {}) {
+export interface CreateBrowserPageAdapterOptions {
+  browser?: any;
+}
+
+function createBrowserPageAdapter(options: CreateBrowserPageAdapterOptions = {}): RunnerAdapter {
   return {
     name: 'createBrowserPage(puppeteer)',
     validate: (context) => {
@@ -66,11 +74,17 @@ function createBrowserPageAdapter(options = {}) {
       });
 
       context.setSessionData('puppeteer.page', page);
+      return { success: true}
     },
   };
 }
 
-function closeBrowserAdapter(options = {}) {
+
+export interface CloseBrowserAdapterOptions {
+  browser?: any;
+}
+
+function closeBrowserAdapter(options: CloseBrowserAdapterOptions = {}): RunnerAdapter {
   return {
     name: 'closeBrowser(puppeteer)',
     validate: (context) => {
@@ -83,6 +97,7 @@ function closeBrowserAdapter(options = {}) {
     action: async (context) => {
       const browser = options.browser || context.getSessionData('puppeteer.browser');
       browser.close();
+      return { success: true}
     },
   };
 }
