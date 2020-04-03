@@ -18,7 +18,7 @@
     "build": "npm run clean && npm run build:types && npm run build:js && npm run build:puppeteer-config",
     "build:types": "tsc --emitDeclarationOnly",
     "build:puppeteer-config": "cp src/puppeteer-config.json lib",
-    "build:js": "babel src --out-dir lib --extensions \".js,.ts\" --source-maps inline",
+    "build:js": "babel src --out-dir lib --extensions \".js,.ts\" --source-maps inline --verbose",
     "prebuild": "node utils/update-puppeteer-config.js",
     "prepare:core": "node utils/prepare-israeli-bank-scrapers-core.js && npm i --package-lock-only && npm ci && npm run build",
     "prepare:default": "npm ci && npm run build",

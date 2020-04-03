@@ -18,7 +18,7 @@ const presets = [
 module.exports = {
     presets,
     ignore: process.env.BABEL_ENV === 'test' ? [] : [
-      '**/*.test.js',
+      '**/*.test.(js,ts)',
       'tests/**/*',
     ],
   "plugins": [
