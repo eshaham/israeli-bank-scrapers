@@ -1,6 +1,8 @@
 import { EventEmitter } from 'events';
 
-import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT, ERRORS } from '../constants';
+import { SCRAPE_PROGRESS_TYPES, LoginResults, ERRORS } from '../constants';
+import { TimeoutError } from '@core/waiting';
+import { LegacyLoginResult, LegacyScrapingResult } from '../types';
 
 const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';
 
@@ -19,11 +21,20 @@ function createTimeoutError(errorMessage) {
 function createGenericError(errorMessage) {
   return createErrorResult(ERRORS.GENERIC, errorMessage);
 }
+// TODO es consider browser type
+export interface BaseScraperOptions {
+  companyId: string;
+  verbose: boolean;
+  startDate: Date;
+  showBrowser: boolean;
+  browser: any;
+  executablePath?: string;
+}
 
 class BaseScraper {
-  constructor(options) {
-    this.options = options;
-    this.eventEmitter = new EventEmitter();
+  private eventEmitter = new EventEmitter();
+
+  constructor(public options: BaseScraperOptions) {
   }
 
   async initialize() {
@@ -38,7 +49,7 @@ class BaseScraper {
     try {
       loginResult = await this.login(credentials);
     } catch (e) {
-      loginResult = e.timeout ?
+      loginResult = e instanceof TimeoutError ?
         createTimeoutError(e.message) :
         createGenericError(e.message);
     }
@@ -49,7 +60,7 @@ class BaseScraper {
         scrapeResult = await this.fetchData();
       } catch (e) {
         scrapeResult =
-          e.timeout ?
+          e instanceof TimeoutError  ?
             createTimeoutError(e.message) :
             createGenericError(e.message);
       }
@@ -67,11 +78,11 @@ class BaseScraper {
     return scrapeResult;
   }
 
-  async login() {
+  async login(credentials: Record<string, string>): Promise<LegacyLoginResult> {
     throw new Error(`login() is not created in ${this.options.companyId}`);
   }
 
-  async fetchData() {
+  async fetchData(): Promise<LegacyScrapingResult> {
     throw new Error(`fetchData() is not created in ${this.options.companyId}`);
   }
 
@@ -92,4 +103,4 @@ class BaseScraper {
   }
 }
 
-export { BaseScraper, LOGIN_RESULT };
+export { BaseScraper, LoginResults };

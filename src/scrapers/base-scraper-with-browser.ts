@@ -1,13 +1,25 @@
-import puppeteer from 'puppeteer';
+import puppeteer, { Page, Browser }  from 'puppeteer';
 
 import { BaseScraper } from './base-scraper';
-import { SCRAPE_PROGRESS_TYPES, LOGIN_RESULT, GENERAL_ERROR } from '../constants';
+import { SCRAPE_PROGRESS_TYPES, LoginResults } from '../constants';
 import { waitForNavigation, getCurrentUrl } from '../helpers/navigation';
 import { waitUntilElementFound, fillInput, clickButton } from '../helpers/elements-interactions';
+import { ErrorTypes, LegacyScrapingResult } from '../types';
 
 const VIEWPORT_WIDTH = 1024;
 const VIEWPORT_HEIGHT = 768;
 const OK_STATUS = 200;
+
+
+export interface LoginOptions {
+  loginUrl: string;
+  checkReadiness?: () => Promise<void>;
+  fields: {selector: string; value: string}[];
+  submitButtonSelector: string;
+  preAction?: () => Promise<void>;
+  postAction?: () => Promise<void>;
+  possibleResults: Partial<Record<LoginResults, (string | RegExp)[]>>;
+}
 
 async function getKeyByValue(object, value) {
   const keys = Object.keys(object);
@@ -31,23 +43,23 @@ async function getKeyByValue(object, value) {
     }
   }
 
-  return Promise.resolve(LOGIN_RESULT.UNKNOWN_ERROR);
+  return Promise.resolve(LoginResults.UnknownError);
 }
 
 function handleLoginResult(scraper, loginResult) {
   switch (loginResult) {
-    case LOGIN_RESULT.SUCCESS:
+    case LoginResults.Success:
       scraper.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
       return { success: true };
-    case LOGIN_RESULT.INVALID_PASSWORD:
-    case LOGIN_RESULT.UNKNOWN_ERROR:
+    case LoginResults.InvalidPassword:
+    case LoginResults.UnknownError:
       scraper.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_FAILED);
       return {
         success: false,
         errorType: loginResult,
         errorMessage: `Login failed with ${loginResult} error`,
       };
-    case LOGIN_RESULT.CHANGE_PASSWORD:
+    case LoginResults.ChangePassword:
       scraper.emitProgress(SCRAPE_PROGRESS_TYPES.CHANGE_PASSWORD);
       return {
         success: false,
@@ -58,14 +70,17 @@ function handleLoginResult(scraper, loginResult) {
   }
 }
 
-function createGeneralError() {
+function createGeneralError(): LegacyScrapingResult {
   return {
     success: false,
-    errorType: GENERAL_ERROR,
+    errorType: ErrorTypes.General,
   };
 }
 
 class BaseScraperWithBrowser extends BaseScraper {
+  protected browser: Browser;
+  protected page: Page;
+
   async initialize() {
     this.emitProgress(SCRAPE_PROGRESS_TYPES.INITIALIZING);
 
@@ -97,7 +112,7 @@ class BaseScraperWithBrowser extends BaseScraper {
     });
   }
 
-  async navigateTo(url, page) {
+  async navigateTo(url: string, page?: Page): Promise<void> {
     const pageToUse = page || this.page;
     const response = await pageToUse.goto(url);
 
@@ -107,7 +122,7 @@ class BaseScraperWithBrowser extends BaseScraper {
     }
   }
 
-  getLoginOptions() {
+  getLoginOptions(credentials: Record<string, string>): LoginOptions {
     throw new Error(`getLoginOptions() is not created in ${this.options.companyId}`);
   }
 
@@ -121,7 +136,7 @@ class BaseScraperWithBrowser extends BaseScraper {
     return null;
   }
 
-  async login(credentials) {
+  async login(credentials: Record<string, string>): Promise<LegacyScrapingResult> {
     if (!credentials) {
       return createGeneralError();
     }
@@ -159,4 +174,4 @@ class BaseScraperWithBrowser extends BaseScraper {
   }
 }
 
-export { BaseScraperWithBrowser, LOGIN_RESULT };
+export { BaseScraperWithBrowser, LoginResults };

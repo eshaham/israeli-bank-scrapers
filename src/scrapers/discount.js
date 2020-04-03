@@ -1,11 +1,11 @@
 import _ from 'lodash';
 import moment from 'moment';
 
-import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { fetchGetWithinPage } from '../helpers/fetch';
-import { NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
+import { NORMAL_TXN_TYPE, TransactionStatuses } from '../constants';
 
 const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
@@ -53,10 +53,10 @@ async function fetchAccountData(page, options) {
 
   const completedTxns = convertTransactions(
     txnsResult.CurrentAccountLastTransactions.OperationEntry,
-    TRANSACTION_STATUS.COMPLETED,
+    TransactionStatuses.Completed,
   );
   const rawFutureTxns = _.get(txnsResult, 'CurrentAccountLastTransactions.FutureTransactionsBlock.FutureTransactionEntry');
-  const pendingTxns = convertTransactions(rawFutureTxns, TRANSACTION_STATUS.PENDING);
+  const pendingTxns = convertTransactions(rawFutureTxns, TransactionStatuses.Pending);
 
   const accountData = {
     success: true,
@@ -79,9 +79,9 @@ async function navigateOrErrorLabel(page) {
 
 function getPossibleLoginResults() {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = [`${BASE_URL}/apollo/core/templates/RETAIL/masterPage.html#/MY_ACCOUNT_HOMEPAGE`];
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/LOGIN_PAGE`];
-  urls[LOGIN_RESULT.CHANGE_PASSWORD] = [`${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/PWD_RENEW`];
+  urls[LoginResults.Success] = [`${BASE_URL}/apollo/core/templates/RETAIL/masterPage.html#/MY_ACCOUNT_HOMEPAGE`];
+  urls[LoginResults.InvalidPassword] = [`${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/LOGIN_PAGE`];
+  urls[LoginResults.ChangePassword] = [`${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/PWD_RENEW`];
   return urls;
 }
 

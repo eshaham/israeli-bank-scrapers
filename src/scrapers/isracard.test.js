@@ -3,7 +3,7 @@ import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
 } from '../../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
-import { LOGIN_RESULT } from '../constants';
+import { LoginResults } from '../constants';
 
 const COMPANY_ID = 'isracard'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
@@ -32,7 +32,7 @@ describe('Isracard legacy scraper', () => {
 
     expect(result).toBeDefined();
     expect(result.success).toBeFalsy();
-    expect(result.errorType).toBe(LOGIN_RESULT.INVALID_PASSWORD);
+    expect(result.errorType).toBe(LoginResults.InvalidPassword);
   });
 
   maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions"', async () => {

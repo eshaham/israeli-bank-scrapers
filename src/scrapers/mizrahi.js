@@ -2,9 +2,9 @@ import moment from 'moment';
 import {
   SHEKEL_CURRENCY,
   NORMAL_TXN_TYPE,
-  TRANSACTION_STATUS,
+  TransactionStatuses,
 } from '../constants';
-import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { waitForNavigation } from '../helpers/navigation';
 import { pageEvalAll } from '../helpers/elements-interactions';
@@ -28,9 +28,9 @@ function createLoginFields(credentials) {
 
 function getPossibleLoginResults() {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = [AFTER_LOGIN_BASE_URL];
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${BASE_WEBSITE_URL}/login/loginMTO.aspx`];
-  urls[LOGIN_RESULT.CHANGE_PASSWORD] = [
+  urls[LoginResults.Success] = [AFTER_LOGIN_BASE_URL];
+  urls[LoginResults.InvalidPassword] = [`${BASE_WEBSITE_URL}/login/loginMTO.aspx`];
+  urls[LoginResults.ChangePassword] = [
     `${AFTER_LOGIN_BASE_URL}/main/uis/ge/changePassword/`,
   ];
   return urls;
@@ -71,7 +71,7 @@ function convertTransactions(txns) {
       originalCurrency: SHEKEL_CURRENCY,
       chargedAmount: row.MC02SchumEZ,
       description: row.MC02TnuaTeurEZ,
-      status: TRANSACTION_STATUS.COMPLETED,
+      status: TransactionStatuses.Completed,
     };
   });
 }
@@ -93,7 +93,7 @@ async function extractPendingTransactions(page) {
       originalCurrency: SHEKEL_CURRENCY,
       chargedAmount: amount,
       description: txn[1],
-      status: TRANSACTION_STATUS.PENDING,
+      status: TransactionStatuses.Pending,
     };
   });
 }

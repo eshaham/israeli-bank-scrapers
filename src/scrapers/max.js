@@ -1,13 +1,13 @@
 import buildUrl from 'build-url';
 import moment from 'moment';
 import { fetchGetWithinPage } from '../helpers/fetch';
-import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound, elementPresentOnPage, clickButton } from '../helpers/elements-interactions';
 import {
   NORMAL_TXN_TYPE,
   INSTALLMENTS_TXN_TYPE,
-  TRANSACTION_STATUS,
+  TransactionStatuses,
 } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
@@ -101,7 +101,7 @@ function mapTransaction(rawTransaction) {
   const processedDate = moment(isPending ?
     rawTransaction.purchaseDate :
     rawTransaction.paymentDate).toISOString();
-  const status = isPending ? TRANSACTION_STATUS.PENDING : TRANSACTION_STATUS.COMPLETED;
+  const status = isPending ? TransactionStatuses.Pending : TransactionStatuses.Completed;
 
   return {
     type: getTransactionType(rawTransaction.planName),
@@ -181,12 +181,12 @@ async function fetchTransactions(page, options) {
 
 function getPossibleLoginResults(page) {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = [`${BASE_WELCOME_URL}/homepage/personal`];
-  urls[LOGIN_RESULT.CHANGE_PASSWORD] = [`${BASE_ACTIONS_URL}/Anonymous/Login/PasswordExpired.aspx`];
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = [async () => {
+  urls[LoginResults.Success] = [`${BASE_WELCOME_URL}/homepage/personal`];
+  urls[LoginResults.ChangePassword] = [`${BASE_ACTIONS_URL}/Anonymous/Login/PasswordExpired.aspx`];
+  urls[LoginResults.InvalidPassword] = [async () => {
     return elementPresentOnPage(page, INVALID_DETAILS_SELECTOR);
   }];
-  urls[LOGIN_RESULT.UNKNOWN_ERROR] = [async () => {
+  urls[LoginResults.UnknownError] = [async () => {
     return elementPresentOnPage(page, LOGIN_ERROR_SELECTOR);
   }];
   return urls;

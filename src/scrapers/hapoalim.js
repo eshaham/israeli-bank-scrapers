@@ -1,10 +1,10 @@
 import moment from 'moment';
 import uuid4 from 'uuid/v4';
 
-import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
 import { waitForRedirect } from '../helpers/navigation';
-import waitUntil from '../helpers/waiting';
-import { NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
+import { waitUntil } from '../helpers/waiting';
+import { NORMAL_TXN_TYPE, TransactionStatuses } from '../constants';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 
 const DATE_FORMAT = 'YYYYMMDD';
@@ -52,7 +52,7 @@ function convertTransactions(txns) {
       originalCurrency: 'ILS',
       chargedAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
       description: txn.activityDescription,
-      status: txn.serialNumber === 0 ? TRANSACTION_STATUS.PENDING : TRANSACTION_STATUS.COMPLETED,
+      status: txn.serialNumber === 0 ? TransactionStatuses.Pending : TransactionStatuses.Completed,
       memo,
     };
   });
@@ -124,12 +124,12 @@ async function fetchAccountData(page, baseUrl, options) {
 
 function getPossibleLoginResults(baseUrl) {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = [
+  urls[LoginResults.Success] = [
     `${baseUrl}/portalserver/HomePage`,
     `${baseUrl}/ng-portals-bt/rb/he/homepage`,
     `${baseUrl}/ng-portals/rb/he/homepage`];
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${baseUrl}/AUTHENTICATE/LOGON?flow=AUTHENTICATE&state=LOGON&errorcode=1.6&callme=false`];
-  urls[LOGIN_RESULT.CHANGE_PASSWORD] = [
+  urls[LoginResults.InvalidPassword] = [`${baseUrl}/AUTHENTICATE/LOGON?flow=AUTHENTICATE&state=LOGON&errorcode=1.6&callme=false`];
+  urls[LoginResults.ChangePassword] = [
     `${baseUrl}/MCP/START?flow=MCP&state=START&expiredDate=null`,
     /\/ABOUTTOEXPIRE\/START/i,
   ];

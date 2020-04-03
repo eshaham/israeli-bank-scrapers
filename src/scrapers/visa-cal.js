@@ -2,7 +2,7 @@ import _ from 'lodash';
 import buildUrl from 'build-url';
 import moment from 'moment';
 
-import { BaseScraper, LOGIN_RESULT } from './base-scraper';
+import { BaseScraper, LoginResults } from './base-scraper';
 import {
   SCRAPE_PROGRESS_TYPES,
   NORMAL_TXN_TYPE,
@@ -11,7 +11,7 @@ import {
   SHEKEL_CURRENCY,
   DOLLAR_CURRENCY_SYMBOL,
   DOLLAR_CURRENCY,
-  TRANSACTION_STATUS,
+  TransactionStatuses,
 } from '../constants';
 import { fetchGet, fetchPost } from '../helpers/fetch';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
@@ -131,7 +131,7 @@ function convertTransactions(txns) {
       description: txn.MerchantDetails.Name,
       memo: getTransactionMemo(txn),
       installments: getInstallmentsInfo(txn),
-      status: TRANSACTION_STATUS.COMPLETED,
+      status: TransactionStatuses.Completed,
     };
   });
 }
@@ -241,21 +241,21 @@ class VisaCalScraper extends BaseScraper {
     if (authResponse === PASSWORD_EXPIRED_MSG) {
       return {
         success: false,
-        errorType: LOGIN_RESULT.CHANGE_PASSWORD,
+        errorType: LoginResults.ChangePassword,
       };
     }
 
     if (authResponse === INVALID_CREDENTIALS) {
       return {
         success: false,
-        errorType: LOGIN_RESULT.INVALID_PASSWORD,
+        errorType: LoginResults.InvalidPassword,
       };
     }
 
     if (!authResponse || !authResponse.token) {
       return {
         success: false,
-        errorType: LOGIN_RESULT.UNKNOWN_ERROR,
+        errorType: LoginResults.UnknownError,
         errorMessage: `No token found in authResponse: ${JSON.stringify(authResponse)}`,
       };
     }

@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
 import { waitForNavigation } from '../helpers/navigation';
 import {
   fillInput,
@@ -14,8 +14,8 @@ const DATE_FORMAT = 'DD/MM/YY';
 
 function getPossibleLoginResults() {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = [`${BASE_URL}/wps/myportal/FibiMenu/Online`];
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${BASE_URL}/LoginServices/login2.do`];
+  urls[LoginResults.Success] = [`${BASE_URL}/wps/myportal/FibiMenu/Online`];
+  urls[LoginResults.InvalidPassword] = [`${BASE_URL}/LoginServices/login2.do`];
   // TODO: support change password
   /* urls[LOGIN_RESULT.CHANGE_PASSWORD] = [``]; */
   return urls;

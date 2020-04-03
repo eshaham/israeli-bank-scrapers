@@ -2,7 +2,7 @@ import _ from 'lodash';
 import buildUrl from 'build-url';
 import moment from 'moment';
 
-import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import {
   SCRAPE_PROGRESS_TYPES,
@@ -11,7 +11,7 @@ import {
   SHEKEL_CURRENCY_KEYWORD,
   SHEKEL_CURRENCY,
   ALT_SHEKEL_CURRENCY,
-  TRANSACTION_STATUS,
+  TransactionStatuses,
 } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, filterOldTransactions } from '../helpers/transactions';
@@ -113,7 +113,7 @@ function convertTransactions(txns, processedDate) {
       description: isOutbound ? txn.fullSupplierNameOutbound : txn.fullSupplierNameHeb,
       memo: txn.moreInfo,
       installments: getInstallmentsInfo(txn),
-      status: TRANSACTION_STATUS.COMPLETED,
+      status: TransactionStatuses.Completed,
     };
   });
 }
@@ -241,14 +241,14 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
         this.emitProgress(SCRAPE_PROGRESS_TYPES.CHANGE_PASSWORD);
         return {
           success: false,
-          errorType: LOGIN_RESULT.CHANGE_PASSWORD,
+          errorType: LoginResults.ChangePassword,
         };
       }
 
       this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_FAILED);
       return {
         success: false,
-        errorType: LOGIN_RESULT.INVALID_PASSWORD,
+        errorType: LoginResults.InvalidPassword,
       };
     }
 
@@ -256,14 +256,14 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
       this.emitProgress(SCRAPE_PROGRESS_TYPES.CHANGE_PASSWORD);
       return {
         success: false,
-        errorType: LOGIN_RESULT.CHANGE_PASSWORD,
+        errorType: LoginResults.ChangePassword,
       };
     }
 
     this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_FAILED);
     return {
       success: false,
-      errorType: LOGIN_RESULT.INVALID_PASSWORD,
+      errorType: LoginResults.InvalidPassword,
     };
   }
 
