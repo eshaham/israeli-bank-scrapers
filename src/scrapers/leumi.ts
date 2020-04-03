@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
 import {
   dropdownSelect,
   dropdownElements,
@@ -10,7 +10,9 @@ import {
   elementPresentOnPage,
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
-import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
+import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TransactionStatuses } from '../constants';
+import { Transaction } from '../types';
+import { Page } from 'puppeteer';
 
 const BASE_URL = 'https://hb2.bankleumi.co.il';
 const DATE_FORMAT = 'DD/MM/YY';
@@ -21,9 +23,9 @@ function getTransactionsUrl() {
 }
 
 function getPossibleLoginResults() {
-  const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = [/ebanking\/SO\/SPA.aspx/i];
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = [/InternalSite\/CustomUpdate\/leumi\/LoginPage.ASP/];
+  const urls: LoginOptions['possibleResults'] = {};
+  urls[LoginResults.Success] = [/ebanking\/SO\/SPA.aspx/i];
+  urls[LoginResults.InvalidPassword] = [/InternalSite\/CustomUpdate\/leumi\/LoginPage.ASP/];
   // urls[LOGIN_RESULT.CHANGE_PASSWORD] = ``; // TODO should wait until my password expires
   return urls;
 }
@@ -79,7 +81,7 @@ async function extractCompletedTransactionsFromPage(page) {
 
   for (const element of tdsValues) {
     if (element.classList.includes('ExtendedActivityColumnDate')) {
-      const newTransaction = { status: TRANSACTION_STATUS.COMPLETED };
+      const newTransaction: Partial<Transaction> = { status: TransactionStatuses.Completed };
       newTransaction.date = (element.innerText || '').trim();
       txns.push(newTransaction);
     } else if (element.classList.includes('ActivityTableColumn1LTR') || element.classList.includes('ActivityTableColumn1')) {
@@ -123,7 +125,7 @@ async function extractPendingTransactionsFromPage(page) {
 
   for (const element of tdsValues) {
     if (element.classList.includes('Colume1Width')) {
-      const newTransaction = { status: TRANSACTION_STATUS.PENDING };
+      const newTransaction: Partial<Transaction> = { status: TransactionStatuses.Pending };
       newTransaction.date = (element.innerText || '').trim();
       txns.push(newTransaction);
     } else if (element.classList.includes('Colume2Width')) {
@@ -225,9 +227,9 @@ async function fetchTransactions(page, startDate) {
   return res;
 }
 
-async function waitForPostLogin(page) {
+async function waitForPostLogin(page: Page): Promise<void> {
   // TODO check for condition to provide new password
-  return Promise.race([
+  await Promise.race([
     waitUntilElementFound(page, 'div.leumi-container', true),
     waitUntilElementFound(page, '#loginErrMsg', true),
   ]);
