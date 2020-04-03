@@ -1,3 +1,5 @@
+// NOTICE: avoid changing exported keys as they are part of the public api
+
 export const PASSWORD_FIELD = 'password';
 
 export const SCRAPERS = {

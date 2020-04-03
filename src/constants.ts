@@ -20,11 +20,12 @@ export const SCRAPE_PROGRESS_TYPES = {
   TERMINATING: 'TERMINATING',
 };
 
-export const LOGIN_RESULT = {
-  SUCCESS: 'SUCCESS',
-  INVALID_PASSWORD: 'INVALID_PASSWORD',
-  CHANGE_PASSWORD: 'CHANGE_PASSWORD',
-  UNKNOWN_ERROR: 'UNKNOWN_ERROR',
+
+export enum LoginResults  {
+  Success = 'Success',
+  InvalidPassword = 'InvalidPassword',
+  ChangePassword = 'ChangePassword',
+  UnknownError = 'UnknownError',
 };
 
 export const ERRORS = {
@@ -32,12 +33,11 @@ export const ERRORS = {
   GENERIC: 'GENERIC',
 };
 
-export const GENERAL_ERROR = 'GENERAL_ERROR';
 
-export const TRANSACTION_STATUS = {
-  COMPLETED: 'completed',
-  PENDING: 'pending',
-};
+export enum TransactionStatuses {
+  Completed = "completed",
+    Pending = "pending"
+}
 
 export const ISO_DATE_FORMAT = 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]';
 export const ISO_DATE_REGEX = /^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([0-1][0-9]|2[0-3])(:[0-5][0-9]){2}\.[0-9]{3}Z$/;
