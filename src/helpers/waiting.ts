@@ -1,9 +1,12 @@
+
+export class TimeoutError extends Error {
+
+}
 function timeoutPromise(ms, promise, description) {
   const timeout = new Promise((resolve, reject) => {
     const id = setTimeout(() => {
       clearTimeout(id);
-      const error = new Error(description);
-      error.timeout = true;
+      const error = new TimeoutError(description);
       reject(error);
     }, ms);
   });
@@ -14,7 +17,7 @@ function timeoutPromise(ms, promise, description) {
   ]);
 }
 
-function waitUntil(asyncTest, description = null, timeout = 10000, interval = 100) {
+export function waitUntil(asyncTest, description = null, timeout = 10000, interval = 100) {
   const promise = new Promise((resolve, reject) => {
     function wait() {
       asyncTest().then((value) => {
@@ -32,4 +35,3 @@ function waitUntil(asyncTest, description = null, timeout = 10000, interval = 10
   return timeoutPromise(timeout, promise, description);
 }
 
-export default waitUntil;

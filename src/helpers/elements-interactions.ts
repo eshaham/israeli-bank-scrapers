@@ -2,7 +2,7 @@ async function waitUntilElementFound(page, elementSelector, onlyVisible = false,
   await page.waitForSelector(elementSelector, { visible: onlyVisible, timeout });
 }
 
-async function fillInput(page, inputSelector, inputValue) {
+async function fillInput(page, inputSelector, inputValue): Promise<void> {
   await page.$eval(inputSelector, (input) => {
     const inputElement = input;
     inputElement.value = '';
