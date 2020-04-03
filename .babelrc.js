@@ -12,6 +12,7 @@ const presets = [
       corejs: "3"
     },
   ],
+  "@babel/typescript"
 ];
 
 module.exports = {
