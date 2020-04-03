@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 
 import { ScrapeProgressTypes, LoginResults, ERRORS } from '../constants';
-import { TimeoutError } from '@core/waiting';
+import { TimeoutError } from '../helpers/waiting';
 import { LegacyLoginResult, LegacyScrapingResult } from '../types';
 
 const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';

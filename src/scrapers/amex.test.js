@@ -1,7 +1,7 @@
 import AMEXScraper from './amex';
 import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
-} from '../../tests/tests-utils';
+} from '../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
 import { LoginResults } from '../constants';
 

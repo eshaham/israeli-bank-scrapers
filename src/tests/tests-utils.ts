@@ -30,14 +30,16 @@ export function getTestsConfig() {
   }
 
   try {
-    testsConfig = require('./.tests-config').default;
-    return process.env;
+    const configPath = path.join(__dirname,'.tests-config');
+    testsConfig = require(configPath).default;
+    return testsConfig;
   } catch (e) {
+    console.error(e);
     throw new Error(MISSING_ERROR_MESSAGE);
   }
 }
 
-export function maybeTestCompanyAPI(scraperId, filter) {
+export function maybeTestCompanyAPI(scraperId, filter?: (config: any) => boolean) {
   if (!configurationLoaded) {
     getTestsConfig();
   }

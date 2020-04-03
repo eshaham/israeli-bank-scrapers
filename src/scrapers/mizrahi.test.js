@@ -1,7 +1,7 @@
 import MizrahiScraper from './mizrahi';
 import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
-} from '../../tests/tests-utils';
+} from '../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
 import { ISO_DATE_REGEX, LoginResults } from '../constants';
 

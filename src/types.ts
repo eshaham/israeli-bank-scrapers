@@ -1,4 +1,4 @@
-import { TransactionStatuses } from '@core/constants';
+import { TransactionStatuses } from './constants';
 
 export interface CompanyAccount {
   accountNumber: string;

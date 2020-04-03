@@ -18,7 +18,7 @@ export interface LoginOptions {
   submitButtonSelector: string;
   preAction?: () => Promise<void>;
   postAction?: () => Promise<void>;
-  possibleResults: Partial<Record<LoginResults, (string | RegExp)[]>>;
+  possibleResults: Partial<{[key in LoginResults]: (string | RegExp)[] }>; // TODO es fix type
 }
 
 async function getKeyByValue(object, value) {

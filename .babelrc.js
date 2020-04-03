@@ -20,6 +20,7 @@ module.exports = {
     ignore: process.env.BABEL_ENV === 'test' ? [] : [
       '**/*.test.(js,ts)',
       'tests/**/*',
+      'src/tests/**/*',
     ],
   "plugins": [
     importVisitor(node => {
