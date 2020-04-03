@@ -1,1 +1,4 @@
 .tests-config.ts
+
+# This extension is not supported, yet it is in ignore list just in case someone copied it without changing the extension to ts
+.tests-config.js
