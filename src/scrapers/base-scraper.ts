@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 
-import { SCRAPE_PROGRESS_TYPES, LoginResults, ERRORS } from '../constants';
+import { ScrapeProgressTypes, LoginResults, ERRORS } from '../constants';
 import { TimeoutError } from '@core/waiting';
 import { LegacyLoginResult, LegacyScrapingResult } from '../types';
 
@@ -38,11 +38,11 @@ class BaseScraper {
   }
 
   async initialize() {
-    this.emitProgress(SCRAPE_PROGRESS_TYPES.INITIALIZING);
+    this.emitProgress(ScrapeProgressTypes.Initializing);
   }
 
   async scrape(credentials) {
-    this.emitProgress(SCRAPE_PROGRESS_TYPES.START_SCRAPING);
+    this.emitProgress(ScrapeProgressTypes.StartScraping);
     await this.initialize();
 
     let loginResult;
@@ -73,7 +73,7 @@ class BaseScraper {
     } catch (e) {
       scrapeResult = createGenericError(e.message);
     }
-    this.emitProgress(SCRAPE_PROGRESS_TYPES.END_SCRAPING);
+    this.emitProgress(ScrapeProgressTypes.EndScraping);
 
     return scrapeResult;
   }
@@ -87,7 +87,7 @@ class BaseScraper {
   }
 
   async terminate() {
-    this.emitProgress(SCRAPE_PROGRESS_TYPES.TERMINATING);
+    this.emitProgress(ScrapeProgressTypes.Terminating);
   }
 
   emitProgress(type) {

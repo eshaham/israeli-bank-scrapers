@@ -1,7 +1,7 @@
 import puppeteer, { Page, Browser }  from 'puppeteer';
 
 import { BaseScraper } from './base-scraper';
-import { SCRAPE_PROGRESS_TYPES, LoginResults } from '../constants';
+import { ScrapeProgressTypes, LoginResults } from '../constants';
 import { waitForNavigation, getCurrentUrl } from '../helpers/navigation';
 import { waitUntilElementFound, fillInput, clickButton } from '../helpers/elements-interactions';
 import { ErrorTypes, LegacyScrapingResult } from '../types';
@@ -49,18 +49,18 @@ async function getKeyByValue(object, value) {
 function handleLoginResult(scraper, loginResult) {
   switch (loginResult) {
     case LoginResults.Success:
-      scraper.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
+      scraper.emitProgress(ScrapeProgressTypes.LoginSuccess);
       return { success: true };
     case LoginResults.InvalidPassword:
     case LoginResults.UnknownError:
-      scraper.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_FAILED);
+      scraper.emitProgress(ScrapeProgressTypes.LoginFailed);
       return {
         success: false,
         errorType: loginResult,
         errorMessage: `Login failed with ${loginResult} error`,
       };
     case LoginResults.ChangePassword:
-      scraper.emitProgress(SCRAPE_PROGRESS_TYPES.CHANGE_PASSWORD);
+      scraper.emitProgress(ScrapeProgressTypes.ChangePassword);
       return {
         success: false,
         errorType: loginResult,
@@ -82,7 +82,7 @@ class BaseScraperWithBrowser extends BaseScraper {
   protected page: Page;
 
   async initialize() {
-    this.emitProgress(SCRAPE_PROGRESS_TYPES.INITIALIZING);
+    this.emitProgress(ScrapeProgressTypes.Initializing);
 
     let env = null;
     if (this.options.verbose) {
@@ -155,7 +155,7 @@ class BaseScraperWithBrowser extends BaseScraper {
     }
     await this.fillInputs(loginOptions.fields);
     await clickButton(this.page, loginOptions.submitButtonSelector);
-    this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGGING_IN);
+    this.emitProgress(ScrapeProgressTypes.LoggingIn);
 
     if (loginOptions.postAction) {
       await loginOptions.postAction();
@@ -169,7 +169,7 @@ class BaseScraperWithBrowser extends BaseScraper {
   }
 
   async terminate() {
-    this.emitProgress(SCRAPE_PROGRESS_TYPES.TERMINATING);
+    this.emitProgress(ScrapeProgressTypes.Terminating);
     await this.browser.close();
   }
 }

@@ -4,7 +4,7 @@ import moment from 'moment';
 
 import { BaseScraper, LoginResults } from './base-scraper';
 import {
-  SCRAPE_PROGRESS_TYPES,
+  ScrapeProgressTypes,
   NORMAL_TXN_TYPE,
   INSTALLMENTS_TXN_TYPE,
   SHEKEL_CURRENCY_SYMBOL,
@@ -235,7 +235,7 @@ class VisaCalScraper extends BaseScraper {
       rememberMe: null,
     };
 
-    this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGGING_IN);
+    this.emitProgress(ScrapeProgressTypes.LoggingIn);
 
     const authResponse = await fetchPost(AUTH_URL, authRequest, HEADER_SITE);
     if (authResponse === PASSWORD_EXPIRED_MSG) {
@@ -260,7 +260,7 @@ class VisaCalScraper extends BaseScraper {
       };
     }
     this.authHeader = `CALAuthScheme ${authResponse.token}`;
-    this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
+    this.emitProgress(ScrapeProgressTypes.LoginSuccess);
     return { success: true };
   }
 

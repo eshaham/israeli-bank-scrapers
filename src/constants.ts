@@ -9,15 +9,15 @@ export const SHEKEL_CURRENCY = 'ILS';
 export const DOLLAR_CURRENCY_SYMBOL = '$';
 export const DOLLAR_CURRENCY = 'USD';
 
-export const SCRAPE_PROGRESS_TYPES = {
-  INITIALIZING: 'INITIALIZING',
-  START_SCRAPING: 'START_SCRAPING',
-  LOGGING_IN: 'LOGGING_IN',
-  LOGIN_SUCCESS: 'LOGIN_SUCCESS',
-  LOGIN_FAILED: 'LOGIN_FAILED',
-  CHANGE_PASSWORD: 'CHANGE_PASSWORD',
-  END_SCRAPING: 'END_SCRAPING',
-  TERMINATING: 'TERMINATING',
+export const ScrapeProgressTypes = {
+  Initializing: 'INITIALIZING',
+  StartScraping: 'START_SCRAPING',
+  LoggingIn: 'LOGGING_IN',
+  LoginSuccess: 'LOGIN_SUCCESS',
+  LoginFailed: 'LOGIN_FAILED',
+  ChangePassword: 'CHANGE_PASSWORD',
+  EndScraping: 'END_SCRAPING',
+  Terminating: 'TERMINATING',
 };
 
 

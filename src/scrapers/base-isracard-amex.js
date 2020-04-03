@@ -5,7 +5,7 @@ import moment from 'moment';
 import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import {
-  SCRAPE_PROGRESS_TYPES,
+  ScrapeProgressTypes,
   NORMAL_TXN_TYPE,
   INSTALLMENTS_TXN_TYPE,
   SHEKEL_CURRENCY_KEYWORD,
@@ -202,7 +202,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
   async login(credentials) {
     await this.navigateTo(`${this.options.baseUrl}/personalarea/Login`);
 
-    this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGGING_IN);
+    this.emitProgress(ScrapeProgressTypes.LoggingIn);
 
     const validateUrl = `${this.options.servicesUrl}?reqName=ValidateIdData`;
     const validateRequest = {
@@ -233,19 +233,19 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
       };
       const loginResult = await fetchPostWithinPage(this.page, loginUrl, request);
       if (loginResult.status === '1') {
-        this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_SUCCESS);
+        this.emitProgress(ScrapeProgressTypes.LoginSuccess);
         return { success: true };
       }
 
       if (loginResult.status === '3') {
-        this.emitProgress(SCRAPE_PROGRESS_TYPES.CHANGE_PASSWORD);
+        this.emitProgress(ScrapeProgressTypes.ChangePassword);
         return {
           success: false,
           errorType: LoginResults.ChangePassword,
         };
       }
 
-      this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_FAILED);
+      this.emitProgress(ScrapeProgressTypes.LoginFailed);
       return {
         success: false,
         errorType: LoginResults.InvalidPassword,
@@ -253,14 +253,14 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
     }
 
     if (validateReturnCode === '4') {
-      this.emitProgress(SCRAPE_PROGRESS_TYPES.CHANGE_PASSWORD);
+      this.emitProgress(ScrapeProgressTypes.ChangePassword);
       return {
         success: false,
         errorType: LoginResults.ChangePassword,
       };
     }
 
-    this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGIN_FAILED);
+    this.emitProgress(ScrapeProgressTypes.LoginFailed);
     return {
       success: false,
       errorType: LoginResults.InvalidPassword,
