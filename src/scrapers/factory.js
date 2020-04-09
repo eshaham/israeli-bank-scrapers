@@ -7,6 +7,7 @@ import VisaCalScraper from './visa-cal';
 import IsracardScraper from './isracard';
 import AmexScraper from './amex';
 import MizrahiScraper from './mizrahi';
+import UnionBankScraper from './union-bank';
 
 export default function createScraper(options) {
   switch (options.companyId) {
