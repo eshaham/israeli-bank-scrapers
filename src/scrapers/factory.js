@@ -34,6 +34,8 @@ export default function createScraper(options) {
       return new IsracardScraper(options);
     case 'amex':
       return new AmexScraper(options);
+    case 'union':
+      return new UnionBankScraper(options);
     default:
       throw new Error(`unknown company id ${options.companyId}`);
   }
