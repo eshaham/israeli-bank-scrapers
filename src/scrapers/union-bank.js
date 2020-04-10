@@ -71,19 +71,19 @@ function convertTransactions(txns) {
 }
 
 function getTransactionDate(tds, txnsTableHeaders) {
-  return (tds[txnsTableHeaders[DATE_HEADER]] || '').trim()
+  return (tds[txnsTableHeaders[DATE_HEADER]] || '').trim();
 }
 
 function getTransactionDescription(tds, txnsTableHeaders) {
-  return (tds[txnsTableHeaders[DESCRIPTION_HEADER]] || '').trim()
+  return (tds[txnsTableHeaders[DESCRIPTION_HEADER]] || '').trim();
 }
 
 function getTransactionReference(tds, txnsTableHeaders) {
-  return (tds[txnsTableHeaders[REFERENCE_HEADER]] || '').trim()
+  return (tds[txnsTableHeaders[REFERENCE_HEADER]] || '').trim();
 }
 
 function getTransactionDebit(tds, txnsTableHeaders) {
-  return (tds[txnsTableHeaders[DEBIT_HEADER]] || '').trim()
+  return (tds[txnsTableHeaders[DEBIT_HEADER]] || '').trim();
 }
 
 function getTransactionCredit(tds, txnsTableHeaders) {
