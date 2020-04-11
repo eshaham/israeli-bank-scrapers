@@ -8,6 +8,7 @@ import IsracardScraper from './isracard';
 import AmexScraper from './amex';
 import MizrahiScraper from './mizrahi';
 import UnionBankScraper from './union-bank';
+import BeinleumiScraper from './beinleumi';
 
 export default function createScraper(options) {
   switch (options.companyId) {
@@ -37,6 +38,8 @@ export default function createScraper(options) {
       return new AmexScraper(options);
     case 'union':
       return new UnionBankScraper(options);
+    case 'beinleumi':
+      return new BeinleumiScraper(options);
     default:
       throw new Error(`unknown company id ${options.companyId}`);
   }

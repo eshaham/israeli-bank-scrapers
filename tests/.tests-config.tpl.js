@@ -20,6 +20,7 @@ export default {
     // amex: { id: '', card6Digits: '', password: ''},
     // mizrahi: { username: '', password: ''},
     // union: {username:'',password:''}
+    // beinleumi: { username: '', password: ''},
   },
   companyAPI: { // enable companyAPI to execute tests against the real companies api
     enabled: true,
