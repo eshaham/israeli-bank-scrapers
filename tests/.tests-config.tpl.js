@@ -11,6 +11,8 @@ export default {
   credentials: { // commented companies will be skipped automatically, uncomment those you wish to test
     // hapoalim: { userCode: '', password: '' },
     // leumi: { username: '', password: '' },
+    // hapoalimBeOnline: { userCode: '', password: '' },
+    // leumi: { username: '', password: '' }
     // discount: { id: '', password: '', num: '' },
     // otsarHahayal: { username: '', password: '' },
     // max: { username: '', password: '' },
@@ -18,6 +20,7 @@ export default {
     // isracard: { id: '', password: '', card6Digits: '' },
     // amex: { id: '', card6Digits: '', password: ''},
     // mizrahi: { username: '', password: ''},
+    // union: {username:'',password:''}
   },
   companyAPI: { // enable companyAPI to execute tests against the real companies api
     enabled: true,
