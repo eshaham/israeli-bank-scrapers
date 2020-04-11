@@ -23,7 +23,7 @@ const CREDIT_COLUMN_CLASS = 'credit';
 const ERROR_MESSAGE_CLASS = 'NO_DATA';
 const ACCOUNTS_NUMBER = 'div.fibi_account span.acc_num';
 const CLOSE_SEARCH_BY_DATES_BUTTON_CLASS = 'ui-datepicker-close';
-const SHOW_SEARCH_BY_DATES_BUTTON_VALUE='הצג';
+const SHOW_SEARCH_BY_DATES_BUTTON_VALUE = 'הצג';
 const TRANSACTIONS_TABLE = 'table[id*=\'dataTable\']';
 const TRANSACTIONS_PAGINATION_LIMIT = 20;
 const NEXT_PAGE_LINK = 'a#Npage.paging';
@@ -122,7 +122,7 @@ async function getTransactionsColsTypeClasses(page) {
 
 function extractTransaction(txns, txnRow, transactionsColsTypes) {
   const txn = extractTransactionDetails(txnRow, transactionsColsTypes);
-  if (txn.date != '') {
+  if (txn.date !== '') {
     txns.push(txn);
   }
 }
@@ -181,8 +181,8 @@ async function navigateToNextPage(page) {
 }
 
 async function scrapeTransactions(page) {
-  let txns = [];
-  for (let i = 0; i < TRANSACTIONS_PAGINATION_LIMIT; i++) {
+  const txns = [];
+  for (let i = 0; i < TRANSACTIONS_PAGINATION_LIMIT; i += 1) {
     txns.push(...await extractTransactions(page));
     try {
       await navigateToNextPage(page);
@@ -207,7 +207,7 @@ async function getAccountTransactions(page) {
     return [];
   }
 
-  return scrapeTransactions(page)
+  return scrapeTransactions(page);
 }
 
 async function fetchAccountData(page, startDate) {
