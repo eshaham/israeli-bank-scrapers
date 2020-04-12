@@ -27,7 +27,6 @@ const SHOW_SEARCH_BY_DATES_BUTTON_VALUE = 'הצג';
 const TRANSACTIONS_TABLE = 'table[id*=\'dataTable\']';
 const TRANSACTIONS_PAGINATION_LIMIT = 20;
 const NEXT_PAGE_LINK = 'a#Npage.paging';
-const CLICK_ELEMENT_NOT_EXISTS_ERROR_MSG = 'Cannot read property';
 
 function getPossibleLoginResults() {
   const urls = {};
@@ -175,6 +174,10 @@ async function getAccountNumber(page) {
   return selectedSnifAccount.replace('/', '_');
 }
 
+async function checkIfHasNextPage(page) {
+  return elementPresentOnPage(page, NEXT_PAGE_LINK);
+}
+
 async function navigateToNextPage(page) {
   await clickButton(page, NEXT_PAGE_LINK);
   await waitForNavigation(page);
@@ -182,15 +185,15 @@ async function navigateToNextPage(page) {
 
 async function scrapeTransactions(page) {
   const txns = [];
+  let hasNextPage = false;
   for (let i = 0; i < TRANSACTIONS_PAGINATION_LIMIT; i += 1) {
-    txns.push(...await extractTransactions(page));
-    try {
+    const currentPageTxns = await extractTransactions(page);
+    txns.push(...currentPageTxns);
+    hasNextPage = await checkIfHasNextPage(page);
+    if (hasNextPage) {
       await navigateToNextPage(page);
-    } catch (error) {
-      if (error.message.includes(CLICK_ELEMENT_NOT_EXISTS_ERROR_MSG)) {
-        break;
-      }
-      throw error;
+    } else {
+      break;
     }
   }
   return convertTransactions(txns);
