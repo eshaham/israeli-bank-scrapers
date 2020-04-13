@@ -7,10 +7,10 @@ import { waitUntilElementFound, elementPresentOnPage, clickButton } from '../hel
 import {
   NORMAL_TXN_TYPE,
   INSTALLMENTS_TXN_TYPE,
-  TransactionStatuses,
 } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
+import { TransactionStatuses } from '../types';
 
 const BASE_ACTIONS_URL = 'https://online.max.co.il';
 const BASE_API_ACTIONS_URL = 'https://onlinelcapi.max.co.il';

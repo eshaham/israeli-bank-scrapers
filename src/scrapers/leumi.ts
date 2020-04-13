@@ -11,8 +11,8 @@ import {
   elementPresentOnPage,
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
-import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TransactionStatuses } from '../constants';
-import { Transaction } from '../types';
+import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE } from '../constants';
+import { Transaction, TransactionStatuses } from '../types';
 
 const BASE_URL = 'https://hb2.bankleumi.co.il';
 const DATE_FORMAT = 'DD/MM/YY';

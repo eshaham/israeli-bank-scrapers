@@ -8,6 +8,7 @@ import {
   pageEvalAll,
 } from '../helpers/elements-interactions';
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, SHEKEL_CURRENCY_SYMBOL } from '../constants';
+import { Transaction } from '../types';
 
 const BASE_URL = 'https://online.bankotsar.co.il';
 const DATE_FORMAT = 'DD/MM/YY';
@@ -86,7 +87,7 @@ async function parseTransactionPage(page) {
   for (const element of tdsValues) {
     const { classList, innerText } = element;
     if (classList.includes('date')) {
-      const newTransaction = {};
+      const newTransaction: Partial<Transaction> = {};
       newTransaction.date = innerText;
       txns.push(newTransaction);
     } else {

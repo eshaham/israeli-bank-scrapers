@@ -5,7 +5,8 @@ import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browse
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { fetchGetWithinPage } from '../helpers/fetch';
-import { NORMAL_TXN_TYPE, TransactionStatuses } from '../constants';
+import { NORMAL_TXN_TYPE } from '../constants';
+import { ErrorTypes, TransactionStatuses } from '../types';
 
 const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
@@ -46,7 +47,7 @@ async function fetchAccountData(page, options) {
   if (txnsResult.Error) {
     return {
       success: false,
-      errorType: 'generic',
+      errorType: ErrorTypes.Generic,
       errorMessage: txnsResult.Error.MsgText,
     };
   }
@@ -106,7 +107,7 @@ class DiscountScraper extends BaseScraperWithBrowser {
   }
 
   async fetchData() {
-    return fetchAccountData(this.page, this.options, (msg) => this.notify(msg));
+    return fetchAccountData(this.page, this.options);
   }
 }
 

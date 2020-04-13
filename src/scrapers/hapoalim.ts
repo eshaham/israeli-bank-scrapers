@@ -4,12 +4,17 @@ import uuid4 from 'uuid/v4';
 import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntil } from '../helpers/waiting';
-import { NORMAL_TXN_TYPE, TransactionStatuses } from '../constants';
+import { NORMAL_TXN_TYPE } from '../constants';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
+import { Transaction, TransactionStatuses } from '../types';
 
 const DATE_FORMAT = 'YYYYMMDD';
 
-function convertTransactions(txns) {
+declare module window {
+  const bnhpApp: any;
+}
+
+function convertTransactions(txns): Transaction[] {
   return txns.map((txn) => {
     const isOutbound = txn.eventActivityTypeCode === 2;
 
@@ -73,7 +78,7 @@ async function getRestContext(page) {
 async function fetchPoalimXSRFWithinPage(page, url, pageUuid) {
   const cookies = await page.cookies();
   const XSRFCookie = cookies.find((cookie) => cookie.name === 'XSRF-TOKEN');
-  const headers = {};
+  const headers: Record<string, any> = {};
   if (XSRFCookie != null) {
     headers['X-XSRF-TOKEN'] = XSRFCookie.value;
   }
@@ -160,7 +165,7 @@ class HapoalimScraper extends BaseScraperWithBrowser {
   }
 
   async fetchData() {
-    return fetchAccountData(this.page, this.baseUrl, this.options, (msg) => this.notify(msg));
+    return fetchAccountData(this.page, this.baseUrl, this.options);
   }
 }
 

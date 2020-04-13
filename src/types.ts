@@ -1,4 +1,3 @@
-import { TransactionStatuses } from './constants';
 
 export interface CompanyAccount {
   accountNumber: string;
@@ -32,6 +31,11 @@ export enum TransactionTypes {
   Installments = 'installments'
 }
 
+
+export enum TransactionStatuses {
+  Completed = 'completed',
+  Pending = 'pending'
+}
 
 export interface Transaction {
   type: TransactionTypes;

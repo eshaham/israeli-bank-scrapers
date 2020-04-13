@@ -11,11 +11,10 @@ import {
   SHEKEL_CURRENCY,
   DOLLAR_CURRENCY_SYMBOL,
   DOLLAR_CURRENCY,
-  TransactionStatuses,
 } from '../constants';
 import { fetchGet, fetchPost } from '../helpers/fetch';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
-import { ErrorTypes } from '../types';
+import { ErrorTypes, TransactionStatuses } from '../types';
 
 const BASE_URL = 'https://cal4u.cal-online.co.il/Cal4U';
 const AUTH_URL = 'https://connect.cal-online.co.il/api/authentication/login';
@@ -229,6 +228,8 @@ async function getTransactionsForAllAccounts(authHeader, startMoment, options) {
 }
 
 class VisaCalScraper extends BaseScraper {
+  private authHeader: string;
+
   async login(credentials) {
     const authRequest = {
       username: credentials.username,
@@ -256,7 +257,7 @@ class VisaCalScraper extends BaseScraper {
     if (!authResponse || !authResponse.token) {
       return {
         success: false,
-        errorType: ErrorTypes.UnknownError,
+        errorType: ErrorTypes.General,
         errorMessage: `No token found in authResponse: ${JSON.stringify(authResponse)}`,
       };
     }

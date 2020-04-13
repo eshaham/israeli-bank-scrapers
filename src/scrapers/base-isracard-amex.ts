@@ -11,11 +11,10 @@ import {
   SHEKEL_CURRENCY_KEYWORD,
   SHEKEL_CURRENCY,
   ALT_SHEKEL_CURRENCY,
-  TransactionStatuses,
 } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, filterOldTransactions } from '../helpers/transactions';
-import { ErrorTypes, LegacyScrapingResult } from '../types';
+import { ErrorTypes, LegacyScrapingResult, TransactionStatuses } from '../types';
 
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';

@@ -2,12 +2,12 @@ import moment from 'moment';
 import {
   SHEKEL_CURRENCY,
   NORMAL_TXN_TYPE,
-  TransactionStatuses,
 } from '../constants';
 import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { waitForNavigation } from '../helpers/navigation';
 import { pageEvalAll } from '../helpers/elements-interactions';
+import { ErrorTypes, TransactionStatuses } from '../types';
 
 const BASE_WEBSITE_URL = 'https://www.mizrahi-tefahot.co.il';
 const LOGIN_URL = `${BASE_WEBSITE_URL}/he/bank/Pages/Default.aspx`;
@@ -78,7 +78,7 @@ function convertTransactions(txns) {
 
 async function extractPendingTransactions(page) {
   const pendingTxn = await pageEvalAll(page, 'tr.rgRow', [], (trs) => {
-    return trs.map((tr) => Array.from(tr.querySelectorAll('td'), (td) => td.textContent));
+    return trs.map((tr) => Array.from(tr.querySelectorAll('td'), (td: HTMLTableDataCellElement) => td.textContent));
   });
 
   return pendingTxn.map((txn) => {
@@ -121,7 +121,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
     if (response.header.success === false) {
       return {
         success: false,
-        errorType: 'generic',
+        errorType: ErrorTypes.Generic,
         errorMessage:
           `Error fetching transaction. Response message: ${response.header.messages[0].text}`,
       };
