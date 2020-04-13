@@ -11,8 +11,8 @@ import {
   elementPresentOnPage,
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
-import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE } from '../constants';
-import { Transaction, TransactionStatuses } from '../types';
+import { SHEKEL_CURRENCY } from '../constants';
+import { Transaction, TransactionStatuses, TransactionTypes } from '../types';
 
 const BASE_URL = 'https://hb2.bankleumi.co.il';
 const DATE_FORMAT = 'DD/MM/YY';
@@ -56,7 +56,7 @@ function convertTransactions(txns) {
     const debit = getAmountData(txn.debit).amount;
     const amount = (Number.isNaN(credit) ? 0 : credit) - (Number.isNaN(debit) ? 0 : debit);
     return {
-      type: NORMAL_TXN_TYPE,
+      type: TransactionTypes.Normal,
       identifier: txn.reference ? parseInt(txn.reference, 10) : null,
       date: txnDate,
       processedDate: txnDate,

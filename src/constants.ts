@@ -1,5 +1,3 @@
-export const NORMAL_TXN_TYPE = 'normal';
-export const INSTALLMENTS_TXN_TYPE = 'installments';
 
 export const SHEKEL_CURRENCY_SYMBOL = '₪';
 export const SHEKEL_CURRENCY_KEYWORD = 'ש"ח';
@@ -18,11 +16,6 @@ export const ScrapeProgressTypes = {
   ChangePassword: 'CHANGE_PASSWORD',
   EndScraping: 'END_SCRAPING',
   Terminating: 'TERMINATING',
-};
-
-export const ERRORS = {
-  TIMEOUT: 'TIMEOUT',
-  GENERIC: 'GENERIC',
 };
 
 export const ISO_DATE_FORMAT = 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]';

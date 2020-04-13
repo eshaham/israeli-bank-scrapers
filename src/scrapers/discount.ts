@@ -5,8 +5,7 @@ import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browse
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { fetchGetWithinPage } from '../helpers/fetch';
-import { NORMAL_TXN_TYPE } from '../constants';
-import { ErrorTypes, TransactionStatuses } from '../types';
+import { ErrorTypes, TransactionStatuses, TransactionTypes } from '../types';
 
 const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
@@ -17,7 +16,7 @@ function convertTransactions(txns, txnStatus) {
   }
   return txns.map((txn) => {
     return {
-      type: NORMAL_TXN_TYPE,
+      type: TransactionTypes.Normal,
       identifier: txn.OperationNumber,
       date: moment(txn.OperationDate, DATE_FORMAT).toISOString(),
       processedDate: moment(txn.ValueDate, DATE_FORMAT).toISOString(),

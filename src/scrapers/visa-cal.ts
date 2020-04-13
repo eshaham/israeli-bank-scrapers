@@ -5,8 +5,6 @@ import moment from 'moment';
 import { BaseScraper } from './base-scraper';
 import {
   ScrapeProgressTypes,
-  NORMAL_TXN_TYPE,
-  INSTALLMENTS_TXN_TYPE,
   SHEKEL_CURRENCY_SYMBOL,
   SHEKEL_CURRENCY,
   DOLLAR_CURRENCY_SYMBOL,
@@ -14,7 +12,7 @@ import {
 } from '../constants';
 import { fetchGet, fetchPost } from '../helpers/fetch';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
-import { ErrorTypes, TransactionStatuses } from '../types';
+import { ErrorTypes, TransactionStatuses, TransactionTypes } from '../types';
 
 const BASE_URL = 'https://cal4u.cal-online.co.il/Cal4U';
 const AUTH_URL = 'https://connect.cal-online.co.il/api/authentication/login';
@@ -76,10 +74,10 @@ function convertTransactionType(txnType) {
     case SERVICES_REFUND_TYPE_CODE:
     case MEMBERSHIP_FEE_TYPE_CODE:
     case SERVICES_TYPE_CODE:
-      return NORMAL_TXN_TYPE;
+      return TransactionTypes.Normal;
     case INSTALLMENTS_TYPE_CODE:
     case CREDIT_PAYMENTS_CODE:
-      return INSTALLMENTS_TXN_TYPE;
+      return TransactionTypes.Installments;
     default:
       throw new Error(`unknown transaction type ${txnType}`);
   }

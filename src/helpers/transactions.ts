@@ -1,14 +1,13 @@
 import moment from 'moment';
 import _ from 'lodash';
-
-import { NORMAL_TXN_TYPE, INSTALLMENTS_TXN_TYPE } from '../constants';
+import { TransactionTypes } from '../types';
 
 function isNormalTransaction(txn) {
-  return txn.type === NORMAL_TXN_TYPE;
+  return txn.type === TransactionTypes.Normal;
 }
 
 function isInstallmentTransaction(txn) {
-  return txn.type === INSTALLMENTS_TXN_TYPE;
+  return txn.type === TransactionTypes.Installments;
 }
 
 function isNonInitialInstallmentTransaction(txn) {

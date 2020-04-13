@@ -1,13 +1,12 @@
 import moment from 'moment';
 import {
   SHEKEL_CURRENCY,
-  NORMAL_TXN_TYPE,
 } from '../constants';
 import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { waitForNavigation } from '../helpers/navigation';
 import { pageEvalAll } from '../helpers/elements-interactions';
-import { ErrorTypes, TransactionStatuses } from '../types';
+import { ErrorTypes, TransactionStatuses, TransactionTypes } from '../types';
 
 const BASE_WEBSITE_URL = 'https://www.mizrahi-tefahot.co.il';
 const LOGIN_URL = `${BASE_WEBSITE_URL}/he/bank/Pages/Default.aspx`;
@@ -63,7 +62,7 @@ function convertTransactions(txns) {
       .toISOString();
 
     return {
-      type: NORMAL_TXN_TYPE,
+      type: TransactionTypes.Normal,
       identifier: row.MC02AsmahtaMekoritEZ ? parseInt(row.MC02AsmahtaMekoritEZ, 10) : null,
       date: txnDate,
       processedDate: txnDate,
@@ -85,7 +84,7 @@ async function extractPendingTransactions(page) {
     const date = moment(txn[0], 'DD/MM/YY').toISOString();
     const amount = parseInt(txn[3], 10);
     return {
-      type: NORMAL_TXN_TYPE,
+      type: TransactionTypes.Normal,
       identifier: null,
       date,
       processedDate: date,

@@ -6,15 +6,15 @@ import { BaseScraperWithBrowser } from './base-scraper-with-browser';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import {
   ScrapeProgressTypes,
-  NORMAL_TXN_TYPE,
-  INSTALLMENTS_TXN_TYPE,
   SHEKEL_CURRENCY_KEYWORD,
   SHEKEL_CURRENCY,
   ALT_SHEKEL_CURRENCY,
 } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, filterOldTransactions } from '../helpers/transactions';
-import { ErrorTypes, LegacyScrapingResult, TransactionStatuses } from '../types';
+import {
+  ErrorTypes, LegacyScrapingResult, TransactionStatuses, TransactionTypes,
+} from '../types';
 
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';
@@ -89,7 +89,7 @@ function getInstallmentsInfo(txn) {
 }
 
 function getTransactionType(txn) {
-  return getInstallmentsInfo(txn) ? INSTALLMENTS_TXN_TYPE : NORMAL_TXN_TYPE;
+  return getInstallmentsInfo(txn) ? TransactionTypes.Installments : TransactionTypes.Normal;
 }
 
 function convertTransactions(txns, processedDate) {

@@ -4,9 +4,8 @@ import uuid4 from 'uuid/v4';
 import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntil } from '../helpers/waiting';
-import { NORMAL_TXN_TYPE } from '../constants';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
-import { Transaction, TransactionStatuses } from '../types';
+import { Transaction, TransactionStatuses, TransactionTypes } from '../types';
 
 const DATE_FORMAT = 'YYYYMMDD';
 
@@ -49,7 +48,7 @@ function convertTransactions(txns): Transaction[] {
     }
 
     return {
-      type: NORMAL_TXN_TYPE,
+      type: TransactionTypes.Normal,
       identifier: txn.referenceNumber,
       date: moment(txn.eventDate, DATE_FORMAT).toISOString(),
       processedDate: moment(txn.valueDate, DATE_FORMAT).toISOString(),

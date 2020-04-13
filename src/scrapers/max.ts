@@ -4,13 +4,9 @@ import { fetchGetWithinPage } from '../helpers/fetch';
 import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound, elementPresentOnPage, clickButton } from '../helpers/elements-interactions';
-import {
-  NORMAL_TXN_TYPE,
-  INSTALLMENTS_TXN_TYPE,
-} from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
-import { TransactionStatuses } from '../types';
+import { TransactionStatuses, TransactionTypes } from '../types';
 
 const BASE_ACTIONS_URL = 'https://online.max.co.il';
 const BASE_API_ACTIONS_URL = 'https://onlinelcapi.max.co.il';
@@ -72,10 +68,10 @@ function getTransactionType(txnTypeStr) {
     case TWO_MONTHS_POSTPONED_TYPE_NAME:
     case INTERNET_SHOPPING_TYPE_NAME:
     case MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME:
-      return NORMAL_TXN_TYPE;
+      return TransactionTypes.Normal;
     case INSTALLMENTS_TYPE_NAME:
     case CREDIT_TYPE_NAME:
-      return INSTALLMENTS_TXN_TYPE;
+      return TransactionTypes.Installments;
     default:
       throw new Error(`Unknown transaction type ${cleanedUpTxnTypeStr}`);
   }

@@ -9,7 +9,7 @@ export enum ErrorTypes {
   ChangePassword = 'changePassword',
   Timeout = 'timeout',
   Generic = 'generic',
-  General = 'GENERAL_ERROR'
+  General = 'generalError'
 }
 
 export interface LegacyLoginResult {
@@ -30,7 +30,6 @@ export enum TransactionTypes {
   Normal = 'normal',
   Installments = 'installments'
 }
-
 
 export enum TransactionStatuses {
   Completed = 'completed',

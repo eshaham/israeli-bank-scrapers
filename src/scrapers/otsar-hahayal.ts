@@ -7,8 +7,8 @@ import {
   waitUntilElementFound,
   pageEvalAll,
 } from '../helpers/elements-interactions';
-import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, SHEKEL_CURRENCY_SYMBOL } from '../constants';
-import { Transaction } from '../types';
+import { SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL } from '../constants';
+import { Transaction, TransactionTypes } from '../types';
 
 const BASE_URL = 'https://online.bankotsar.co.il';
 const DATE_FORMAT = 'DD/MM/YY';
@@ -63,7 +63,7 @@ function convertTransactions(txns) {
     const amount = (Number.isNaN(credit) ? 0 : credit) - (Number.isNaN(debit) ? 0 : debit);
 
     return {
-      type: NORMAL_TXN_TYPE,
+      type: TransactionTypes.Normal,
       identifier: txn.reference ? parseInt(txn.reference, 10) : null,
       date: txnDate,
       processedDate: txnDate,

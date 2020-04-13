@@ -1,8 +1,8 @@
 import { EventEmitter } from 'events';
 
-import { ScrapeProgressTypes, ERRORS } from '../constants';
+import { ScrapeProgressTypes } from '../constants';
 import { TimeoutError } from '../helpers/waiting';
-import { LegacyLoginResult, LegacyScrapingResult } from '../types';
+import { ErrorTypes, LegacyLoginResult, LegacyScrapingResult } from '../types';
 
 const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';
 
@@ -15,11 +15,11 @@ function createErrorResult(errorType, errorMessage) {
 }
 
 function createTimeoutError(errorMessage) {
-  return createErrorResult(ERRORS.TIMEOUT, errorMessage);
+  return createErrorResult(ErrorTypes.Timeout, errorMessage);
 }
 
 function createGenericError(errorMessage) {
-  return createErrorResult(ERRORS.GENERIC, errorMessage);
+  return createErrorResult(ErrorTypes.Generic, errorMessage);
 }
 
 // TODO es consider browser type
