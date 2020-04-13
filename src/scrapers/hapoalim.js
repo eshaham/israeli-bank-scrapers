@@ -1,7 +1,8 @@
 import moment from 'moment';
 import uuid4 from 'uuid/v4';
 
-import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser } from './base-scraper-with-browser';
+import { LoginResults } from './base-scraper';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntil } from '../helpers/waiting';
 import { NORMAL_TXN_TYPE, TransactionStatuses } from '../constants';

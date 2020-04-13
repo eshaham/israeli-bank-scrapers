@@ -1,9 +1,9 @@
-import puppeteer, { Page, Browser } from 'puppeteer';
+import puppeteer, { Browser, Page } from 'puppeteer';
 
-import { BaseScraper } from './base-scraper';
-import { ScrapeProgressTypes, LoginResults } from '../constants';
-import { waitForNavigation, getCurrentUrl } from '../helpers/navigation';
-import { waitUntilElementFound, fillInput, clickButton } from '../helpers/elements-interactions';
+import { BaseScraper, LoginResults } from './base-scraper';
+import { ScrapeProgressTypes } from '../constants';
+import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
+import { clickButton, fillInput, waitUntilElementFound } from '../helpers/elements-interactions';
 import { ErrorTypes, LegacyScrapingResult } from '../types';
 
 const VIEWPORT_WIDTH = 1024;
@@ -56,14 +56,15 @@ function handleLoginResult(scraper, loginResult) {
       scraper.emitProgress(ScrapeProgressTypes.LoginFailed);
       return {
         success: false,
-        errorType: loginResult,
+        errorType: loginResult === LoginResults.InvalidPassword ? ErrorTypes.InvalidPassword :
+          ErrorTypes.General,
         errorMessage: `Login failed with ${loginResult} error`,
       };
     case LoginResults.ChangePassword:
       scraper.emitProgress(ScrapeProgressTypes.ChangePassword);
       return {
         success: false,
-        errorType: loginResult,
+        errorType: ErrorTypes.ChangePassword,
       };
     default:
       throw new Error(`unexpected login result "${loginResult}"`);
@@ -176,4 +177,4 @@ class BaseScraperWithBrowser extends BaseScraper {
   }
 }
 
-export { BaseScraperWithBrowser, LoginResults };
+export { BaseScraperWithBrowser };

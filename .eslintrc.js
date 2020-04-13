@@ -1,4 +1,5 @@
 module.exports = {
+  root: true,
   "rules": {
     "arrow-body-style": 0,
     "no-shadow": 0,
@@ -33,5 +34,5 @@ module.exports = {
     ecmaVersion:  2018,  // Allows for the parsing of modern ECMAScript features
     sourceType:  'module',  // Allows for the use of imports
   },
-  extends: ['airbnb-typescript/base'],
+  extends: ['airbnb-typescript/base']
 }

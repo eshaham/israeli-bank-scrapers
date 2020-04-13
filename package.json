@@ -15,7 +15,7 @@
     "lint": "eslint src --ext .ts",
     "type-check": "tsc --noEmit",
     "dev": "npm run type-check -- --watch",
-    "build": "npm run clean && npm run build:types && npm run build:js && npm run build:puppeteer-config",
+    "build": "npm run lint && npm run clean && npm run build:types && npm run build:js && npm run build:puppeteer-config",
     "build:types": "tsc --emitDeclarationOnly",
     "build:puppeteer-config": "cp src/puppeteer-config.json lib",
     "build:js": "babel src --out-dir lib --extensions \".js,.ts\" --source-maps inline --verbose",

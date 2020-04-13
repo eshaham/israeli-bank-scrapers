@@ -3,7 +3,8 @@ import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
 } from '../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
-import { ISO_DATE_REGEX, LoginResults } from '../constants';
+import { ISO_DATE_REGEX } from '../constants';
+import { LoginResults } from './base-scraper';
 
 const COMPANY_ID = 'mizrahi'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();

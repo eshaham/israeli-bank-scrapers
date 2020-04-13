@@ -20,19 +20,10 @@ export const ScrapeProgressTypes = {
   Terminating: 'TERMINATING',
 };
 
-
-export enum LoginResults {
-  Success = 'Success',
-  InvalidPassword = 'InvalidPassword',
-  ChangePassword = 'ChangePassword',
-  UnknownError = 'UnknownError',
-}
-
 export const ERRORS = {
   TIMEOUT: 'TIMEOUT',
   GENERIC: 'GENERIC',
 };
-
 
 export enum TransactionStatuses {
   Completed = 'completed',

@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 
-import { ScrapeProgressTypes, LoginResults, ERRORS } from '../constants';
+import { ScrapeProgressTypes, ERRORS } from '../constants';
 import { TimeoutError } from '../helpers/waiting';
 import { LegacyLoginResult, LegacyScrapingResult } from '../types';
 
@@ -21,6 +21,14 @@ function createTimeoutError(errorMessage) {
 function createGenericError(errorMessage) {
   return createErrorResult(ERRORS.GENERIC, errorMessage);
 }
+
+export enum LoginResults {
+  Success = 'Success',
+  InvalidPassword = 'InvalidPassword',
+  ChangePassword = 'ChangePassword',
+  UnknownError = 'UnknownError',
+}
+
 // TODO es consider browser type
 export interface BaseScraperOptions {
   companyId: string;
@@ -104,4 +112,4 @@ class BaseScraper {
   }
 }
 
-export { BaseScraper, LoginResults };
+export { BaseScraper };

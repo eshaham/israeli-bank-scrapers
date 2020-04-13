@@ -1,11 +1,12 @@
 import _ from 'lodash';
 import moment from 'moment';
 
-import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser } from './base-scraper-with-browser';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { fetchGetWithinPage } from '../helpers/fetch';
 import { NORMAL_TXN_TYPE, TransactionStatuses } from '../constants';
+import { LoginResults } from './base-scraper';
 
 const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';

@@ -2,7 +2,7 @@ import _ from 'lodash';
 import buildUrl from 'build-url';
 import moment from 'moment';
 
-import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser } from './base-scraper-with-browser';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import {
   ScrapeProgressTypes,
@@ -15,6 +15,7 @@ import {
 } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, filterOldTransactions } from '../helpers/transactions';
+import { ErrorTypes, LegacyScrapingResult } from '../types';
 
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';
@@ -27,7 +28,7 @@ function getAccountsUrl(servicesUrl, monthMoment) {
   return buildUrl(servicesUrl, {
     queryParams: {
       reqName: 'DashboardMonth',
-      actionCode: 0,
+      actionCode: '0',
       billingDate,
       format: 'Json',
     },
@@ -190,28 +191,33 @@ async function fetchAllTransactions(page, options, startMoment) {
 }
 
 class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
+  private baseUrl: string;
+
+  private companyCode: string;
+
+  private servicesUrl: string;
+
   constructor(options, baseUrl, companyCode) {
-    const clonedOptions = Object.assign(options, {
-      baseUrl,
-      servicesUrl: `${baseUrl}/services/ProxyRequestHandler.ashx`,
-      companyCode,
-    });
-    super(clonedOptions);
+    super(options);
+
+    this.baseUrl = baseUrl;
+    this.companyCode = companyCode;
+    this.servicesUrl = `${baseUrl}/services/ProxyRequestHandler.ashx`;
   }
 
-  async login(credentials) {
-    await this.navigateTo(`${this.options.baseUrl}/personalarea/Login`);
+  async login(credentials): Promise<LegacyScrapingResult> {
+    await this.navigateTo(`${this.baseUrl}/personalarea/Login`);
 
     this.emitProgress(ScrapeProgressTypes.LoggingIn);
 
-    const validateUrl = `${this.options.servicesUrl}?reqName=ValidateIdData`;
+    const validateUrl = `${this.servicesUrl}?reqName=ValidateIdData`;
     const validateRequest = {
       id: credentials.id,
       cardSuffix: credentials.card6Digits,
       countryCode: COUNTRY_CODE,
       idType: ID_TYPE,
       checkLevel: '1',
-      companyCode: this.options.companyCode,
+      companyCode: this.companyCode,
     };
     const validateResult = await fetchPostWithinPage(this.page, validateUrl, validateRequest);
     if (!validateResult || !validateResult.Header || validateResult.Header.Status !== '1' || !validateResult.ValidateIdDataBean) {
@@ -222,7 +228,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
     if (validateReturnCode === '1') {
       const { userName } = validateResult.ValidateIdDataBean;
 
-      const loginUrl = `${this.options.servicesUrl}?reqName=performLogonI`;
+      const loginUrl = `${this.servicesUrl}?reqName=performLogonI`;
       const request = {
         KodMishtamesh: userName,
         MisparZihuy: credentials.id,
@@ -241,14 +247,14 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
         this.emitProgress(ScrapeProgressTypes.ChangePassword);
         return {
           success: false,
-          errorType: LoginResults.ChangePassword,
+          errorType: ErrorTypes.ChangePassword,
         };
       }
 
       this.emitProgress(ScrapeProgressTypes.LoginFailed);
       return {
         success: false,
-        errorType: LoginResults.InvalidPassword,
+        errorType: ErrorTypes.InvalidPassword,
       };
     }
 
@@ -256,14 +262,14 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
       this.emitProgress(ScrapeProgressTypes.ChangePassword);
       return {
         success: false,
-        errorType: LoginResults.ChangePassword,
+        errorType: ErrorTypes.ChangePassword,
       };
     }
 
     this.emitProgress(ScrapeProgressTypes.LoginFailed);
     return {
       success: false,
-      errorType: LoginResults.InvalidPassword,
+      errorType: ErrorTypes.InvalidPassword,
     };
   }
 

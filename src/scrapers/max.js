@@ -1,7 +1,8 @@
 import buildUrl from 'build-url';
 import moment from 'moment';
 import { fetchGetWithinPage } from '../helpers/fetch';
-import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser } from './base-scraper-with-browser';
+import { LoginResults } from './base-scraper';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound, elementPresentOnPage, clickButton } from '../helpers/elements-interactions';
 import {

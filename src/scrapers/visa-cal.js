@@ -2,7 +2,7 @@ import _ from 'lodash';
 import buildUrl from 'build-url';
 import moment from 'moment';
 
-import { BaseScraper, LoginResults } from './base-scraper';
+import { BaseScraper } from './base-scraper';
 import {
   ScrapeProgressTypes,
   NORMAL_TXN_TYPE,
@@ -15,6 +15,7 @@ import {
 } from '../constants';
 import { fetchGet, fetchPost } from '../helpers/fetch';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
+import { ErrorTypes } from '../types';
 
 const BASE_URL = 'https://cal4u.cal-online.co.il/Cal4U';
 const AUTH_URL = 'https://connect.cal-online.co.il/api/authentication/login';
@@ -241,21 +242,21 @@ class VisaCalScraper extends BaseScraper {
     if (authResponse === PASSWORD_EXPIRED_MSG) {
       return {
         success: false,
-        errorType: LoginResults.ChangePassword,
+        errorType: ErrorTypes.ChangePassword,
       };
     }
 
     if (authResponse === INVALID_CREDENTIALS) {
       return {
         success: false,
-        errorType: LoginResults.InvalidPassword,
+        errorType: ErrorTypes.InvalidPassword,
       };
     }
 
     if (!authResponse || !authResponse.token) {
       return {
         success: false,
-        errorType: LoginResults.UnknownError,
+        errorType: ErrorTypes.UnknownError,
         errorMessage: `No token found in authResponse: ${JSON.stringify(authResponse)}`,
       };
     }

@@ -1,23 +1,23 @@
-import IsracardScraper from './isracard';
+import AMEXScraper from './amex';
 import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
 } from '../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
-import { LoginResults } from '../constants';
+import { LoginResults } from './base-scraper';
 
-const COMPANY_ID = 'isracard'; // TODO this property should be hard-coded in the provider
+const COMPANY_ID = 'amex'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
 
-describe('Isracard legacy scraper', () => {
+describe('AMEX legacy scraper', () => {
   beforeAll(() => {
     extendAsyncTimeout(); // The default timeout is 5 seconds per async test, this function extends the timeout value
   });
 
   test('should expose login fields in scrapers constant', () => {
-    expect(SCRAPERS.isracard).toBeDefined();
-    expect(SCRAPERS.isracard.loginFields).toContain('id');
-    expect(SCRAPERS.isracard.loginFields).toContain('card6Digits');
-    expect(SCRAPERS.isracard.loginFields).toContain('password');
+    expect(SCRAPERS.amex).toBeDefined();
+    expect(SCRAPERS.amex.loginFields).toContain('id');
+    expect(SCRAPERS.amex.loginFields).toContain('card6Digits');
+    expect(SCRAPERS.amex.loginFields).toContain('password');
   });
 
   maybeTestCompanyAPI(COMPANY_ID, (config) => config.companyAPI.invalidPassword)('should fail on invalid user/password"', async () => {
@@ -26,7 +26,7 @@ describe('Isracard legacy scraper', () => {
       companyId: COMPANY_ID,
     };
 
-    const scraper = new IsracardScraper(options);
+    const scraper = new AMEXScraper(options);
 
     const result = await scraper.scrape({ username: 'e10s12', password: '3f3ss3d' });
 
@@ -41,8 +41,8 @@ describe('Isracard legacy scraper', () => {
       companyId: COMPANY_ID,
     };
 
-    const scraper = new IsracardScraper(options);
-    const result = await scraper.scrape(testsConfig.credentials.isracard);
+    const scraper = new AMEXScraper(options);
+    const result = await scraper.scrape(testsConfig.credentials.amex);
     expect(result).toBeDefined();
     const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
     expect(error).toBe('');
