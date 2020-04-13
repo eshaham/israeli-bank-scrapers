@@ -60,7 +60,7 @@ class BaseScraper {
         scrapeResult = await this.fetchData();
       } catch (e) {
         scrapeResult =
-          e instanceof TimeoutError  ?
+          e instanceof TimeoutError ?
             createTimeoutError(e.message) :
             createGenericError(e.message);
       }
@@ -78,6 +78,7 @@ class BaseScraper {
     return scrapeResult;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async login(credentials: Record<string, string>): Promise<LegacyLoginResult> {
     throw new Error(`login() is not created in ${this.options.companyId}`);
   }

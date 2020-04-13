@@ -34,4 +34,3 @@ export function waitUntil(asyncTest, description = null, timeout = 10000, interv
   });
   return timeoutPromise(timeout, promise, description);
 }
-

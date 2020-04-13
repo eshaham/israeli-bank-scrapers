@@ -6,11 +6,11 @@ export interface CompanyAccount {
 }
 
 export enum ErrorTypes {
-  InvalidPassword ="invalidPassword",
-  ChangePassword = "changePassword",
-  Timeout = "timeout",
-  Generic = "generic",
-  General = "GENERAL_ERROR"
+  InvalidPassword ='invalidPassword',
+  ChangePassword = 'changePassword',
+  Timeout = 'timeout',
+  Generic = 'generic',
+  General = 'GENERAL_ERROR'
 }
 
 export interface LegacyLoginResult {
@@ -28,8 +28,8 @@ export interface LegacyScrapingResult {
 }
 
 export enum TransactionTypes {
-  Normal = "normal",
-  Installments = "installments"
+  Normal = 'normal',
+  Installments = 'installments'
 }
 
 

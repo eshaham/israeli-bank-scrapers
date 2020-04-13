@@ -1,4 +1,4 @@
-import puppeteer, { Page, Browser }  from 'puppeteer';
+import puppeteer, { Page, Browser } from 'puppeteer';
 
 import { BaseScraper } from './base-scraper';
 import { ScrapeProgressTypes, LoginResults } from '../constants';
@@ -79,6 +79,7 @@ function createGeneralError(): LegacyScrapingResult {
 
 class BaseScraperWithBrowser extends BaseScraper {
   protected browser: Browser;
+
   protected page: Page;
 
   async initialize() {
@@ -122,6 +123,7 @@ class BaseScraperWithBrowser extends BaseScraper {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getLoginOptions(credentials: Record<string, string>): LoginOptions {
     throw new Error(`getLoginOptions() is not created in ${this.options.companyId}`);
   }

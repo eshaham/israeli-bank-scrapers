@@ -29,9 +29,9 @@ module.exports = {
     "jest": true
   },
   parserOptions:  {
+    project: './tsconfig.json',
     ecmaVersion:  2018,  // Allows for the parsing of modern ECMAScript features
     sourceType:  'module',  // Allows for the use of imports
   },
-  "parser": "@typescript-eslint/parser",
-  "extends": "plugin:@typescript-eslint/recommended"
+  extends: ['airbnb-typescript/base'],
 }

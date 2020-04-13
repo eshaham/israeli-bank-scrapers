@@ -1,5 +1,5 @@
-import { waitUntil, TimeoutError } from './waiting';
 import { NavigationOptions, Page } from 'puppeteer';
+import { waitUntil } from './waiting';
 
 export async function waitForNavigation(page: Page, options?: NavigationOptions) {
   await page.waitForNavigation(options);
@@ -20,15 +20,8 @@ export async function getCurrentUrl(page, clientSide = false) {
 export async function waitForRedirect(page, timeout = 20000, clientSide = false, ignoreList = []) {
   const initial = await getCurrentUrl(page, clientSide);
 
-  try {
-    await waitUntil(async () => {
-      const current = await getCurrentUrl(page, clientSide);
-      return current !== initial && !ignoreList.includes(current);
-    }, `waiting for redirect from ${initial}`, timeout, 1000);
-  } catch (e) {
-    if (e && e instanceof TimeoutError ) {
-      const current = await getCurrentUrl(page, clientSide);
-    }
-    throw e;
-  }
+  await waitUntil(async () => {
+    const current = await getCurrentUrl(page, clientSide);
+    return current !== initial && !ignoreList.includes(current);
+  }, `waiting for redirect from ${initial}`, timeout, 1000);
 }

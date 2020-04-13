@@ -21,12 +21,12 @@ export const ScrapeProgressTypes = {
 };
 
 
-export enum LoginResults  {
+export enum LoginResults {
   Success = 'Success',
   InvalidPassword = 'InvalidPassword',
   ChangePassword = 'ChangePassword',
   UnknownError = 'UnknownError',
-};
+}
 
 export const ERRORS = {
   TIMEOUT: 'TIMEOUT',
@@ -35,8 +35,8 @@ export const ERRORS = {
 
 
 export enum TransactionStatuses {
-  Completed = "completed",
-    Pending = "pending"
+  Completed = 'completed',
+  Pending = 'pending'
 }
 
 export const ISO_DATE_FORMAT = 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]';

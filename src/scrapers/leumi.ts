@@ -1,4 +1,5 @@
 import moment from 'moment';
+import { Page } from 'puppeteer';
 import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
 import {
   dropdownSelect,
@@ -12,7 +13,6 @@ import {
 import { waitForNavigation } from '../helpers/navigation';
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TransactionStatuses } from '../constants';
 import { Transaction } from '../types';
-import { Page } from 'puppeteer';
 
 const BASE_URL = 'https://hb2.bankleumi.co.il';
 const DATE_FORMAT = 'DD/MM/YY';
