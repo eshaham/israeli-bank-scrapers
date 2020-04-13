@@ -15,8 +15,10 @@ const LOGIN_URL = `${BASE_URL}/MatafLoginService/MatafLoginServlet?bankId=FIBIPO
 const TRANSACTIONS_URL = `${BASE_URL}/wps/myportal/FibiMenu/Online/OnAccountMngment/OnBalanceTrans/PrivateAccountFlow`;
 const DATE_FORMAT = 'DD/MM/YYYY';
 const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא נמצאו נתונים בנושא המבוקש';
-const DATE_COLUMN_CLASS = 'date first';
-const DESCRIPTION_COLUMN_CLASS = 'reference wrap_normal';
+const DATE_COLUMN_CLASS_COMPLETED = 'date first';
+const DATE_COLUMN_CLASS_PENDING = 'first date';
+const DESCRIPTION_COLUMN_CLASS_COMPLETED = 'reference wrap_normal';
+const DESCRIPTION_COLUMN_CLASS_PENDING = 'details wrap_normal';
 const REFERENCE_COLUMN_CLASS = 'details';
 const DEBIT_COLUMN_CLASS = 'debit';
 const CREDIT_COLUMN_CLASS = 'credit';
@@ -24,8 +26,8 @@ const ERROR_MESSAGE_CLASS = 'NO_DATA';
 const ACCOUNTS_NUMBER = 'div.fibi_account span.acc_num';
 const CLOSE_SEARCH_BY_DATES_BUTTON_CLASS = 'ui-datepicker-close';
 const SHOW_SEARCH_BY_DATES_BUTTON_VALUE = 'הצג';
-const TRANSACTIONS_TABLE = 'table[id*=\'dataTable\']';
-const TRANSACTIONS_PAGINATION_LIMIT = 20;
+const COMPLETED_TRANSACTIONS_TABLE = 'table#dataTable077';
+const PENDING_TRANSACTIONS_TABLE = 'table#dataTable023';
 const NEXT_PAGE_LINK = 'a#Npage.paging';
 
 function getPossibleLoginResults() {
@@ -72,12 +74,18 @@ function convertTransactions(txns) {
   });
 }
 
-function getTransactionDate(tds, transactionsColsTypes) {
-  return (tds[transactionsColsTypes[DATE_COLUMN_CLASS]] || '').trim();
+function getTransactionDate(tds, transactionType, transactionsColsTypes) {
+  if (transactionType === 'completed') {
+    return (tds[transactionsColsTypes[DATE_COLUMN_CLASS_COMPLETED]] || '').trim();
+  }
+  return (tds[transactionsColsTypes[DATE_COLUMN_CLASS_PENDING]] || '').trim();
 }
 
-function getTransactionDescription(tds, transactionsColsTypes) {
-  return (tds[transactionsColsTypes[DESCRIPTION_COLUMN_CLASS]] || '').trim();
+function getTransactionDescription(tds, transactionType, transactionsColsTypes) {
+  if (transactionType === 'completed') {
+    return (tds[transactionsColsTypes[DESCRIPTION_COLUMN_CLASS_COMPLETED]] || '').trim();
+  }
+  return (tds[transactionsColsTypes[DESCRIPTION_COLUMN_CLASS_PENDING]] || '').trim();
 }
 
 function getTransactionReference(tds, transactionsColsTypes) {
@@ -92,21 +100,21 @@ function getTransactionCredit(tds, transactionsColsTypes) {
   return (tds[transactionsColsTypes[CREDIT_COLUMN_CLASS]] || '').trim();
 }
 
-function extractTransactionDetails(txnRow, transactionsColsTypes) {
+function extractTransactionDetails(txnRow, transactionType, transactionsColsTypes) {
   const tds = txnRow.innerTds;
   return {
-    status: TRANSACTION_STATUS.COMPLETED,
-    date: getTransactionDate(tds, transactionsColsTypes),
-    description: getTransactionDescription(tds, transactionsColsTypes),
+    status: transactionType,
+    date: getTransactionDate(tds, transactionType, transactionsColsTypes),
+    description: getTransactionDescription(tds, transactionType, transactionsColsTypes),
     reference: getTransactionReference(tds, transactionsColsTypes),
     debit: getTransactionDebit(tds, transactionsColsTypes),
     credit: getTransactionCredit(tds, transactionsColsTypes),
   };
 }
 
-async function getTransactionsColsTypeClasses(page) {
+async function getTransactionsColsTypeClasses(page, tableLocator) {
   const typeClassesMap = [];
-  const typeClassesObjs = await pageEvalAll(page, `${TRANSACTIONS_TABLE} tbody tr:first-of-type td`, null, (tds) => {
+  const typeClassesObjs = await pageEvalAll(page, `${tableLocator} tbody tr:first-of-type td`, null, (tds) => {
     return tds.map((td, index) => ({
       colClass: td.getAttribute('class'),
       index,
@@ -119,25 +127,25 @@ async function getTransactionsColsTypeClasses(page) {
   return typeClassesMap;
 }
 
-function extractTransaction(txns, txnRow, transactionsColsTypes) {
-  const txn = extractTransactionDetails(txnRow, transactionsColsTypes);
+function extractTransaction(txns, transactionType, txnRow, transactionsColsTypes) {
+  const txn = extractTransactionDetails(txnRow, transactionType, transactionsColsTypes);
   if (txn.date !== '') {
     txns.push(txn);
   }
 }
 
-async function extractTransactions(page) {
+async function extractTransactions(page, tableLocator, transactionType) {
   const txns = [];
-  const transactionsColsTypes = await getTransactionsColsTypeClasses(page);
+  const transactionsColsTypes = await getTransactionsColsTypeClasses(page, tableLocator);
 
-  const transactionsRows = await pageEvalAll(page, `${TRANSACTIONS_TABLE} tbody tr`, [], (trs) => {
+  const transactionsRows = await pageEvalAll(page, `${tableLocator} tbody tr`, [], (trs) => {
     return trs.map((tr) => ({
       innerTds: Array.from(tr.getElementsByTagName('td')).map((td) => td.innerText),
     }));
   });
 
   for (const txnRow of transactionsRows) {
-    extractTransaction(txns, txnRow, transactionsColsTypes);
+    extractTransaction(txns, transactionType, txnRow, transactionsColsTypes);
   }
   return txns;
 }
@@ -183,19 +191,23 @@ async function navigateToNextPage(page) {
   await waitForNavigation(page);
 }
 
-async function scrapeTransactions(page) {
+/* Couldn't reproduce scenario with multiple pages of pending transactions - Should support if exists such case.
+   needToPaginate is false if scraping pending transactions */
+async function scrapeTransactions(page, tableLocator, transactionType, needToPaginate) {
   const txns = [];
   let hasNextPage = false;
-  for (let i = 0; i < TRANSACTIONS_PAGINATION_LIMIT; i += 1) {
-    const currentPageTxns = await extractTransactions(page);
+
+  do {
+    const currentPageTxns = await extractTransactions(page, tableLocator, transactionType);
     txns.push(...currentPageTxns);
-    hasNextPage = await checkIfHasNextPage(page);
-    if (hasNextPage) {
-      await navigateToNextPage(page);
-    } else {
-      break;
+    if (needToPaginate) {
+      hasNextPage = await checkIfHasNextPage(page);
+      if (hasNextPage) {
+        await navigateToNextPage(page);
+      }
     }
-  }
+  } while (hasNextPage);
+
   return convertTransactions(txns);
 }
 
@@ -210,7 +222,15 @@ async function getAccountTransactions(page) {
     return [];
   }
 
-  return scrapeTransactions(page);
+  const pendingTxns = await scrapeTransactions(page, PENDING_TRANSACTIONS_TABLE,
+    TRANSACTION_STATUS.PENDING, false);
+  const completedTxns = await scrapeTransactions(page, COMPLETED_TRANSACTIONS_TABLE,
+    TRANSACTION_STATUS.COMPLETED, true);
+  const txns = [
+    ...pendingTxns,
+    ...completedTxns,
+  ];
+  return txns;
 }
 
 async function fetchAccountData(page, startDate) {
