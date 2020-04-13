@@ -5,11 +5,11 @@ export interface CompanyAccount {
 }
 
 export enum ErrorTypes {
-  InvalidPassword ='invalidPassword',
-  ChangePassword = 'changePassword',
-  Timeout = 'timeout',
-  Generic = 'generic',
-  General = 'generalError'
+  InvalidPassword ='INVALID_PASSWORD',
+  ChangePassword = 'CHANGE_PASSWORD',
+  Timeout = 'TIMEOUT',
+  Generic = 'GENERIC',
+  General = 'GENERAL_ERROR'
 }
 
 export interface LegacyLoginResult {
