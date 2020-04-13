@@ -50,7 +50,7 @@
     "eslint-config-airbnb-base": "^14.0.0",
     "eslint-plugin-import": "^2.14.0",
     "jest": "^25.3.0",
-    "json2csv": "^4.2.1",
+    "json2csv": "^5.0.0",
     "ncp": "^2.0.0",
     "pre-commit": "^1.2.2",
     "rimraf": "^3.0.0"
