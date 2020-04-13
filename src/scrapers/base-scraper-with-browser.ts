@@ -1,7 +1,6 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 
-import { BaseScraper } from './base-scraper';
-import { ScrapeProgressTypes } from '../constants';
+import { BaseScraper, ScrapeProgressTypes } from './base-scraper';
 import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { clickButton, fillInput, waitUntilElementFound } from '../helpers/elements-interactions';
 import { ErrorTypes, LegacyScrapingResult } from '../types';

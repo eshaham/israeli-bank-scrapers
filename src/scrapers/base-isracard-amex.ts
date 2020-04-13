@@ -5,7 +5,6 @@ import moment from 'moment';
 import { BaseScraperWithBrowser } from './base-scraper-with-browser';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import {
-  ScrapeProgressTypes,
   SHEKEL_CURRENCY_KEYWORD,
   SHEKEL_CURRENCY,
   ALT_SHEKEL_CURRENCY,
@@ -15,6 +14,7 @@ import { fixInstallments, filterOldTransactions } from '../helpers/transactions'
 import {
   ErrorTypes, LegacyScrapingResult, TransactionStatuses, TransactionTypes,
 } from '../types';
+import { ScrapeProgressTypes } from './base-scraper';
 
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';

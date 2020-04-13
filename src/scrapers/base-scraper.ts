@@ -1,6 +1,4 @@
 import { EventEmitter } from 'events';
-
-import { ScrapeProgressTypes } from '../constants';
 import { TimeoutError } from '../helpers/waiting';
 import { ErrorTypes, LegacyLoginResult, LegacyScrapingResult } from '../types';
 
@@ -32,7 +30,19 @@ export interface BaseScraperOptions {
   executablePath?: string;
 }
 
-class BaseScraper {
+
+export enum ScrapeProgressTypes {
+  Initializing = 'INITIALIZING',
+  StartScraping = 'START_SCRAPING',
+  LoggingIn = 'LOGGING_IN',
+  LoginSuccess = 'LOGIN_SUCCESS',
+  LoginFailed = 'LOGIN_FAILED',
+  ChangePassword = 'CHANGE_PASSWORD',
+  EndScraping = 'END_SCRAPING',
+  Terminating = 'TERMINATING',
+}
+
+export class BaseScraper {
   private eventEmitter = new EventEmitter();
 
   constructor(public options: BaseScraperOptions) {
@@ -104,5 +114,3 @@ class BaseScraper {
     this.eventEmitter.on(SCRAPE_PROGRESS, func);
   }
 }
-
-export { BaseScraper };

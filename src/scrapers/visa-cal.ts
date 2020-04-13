@@ -2,9 +2,8 @@ import _ from 'lodash';
 import buildUrl from 'build-url';
 import moment from 'moment';
 
-import { BaseScraper } from './base-scraper';
+import { BaseScraper, ScrapeProgressTypes } from './base-scraper';
 import {
-  ScrapeProgressTypes,
   SHEKEL_CURRENCY_SYMBOL,
   SHEKEL_CURRENCY,
   DOLLAR_CURRENCY_SYMBOL,
