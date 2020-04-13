@@ -4,7 +4,7 @@ import {
 } from '../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
 import { ISO_DATE_REGEX } from '../constants';
-import { LoginResults } from './base-scraper';
+import { LoginResults } from './base-scraper-with-browser';
 
 const COMPANY_ID = 'mizrahi'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();

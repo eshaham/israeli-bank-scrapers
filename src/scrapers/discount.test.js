@@ -3,7 +3,7 @@ import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
 } from '../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
-import { LoginResults } from './base-scraper';
+import { LoginResults } from './base-scraper-with-browser';
 
 const COMPANY_ID = 'discount'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();

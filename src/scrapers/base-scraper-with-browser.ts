@@ -1,6 +1,6 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 
-import { BaseScraper, LoginResults } from './base-scraper';
+import { BaseScraper } from './base-scraper';
 import { ScrapeProgressTypes } from '../constants';
 import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { clickButton, fillInput, waitUntilElementFound } from '../helpers/elements-interactions';
@@ -10,6 +10,12 @@ const VIEWPORT_WIDTH = 1024;
 const VIEWPORT_HEIGHT = 768;
 const OK_STATUS = 200;
 
+export enum LoginResults {
+  Success = 'Success',
+  InvalidPassword = 'InvalidPassword',
+  ChangePassword = 'ChangePassword',
+  UnknownError = 'UnknownError',
+}
 
 export interface LoginOptions {
   loginUrl: string;

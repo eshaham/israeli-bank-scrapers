@@ -4,8 +4,7 @@ import {
   NORMAL_TXN_TYPE,
   TransactionStatuses,
 } from '../constants';
-import { BaseScraperWithBrowser } from './base-scraper-with-browser';
-import { LoginResults } from './base-scraper';
+import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { waitForNavigation } from '../helpers/navigation';
 import { pageEvalAll } from '../helpers/elements-interactions';

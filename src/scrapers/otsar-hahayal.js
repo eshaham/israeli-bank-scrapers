@@ -1,6 +1,5 @@
 import moment from 'moment';
-import { BaseScraperWithBrowser } from './base-scraper-with-browser';
-import { LoginResults } from './base-scraper';
+import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
 import { waitForNavigation } from '../helpers/navigation';
 import {
   fillInput,

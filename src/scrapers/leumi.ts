@@ -1,7 +1,6 @@
 import moment from 'moment';
 import { Page } from 'puppeteer';
-import { BaseScraperWithBrowser, LoginOptions } from './base-scraper-with-browser';
-import { LoginResults } from './base-scraper';
+import { BaseScraperWithBrowser, LoginResults, LoginOptions } from './base-scraper-with-browser';
 import {
   dropdownSelect,
   dropdownElements,
