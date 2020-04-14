@@ -12,7 +12,9 @@ import {
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { SHEKEL_CURRENCY } from '../constants';
-import { Transaction, TransactionStatuses, TransactionTypes } from '../types';
+import {
+  LegacyScrapingResult, ScraperAccount, Transaction, TransactionStatuses, TransactionTypes,
+} from '../types';
 
 const BASE_URL = 'https://hb2.bankleumi.co.il';
 const DATE_FORMAT = 'DD/MM/YY';
@@ -48,30 +50,43 @@ function getAmountData(amountStr) {
   };
 }
 
-function convertTransactions(txns) {
+interface SiteTransaction {
+  status: TransactionStatuses,
+  description?: string,
+  memo?: string,
+  balance?: string,
+  credit?: string,
+  debit?: string,
+  reference?: string,
+  date?: string,
+}
+
+function convertTransactions(txns: SiteTransaction[]): Transaction[] {
   return txns.map((txn) => {
     const txnDate = moment(txn.date, DATE_FORMAT).toISOString();
 
     const credit = getAmountData(txn.credit).amount;
     const debit = getAmountData(txn.debit).amount;
     const amount = (Number.isNaN(credit) ? 0 : credit) - (Number.isNaN(debit) ? 0 : debit);
-    return {
+
+    const transaction: Transaction = {
       type: TransactionTypes.Normal,
-      identifier: txn.reference ? parseInt(txn.reference, 10) : null,
+      identifier: txn.reference ? parseInt(txn.reference, 10) : undefined,
       date: txnDate,
       processedDate: txnDate,
       originalAmount: amount,
       originalCurrency: SHEKEL_CURRENCY,
       chargedAmount: amount,
       status: txn.status,
-      description: txn.description,
-      memo: txn.memo,
+      description: txn.description || '',
+      memo: txn.memo || '',
     };
+    return transaction;
   });
 }
 
-async function extractCompletedTransactionsFromPage(page) {
-  const txns = [];
+async function extractCompletedTransactionsFromPage(page): Promise<SiteTransaction[]> {
+  const txns: SiteTransaction[] = [];
   const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #ctlActivityTable tr td', [], (tds) => {
     return tds.map((td) => ({
       classList: td.getAttribute('class'),
@@ -81,41 +96,35 @@ async function extractCompletedTransactionsFromPage(page) {
 
   for (const element of tdsValues) {
     if (element.classList.includes('ExtendedActivityColumnDate')) {
-      const newTransaction: Partial<Transaction> = { status: TransactionStatuses.Completed };
+      const newTransaction: SiteTransaction = { status: TransactionStatuses.Completed };
       newTransaction.date = (element.innerText || '').trim();
       txns.push(newTransaction);
-    } else if (element.classList.includes('ActivityTableColumn1LTR') || element.classList.includes('ActivityTableColumn1')) {
-      const changedTransaction = txns.pop();
-      changedTransaction.description = element.innerText;
-      txns.push(changedTransaction);
-    } else if (element.classList.includes('ReferenceNumberUniqeClass')) {
-      const changedTransaction = txns.pop();
-      changedTransaction.reference = element.innerText;
-      txns.push(changedTransaction);
-    } else if (element.classList.includes('AmountDebitUniqeClass')) {
-      const changedTransaction = txns.pop();
-      changedTransaction.debit = element.innerText;
-      txns.push(changedTransaction);
-    } else if (element.classList.includes('AmountCreditUniqeClass')) {
-      const changedTransaction = txns.pop();
-      changedTransaction.credit = element.innerText;
-      txns.push(changedTransaction);
-    } else if (element.classList.includes('number_column')) {
-      const changedTransaction = txns.pop();
-      changedTransaction.balance = element.innerText;
-      txns.push(changedTransaction);
-    } else if (element.classList.includes('tdDepositRowAdded')) {
-      const changedTransaction = txns.pop();
-      changedTransaction.memo = (element.innerText || '').trim();
-      txns.push(changedTransaction);
+    } else {
+      const changedTransaction = txns.length ? txns.pop() : null;
+      if (changedTransaction) {
+        if (element.classList.includes('ActivityTableColumn1LTR') || element.classList.includes('ActivityTableColumn1')) {
+          changedTransaction.description = element.innerText;
+        } else if (element.classList.includes('ReferenceNumberUniqeClass')) {
+          changedTransaction.reference = element.innerText;
+        } else if (element.classList.includes('AmountDebitUniqeClass')) {
+          changedTransaction.debit = element.innerText;
+        } else if (element.classList.includes('AmountCreditUniqeClass')) {
+          changedTransaction.credit = element.innerText;
+        } else if (element.classList.includes('number_column')) {
+          changedTransaction.balance = element.innerText;
+        } else if (element.classList.includes('tdDepositRowAdded')) {
+          changedTransaction.memo = (element.innerText || '').trim();
+        }
+        txns.push(changedTransaction);
+      }
     }
   }
 
   return txns;
 }
 
-async function extractPendingTransactionsFromPage(page) {
-  const txns = [];
+async function extractPendingTransactionsFromPage(page): Promise<SiteTransaction[]> {
+  const txns: SiteTransaction[] = [];
   const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #trTodayActivityNapaTableUpper tr td', [], (tds) => {
     return tds.map((td) => ({
       classList: td.getAttribute('class'),
@@ -125,29 +134,26 @@ async function extractPendingTransactionsFromPage(page) {
 
   for (const element of tdsValues) {
     if (element.classList.includes('Colume1Width')) {
-      const newTransaction: Partial<Transaction> = { status: TransactionStatuses.Pending };
+      const newTransaction: SiteTransaction = { status: TransactionStatuses.Pending };
       newTransaction.date = (element.innerText || '').trim();
       txns.push(newTransaction);
-    } else if (element.classList.includes('Colume2Width')) {
-      const changedTransaction = txns.pop();
-      changedTransaction.description = element.innerText;
-      txns.push(changedTransaction);
-    } else if (element.classList.includes('Colume3Width')) {
-      const changedTransaction = txns.pop();
-      changedTransaction.reference = element.innerText;
-      txns.push(changedTransaction);
-    } else if (element.classList.includes('Colume4Width')) {
-      const changedTransaction = txns.pop();
-      changedTransaction.debit = element.innerText;
-      txns.push(changedTransaction);
-    } else if (element.classList.includes('Colume5Width')) {
-      const changedTransaction = txns.pop();
-      changedTransaction.credit = element.innerText;
-      txns.push(changedTransaction);
-    } else if (element.classList.includes('Colume6Width')) {
-      const changedTransaction = txns.pop();
-      changedTransaction.balance = element.innerText;
-      txns.push(changedTransaction);
+    } else {
+      const changedTransaction = txns.length ? txns.pop() : null;
+
+      if (changedTransaction) {
+        if (element.classList.includes('Colume2Width')) {
+          changedTransaction.description = element.innerText;
+        } else if (element.classList.includes('Colume3Width')) {
+          changedTransaction.reference = element.innerText;
+        } else if (element.classList.includes('Colume4Width')) {
+          changedTransaction.debit = element.innerText;
+        } else if (element.classList.includes('Colume5Width')) {
+          changedTransaction.credit = element.innerText;
+        } else if (element.classList.includes('Colume6Width')) {
+          changedTransaction.balance = element.innerText;
+        }
+        txns.push(changedTransaction);
+      }
     }
   }
 
@@ -165,7 +171,7 @@ async function isNoTransactionInDateRangeError(page) {
   return false;
 }
 
-async function fetchTransactionsForAccount(page, startDate, accountId) {
+async function fetchTransactionsForAccount(page, startDate, accountId): Promise<ScraperAccount> {
   await dropdownSelect(page, 'select#ddlAccounts_m_ddl', accountId);
   await dropdownSelect(page, 'select#ddlTransactionPeriod', '004');
   await waitUntilElementFound(page, 'select#ddlTransactionPeriod');
@@ -215,7 +221,7 @@ async function fetchTransactionsForAccount(page, startDate, accountId) {
 }
 
 async function fetchTransactions(page, startDate) {
-  const res = [];
+  const res: ScraperAccount[] = [];
   // Loop through all available accounts and collect transactions from all
   const accounts = await dropdownElements(page, 'select#ddlAccounts_m_ddl');
   for (const account of accounts) {
@@ -246,7 +252,7 @@ class LeumiScraper extends BaseScraperWithBrowser {
     };
   }
 
-  async fetchData() {
+  async fetchData(): Promise<LegacyScrapingResult> {
     const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));

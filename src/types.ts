@@ -1,5 +1,5 @@
 
-export interface CompanyAccount {
+export interface ScraperAccount {
   accountNumber: string;
   txns: Transaction[];
 }
@@ -21,7 +21,7 @@ export interface LegacyLoginResult {
 
 export interface LegacyScrapingResult {
   success: boolean;
-  accounts?: CompanyAccount[];
+  accounts?: ScraperAccount[];
   errorType?: ErrorTypes;
   errorMessage?: string; // only on success=false
 }
