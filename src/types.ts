@@ -46,6 +46,7 @@ export interface Transaction {
   chargedAmount: number;
   description: string;
   memo: string;
+
   status: TransactionStatuses;
 }
 

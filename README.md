@@ -20,6 +20,7 @@ Currently only the following banks are supported:
 - Max (Formerly Leumi Card)
 - Isracard
 - Amex (thanks [@erezd](https://github.com/erezd))
+- Union Bank (Thanks to Intuit FDP OpenSource Team [@dratler](https://github.com/dratler),[@kalinoy](https://github.com/kalinoy),[@shanigad](https://github.com/shanigad),[@dudiventura](https://github.com/dudiventura) and [@NoamGoren](https://github.com/NoamGoren))
 
 # Prerequisites
 To use this you will need to have [Node.js](https://nodejs.org) >= 8.10.0 installed.
@@ -261,6 +262,7 @@ This scraper supports fetching transaction from up to one year.
 These are the projects known to be using this module:
 - [Israeli YNAB updater](https://github.com/eshaham/israeli-ynab-updater) - A command line tool for exporting banks data to CSVs, formatted specifically for [YNAB](https://www.youneedabudget.com)
 - [Israel Finance Telegram Bot](https://github.com/GuyLewin/israel-finance-telegram-bot) - A simple telegram bot that sends notifications about new transactions and interacts with them
+- [Automated budget tracking app](https://github.com/brafdlog/budget-tracking) - An app for automatically sending transactions from Israeli banks and credit cards to budget tracking apps
 
 Built something interesting you want to share here? [Let me know](https://goo.gl/forms/5Fb9JAjvzMIpmzqo2).
 
