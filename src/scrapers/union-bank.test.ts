@@ -1,9 +1,9 @@
 import UnionBankScraper from './union-bank';
 import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
-} from '../../tests/tests-utils';
+} from '../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
-import { LOGIN_RESULT } from '../constants';
+import { LoginResults } from './base-scraper-with-browser';
 
 const COMPANY_ID = 'union'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
@@ -31,7 +31,7 @@ describe('Union', () => {
 
     expect(result).toBeDefined();
     expect(result.success).toBeFalsy();
-    expect(result.errorType).toBe(LOGIN_RESULT.INVALID_PASSWORD);
+    expect(result.errorType).toBe(LoginResults.InvalidPassword);
   });
 
   maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions"', async () => {

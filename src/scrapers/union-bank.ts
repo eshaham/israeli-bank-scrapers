@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
 import {
   dropdownSelect,
   dropdownElements,
@@ -10,7 +10,8 @@ import {
   elementPresentOnPage,
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
-import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, TRANSACTION_STATUS } from '../constants';
+import { SHEKEL_CURRENCY } from '../constants';
+import { TransactionStatuses, TransactionTypes } from '../types';
 
 const BASE_URL = 'https://hb.unionbank.co.il';
 const TRANSACTIONS_URL = `${BASE_URL}/eBanking/Accounts/ExtendedActivity.aspx#/`;
@@ -28,8 +29,8 @@ const ACCOUNTS_DROPDOWN_SELECTOR = 'select#ddlAccounts_m_ddl';
 
 function getPossibleLoginResults() {
   const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = [/eBanking\/Accounts/];
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = [/InternalSite\/CustomUpdate\/leumi\/LoginPage.ASP/];
+  urls[LoginResults.Success] = [/eBanking\/Accounts/];
+  urls[LoginResults.InvalidPassword] = [/InternalSite\/CustomUpdate\/leumi\/LoginPage.ASP/];
   return urls;
 }
 
@@ -56,7 +57,7 @@ function convertTransactions(txns) {
     const convertedDate = moment(txn.date, DATE_FORMAT).toISOString();
     const convertedAmount = getTxnAmount(txn);
     return {
-      type: NORMAL_TXN_TYPE,
+      type: TransactionTypes.Normal,
       identifier: txn.reference ? parseInt(txn.reference, 10) : null,
       date: convertedDate,
       processedDate: convertedDate,
@@ -140,7 +141,7 @@ async function extractTransactionsFromTable(page, tableTypeId, txnType) {
   const transactionsTableHeaders = await getTransactionsTableHeaders(page, tableTypeId);
 
   const transactionsRows = await pageEvalAll(page, `#WorkSpaceBox #${tableTypeId} tr[class]:not([class='header'])`, [], (trs) => {
-    return trs.map((tr) => ({
+    return trs.map((tr: HTMLTableDataCellElement) => ({
       id: tr.getAttribute('id'),
       innerTds: Array.from(tr.getElementsByTagName('td')).map((td) => td.innerText),
     }));
@@ -165,7 +166,8 @@ async function isNoTransactionInDateRangeError(page) {
 
 async function chooseAccount(page, accountId) {
   const hasErrorInfoElement = await elementPresentOnPage(page, ACCOUNTS_DROPDOWN_SELECTOR);
-  if (hasErrorInfoElement.offsetParent !== null) {
+  // TODO check https://github.com/eshaham/israeli-bank-scrapers/issues/415
+  if ((hasErrorInfoElement as any).offsetParent !== null) {
     await dropdownSelect(page, ACCOUNTS_DROPDOWN_SELECTOR, accountId);
   }
 }
@@ -199,9 +201,9 @@ async function expandTransactionsTable(page) {
 
 async function scrapeTransactionsFromTable(page) {
   const pendingTxns = await extractTransactionsFromTable(page, PENDING_TRANSACTIONS_TABLE_ID,
-    TRANSACTION_STATUS.PENDING);
+    TransactionStatuses.Pending);
   const completedTxns = await extractTransactionsFromTable(page, COMPLETED_TRANSACTIONS_TABLE_ID,
-    TRANSACTION_STATUS.COMPLETED);
+    TransactionStatuses.Completed);
   const txns = [
     ...pendingTxns,
     ...completedTxns,
