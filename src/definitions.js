@@ -45,4 +45,8 @@ export const SCRAPERS = {
     name: 'Union',
     loginFields: ['username', PASSWORD_FIELD],
   },
+  beinleumi: {
+    name: 'Beinleumi',
+    loginFields: ['username', PASSWORD_FIELD],
+  },
 };
