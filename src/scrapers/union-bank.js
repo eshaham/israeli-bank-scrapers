@@ -164,8 +164,8 @@ async function isNoTransactionInDateRangeError(page) {
 }
 
 async function chooseAccount(page, accountId) {
-  const hasErrorInfoElement = await elementPresentOnPage(page, ACCOUNTS_DROPDOWN_SELECTOR);
-  if (hasErrorInfoElement.offsetParent !== null) {
+  const hasDropDownList = await elementPresentOnPage(page, ACCOUNTS_DROPDOWN_SELECTOR);
+  if (hasDropDownList) {
     await dropdownSelect(page, ACCOUNTS_DROPDOWN_SELECTOR, accountId);
   }
 }
