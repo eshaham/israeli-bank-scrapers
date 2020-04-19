@@ -50,7 +50,7 @@ function getAmountData(amountStr) {
   };
 }
 
-interface SiteTransaction {
+interface ScrapedTransaction {
   status: TransactionStatuses,
   description?: string,
   memo?: string,
@@ -61,7 +61,7 @@ interface SiteTransaction {
   date?: string,
 }
 
-function convertTransactions(txns: SiteTransaction[]): Transaction[] {
+function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((txn) => {
     const txnDate = moment(txn.date, DATE_FORMAT).toISOString();
 
@@ -85,8 +85,8 @@ function convertTransactions(txns: SiteTransaction[]): Transaction[] {
   });
 }
 
-async function extractCompletedTransactionsFromPage(page): Promise<SiteTransaction[]> {
-  const txns: SiteTransaction[] = [];
+async function extractCompletedTransactionsFromPage(page): Promise<ScrapedTransaction[]> {
+  const txns: ScrapedTransaction[] = [];
   const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #ctlActivityTable tr td', [], (tds) => {
     return tds.map((td) => ({
       classList: td.getAttribute('class'),
@@ -96,7 +96,7 @@ async function extractCompletedTransactionsFromPage(page): Promise<SiteTransacti
 
   for (const element of tdsValues) {
     if (element.classList.includes('ExtendedActivityColumnDate')) {
-      const newTransaction: SiteTransaction = { status: TransactionStatuses.Completed };
+      const newTransaction: ScrapedTransaction = { status: TransactionStatuses.Completed };
       newTransaction.date = (element.innerText || '').trim();
       txns.push(newTransaction);
     } else {
@@ -123,8 +123,8 @@ async function extractCompletedTransactionsFromPage(page): Promise<SiteTransacti
   return txns;
 }
 
-async function extractPendingTransactionsFromPage(page): Promise<SiteTransaction[]> {
-  const txns: SiteTransaction[] = [];
+async function extractPendingTransactionsFromPage(page): Promise<ScrapedTransaction[]> {
+  const txns: ScrapedTransaction[] = [];
   const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #trTodayActivityNapaTableUpper tr td', [], (tds) => {
     return tds.map((td) => ({
       classList: td.getAttribute('class'),
@@ -134,7 +134,7 @@ async function extractPendingTransactionsFromPage(page): Promise<SiteTransaction
 
   for (const element of tdsValues) {
     if (element.classList.includes('Colume1Width')) {
-      const newTransaction: SiteTransaction = { status: TransactionStatuses.Pending };
+      const newTransaction: ScrapedTransaction = { status: TransactionStatuses.Pending };
       newTransaction.date = (element.innerText || '').trim();
       txns.push(newTransaction);
     } else {
