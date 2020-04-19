@@ -141,7 +141,7 @@ async function extractTransactionsFromTable(page, tableTypeId, txnType) {
   const transactionsTableHeaders = await getTransactionsTableHeaders(page, tableTypeId);
 
   const transactionsRows = await pageEvalAll(page, `#WorkSpaceBox #${tableTypeId} tr[class]:not([class='header'])`, [], (trs) => {
-    return trs.map((tr: HTMLTableDataCellElement) => ({
+    return trs.map((tr: HTMLTableRowElement) => ({
       id: tr.getAttribute('id'),
       innerTds: Array.from(tr.getElementsByTagName('td')).map((td) => td.innerText),
     }));
@@ -165,9 +165,8 @@ async function isNoTransactionInDateRangeError(page) {
 }
 
 async function chooseAccount(page, accountId) {
-  const hasErrorInfoElement = await elementPresentOnPage(page, ACCOUNTS_DROPDOWN_SELECTOR);
-  // TODO check https://github.com/eshaham/israeli-bank-scrapers/issues/415
-  if ((hasErrorInfoElement as any).offsetParent !== null) {
+  const hasDropDownList = await elementPresentOnPage(page, ACCOUNTS_DROPDOWN_SELECTOR);
+  if (hasDropDownList) {
     await dropdownSelect(page, ACCOUNTS_DROPDOWN_SELECTOR, accountId);
   }
 }
