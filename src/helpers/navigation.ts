@@ -17,7 +17,8 @@ export async function getCurrentUrl(page, clientSide = false) {
   return page.url();
 }
 
-export async function waitForRedirect(page, timeout = 20000, clientSide = false, ignoreList = []) {
+export async function waitForRedirect(page, timeout = 20000,
+  clientSide = false, ignoreList: string[] = []) {
   const initial = await getCurrentUrl(page, clientSide);
 
   await waitUntil(async () => {

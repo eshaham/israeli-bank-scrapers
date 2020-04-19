@@ -11,7 +11,9 @@ import {
 } from '../constants';
 import { fetchGet, fetchPost } from '../helpers/fetch';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
-import { ErrorTypes, TransactionStatuses, TransactionTypes } from '../types';
+import {
+  ErrorTypes, ScraperAccount, Transaction, TransactionStatuses, TransactionTypes,
+} from '../types';
 
 const BASE_URL = 'https://cal4u.cal-online.co.il/Cal4U';
 const AUTH_URL = 'https://connect.cal-online.co.il/api/authentication/login';
@@ -34,6 +36,58 @@ const SERVICES_TYPE_CODE = '72';
 const REFUND_TYPE_CODE_2 = '76';
 
 const HEADER_SITE = { 'X-Site-Id': '8D37DF16-5812-4ACD-BAE7-CD1A5BFA2206' };
+
+
+interface BankDebitsResponse {
+  Response: {
+    Status: {
+      Succeeded: boolean,
+      Description: string,
+      Message: string
+    }
+  },
+  Debits: {
+    CardId: string,
+    Date: string,
+  }[]
+}
+
+interface BankAccountCard {
+  Id: string,
+  IsEffectiveInd: boolean,
+  LastFourDigits: string,
+}
+
+interface CardByAccountResponse {
+  Response: {
+    Status: {
+      Succeeded: boolean,
+    }
+  }
+  BankAccounts: {
+    AccountID: string
+    Cards: BankAccountCard[]
+  }[]
+}
+
+interface ScrapedTransaction {
+  TransType: string,
+  Date: string,
+  DebitDate: string,
+  Amount: {
+    Value: number,
+    Symbol: string
+  },
+  DebitAmount: {
+    Value: number,
+  },
+  MerchantDetails: {
+    Name: string
+  },
+  TransTypeDesc: string,
+  TotalPayments?: string,
+  CurrentPayment?: string
+}
 
 function getBankDebitsUrl(accountId) {
   const toDate = moment().add(2, 'months');
@@ -104,7 +158,7 @@ function getInstallmentsInfo(txn) {
   };
 }
 
-function getTransactionMemo(txn) {
+function getTransactionMemo(txn: ScrapedTransaction) {
   const { TransType: txnType, TransTypeDesc: txnTypeDescription } = txn;
   switch (txnType) {
     case NORMAL_TYPE_CODE:
@@ -116,7 +170,7 @@ function getTransactionMemo(txn) {
   }
 }
 
-function convertTransactions(txns) {
+function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((txn) => {
     return {
       type: convertTransactionType(txn.TransType),
@@ -133,8 +187,8 @@ function convertTransactions(txns) {
   });
 }
 
-function prepareTransactions(txns, startMoment, combineInstallments) {
-  let clonedTxns = Array.from(txns);
+function prepareTransactions(txns, startMoment, combineInstallments): Transaction[] {
+  let clonedTxns: Transaction[] = Array.from(txns);
   if (!combineInstallments) {
     clonedTxns = fixInstallments(clonedTxns);
   }
@@ -143,21 +197,23 @@ function prepareTransactions(txns, startMoment, combineInstallments) {
   return clonedTxns;
 }
 
-async function getBankDebits(authHeader, accountId) {
+async function getBankDebits(authHeader, accountId): Promise<BankDebitsResponse> {
   const bankDebitsUrl = getBankDebitsUrl(accountId);
   return fetchGet(bankDebitsUrl, authHeader);
 }
 
 async function getTransactionsNextPage(authHeader) {
   const hasNextPageUrl = `${BASE_URL}/CalTransNextPage`;
-  return fetchGet(hasNextPageUrl, authHeader);
+  return fetchGet<{ HasNextPage: boolean,
+    Transactions?: ScrapedTransaction[]}>(hasNextPageUrl, authHeader);
 }
 
-async function fetchTxns(authHeader, cardId, debitDates) {
-  const txns = [];
+async function fetchTxns(authHeader, cardId, debitDates): Promise<ScrapedTransaction[]> {
+  const txns: ScrapedTransaction[] = [];
   for (const date of debitDates) {
     const fetchTxnUrl = getTransactionsUrl(cardId, date);
-    let txnResponse = await fetchGet(fetchTxnUrl, authHeader);
+    let txnResponse = await fetchGet<{ HasNextPage: boolean,
+      Transactions?: ScrapedTransaction[]}>(fetchTxnUrl, authHeader);
     if (txnResponse.Transactions) {
       txns.push(...txnResponse.Transactions);
     }
@@ -171,7 +227,7 @@ async function fetchTxns(authHeader, cardId, debitDates) {
   return txns;
 }
 
-async function getTxnsOfCard(authHeader, card, bankDebits) {
+async function getTxnsOfCard(authHeader, card: BankAccountCard, bankDebits: BankDebitsResponse['Debits']): Promise<ScrapedTransaction[]> {
   const cardId = card.Id;
   const cardDebitDates = bankDebits.filter((bankDebit) => {
     return bankDebit.CardId === cardId;
@@ -183,10 +239,10 @@ async function getTxnsOfCard(authHeader, card, bankDebits) {
 
 async function getTransactionsForAllAccounts(authHeader, startMoment, options) {
   const cardsByAccountUrl = `${BASE_URL}/CardsByAccounts`;
-  const banksResponse = await fetchGet(cardsByAccountUrl, authHeader);
+  const banksResponse = await fetchGet<CardByAccountResponse>(cardsByAccountUrl, authHeader);
 
   if (_.get(banksResponse, 'Response.Status.Succeeded')) {
-    const accounts = [];
+    const accounts: ScraperAccount[] = [];
     for (let i = 0; i < banksResponse.BankAccounts.length; i += 1) {
       const bank = banksResponse.BankAccounts[i];
       const bankDebits = await getBankDebits(authHeader, bank.AccountID);
@@ -198,7 +254,7 @@ async function getTransactionsForAllAccounts(authHeader, startMoment, options) {
             if (rawTxns) {
               let txns = convertTransactions(rawTxns);
               txns = prepareTransactions(txns, startMoment, options.combineInstallments);
-              const result = {
+              const result: ScraperAccount = {
                 accountNumber: bank.Cards[j].LastFourDigits,
                 txns,
               };
@@ -225,7 +281,7 @@ async function getTransactionsForAllAccounts(authHeader, startMoment, options) {
 }
 
 class VisaCalScraper extends BaseScraper {
-  private authHeader: string;
+  private authHeader: string = '';
 
   async login(credentials) {
     const authRequest = {

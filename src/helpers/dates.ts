@@ -1,9 +1,9 @@
-import moment from 'moment';
+import moment, { Moment } from 'moment';
 
 export default function getAllMonthMoments(startMoment, includeNext) {
   let monthMoment = moment(startMoment).startOf('month');
 
-  const allMonths = [];
+  const allMonths: Moment[] = [];
   let lastMonth = moment().startOf('month');
   if (includeNext) {
     lastMonth = lastMonth.add(1, 'month');

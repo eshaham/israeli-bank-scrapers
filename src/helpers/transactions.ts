@@ -1,6 +1,6 @@
 import moment from 'moment';
 import _ from 'lodash';
-import { TransactionTypes } from '../types';
+import { Transaction, TransactionTypes } from '../types';
 
 function isNormalTransaction(txn) {
   return txn.type === TransactionTypes.Normal;
@@ -18,7 +18,7 @@ function isInitialInstallmentTransaction(txn) {
   return isInstallmentTransaction(txn) && txn.installments && txn.installments.number === 1;
 }
 
-export function fixInstallments(txns) {
+export function fixInstallments(txns): Transaction[] {
   return txns.map((txn) => {
     const clonedTxn = { ...txn };
     if (isNonInitialInstallmentTransaction(clonedTxn)) {

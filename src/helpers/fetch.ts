@@ -9,7 +9,7 @@ function getJsonHeaders() {
   };
 }
 
-export async function fetchGet(url, extraHeaders) {
+export async function fetchGet<TResult>(url, extraHeaders): Promise<TResult> {
   let headers = getJsonHeaders();
   if (extraHeaders) {
     headers = Object.assign(headers, extraHeaders);

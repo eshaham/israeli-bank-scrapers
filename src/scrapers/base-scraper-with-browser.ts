@@ -84,14 +84,18 @@ function createGeneralError(): LegacyScrapingResult {
 }
 
 class BaseScraperWithBrowser extends BaseScraper {
-  protected browser: Browser;
+  // NOTICE - it is discourage to use bang (!) in general. It is used here because
+  // all the classes that inherit from this base assume is it mandatory.
+  protected browser!: Browser;
 
-  protected page: Page;
+  // NOTICE - it is discourage to use bang (!) in general. It is used here because
+  // all the classes that inherit from this base assume is it mandatory.
+  protected page!: Page;
 
   async initialize() {
     this.emitProgress(ScrapeProgressTypes.Initializing);
 
-    let env = null;
+    let env: Record<string, any> | undefined;
     if (this.options.verbose) {
       env = { DEBUG: '*', ...process.env };
     }
@@ -105,6 +109,10 @@ class BaseScraperWithBrowser extends BaseScraper {
         headless: !this.options.showBrowser,
         executablePath,
       });
+    }
+
+    if (!this.browser) {
+      return;
     }
 
     const pages = await this.browser.pages();
@@ -121,6 +129,11 @@ class BaseScraperWithBrowser extends BaseScraper {
 
   async navigateTo(url: string, page?: Page): Promise<void> {
     const pageToUse = page || this.page;
+
+    if (!pageToUse) {
+      return;
+    }
+
     const response = await pageToUse.goto(url);
 
     // note: response will be null when navigating to same url while changing the hash part. the condition below will always accept null as valid result.
@@ -145,7 +158,7 @@ class BaseScraperWithBrowser extends BaseScraper {
   }
 
   async login(credentials: Record<string, string>): Promise<LegacyScrapingResult> {
-    if (!credentials) {
+    if (!credentials || !this.page) {
       return createGeneralError();
     }
 
@@ -178,6 +191,11 @@ class BaseScraperWithBrowser extends BaseScraper {
 
   async terminate() {
     this.emitProgress(ScrapeProgressTypes.Terminating);
+
+    if (!this.browser) {
+      return;
+    }
+
     await this.browser.close();
   }
 }

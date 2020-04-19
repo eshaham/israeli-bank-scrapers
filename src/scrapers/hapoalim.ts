@@ -5,7 +5,9 @@ import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browse
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntil } from '../helpers/waiting';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
-import { Transaction, TransactionStatuses, TransactionTypes } from '../types';
+import {
+  ScraperAccount, Transaction, TransactionStatuses, TransactionTypes,
+} from '../types';
 
 const DATE_FORMAT = 'YYYYMMDD';
 
@@ -13,11 +15,28 @@ declare module window {
   const bnhpApp: any;
 }
 
-function convertTransactions(txns): Transaction[] {
+interface ScrapedTransaction {
+  serialNumber?: number,
+  activityDescription?: string,
+  eventAmount: number,
+  valueDate?: string,
+  eventDate?: string,
+  referenceNumber?: number,
+  ScrapedTransaction?: string,
+  eventActivityTypeCode: number,
+  beneficiaryDetailsData?: {
+    partyHeadline?: string,
+    partyName?: string,
+    messageHeadline?: string,
+    messageDetail?: string,
+  }
+}
+
+function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((txn) => {
     const isOutbound = txn.eventActivityTypeCode === 2;
 
-    let memo = null;
+    let memo: string = '';
     if (txn.beneficiaryDetailsData) {
       const {
         partyHeadline,
@@ -25,7 +44,7 @@ function convertTransactions(txns): Transaction[] {
         messageHeadline,
         messageDetail,
       } = txn.beneficiaryDetailsData;
-      const memoLines = [];
+      const memoLines: string[] = [];
       if (partyHeadline) {
         memoLines.push(partyHeadline);
       }
@@ -47,7 +66,7 @@ function convertTransactions(txns): Transaction[] {
       }
     }
 
-    return {
+    const result: Transaction = {
       type: TransactionTypes.Normal,
       identifier: txn.referenceNumber,
       date: moment(txn.eventDate, DATE_FORMAT).toISOString(),
@@ -55,10 +74,12 @@ function convertTransactions(txns): Transaction[] {
       originalAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
       originalCurrency: 'ILS',
       chargedAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
-      description: txn.activityDescription,
+      description: txn.activityDescription || '',
       status: txn.serialNumber === 0 ? TransactionStatuses.Pending : TransactionStatuses.Completed,
       memo,
     };
+
+    return result;
   });
 }
 
@@ -100,14 +121,14 @@ async function fetchAccountData(page, baseUrl, options) {
   const startDateStr = startMoment.format(DATE_FORMAT);
   const endDateStr = moment().format(DATE_FORMAT);
 
-  const accounts = [];
+  const accounts: ScraperAccount[] = [];
   for (let accountIndex = 0; accountIndex < accountsInfo.length; accountIndex += 1) {
     const accountNumber = `${accountsInfo[accountIndex].bankNumber}-${accountsInfo[accountIndex].branchNumber}-${accountsInfo[accountIndex].accountNumber}`;
 
     const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
 
     const txnsResult = await fetchPoalimXSRFWithinPage(page, txnsUrl, '/current-account/transactions');
-    let txns = [];
+    let txns: Transaction[] = [];
     if (txnsResult) {
       txns = convertTransactions(txnsResult.transactions);
     }

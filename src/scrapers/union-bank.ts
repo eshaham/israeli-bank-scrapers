@@ -11,7 +11,10 @@ import {
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { SHEKEL_CURRENCY } from '../constants';
-import { TransactionStatuses, TransactionTypes } from '../types';
+import {
+  ScraperAccount, Transaction, TransactionStatuses,
+  TransactionTypes,
+} from '../types';
 
 const BASE_URL = 'https://hb.unionbank.co.il';
 const TRANSACTIONS_URL = `${BASE_URL}/eBanking/Accounts/ExtendedActivity.aspx#/`;
@@ -122,7 +125,7 @@ function handleTransactionRow(txns, txnsTableHeaders, txnRow, txnType) {
 }
 
 async function getTransactionsTableHeaders(page, tableTypeId) {
-  const headersMap = [];
+  const headersMap: Record<string, any> = [];
   const headersObjs = await pageEvalAll(page, `#WorkSpaceBox #${tableTypeId} tr[class='header'] th`, null, (ths) => {
     return ths.map((th, index) => ({
       text: th.innerText.trim(),
@@ -136,7 +139,7 @@ async function getTransactionsTableHeaders(page, tableTypeId) {
   return headersMap;
 }
 
-async function extractTransactionsFromTable(page, tableTypeId, txnType) {
+async function extractTransactionsFromTable(page, tableTypeId, txnType): Promise<Transaction[]> {
   const txns = [];
   const transactionsTableHeaders = await getTransactionsTableHeaders(page, tableTypeId);
 
@@ -198,7 +201,7 @@ async function expandTransactionsTable(page) {
   }
 }
 
-async function scrapeTransactionsFromTable(page) {
+async function scrapeTransactionsFromTable(page): Promise<Transaction[]> {
   const pendingTxns = await extractTransactionsFromTable(page, PENDING_TRANSACTIONS_TABLE_ID,
     TransactionStatuses.Pending);
   const completedTxns = await extractTransactionsFromTable(page, COMPLETED_TRANSACTIONS_TABLE_ID,
@@ -210,7 +213,7 @@ async function scrapeTransactionsFromTable(page) {
   return convertTransactions(txns);
 }
 
-async function getAccountTransactions(page) {
+async function getAccountTransactions(page): Promise<Transaction[]> {
   await Promise.race([
     waitUntilElementFound(page, `#${COMPLETED_TRANSACTIONS_TABLE_ID}`, false),
     waitUntilElementFound(page, `.${ERROR_MESSAGE_CLASS}`, false),
@@ -225,7 +228,7 @@ async function getAccountTransactions(page) {
   return scrapeTransactionsFromTable(page);
 }
 
-async function fetchAccountData(page, startDate, accountId) {
+async function fetchAccountData(page, startDate, accountId): Promise<ScraperAccount> {
   await chooseAccount(page, accountId);
   await searchByDates(page, startDate);
   const accountNumber = await getAccountNumber(page);
@@ -237,7 +240,7 @@ async function fetchAccountData(page, startDate, accountId) {
 }
 
 async function fetchAccounts(page, startDate) {
-  const accounts = [];
+  const accounts: ScraperAccount[] = [];
   const accountsList = await dropdownElements(page, ACCOUNTS_DROPDOWN_SELECTOR);
   for (const account of accountsList) {
     if (account.value !== '-1') { // Skip "All accounts" option

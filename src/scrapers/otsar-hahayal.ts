@@ -2,16 +2,24 @@ import moment from 'moment';
 import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
 import { waitForNavigation } from '../helpers/navigation';
 import {
-  fillInput,
-  clickButton,
-  waitUntilElementFound,
-  pageEvalAll,
+  clickButton, fillInput, pageEvalAll, waitUntilElementFound,
 } from '../helpers/elements-interactions';
 import { SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL } from '../constants';
-import { Transaction, TransactionTypes } from '../types';
+import { Transaction, TransactionStatuses, TransactionTypes } from '../types';
 
 const BASE_URL = 'https://online.bankotsar.co.il';
 const DATE_FORMAT = 'DD/MM/YY';
+
+interface ScrapedTransaction {
+  balance?: string,
+  debit?: string,
+  credit?: string,
+  memo?: string,
+  status?: string,
+  reference?: string,
+  description?: string,
+  date: string,
+}
 
 function getPossibleLoginResults() {
   const urls = {};
@@ -35,8 +43,8 @@ function createLoginFields(credentials) {
 
 function getAmountData(amountStr, hasCurrency = false) {
   const amountStrCln = amountStr.replace(',', '');
-  let currency = null;
-  let amount = null;
+  let currency: string | null = null;
+  let amount: number | null = null;
   if (!hasCurrency) {
     amount = parseFloat(amountStrCln);
     currency = SHEKEL_CURRENCY;
@@ -55,27 +63,31 @@ function getAmountData(amountStr, hasCurrency = false) {
   };
 }
 
-function convertTransactions(txns) {
+function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((txn) => {
     const txnDate = moment(txn.date, DATE_FORMAT).toISOString();
     const credit = getAmountData(txn.credit).amount;
     const debit = getAmountData(txn.debit).amount;
     const amount = (Number.isNaN(credit) ? 0 : credit) - (Number.isNaN(debit) ? 0 : debit);
 
-    return {
+    const result: Transaction = {
       type: TransactionTypes.Normal,
-      identifier: txn.reference ? parseInt(txn.reference, 10) : null,
+      status: TransactionStatuses.Completed,
+      identifier: txn.reference ? parseInt(txn.reference, 10) : undefined,
       date: txnDate,
       processedDate: txnDate,
       originalAmount: amount,
       originalCurrency: SHEKEL_CURRENCY,
       chargedAmount: amount,
-      description: txn.description,
+      description: txn.description || '',
+      memo: '',
     };
+
+    return result;
   });
 }
 
-async function parseTransactionPage(page) {
+async function parseTransactionPage(page): Promise<ScrapedTransaction[]> {
   const tdsValues = await pageEvalAll(page, '#dataTable077 tbody tr td', [], (tds) => {
     return tds.map((td) => ({
       classList: td.getAttribute('class'),
@@ -83,27 +95,31 @@ async function parseTransactionPage(page) {
     }));
   });
 
-  const txns = [];
+  const txns: ScrapedTransaction[] = [];
   for (const element of tdsValues) {
     const { classList, innerText } = element;
     if (classList.includes('date')) {
-      const newTransaction: Partial<Transaction> = {};
-      newTransaction.date = innerText;
+      const newTransaction: ScrapedTransaction = {
+        date: innerText,
+      };
       txns.push(newTransaction);
     } else {
-      const changedTransaction = txns.pop();
-      if (classList.includes('reference')) {
-        changedTransaction.description = innerText;
-      } else if (classList.includes('details')) {
-        changedTransaction.reference = innerText;
-      } else if (classList.includes('credit')) {
-        changedTransaction.credit = innerText;
-      } else if (classList.includes('debit')) {
-        changedTransaction.debit = innerText;
-      } else if (classList.includes('balance')) {
-        changedTransaction.balance = innerText;
+      const changedTransaction = txns.length ? txns[0] : null;
+
+      if (changedTransaction) {
+        if (classList.includes('reference')) {
+          changedTransaction.description = innerText;
+        } else if (classList.includes('details')) {
+          changedTransaction.reference = innerText;
+        } else if (classList.includes('credit')) {
+          changedTransaction.credit = innerText;
+        } else if (classList.includes('debit')) {
+          changedTransaction.debit = innerText;
+        } else if (classList.includes('balance')) {
+          changedTransaction.balance = innerText;
+        }
+        txns.push(changedTransaction);
       }
-      txns.push(changedTransaction);
     }
   }
 
@@ -148,7 +164,7 @@ async function fetchTransactionsForAccount(page, startDate) {
   await waitForNavigation(page);
   await waitUntilElementFound(page, 'table#dataTable077, #NO_DATA077');
   let hasNextPage = true;
-  let txns = [];
+  let txns: ScrapedTransaction[] = [];
 
   const noTransactionElm = await page.$('#NO_DATA077');
   if (noTransactionElm == null) {

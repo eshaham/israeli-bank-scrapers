@@ -12,7 +12,8 @@ import {
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, filterOldTransactions } from '../helpers/transactions';
 import {
-  ErrorTypes, LegacyScrapingResult, TransactionStatuses, TransactionTypes,
+  ErrorTypes, LegacyScrapingResult, ScraperAccount, Transaction,
+  TransactionStatuses, TransactionTypes,
 } from '../types';
 import { ScrapeProgressTypes } from './base-scraper';
 
@@ -92,7 +93,7 @@ function getTransactionType(txn) {
   return getInstallmentsInfo(txn) ? TransactionTypes.Installments : TransactionTypes.Normal;
 }
 
-function convertTransactions(txns, processedDate) {
+function convertTransactions(txns, processedDate): Transaction[] {
   const filteredTxns = txns.filter((txn) => txn.dealSumType !== '1' &&
                                             txn.voucherNumberRatz !== '000000000' &&
                                             txn.voucherNumberRatzOutbound !== '000000000');
@@ -123,11 +124,11 @@ async function fetchTransactions(page, options, startMoment, monthMoment) {
   const dataUrl = getTransactionsUrl(options.servicesUrl, monthMoment);
   const dataResult = await fetchGetWithinPage(page, dataUrl);
   if (_.get(dataResult, 'Header.Status') === '1' && dataResult.CardsTransactionsListBean) {
-    const accountTxns = {};
+    const accountTxns: Record<string, ScraperAccount | { index: number }> = {};
     accounts.forEach((account) => {
       const txnGroups = _.get(dataResult, `CardsTransactionsListBean.Index${account.index}.CurrentCardTransactions`);
       if (txnGroups) {
-        let allTxns = [];
+        let allTxns: Transaction[] = [];
         txnGroups.forEach((txnGroup) => {
           if (txnGroup.txnIsrael) {
             const txns = convertTransactions(txnGroup.txnIsrael, account.processedDate);
@@ -154,7 +155,7 @@ async function fetchTransactions(page, options, startMoment, monthMoment) {
     return accountTxns;
   }
 
-  return null;
+  return [];
 }
 
 async function fetchAllTransactions(page, options, startMoment) {

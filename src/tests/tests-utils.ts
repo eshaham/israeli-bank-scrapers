@@ -2,8 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import moment from 'moment';
 import json2csv from 'json2csv';
+import { ScraperAccount } from '../types';
 
-let testsConfig = null;
+let testsConfig;
 let configurationLoaded = false;
 
 const MISSING_ERROR_MESSAGE = 'Missing environment test configuration. To troubleshot this issue open CONTRIBUTING.md file and read section "F.A.Q regarding the tests".';
@@ -61,7 +62,7 @@ export function exportTransactions(fileName, accounts) {
     return;
   }
 
-  let data = [];
+  let data: ScraperAccount[] | { comment: string}[] = [];
 
   for (let i = 0; i < accounts.length; i += 1) {
     const account = accounts[i];
