@@ -11,7 +11,7 @@ module.exports = {
       "WithStatement"
     ],
     "operator-linebreak": ["error", "after"],
-    "max-len": ["error", 100, 2, {
+    "max-len": ["error", 150, 2, {
       "ignoreUrls": true,
       "ignoreComments": true,
       "ignoreRegExpLiterals": true,

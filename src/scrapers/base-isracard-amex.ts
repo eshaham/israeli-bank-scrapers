@@ -1,7 +1,8 @@
 import _ from 'lodash';
 import buildUrl from 'build-url';
-import moment from 'moment';
+import moment, { Moment } from 'moment';
 
+import { Page } from 'puppeteer';
 import { BaseScraperWithBrowser } from './base-scraper-with-browser';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import {
@@ -12,10 +13,11 @@ import {
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, filterOldTransactions } from '../helpers/transactions';
 import {
+  CreditCardTransaction,
   ErrorTypes, LegacyScrapingResult, ScraperAccount, Transaction,
   TransactionStatuses, TransactionTypes,
 } from '../types';
-import { ScrapeProgressTypes } from './base-scraper';
+import { BaseScraperOptions, ScrapeProgressTypes } from './base-scraper';
 
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';
@@ -23,7 +25,41 @@ const INSTALLMENTS_KEYWORD = 'תשלום';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 
-function getAccountsUrl(servicesUrl, monthMoment) {
+interface ExtendedOptions extends BaseScraperOptions {
+  servicesUrl: string,
+  companyCode: string
+}
+
+interface ScrapedTransaction {
+  dealSumType: string,
+  voucherNumberRatzOutbound: string,
+  voucherNumberRatz: string,
+  moreInfo?: string,
+  dealSumOutbound: boolean,
+  currencyId: string,
+  dealSum: number,
+  fullPurchaseDate?: string,
+  fullPurchaseDateOutbound?: string,
+  fullSupplierNameHeb: string,
+  fullSupplierNameOutbound: string,
+  paymentSum: number,
+  paymentSumOutbound: number
+}
+
+interface FetchAccountsWithinPageResponse {
+  Header: {
+    Status: string
+  },
+  DashboardMonthBean?: {
+    cardsCharges: {
+      cardIndex: string,
+      cardNumber: string,
+      billingDate: string
+    }[]
+  }
+}
+
+function getAccountsUrl(servicesUrl: string, monthMoment: Moment) {
   const billingDate = monthMoment.format('YYYY-MM-DD');
   return buildUrl(servicesUrl, {
     queryParams: {
@@ -35,10 +71,10 @@ function getAccountsUrl(servicesUrl, monthMoment) {
   });
 }
 
-async function fetchAccounts(page, servicesUrl, monthMoment) {
+async function fetchAccounts(page: Page, servicesUrl: string, monthMoment: Moment) {
   const dataUrl = getAccountsUrl(servicesUrl, monthMoment);
-  const dataResult = await fetchGetWithinPage(page, dataUrl);
-  if (_.get(dataResult, 'Header.Status') === '1' && dataResult.DashboardMonthBean) {
+  const dataResult = await fetchGetWithinPage<FetchAccountsWithinPageResponse>(page, dataUrl);
+  if (dataResult && _.get(dataResult, 'Header.Status') === '1' && dataResult.DashboardMonthBean) {
     const { cardsCharges } = dataResult.DashboardMonthBean;
     if (cardsCharges) {
       return cardsCharges.map((cardCharge) => {
@@ -53,7 +89,7 @@ async function fetchAccounts(page, servicesUrl, monthMoment) {
   return null;
 }
 
-function getTransactionsUrl(servicesUrl, monthMoment) {
+function getTransactionsUrl(servicesUrl: string, monthMoment: Moment) {
   const month = monthMoment.month() + 1;
   const year = monthMoment.year();
   const monthStr = month < 10 ? `0${month}` : month.toString();
@@ -61,26 +97,26 @@ function getTransactionsUrl(servicesUrl, monthMoment) {
     queryParams: {
       reqName: 'CardsTransactionsList',
       month: monthStr,
-      year,
+      year: `${year}`,
       requiredDate: 'N',
     },
   });
 }
 
-function convertCurrency(currencyStr) {
+function convertCurrency(currencyStr: string) {
   if (currencyStr === SHEKEL_CURRENCY_KEYWORD || currencyStr === ALT_SHEKEL_CURRENCY) {
     return SHEKEL_CURRENCY;
   }
   return currencyStr;
 }
 
-function getInstallmentsInfo(txn) {
+function getInstallmentsInfo(txn: ScrapedTransaction): CreditCardTransaction['installments'] {
   if (!txn.moreInfo || !txn.moreInfo.includes(INSTALLMENTS_KEYWORD)) {
-    return null;
+    return undefined;
   }
   const matches = txn.moreInfo.match(/\d+/g);
   if (!matches || matches.length < 2) {
-    return null;
+    return undefined;
   }
 
   return {
@@ -89,11 +125,11 @@ function getInstallmentsInfo(txn) {
   };
 }
 
-function getTransactionType(txn) {
+function getTransactionType(txn: ScrapedTransaction) {
   return getInstallmentsInfo(txn) ? TransactionTypes.Installments : TransactionTypes.Normal;
 }
 
-function convertTransactions(txns, processedDate): Transaction[] {
+function convertTransactions(txns: ScrapedTransaction[], processedDate: string): Transaction[] {
   const filteredTxns = txns.filter((txn) => txn.dealSumType !== '1' &&
                                             txn.voucherNumberRatz !== '000000000' &&
                                             txn.voucherNumberRatzOutbound !== '000000000');
@@ -103,23 +139,25 @@ function convertTransactions(txns, processedDate): Transaction[] {
     const txnDateStr = isOutbound ? txn.fullPurchaseDateOutbound : txn.fullPurchaseDate;
     const txnMoment = moment(txnDateStr, DATE_FORMAT);
 
-    return {
+    const result: CreditCardTransaction = {
       type: getTransactionType(txn),
-      identifier: isOutbound ? txn.voucherNumberRatzOutbound : txn.voucherNumberRatz,
+      identifier: parseInt(isOutbound ? txn.voucherNumberRatzOutbound : txn.voucherNumberRatz, 10),
       date: txnMoment.toISOString(),
       processedDate,
       originalAmount: isOutbound ? -txn.dealSumOutbound : -txn.dealSum,
       originalCurrency: convertCurrency(txn.currencyId),
       chargedAmount: isOutbound ? -txn.paymentSumOutbound : -txn.paymentSum,
       description: isOutbound ? txn.fullSupplierNameOutbound : txn.fullSupplierNameHeb,
-      memo: txn.moreInfo,
-      installments: getInstallmentsInfo(txn),
+      memo: txn.moreInfo || '',
+      installments: getInstallmentsInfo(txn) || undefined,
       status: TransactionStatuses.Completed,
     };
+
+    return result;
   });
 }
 
-async function fetchTransactions(page, options, startMoment, monthMoment) {
+async function fetchTransactions(page: Page, options: ExtendedOptions, startMoment: Moment, monthMoment: Moment) {
   const accounts = await fetchAccounts(page, options.servicesUrl, monthMoment);
   const dataUrl = getTransactionsUrl(options.servicesUrl, monthMoment);
   const dataResult = await fetchGetWithinPage(page, dataUrl);
@@ -158,7 +196,7 @@ async function fetchTransactions(page, options, startMoment, monthMoment) {
   return [];
 }
 
-async function fetchAllTransactions(page, options, startMoment) {
+async function fetchAllTransactions(page: Page, options: ExtendedOptions, startMoment: Moment) {
   const allMonths = getAllMonthMoments(startMoment, true);
   const results = await Promise.all(allMonths.map(async (monthMoment) => {
     return fetchTransactions(page, options, startMoment, monthMoment);
@@ -190,6 +228,7 @@ async function fetchAllTransactions(page, options, startMoment) {
   };
 }
 
+
 class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
   private baseUrl: string;
 
@@ -197,7 +236,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
 
   private servicesUrl: string;
 
-  constructor(options, baseUrl, companyCode) {
+  constructor(options: BaseScraperOptions, baseUrl: string, companyCode: string) {
     super(options);
 
     this.baseUrl = baseUrl;
@@ -205,7 +244,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
     this.servicesUrl = `${baseUrl}/services/ProxyRequestHandler.ashx`;
   }
 
-  async login(credentials): Promise<LegacyScrapingResult> {
+  async login(credentials: Record<string, string>): Promise<LegacyScrapingResult> {
     await this.navigateTo(`${this.baseUrl}/personalarea/Login`);
 
     this.emitProgress(ScrapeProgressTypes.LoggingIn);
@@ -237,13 +276,13 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
         countryCode: COUNTRY_CODE,
         idType: ID_TYPE,
       };
-      const loginResult = await fetchPostWithinPage(this.page, loginUrl, request);
-      if (loginResult.status === '1') {
+      const loginResult = await fetchPostWithinPage<{status: string}>(this.page, loginUrl, request);
+      if (loginResult && loginResult.status === '1') {
         this.emitProgress(ScrapeProgressTypes.LoginSuccess);
         return { success: true };
       }
 
-      if (loginResult.status === '3') {
+      if (loginResult && loginResult.status === '3') {
         this.emitProgress(ScrapeProgressTypes.ChangePassword);
         return {
           success: false,
@@ -278,7 +317,11 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-    return fetchAllTransactions(this.page, this.options, startMoment);
+    return fetchAllTransactions(this.page, {
+      ...this.options,
+      servicesUrl: this.servicesUrl,
+      companyCode: this.companyCode,
+    }, startMoment);
   }
 }
 

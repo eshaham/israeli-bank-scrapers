@@ -5,11 +5,11 @@ export async function waitForNavigation(page: Page, options?: NavigationOptions)
   await page.waitForNavigation(options);
 }
 
-export async function waitForNavigationAndDomLoad(page) {
+export async function waitForNavigationAndDomLoad(page: Page) {
   await waitForNavigation(page, { waitUntil: 'domcontentloaded' });
 }
 
-export async function getCurrentUrl(page, clientSide = false) {
+export async function getCurrentUrl(page: Page, clientSide = false) {
   if (clientSide) {
     return page.evaluate(() => window.location.href);
   }
@@ -17,7 +17,7 @@ export async function getCurrentUrl(page, clientSide = false) {
   return page.url();
 }
 
-export async function waitForRedirect(page, timeout = 20000,
+export async function waitForRedirect(page: Page, timeout = 20000,
   clientSide = false, ignoreList: string[] = []) {
   const initial = await getCurrentUrl(page, clientSide);
 

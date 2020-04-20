@@ -15,6 +15,7 @@ export enum LoginResults {
   ChangePassword = 'ChangePassword',
   UnknownError = 'UnknownError',
 }
+export type PossibleResults = Record<keyof LoginResults, (string | RegExp | (() => Promise<boolean>))[]>;
 
 export interface LoginOptions {
   loginUrl: string;
@@ -23,12 +24,13 @@ export interface LoginOptions {
   submitButtonSelector: string;
   preAction?: () => Promise<void>;
   postAction?: () => Promise<void>;
-  possibleResults: Partial<{[key in LoginResults]: (string | RegExp)[] }>; // TODO es fix type
+  possibleResults: PossibleResults;
 }
 
-async function getKeyByValue(object, value) {
+async function getKeyByValue(object: PossibleResults, value: string): Promise<LoginResults> {
   const keys = Object.keys(object);
   for (const key of keys) {
+    // @ts-ignore
     const conditions = object[key];
 
     for (const condition of conditions) {
@@ -43,6 +45,7 @@ async function getKeyByValue(object, value) {
       }
 
       if (result) {
+        // @ts-ignore
         return Promise.resolve(key);
       }
     }
@@ -51,7 +54,7 @@ async function getKeyByValue(object, value) {
   return Promise.resolve(LoginResults.UnknownError);
 }
 
-function handleLoginResult(scraper, loginResult) {
+function handleLoginResult(scraper: BaseScraperWithBrowser, loginResult: LoginResults) {
   switch (loginResult) {
     case LoginResults.Success:
       scraper.emitProgress(ScrapeProgressTypes.LoginSuccess);
@@ -147,14 +150,17 @@ class BaseScraperWithBrowser extends BaseScraper {
     throw new Error(`getLoginOptions() is not created in ${this.options.companyId}`);
   }
 
-  async fillInputs(fields) {
+  async fillInputs(fields: { selector: string, value: string}[]): Promise<void> {
     const modified = [...fields];
     const input = modified.shift();
+
+    if (!input) {
+      return;
+    }
     await fillInput(this.page, input.selector, input.value);
     if (modified.length) {
-      return this.fillInputs(modified);
+      await this.fillInputs(modified);
     }
-    return null;
   }
 
   async login(credentials: Record<string, string>): Promise<LegacyScrapingResult> {

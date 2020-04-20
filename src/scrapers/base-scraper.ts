@@ -4,7 +4,7 @@ import { ErrorTypes, LegacyLoginResult, LegacyScrapingResult } from '../types';
 
 const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';
 
-function createErrorResult(errorType, errorMessage) {
+function createErrorResult(errorType: ErrorTypes, errorMessage: string) {
   return {
     success: false,
     errorType,
@@ -12,11 +12,11 @@ function createErrorResult(errorType, errorMessage) {
   };
 }
 
-function createTimeoutError(errorMessage) {
+function createTimeoutError(errorMessage: string) {
   return createErrorResult(ErrorTypes.Timeout, errorMessage);
 }
 
-function createGenericError(errorMessage) {
+function createGenericError(errorMessage: string) {
   return createErrorResult(ErrorTypes.Generic, errorMessage);
 }
 
@@ -28,6 +28,7 @@ export interface BaseScraperOptions {
   showBrowser: boolean;
   browser: any;
   executablePath?: string;
+  combineInstallments: boolean;
 }
 
 
@@ -52,7 +53,7 @@ export class BaseScraper {
     this.emitProgress(ScrapeProgressTypes.Initializing);
   }
 
-  async scrape(credentials) {
+  async scrape(credentials: Record<string, string>): Promise<LegacyScrapingResult> {
     this.emitProgress(ScrapeProgressTypes.StartScraping);
     await this.initialize();
 
@@ -102,15 +103,15 @@ export class BaseScraper {
     this.emitProgress(ScrapeProgressTypes.Terminating);
   }
 
-  emitProgress(type) {
+  emitProgress(type: ScrapeProgressTypes) {
     this.emit(SCRAPE_PROGRESS, { type });
   }
 
-  emit(eventName, payload) {
+  emit(eventName: string, payload: Record<string, any>) {
     this.eventEmitter.emit(eventName, this.options.companyId, payload);
   }
 
-  onProgress(func) {
+  onProgress(func: (...args: any[]) => void) {
     this.eventEmitter.on(SCRAPE_PROGRESS, func);
   }
 }

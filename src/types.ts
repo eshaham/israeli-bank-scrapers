@@ -51,7 +51,7 @@ export interface Transaction {
 }
 
 export interface CreditCardTransaction extends Transaction {
-  installments: {
+  installments?: {
     number: number;
     total: number;
   };
