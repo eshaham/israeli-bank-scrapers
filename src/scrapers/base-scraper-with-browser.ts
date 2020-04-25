@@ -1,6 +1,6 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 
-import { BaseScraper, ScrapeProgressTypes } from './base-scraper';
+import { BaseScraper, ScrapeProgressTypes, ScraperCredentials } from './base-scraper';
 import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { clickButton, fillInput, waitUntilElementFound } from '../helpers/elements-interactions';
 import { ErrorTypes, LegacyScrapingResult } from '../types';
@@ -15,7 +15,9 @@ export enum LoginResults {
   ChangePassword = 'ChangePassword',
   UnknownError = 'UnknownError',
 }
-export type PossibleResults = Record<keyof LoginResults, (string | RegExp | (() => Promise<boolean>))[]>;
+export type PossibleLoginResults = {
+  [key in LoginResults]?: (string | RegExp | (() => Promise<boolean>))[]
+};
 
 export interface LoginOptions {
   loginUrl: string;
@@ -24,10 +26,10 @@ export interface LoginOptions {
   submitButtonSelector: string;
   preAction?: () => Promise<void>;
   postAction?: () => Promise<void>;
-  possibleResults: PossibleResults;
+  possibleResults: PossibleLoginResults;
 }
 
-async function getKeyByValue(object: PossibleResults, value: string): Promise<LoginResults> {
+async function getKeyByValue(object: PossibleLoginResults, value: string): Promise<LoginResults> {
   const keys = Object.keys(object);
   for (const key of keys) {
     // @ts-ignore
@@ -146,7 +148,7 @@ class BaseScraperWithBrowser extends BaseScraper {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  getLoginOptions(credentials: Record<string, string>): LoginOptions {
+  getLoginOptions(credentials: ScraperCredentials): LoginOptions {
     throw new Error(`getLoginOptions() is not created in ${this.options.companyId}`);
   }
 

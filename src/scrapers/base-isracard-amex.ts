@@ -17,7 +17,7 @@ import {
   ErrorTypes, LegacyScrapingResult, ScraperAccount, Transaction,
   TransactionStatuses, TransactionTypes,
 } from '../types';
-import { BaseScraperOptions, ScrapeProgressTypes } from './base-scraper';
+import { BaseScraperOptions, ScrapeProgressTypes, ScraperCredentials } from './base-scraper';
 
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';
@@ -244,7 +244,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
     this.servicesUrl = `${baseUrl}/services/ProxyRequestHandler.ashx`;
   }
 
-  async login(credentials: Record<string, string>): Promise<LegacyScrapingResult> {
+  async login(credentials: ScraperCredentials): Promise<LegacyScrapingResult> {
     await this.navigateTo(`${this.baseUrl}/personalarea/Login`);
 
     this.emitProgress(ScrapeProgressTypes.LoggingIn);

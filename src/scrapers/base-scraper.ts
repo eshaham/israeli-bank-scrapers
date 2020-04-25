@@ -4,6 +4,8 @@ import { ErrorTypes, LegacyLoginResult, LegacyScrapingResult } from '../types';
 
 const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';
 
+export type ScraperCredentials = Record<string, string>;
+
 function createErrorResult(errorType: ErrorTypes, errorMessage: string) {
   return {
     success: false,
@@ -53,7 +55,7 @@ export class BaseScraper {
     this.emitProgress(ScrapeProgressTypes.Initializing);
   }
 
-  async scrape(credentials: Record<string, string>): Promise<LegacyScrapingResult> {
+  async scrape(credentials: ScraperCredentials): Promise<LegacyScrapingResult> {
     this.emitProgress(ScrapeProgressTypes.StartScraping);
     await this.initialize();
 

@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 import {
   fillInput,
   clickButton,
@@ -31,8 +31,8 @@ const COMPLETED_TRANSACTIONS_TABLE = 'table#dataTable077';
 const PENDING_TRANSACTIONS_TABLE = 'table#dataTable023';
 const NEXT_PAGE_LINK = 'a#Npage.paging';
 
-function getPossibleLoginResults() {
-  const urls = {};
+function getPossibleLoginResults(): PossibleLoginResults {
+  const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [/FibiMenu\/Online/];
   urls[LoginResults.InvalidPassword] = [/FibiMenu\/Marketing\/Private\/Home/];
   return urls;
