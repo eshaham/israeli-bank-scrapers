@@ -6,9 +6,9 @@ import {
   clickButton,
   waitUntilElementFound,
   pageEvalAll,
+  elementPresentOnPage,
 } from '../helpers/elements-interactions';
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, SHEKEL_CURRENCY_SYMBOL } from '../constants';
-import { elementPresentOnPage } from '../../lib/helpers/elements-interactions';
 
 const BASE_URL = 'https://online.bankotsar.co.il';
 const DATE_FORMAT = 'DD/MM/YY';
