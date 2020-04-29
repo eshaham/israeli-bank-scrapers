@@ -8,14 +8,15 @@ import {
   pageEvalAll,
 } from '../helpers/elements-interactions';
 import { SHEKEL_CURRENCY, NORMAL_TXN_TYPE, SHEKEL_CURRENCY_SYMBOL } from '../constants';
+import { elementPresentOnPage } from '../../lib/helpers/elements-interactions';
 
 const BASE_URL = 'https://online.bankotsar.co.il';
 const DATE_FORMAT = 'DD/MM/YY';
 
-function getPossibleLoginResults() {
+function getPossibleLoginResults(page) {
   const urls = {};
   urls[LOGIN_RESULT.SUCCESS] = [`${BASE_URL}/wps/myportal/FibiMenu/Online`];
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${BASE_URL}/LoginServices/login2.do`];
+  urls[LOGIN_RESULT.INVALID_PASSWORD] = [() => elementPresentOnPage(page, '#validationMsg')];
   // TODO: support change password
   /* urls[LOGIN_RESULT.CHANGE_PASSWORD] = [``]; */
   return urls;
@@ -184,18 +185,18 @@ async function waitForPostLogin(page) {
   // TODO check for condition to provide new password
   return Promise.race([
     waitUntilElementFound(page, 'div.lotusFrame', true),
-    waitUntilElementFound(page, 'div.fibi_pwd_error', true),
+    waitUntilElementFound(page, '#validationMsg'),
   ]);
 }
 
 class OtsarHahayalScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials) {
     return {
-      loginUrl: `${BASE_URL}/LoginServices/login2.do?bankId=OTSARPRTAL`,
+      loginUrl: 'https://online.bankotsar.co.il/MatafLoginService/MatafLoginServlet?bankId=OTSARPRTAL&site=Private&KODSAFA=HE',
       fields: createLoginFields(credentials),
-      submitButtonSelector: '#login_btn',
+      submitButtonSelector: '#continueBtn',
       postAction: async () => waitForPostLogin(this.page),
-      possibleResults: getPossibleLoginResults(),
+      possibleResults: getPossibleLoginResults(this.page),
     };
   }
 
