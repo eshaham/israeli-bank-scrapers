@@ -192,7 +192,7 @@ async function waitForPostLogin(page) {
 class OtsarHahayalScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials) {
     return {
-      loginUrl: 'https://online.bankotsar.co.il/MatafLoginService/MatafLoginServlet?bankId=OTSARPRTAL&site=Private&KODSAFA=HE',
+      loginUrl: `${BASE_URL}/MatafLoginService/MatafLoginServlet?bankId=OTSARPRTAL&site=Private&KODSAFA=HE`,
       fields: createLoginFields(credentials),
       submitButtonSelector: '#continueBtn',
       postAction: async () => waitForPostLogin(this.page),
