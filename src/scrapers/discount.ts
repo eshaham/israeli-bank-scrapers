@@ -1,16 +1,42 @@
 import _ from 'lodash';
 import moment from 'moment';
 
-import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
+import { Page } from 'puppeteer';
+import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { fetchGetWithinPage } from '../helpers/fetch';
-import { ErrorTypes, TransactionStatuses, TransactionTypes } from '../types';
+import {
+  ErrorTypes, LegacyScrapingResult,
+  Transaction, TransactionStatuses, TransactionTypes,
+} from '../types';
+import { BaseScraperOptions, ScraperCredentials } from './base-scraper';
 
 const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
 
-function convertTransactions(txns, txnStatus) {
+interface ScrapedTransaction {
+  OperationNumber: number,
+  OperationDate: string,
+  ValueDate: string,
+  OperationAmount: number,
+  OperationDescriptionToDisplay: string
+}
+
+interface FetchedAccountData {
+  UserAccountsData: {
+    DefaultAccountNumber: string
+  }
+}
+
+interface FetchedTransactions {
+  Error?: { MsgText: string },
+  CurrentAccountLastTransactions?: {
+    OperationEntry: ScrapedTransaction[]
+  }
+}
+
+function convertTransactions(txns: ScrapedTransaction[], txnStatus: TransactionStatuses): Transaction[] {
   if (!txns) {
     return [];
   }
@@ -29,11 +55,20 @@ function convertTransactions(txns, txnStatus) {
   });
 }
 
-async function fetchAccountData(page, options) {
+
+async function fetchAccountData(page: Page, options: BaseScraperOptions): Promise<LegacyScrapingResult> {
   const apiSiteUrl = `${BASE_URL}/Titan/gatewayAPI`;
 
   const accountDataUrl = `${apiSiteUrl}/userAccountsData`;
-  const accountInfo = await fetchGetWithinPage(page, accountDataUrl);
+  const accountInfo = await fetchGetWithinPage<FetchedAccountData>(page, accountDataUrl);
+
+  if (!accountInfo) {
+    return {
+      success: false,
+      errorType: ErrorTypes.Generic,
+      errorMessage: 'failed to get account data',
+    };
+  }
   const accountNumber = accountInfo.UserAccountsData.DefaultAccountNumber;
 
   const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
@@ -42,12 +77,13 @@ async function fetchAccountData(page, options) {
 
   const startDateStr = startMoment.format(DATE_FORMAT);
   const txnsUrl = `${apiSiteUrl}/lastTransactions/${accountNumber}/Date?IsCategoryDescCode=True&IsTransactionDetails=True&IsEventNames=True&IsFutureTransactionFlag=True&FromDate=${startDateStr}`;
-  const txnsResult = await fetchGetWithinPage(page, txnsUrl);
-  if (txnsResult.Error) {
+  const txnsResult = await fetchGetWithinPage<FetchedTransactions>(page, txnsUrl);
+  if (!txnsResult || txnsResult.Error ||
+    !txnsResult.CurrentAccountLastTransactions) {
     return {
       success: false,
       errorType: ErrorTypes.Generic,
-      errorMessage: txnsResult.Error.MsgText,
+      errorMessage: txnsResult && txnsResult.Error ? txnsResult.Error.MsgText : 'unknown error',
     };
   }
 
@@ -69,7 +105,7 @@ async function fetchAccountData(page, options) {
   return accountData;
 }
 
-async function navigateOrErrorLabel(page) {
+async function navigateOrErrorLabel(page: Page) {
   try {
     await waitForNavigation(page);
   } catch (e) {
@@ -77,15 +113,15 @@ async function navigateOrErrorLabel(page) {
   }
 }
 
-function getPossibleLoginResults() {
-  const urls = {};
+function getPossibleLoginResults(): PossibleLoginResults {
+  const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [`${BASE_URL}/apollo/core/templates/RETAIL/masterPage.html#/MY_ACCOUNT_HOMEPAGE`];
   urls[LoginResults.InvalidPassword] = [`${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/LOGIN_PAGE`];
   urls[LoginResults.ChangePassword] = [`${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/PWD_RENEW`];
   return urls;
 }
 
-function createLoginFields(credentials) {
+function createLoginFields(credentials: ScraperCredentials) {
   return [
     { selector: '#tzId', value: credentials.id },
     { selector: '#tzPassword', value: credentials.password },
@@ -94,7 +130,7 @@ function createLoginFields(credentials) {
 }
 
 class DiscountScraper extends BaseScraperWithBrowser {
-  getLoginOptions(credentials) {
+  getLoginOptions(credentials: ScraperCredentials) {
     return {
       loginUrl: `${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/LOGIN_PAGE`,
       checkReadiness: async () => waitUntilElementFound(this.page, '#tzId'),
