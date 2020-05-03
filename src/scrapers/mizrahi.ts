@@ -1,12 +1,23 @@
 import moment from 'moment';
+import { Request } from 'puppeteer';
 import {
   SHEKEL_CURRENCY,
 } from '../constants';
-import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { waitForNavigation } from '../helpers/navigation';
 import { pageEvalAll } from '../helpers/elements-interactions';
-import { ErrorTypes, TransactionStatuses, TransactionTypes } from '../types';
+import {
+  ErrorTypes, Transaction, TransactionStatuses, TransactionTypes,
+} from '../types';
+import { ScraperCredentials } from './base-scraper';
+
+interface ScrapedTransaction {
+  MC02PeulaTaaEZ: string,
+  MC02SchumEZ: number,
+  MC02AsmahtaMekoritEZ: string,
+  MC02TnuaTeurEZ: string,
+}
 
 const BASE_WEBSITE_URL = 'https://www.mizrahi-tefahot.co.il';
 const LOGIN_URL = `${BASE_WEBSITE_URL}/he/bank/Pages/Default.aspx`;
@@ -18,15 +29,15 @@ const PENDING_TRANSACTIONS_PAGE = `${BASE_APP_URL}Online/Osh/p420.aspx`;
 const DATE_FORMAT = 'DD/MM/YYYY';
 const MAX_ROWS_PER_REQUEST = 10000000000;
 
-function createLoginFields(credentials) {
+function createLoginFields(credentials: ScraperCredentials) {
   return [
     { selector: '#ctl00_PlaceHolderLogin_ctl00_tbUserName', value: credentials.username },
     { selector: '#ctl00_PlaceHolderLogin_ctl00_tbPassword', value: credentials.password },
   ];
 }
 
-function getPossibleLoginResults() {
-  const urls = {};
+function getPossibleLoginResults(): PossibleLoginResults {
+  const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [AFTER_LOGIN_BASE_URL];
   urls[LoginResults.InvalidPassword] = [`${BASE_WEBSITE_URL}/login/loginMTO.aspx`];
   urls[LoginResults.ChangePassword] = [
@@ -35,12 +46,12 @@ function getPossibleLoginResults() {
   return urls;
 }
 
-function CreateDataFromRequest(request, optionsStartDate) {
+function CreateDataFromRequest(request: Request, optionsStartDate: Date) {
   const defaultStartMoment = moment().subtract(1, 'years');
   const startDate = optionsStartDate || defaultStartMoment.toDate();
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-  const data = JSON.parse(request.postData());
+  const data = JSON.parse(request.postData() || '{}');
 
   data.inToDate = moment().format(DATE_FORMAT);
   data.inFromDate = startMoment.format(DATE_FORMAT);
@@ -49,21 +60,22 @@ function CreateDataFromRequest(request, optionsStartDate) {
   return data;
 }
 
-function createHeadersFromRequest(request) {
+function createHeadersFromRequest(request: Request) {
   return {
     mizrahixsrftoken: request.headers().mizrahixsrftoken,
     'Content-Type': request.headers()['content-type'],
   };
 }
 
-function convertTransactions(txns) {
+
+function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((row) => {
     const txnDate = moment(row.MC02PeulaTaaEZ, moment.HTML5_FMT.DATETIME_LOCAL_SECONDS)
       .toISOString();
 
     return {
       type: TransactionTypes.Normal,
-      identifier: row.MC02AsmahtaMekoritEZ ? parseInt(row.MC02AsmahtaMekoritEZ, 10) : null,
+      identifier: row.MC02AsmahtaMekoritEZ ? parseInt(row.MC02AsmahtaMekoritEZ, 10) : undefined,
       date: txnDate,
       processedDate: txnDate,
       originalAmount: row.MC02SchumEZ,
@@ -75,7 +87,7 @@ function convertTransactions(txns) {
   });
 }
 
-async function extractPendingTransactions(page) {
+async function extractPendingTransactions(page: Page) {
   const pendingTxn = await pageEvalAll(page, 'tr.rgRow', [], (trs) => {
     return trs.map((tr) => Array.from(tr.querySelectorAll('td'), (td: HTMLTableDataCellElement) => td.textContent));
   });
@@ -98,7 +110,7 @@ async function extractPendingTransactions(page) {
 }
 
 class MizrahiScraper extends BaseScraperWithBrowser {
-  getLoginOptions(credentials) {
+  getLoginOptions(credentials: ScraperCredentials) {
     return {
       loginUrl: `${LOGIN_URL}`,
       fields: createLoginFields(credentials),
