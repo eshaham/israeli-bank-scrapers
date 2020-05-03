@@ -1,4 +1,4 @@
-import moment from 'moment';
+import moment, { Moment } from 'moment';
 import { Page } from 'puppeteer';
 import { BaseScraperWithBrowser, LoginResults, LoginOptions } from './base-scraper-with-browser';
 import {
@@ -15,6 +15,7 @@ import { SHEKEL_CURRENCY } from '../constants';
 import {
   LegacyScrapingResult, ScraperAccount, Transaction, TransactionStatuses, TransactionTypes,
 } from '../types';
+import { ScraperCredentials } from './base-scraper';
 
 const BASE_URL = 'https://hb2.bankleumi.co.il';
 const DATE_FORMAT = 'DD/MM/YY';
@@ -32,14 +33,14 @@ function getPossibleLoginResults() {
   return urls;
 }
 
-function createLoginFields(credentials) {
+function createLoginFields(credentials: ScraperCredentials) {
   return [
     { selector: '#wtr_uid', value: credentials.username },
     { selector: '#wtr_password', value: credentials.password },
   ];
 }
 
-function getAmountData(amountStr) {
+function getAmountData(amountStr: string) {
   const amountStrCopy = amountStr.replace(',', '');
   const amount = parseFloat(amountStrCopy);
   const currency = SHEKEL_CURRENCY;
@@ -65,8 +66,8 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((txn) => {
     const txnDate = moment(txn.date, DATE_FORMAT).toISOString();
 
-    const credit = getAmountData(txn.credit).amount;
-    const debit = getAmountData(txn.debit).amount;
+    const credit = getAmountData(txn.credit || '').amount;
+    const debit = getAmountData(txn.debit || '').amount;
     const amount = (Number.isNaN(credit) ? 0 : credit) - (Number.isNaN(debit) ? 0 : debit);
 
     const transaction: Transaction = {
@@ -84,13 +85,16 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
     return transaction;
   });
 }
-
-async function extractCompletedTransactionsFromPage(page): Promise<ScrapedTransaction[]> {
+interface ScrapedTds {
+  classList: string,
+  innerText: string
+}
+async function extractCompletedTransactionsFromPage(page: Page): Promise<ScrapedTransaction[]> {
   const txns: ScrapedTransaction[] = [];
-  const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #ctlActivityTable tr td', [], (tds) => {
+  const tdsValues = await pageEvalAll<ScrapedTds[]>(page, '#WorkSpaceBox #ctlActivityTable tr td', [], (tds) => {
     return tds.map((td) => ({
-      classList: td.getAttribute('class'),
-      innerText: td.innerText,
+      classList: td.getAttribute('class') || '',
+      innerText: (td as HTMLElement).innerText,
     }));
   });
 
@@ -123,12 +127,12 @@ async function extractCompletedTransactionsFromPage(page): Promise<ScrapedTransa
   return txns;
 }
 
-async function extractPendingTransactionsFromPage(page): Promise<ScrapedTransaction[]> {
+async function extractPendingTransactionsFromPage(page: Page): Promise<ScrapedTransaction[]> {
   const txns: ScrapedTransaction[] = [];
-  const tdsValues = await pageEvalAll(page, '#WorkSpaceBox #trTodayActivityNapaTableUpper tr td', [], (tds) => {
+  const tdsValues = await pageEvalAll<ScrapedTds[]>(page, '#WorkSpaceBox #trTodayActivityNapaTableUpper tr td', [], (tds) => {
     return tds.map((td) => ({
-      classList: td.getAttribute('class'),
-      innerText: td.innerText,
+      classList: td.getAttribute('class') || '',
+      innerText: (td as HTMLElement).innerText,
     }));
   });
 
@@ -160,18 +164,18 @@ async function extractPendingTransactionsFromPage(page): Promise<ScrapedTransact
   return txns;
 }
 
-async function isNoTransactionInDateRangeError(page) {
+async function isNoTransactionInDateRangeError(page: Page) {
   const hasErrorInfoElement = await elementPresentOnPage(page, '.errInfo');
   if (hasErrorInfoElement) {
     const errorText = await page.$eval('.errInfo', (errorElement) => {
-      return errorElement.innerText;
+      return (errorElement as HTMLElement).innerText;
     });
     return errorText === NO_TRANSACTION_IN_DATE_RANGE_TEXT;
   }
   return false;
 }
 
-async function fetchTransactionsForAccount(page, startDate, accountId): Promise<ScraperAccount> {
+async function fetchTransactionsForAccount(page: Page, startDate: Moment, accountId: string): Promise<ScraperAccount> {
   await dropdownSelect(page, 'select#ddlAccounts_m_ddl', accountId);
   await dropdownSelect(page, 'select#ddlTransactionPeriod', '004');
   await waitUntilElementFound(page, 'select#ddlTransactionPeriod');
@@ -184,7 +188,7 @@ async function fetchTransactionsForAccount(page, startDate, accountId): Promise<
   await waitForNavigation(page);
 
   const selectedSnifAccount = await page.$eval('#ddlAccounts_m_ddl option[selected="selected"]', (option) => {
-    return option.innerText;
+    return (option as HTMLElement).innerText;
   });
 
   const accountNumber = selectedSnifAccount.replace('/', '_');
@@ -220,7 +224,7 @@ async function fetchTransactionsForAccount(page, startDate, accountId): Promise<
   };
 }
 
-async function fetchTransactions(page, startDate) {
+async function fetchTransactions(page: Page, startDate: Moment) {
   const res: ScraperAccount[] = [];
   // Loop through all available accounts and collect transactions from all
   const accounts = await dropdownElements(page, 'select#ddlAccounts_m_ddl');
@@ -242,7 +246,7 @@ async function waitForPostLogin(page: Page): Promise<void> {
 }
 
 class LeumiScraper extends BaseScraperWithBrowser {
-  getLoginOptions(credentials) {
+  getLoginOptions(credentials: Record<string, string>) {
     return {
       loginUrl: `${BASE_URL}`,
       fields: createLoginFields(credentials),

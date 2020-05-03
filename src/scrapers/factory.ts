@@ -9,8 +9,9 @@ import AmexScraper from './amex';
 import MizrahiScraper from './mizrahi';
 import UnionBankScraper from './union-bank';
 import BeinleumiScraper from './beinleumi';
+import { BaseScraperOptions } from './base-scraper';
 
-export default function createScraper(options) {
+export default function createScraper(options: BaseScraperOptions) {
   switch (options.companyId) {
     case 'hapoalim':
       return new HapoalimScraper(options);
