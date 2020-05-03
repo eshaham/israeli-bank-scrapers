@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { Request } from 'puppeteer';
+import { Page, Request } from 'puppeteer';
 import {
   SHEKEL_CURRENCY,
 } from '../constants';
@@ -13,10 +13,26 @@ import {
 import { ScraperCredentials } from './base-scraper';
 
 interface ScrapedTransaction {
+  RecTypeSpecified: boolean,
   MC02PeulaTaaEZ: string,
   MC02SchumEZ: number,
   MC02AsmahtaMekoritEZ: string,
   MC02TnuaTeurEZ: string,
+}
+
+interface FetchedTransactions {
+  header: {
+    success: boolean
+    messages: { text: string }[]
+  }
+  body: {
+    fields: {
+      AccountNumber: string
+    },
+    table: {
+      rows: ScrapedTransaction[]
+    }
+  }
 }
 
 const BASE_WEBSITE_URL = 'https://www.mizrahi-tefahot.co.il';
@@ -87,9 +103,9 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   });
 }
 
-async function extractPendingTransactions(page: Page) {
+async function extractPendingTransactions(page: Page): Promise<Transaction[]> {
   const pendingTxn = await pageEvalAll(page, 'tr.rgRow', [], (trs) => {
-    return trs.map((tr) => Array.from(tr.querySelectorAll('td'), (td: HTMLTableDataCellElement) => td.textContent));
+    return trs.map((tr) => Array.from(tr.querySelectorAll('td'), (td: HTMLTableDataCellElement) => td.textContent || ''));
   });
 
   return pendingTxn.map((txn) => {
@@ -97,7 +113,6 @@ async function extractPendingTransactions(page: Page) {
     const amount = parseInt(txn[3], 10);
     return {
       type: TransactionTypes.Normal,
-      identifier: null,
       date,
       processedDate: date,
       originalAmount: amount,
@@ -126,15 +141,15 @@ class MizrahiScraper extends BaseScraperWithBrowser {
     const data = CreateDataFromRequest(request, this.options.startDate);
     const headers = createHeadersFromRequest(request);
 
-    const response = await fetchPostWithinPage(this.page,
+    const response = await fetchPostWithinPage<FetchedTransactions>(this.page,
       TRANSACTIONS_REQUEST_URL, data, headers);
 
-    if (response.header.success === false) {
+    if (!response || response.header.success === false) {
       return {
         success: false,
         errorType: ErrorTypes.Generic,
         errorMessage:
-          `Error fetching transaction. Response message: ${response.header.messages[0].text}`,
+          `Error fetching transaction. Response message: ${response ? response.header.messages[0].text : ''}`,
       };
     }
 
