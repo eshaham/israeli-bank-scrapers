@@ -1,12 +1,27 @@
 import buildUrl from 'build-url';
-import moment from 'moment';
+import moment, { Moment } from 'moment';
+import { Page } from 'puppeteer';
 import { fetchGetWithinPage } from '../helpers/fetch';
-import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound, elementPresentOnPage, clickButton } from '../helpers/elements-interactions';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
-import { TransactionStatuses, TransactionTypes } from '../types';
+import { Transaction, TransactionStatuses, TransactionTypes } from '../types';
+import { BaseScraperOptions, ScraperCredentials } from './base-scraper';
+
+
+interface ScrapedTransaction {
+  shortCardNumber: string,
+  paymentDate?: string,
+  purchaseDate: string,
+  actualPaymentAmount: string,
+  originalCurrency: string,
+  originalAmount: number,
+  planName: string,
+  comments: string,
+  merchantName: string,
+}
 
 const BASE_ACTIONS_URL = 'https://online.max.co.il';
 const BASE_API_ACTIONS_URL = 'https://onlinelcapi.max.co.il';
@@ -29,7 +44,7 @@ const CREDIT_TYPE_NAME = 'קרדיט';
 const INVALID_DETAILS_SELECTOR = '#popupWrongDetails';
 const LOGIN_ERROR_SELECTOR = '#popupCardHoldersLoginError';
 
-function redirectOrDialog(page) {
+function redirectOrDialog(page: Page) {
   return Promise.race([
     waitForRedirect(page, 20000, false, [BASE_WELCOME_URL, `${BASE_WELCOME_URL}/`]),
     waitUntilElementFound(page, INVALID_DETAILS_SELECTOR, true),
@@ -37,7 +52,7 @@ function redirectOrDialog(page) {
   ]);
 }
 
-function getTransactionsUrl(monthMoment) {
+function getTransactionsUrl(monthMoment: Moment) {
   const month = monthMoment.month() + 1;
   const year = monthMoment.year();
   const date = `${year}-${month}-01`;
@@ -53,7 +68,7 @@ function getTransactionsUrl(monthMoment) {
   });
 }
 
-function getTransactionType(txnTypeStr) {
+function getTransactionType(txnTypeStr: string) {
   const cleanedUpTxnTypeStr = txnTypeStr.replace('\t', ' ').trim();
   switch (cleanedUpTxnTypeStr) {
     case ATM_TYPE_NAME:
@@ -77,7 +92,7 @@ function getTransactionType(txnTypeStr) {
   }
 }
 
-function getInstallmentsInfo(comments) {
+function getInstallmentsInfo(comments: string) {
   if (!comments) {
     return null;
   }
@@ -91,8 +106,7 @@ function getInstallmentsInfo(comments) {
     total: parseInt(matches[1], 10),
   };
 }
-
-function mapTransaction(rawTransaction) {
+function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
   const isPending = rawTransaction.paymentDate === null;
   const processedDate = moment(isPending ?
     rawTransaction.purchaseDate :
@@ -108,20 +122,25 @@ function mapTransaction(rawTransaction) {
     chargedAmount: -rawTransaction.actualPaymentAmount,
     description: rawTransaction.merchantName.trim(),
     memo: rawTransaction.comments,
-    installments: getInstallmentsInfo(rawTransaction.comments),
+    installments: getInstallmentsInfo(rawTransaction.comments) || undefined,
     status,
   };
 }
+interface FetchedTransactions{
+  result?: {
+    transactions: ScrapedTransaction[]
+  }
+}
 
-async function fetchTransactionsForMonth(page, monthMoment) {
+async function fetchTransactionsForMonth(page: Page, monthMoment: Moment) {
   const url = getTransactionsUrl(monthMoment);
 
-  const data = await fetchGetWithinPage(page, url);
-  const transactionsByAccount = {};
+  const data = await fetchGetWithinPage<FetchedTransactions>(page, url);
+  const transactionsByAccount: Record<string, Transaction[]> = {};
 
-  if (!data.result) return transactionsByAccount;
+  if (!data || !data.result) return transactionsByAccount;
 
-  data.result.transactions.forEach((transaction) => {
+  data.result.transactions.forEach((transaction: ScrapedTransaction) => {
     if (!transactionsByAccount[transaction.shortCardNumber]) {
       transactionsByAccount[transaction.shortCardNumber] = [];
     }
@@ -133,8 +152,8 @@ async function fetchTransactionsForMonth(page, monthMoment) {
   return transactionsByAccount;
 }
 
-function addResult(allResults, result) {
-  const clonedResults = { ...allResults };
+function addResult(allResults: Record<string, Transaction[]>, result: Record<string, Transaction[]>) {
+  const clonedResults: Record<string, Transaction[]> = { ...allResults };
   Object.keys(result).forEach((accountNumber) => {
     if (!clonedResults[accountNumber]) {
       clonedResults[accountNumber] = [];
@@ -144,7 +163,7 @@ function addResult(allResults, result) {
   return clonedResults;
 }
 
-function prepareTransactions(txns, startMoment, combineInstallments) {
+function prepareTransactions(txns: Transaction[], startMoment: moment.Moment, combineInstallments: boolean) {
   let clonedTxns = Array.from(txns);
   if (!combineInstallments) {
     clonedTxns = fixInstallments(clonedTxns);
@@ -154,13 +173,13 @@ function prepareTransactions(txns, startMoment, combineInstallments) {
   return clonedTxns;
 }
 
-async function fetchTransactions(page, options) {
+async function fetchTransactions(page: Page, options: BaseScraperOptions) {
   const defaultStartMoment = moment().subtract(1, 'years');
   const startDate = options.startDate || defaultStartMoment.toDate();
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
   const allMonths = getAllMonthMoments(startMoment, true);
 
-  let allResults = {};
+  let allResults: Record<string, Transaction[]> = {};
   for (let i = 0; i < allMonths.length; i += 1) {
     const result = await fetchTransactionsForMonth(page, allMonths[i]);
     allResults = addResult(allResults, result);
@@ -175,8 +194,8 @@ async function fetchTransactions(page, options) {
   return allResults;
 }
 
-function getPossibleLoginResults(page) {
-  const urls = {};
+function getPossibleLoginResults(page: Page): PossibleLoginResults {
+  const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [`${BASE_WELCOME_URL}/homepage/personal`];
   urls[LoginResults.ChangePassword] = [`${BASE_ACTIONS_URL}/Anonymous/Login/PasswordExpired.aspx`];
   urls[LoginResults.InvalidPassword] = [async () => {
@@ -188,7 +207,7 @@ function getPossibleLoginResults(page) {
   return urls;
 }
 
-function createLoginFields(inputGroupName, credentials) {
+function createLoginFields(inputGroupName: string, credentials: ScraperCredentials) {
   return [
     { selector: `#${inputGroupName}_txtUserName`, value: credentials.username },
     { selector: '#txtPassword', value: credentials.password },
@@ -196,7 +215,7 @@ function createLoginFields(inputGroupName, credentials) {
 }
 
 class MaxScraper extends BaseScraperWithBrowser {
-  getLoginOptions(credentials) {
+  getLoginOptions(credentials: ScraperCredentials) {
     const inputGroupName = 'PlaceHolderMain_CardHoldersLogin1';
     return {
       loginUrl: `${BASE_ACTIONS_URL}/Anonymous/Login/CardholdersLogin.aspx`,
