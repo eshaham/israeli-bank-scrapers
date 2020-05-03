@@ -33,7 +33,7 @@ async function clickLink(page: Page, aSelector: string) {
 }
 
 async function pageEvalAll<R>(page: Page, selector: string,
-  defaultResult: any, callback: (elements: Element[]) => R | Promise<R>) {
+  defaultResult: any, callback: (elements: Element[]) => R): Promise<R> {
   let result = defaultResult;
   try {
     result = await page.$$eval(selector, callback);

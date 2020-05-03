@@ -45,13 +45,17 @@ export interface Transaction {
   originalCurrency: string;
   chargedAmount: number;
   description: string;
-  memo: string;
-
+  memo?: string;
   status: TransactionStatuses;
 }
 
-export interface CreditCardTransaction extends Transaction {
-  installments?: {
+export interface NormalTransaction extends Transaction {
+  type: TransactionTypes.Normal;
+}
+
+export interface InstallmentsTransaction extends Transaction {
+  type: TransactionTypes.Installments;
+  installments: {
     number: number;
     total: number;
   };

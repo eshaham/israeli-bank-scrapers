@@ -1,4 +1,5 @@
-import moment from 'moment';
+import moment, { Moment } from 'moment';
+import { Page } from 'puppeteer';
 import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 import {
   fillInput,
@@ -9,7 +10,10 @@ import {
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { SHEKEL_CURRENCY } from '../constants';
-import { ScraperAccount, TransactionStatuses, TransactionTypes } from '../types';
+import {
+  ScraperAccount, Transaction, TransactionStatuses, TransactionTypes,
+} from '../types';
+import { ScraperCredentials } from './base-scraper';
 
 const BASE_URL = 'https://online.fibi.co.il';
 const LOGIN_URL = `${BASE_URL}/MatafLoginService/MatafLoginServlet?bankId=FIBIPORTAL&site=Private&KODSAFA=HE`;
@@ -31,6 +35,22 @@ const COMPLETED_TRANSACTIONS_TABLE = 'table#dataTable077';
 const PENDING_TRANSACTIONS_TABLE = 'table#dataTable023';
 const NEXT_PAGE_LINK = 'a#Npage.paging';
 
+
+type TransactionsColsTypes = Record<string, number>;
+type TransactionsTrTds = string[];
+type TransactionsTr = { innerTds: TransactionsTrTds; };
+
+interface ScrapedTransaction {
+  reference: string;
+  date: string;
+  credit: string;
+  debit: string;
+  memo?: string;
+  description: string;
+  status: TransactionStatuses
+}
+
+
 function getPossibleLoginResults(): PossibleLoginResults {
   const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [/FibiMenu\/Online/];
@@ -38,31 +58,31 @@ function getPossibleLoginResults(): PossibleLoginResults {
   return urls;
 }
 
-function createLoginFields(credentials) {
+function createLoginFields(credentials: ScraperCredentials) {
   return [
     { selector: '#username', value: credentials.username },
     { selector: '#password', value: credentials.password },
   ];
 }
 
-function getAmountData(amountStr) {
+function getAmountData(amountStr: string) {
   const amountStrCopy = amountStr.replace(',', '');
   return parseFloat(amountStrCopy);
 }
 
-function getTxnAmount(txn) {
+function getTxnAmount(txn: ScrapedTransaction) {
   const credit = getAmountData(txn.credit);
   const debit = getAmountData(txn.debit);
   return (Number.isNaN(credit) ? 0 : credit) - (Number.isNaN(debit) ? 0 : debit);
 }
 
-function convertTransactions(txns) {
-  return txns.map((txn) => {
+function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
+  return txns.map((txn): Transaction => {
     const convertedDate = moment(txn.date, DATE_FORMAT).toISOString();
     const convertedAmount = getTxnAmount(txn);
     return {
       type: TransactionTypes.Normal,
-      identifier: txn.reference ? parseInt(txn.reference, 10) : null,
+      identifier: txn.reference ? parseInt(txn.reference, 10) : undefined,
       date: convertedDate,
       processedDate: convertedDate,
       originalAmount: convertedAmount,
@@ -75,46 +95,48 @@ function convertTransactions(txns) {
   });
 }
 
-function getTransactionDate(tds, transactionType, transactionsColsTypes) {
+function getTransactionDate(tds: TransactionsTrTds, transactionType: string, transactionsColsTypes: TransactionsColsTypes) {
   if (transactionType === 'completed') {
     return (tds[transactionsColsTypes[DATE_COLUMN_CLASS_COMPLETED]] || '').trim();
   }
   return (tds[transactionsColsTypes[DATE_COLUMN_CLASS_PENDING]] || '').trim();
 }
 
-function getTransactionDescription(tds, transactionType, transactionsColsTypes) {
+function getTransactionDescription(tds: TransactionsTrTds, transactionType: string, transactionsColsTypes: TransactionsColsTypes) {
   if (transactionType === 'completed') {
     return (tds[transactionsColsTypes[DESCRIPTION_COLUMN_CLASS_COMPLETED]] || '').trim();
   }
   return (tds[transactionsColsTypes[DESCRIPTION_COLUMN_CLASS_PENDING]] || '').trim();
 }
 
-function getTransactionReference(tds, transactionsColsTypes) {
+function getTransactionReference(tds: TransactionsTrTds, transactionsColsTypes: TransactionsColsTypes) {
   return (tds[transactionsColsTypes[REFERENCE_COLUMN_CLASS]] || '').trim();
 }
 
-function getTransactionDebit(tds, transactionsColsTypes) {
+function getTransactionDebit(tds: TransactionsTrTds, transactionsColsTypes: TransactionsColsTypes) {
   return (tds[transactionsColsTypes[DEBIT_COLUMN_CLASS]] || '').trim();
 }
 
-function getTransactionCredit(tds, transactionsColsTypes) {
+function getTransactionCredit(tds: TransactionsTrTds, transactionsColsTypes: TransactionsColsTypes) {
   return (tds[transactionsColsTypes[CREDIT_COLUMN_CLASS]] || '').trim();
 }
 
-function extractTransactionDetails(txnRow, transactionType, transactionsColsTypes) {
+function extractTransactionDetails(txnRow: TransactionsTr, transactionStatus: TransactionStatuses, transactionsColsTypes: TransactionsColsTypes): ScrapedTransaction {
   const tds = txnRow.innerTds;
-  return {
-    status: transactionType,
-    date: getTransactionDate(tds, transactionType, transactionsColsTypes),
-    description: getTransactionDescription(tds, transactionType, transactionsColsTypes),
+  const item = {
+    status: transactionStatus,
+    date: getTransactionDate(tds, transactionStatus, transactionsColsTypes),
+    description: getTransactionDescription(tds, transactionStatus, transactionsColsTypes),
     reference: getTransactionReference(tds, transactionsColsTypes),
     debit: getTransactionDebit(tds, transactionsColsTypes),
     credit: getTransactionCredit(tds, transactionsColsTypes),
   };
+
+  return item;
 }
 
-async function getTransactionsColsTypeClasses(page, tableLocator) {
-  const typeClassesMap: Record<string, string>[] = [];
+async function getTransactionsColsTypeClasses(page: Page, tableLocator: string): Promise<TransactionsColsTypes> {
+  const result: TransactionsColsTypes = {};
   const typeClassesObjs = await pageEvalAll(page, `${tableLocator} tbody tr:first-of-type td`, null, (tds) => {
     return tds.map((td, index) => ({
       colClass: td.getAttribute('class'),
@@ -123,46 +145,48 @@ async function getTransactionsColsTypeClasses(page, tableLocator) {
   });
 
   for (const typeClassObj of typeClassesObjs) {
-    typeClassesMap[typeClassObj.colClass] = typeClassObj.index;
+    if (typeClassObj.colClass) {
+      result[typeClassObj.colClass] = typeClassObj.index;
+    }
   }
-  return typeClassesMap;
+  return result;
 }
 
-function extractTransaction(txns, transactionType, txnRow, transactionsColsTypes) {
-  const txn = extractTransactionDetails(txnRow, transactionType, transactionsColsTypes);
+function extractTransaction(txns: ScrapedTransaction[], transactionStatus: TransactionStatuses, txnRow: TransactionsTr, transactionsColsTypes: TransactionsColsTypes) {
+  const txn = extractTransactionDetails(txnRow, transactionStatus, transactionsColsTypes);
   if (txn.date !== '') {
     txns.push(txn);
   }
 }
 
-async function extractTransactions(page, tableLocator, transactionType) {
-  const txns = [];
+async function extractTransactions(page: Page, tableLocator: string, transactionStatus: TransactionStatuses) {
+  const txns: ScrapedTransaction[] = [];
   const transactionsColsTypes = await getTransactionsColsTypeClasses(page, tableLocator);
 
-  const transactionsRows = await pageEvalAll(page, `${tableLocator} tbody tr`, [], (trs) => {
-    return trs.map((tr: HTMLTableRowElement) => ({
+  const transactionsRows = await pageEvalAll<TransactionsTr[]>(page, `${tableLocator} tbody tr`, [], (trs) => {
+    return trs.map((tr) => ({
       innerTds: Array.from(tr.getElementsByTagName('td')).map((td) => td.innerText),
     }));
   });
 
   for (const txnRow of transactionsRows) {
-    extractTransaction(txns, transactionType, txnRow, transactionsColsTypes);
+    extractTransaction(txns, transactionStatus, txnRow, transactionsColsTypes);
   }
   return txns;
 }
 
-async function isNoTransactionInDateRangeError(page) {
+async function isNoTransactionInDateRangeError(page: Page) {
   const hasErrorInfoElement = await elementPresentOnPage(page, `.${ERROR_MESSAGE_CLASS}`);
   if (hasErrorInfoElement) {
     const errorText = await page.$eval(`.${ERROR_MESSAGE_CLASS}`, (errorElement) => {
-      return errorElement.innerText;
+      return (errorElement as HTMLElement).innerText;
     });
     return errorText.trim() === NO_TRANSACTION_IN_DATE_RANGE_TEXT;
   }
   return false;
 }
 
-async function searchByDates(page, startDate) {
+async function searchByDates(page: Page, startDate: Moment) {
   await clickButton(page, 'a#tabHeader4');
   await waitUntilElementFound(page, 'div#fibi_dates');
   await fillInput(
@@ -175,31 +199,31 @@ async function searchByDates(page, startDate) {
   await waitForNavigation(page);
 }
 
-async function getAccountNumber(page) {
+async function getAccountNumber(page: Page) {
   const selectedSnifAccount = await page.$eval(ACCOUNTS_NUMBER, (option) => {
-    return option.innerText;
+    return (option as HTMLElement).innerText;
   });
 
   return selectedSnifAccount.replace('/', '_');
 }
 
-async function checkIfHasNextPage(page) {
+async function checkIfHasNextPage(page: Page) {
   return elementPresentOnPage(page, NEXT_PAGE_LINK);
 }
 
-async function navigateToNextPage(page) {
+async function navigateToNextPage(page: Page) {
   await clickButton(page, NEXT_PAGE_LINK);
   await waitForNavigation(page);
 }
 
 /* Couldn't reproduce scenario with multiple pages of pending transactions - Should support if exists such case.
    needToPaginate is false if scraping pending transactions */
-async function scrapeTransactions(page, tableLocator, transactionType, needToPaginate) {
+async function scrapeTransactions(page: Page, tableLocator: string, transactionStatus: TransactionStatuses, needToPaginate: boolean) {
   const txns = [];
   let hasNextPage = false;
 
   do {
-    const currentPageTxns = await extractTransactions(page, tableLocator, transactionType);
+    const currentPageTxns = await extractTransactions(page, tableLocator, transactionStatus);
     txns.push(...currentPageTxns);
     if (needToPaginate) {
       hasNextPage = await checkIfHasNextPage(page);
@@ -212,7 +236,7 @@ async function scrapeTransactions(page, tableLocator, transactionType, needToPag
   return convertTransactions(txns);
 }
 
-async function getAccountTransactions(page) {
+async function getAccountTransactions(page: Page) {
   await Promise.race([
     waitUntilElementFound(page, 'div[id*=\'divTable\']', false),
     waitUntilElementFound(page, `.${ERROR_MESSAGE_CLASS}`, false),
@@ -234,7 +258,7 @@ async function getAccountTransactions(page) {
   return txns;
 }
 
-async function fetchAccountData(page, startDate) {
+async function fetchAccountData(page: Page, startDate: Moment) {
   await searchByDates(page, startDate);
   const accountNumber = await getAccountNumber(page);
   const txns = await getAccountTransactions(page);
@@ -245,14 +269,14 @@ async function fetchAccountData(page, startDate) {
 }
 
 // TODO: Add support of multiple accounts
-async function fetchAccounts(page, startDate) {
+async function fetchAccounts(page: Page, startDate: Moment) {
   const accounts: ScraperAccount[] = [];
   const accountData = await fetchAccountData(page, startDate);
   accounts.push(accountData);
   return accounts;
 }
 
-async function waitForPostLogin(page) {
+async function waitForPostLogin(page: Page) {
   return Promise.race([
     waitUntilElementFound(page, '#matafLogoutLink', true),
     waitUntilElementFound(page, '#validationMsg', true),
@@ -260,7 +284,7 @@ async function waitForPostLogin(page) {
 }
 
 class BeinleumiScraper extends BaseScraperWithBrowser {
-  getLoginOptions(credentials) {
+  getLoginOptions(credentials: ScraperCredentials) {
     return {
       loginUrl: `${LOGIN_URL}`,
       fields: createLoginFields(credentials),

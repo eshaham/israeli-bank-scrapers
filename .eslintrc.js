@@ -11,12 +11,13 @@ module.exports = {
       "WithStatement"
     ],
     "operator-linebreak": ["error", "after"],
-    "max-len": ["error", 150, 2, {
+    "max-len": ["error", 120, 2, {
       "ignoreUrls": true,
       "ignoreComments": true,
       "ignoreRegExpLiterals": true,
       "ignoreStrings": true,
-      "ignoreTemplateLiterals": true
+      "ignoreTemplateLiterals": true,
+      "ignorePattern": "^(async )?function "
     }],
     "linebreak-style": process.platform === "win32"? 0: 2
   },
