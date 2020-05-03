@@ -47,15 +47,7 @@ export interface Transaction {
   description: string;
   memo?: string;
   status: TransactionStatuses;
-}
-
-export interface NormalTransaction extends Transaction {
-  type: TransactionTypes.Normal;
-}
-
-export interface InstallmentsTransaction extends Transaction {
-  type: TransactionTypes.Installments;
-  installments: {
+  installments?: {
     number: number;
     total: number;
   };

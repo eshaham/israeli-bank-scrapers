@@ -13,8 +13,7 @@ import {
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, filterOldTransactions } from '../helpers/transactions';
 import {
-  CreditCardTransaction,
-  ErrorTypes, LegacyScrapingResult, ScraperAccount, Transaction,
+  ErrorTypes, InstallmentsTransaction, LegacyScrapingResult, ScraperAccount, Transaction,
   TransactionStatuses, TransactionTypes,
 } from '../types';
 import { BaseScraperOptions, ScrapeProgressTypes, ScraperCredentials } from './base-scraper';
@@ -110,7 +109,7 @@ function convertCurrency(currencyStr: string) {
   return currencyStr;
 }
 
-function getInstallmentsInfo(txn: ScrapedTransaction): CreditCardTransaction['installments'] {
+function getInstallmentsInfo(txn: ScrapedTransaction): InstallmentsTransaction['installments'] | undefined {
   if (!txn.moreInfo || !txn.moreInfo.includes(INSTALLMENTS_KEYWORD)) {
     return undefined;
   }
@@ -139,7 +138,7 @@ function convertTransactions(txns: ScrapedTransaction[], processedDate: string):
     const txnDateStr = isOutbound ? txn.fullPurchaseDateOutbound : txn.fullPurchaseDate;
     const txnMoment = moment(txnDateStr, DATE_FORMAT);
 
-    const result: CreditCardTransaction = {
+    const result: Transaction = {
       type: getTransactionType(txn),
       identifier: parseInt(isOutbound ? txn.voucherNumberRatzOutbound : txn.voucherNumberRatz, 10),
       date: txnMoment.toISOString(),

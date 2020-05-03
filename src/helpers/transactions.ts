@@ -1,15 +1,14 @@
 import moment, { Moment } from 'moment';
 import _ from 'lodash';
 import {
-  InstallmentsTransaction,
-  NormalTransaction, Transaction, TransactionTypes,
+  Transaction, TransactionTypes,
 } from '../types';
 
-function isNormalTransaction(txn: any): txn is NormalTransaction {
+function isNormalTransaction(txn: any): boolean {
   return txn && txn.type === TransactionTypes.Normal;
 }
 
-function isInstallmentTransaction(txn: any) : txn is InstallmentsTransaction {
+function isInstallmentTransaction(txn: any) : boolean {
   return txn && txn.type === TransactionTypes.Installments;
 }
 
@@ -25,7 +24,8 @@ export function fixInstallments(txns: Transaction[]): Transaction[] {
   return txns.map((txn: Transaction) => {
     const clonedTxn = { ...txn };
 
-    if (isInstallmentTransaction(clonedTxn) && isNonInitialInstallmentTransaction(clonedTxn)) {
+    if (isInstallmentTransaction(clonedTxn) && isNonInitialInstallmentTransaction(clonedTxn) &&
+      clonedTxn.installments) {
       const dateMoment = moment(clonedTxn.date);
       const actualDateMoment = dateMoment.add(clonedTxn.installments.number - 1, 'month');
       clonedTxn.date = actualDateMoment.toISOString();
