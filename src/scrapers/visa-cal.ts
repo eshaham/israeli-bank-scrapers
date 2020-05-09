@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import buildUrl from 'build-url';
-import moment from 'moment';
+import moment, { Moment } from 'moment';
 
 import { BaseScraper, ScrapeProgressTypes } from './base-scraper';
 import {
@@ -89,7 +89,7 @@ interface ScrapedTransaction {
   CurrentPayment?: string
 }
 
-function getBankDebitsUrl(accountId) {
+function getBankDebitsUrl(accountId: string) {
   const toDate = moment().add(2, 'months');
   const fromDate = moment().subtract(6, 'months');
 
@@ -106,7 +106,7 @@ function getBankDebitsUrl(accountId) {
   });
 }
 
-function getTransactionsUrl(cardId, debitDate) {
+function getTransactionsUrl(cardId: string, debitDate: string) {
   return buildUrl(BASE_URL, {
     path: `CalTransactions/${cardId}`,
     queryParams: {
@@ -116,7 +116,7 @@ function getTransactionsUrl(cardId, debitDate) {
   });
 }
 
-function convertTransactionType(txnType) {
+function convertTransactionType(txnType: string) {
   switch (txnType) {
     case NORMAL_TYPE_CODE:
     case REFUND_TYPE_CODE:
@@ -136,7 +136,7 @@ function convertTransactionType(txnType) {
   }
 }
 
-function convertCurrency(currency) {
+function convertCurrency(currency: string) {
   switch (currency) {
     case SHEKEL_CURRENCY_SYMBOL:
       return SHEKEL_CURRENCY;
@@ -147,14 +147,14 @@ function convertCurrency(currency) {
   }
 }
 
-function getInstallmentsInfo(txn) {
+function getInstallmentsInfo(txn: ScrapedTransaction) {
   if (!txn.CurrentPayment || txn.CurrentPayment === '0') {
     return null;
   }
 
   return {
     number: parseInt(txn.CurrentPayment, 10),
-    total: parseInt(txn.TotalPayments, 10),
+    total: txn.TotalPayments ? parseInt(txn.TotalPayments, 10) : Number.NaN,
   };
 }
 
@@ -187,7 +187,7 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   });
 }
 
-function prepareTransactions(txns, startMoment, combineInstallments): Transaction[] {
+function prepareTransactions(txns: Transaction[], startMoment: Moment, combineInstallments: boolean): Transaction[] {
   let clonedTxns: Transaction[] = Array.from(txns);
   if (!combineInstallments) {
     clonedTxns = fixInstallments(clonedTxns);

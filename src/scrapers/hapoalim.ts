@@ -1,13 +1,15 @@
 import moment from 'moment';
 import uuid4 from 'uuid/v4';
 
-import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
+import { Page } from 'puppeteer';
+import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntil } from '../helpers/waiting';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import {
   ScraperAccount, Transaction, TransactionStatuses, TransactionTypes,
 } from '../types';
+import { BaseScraperOptions, ScraperCredentials } from './base-scraper';
 
 const DATE_FORMAT = 'YYYYMMDD';
 
@@ -31,6 +33,16 @@ interface ScrapedTransaction {
     messageDetail?: string,
   }
 }
+
+type FetchedAccountData = {
+  bankNumber: string,
+  accountNumber: string,
+  branchNumber: string
+}[];
+
+type FetchedAccountTransactionsData = {
+  transactions: ScrapedTransaction[]
+};
 
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((txn) => {
@@ -83,7 +95,7 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   });
 }
 
-async function getRestContext(page) {
+async function getRestContext(page: Page) {
   await waitUntil(async () => {
     return page.evaluate(() => !!window.bnhpApp);
   }, 'waiting for app data load');
@@ -95,7 +107,7 @@ async function getRestContext(page) {
   return result.slice(1);
 }
 
-async function fetchPoalimXSRFWithinPage(page, url, pageUuid) {
+async function fetchPoalimXSRFWithinPage(page: Page, url: string, pageUuid: string): Promise<FetchedAccountTransactionsData | null> {
   const cookies = await page.cookies();
   const XSRFCookie = cookies.find((cookie) => cookie.name === 'XSRF-TOKEN');
   const headers: Record<string, any> = {};
@@ -105,14 +117,14 @@ async function fetchPoalimXSRFWithinPage(page, url, pageUuid) {
   headers.pageUuid = pageUuid;
   headers.uuid = uuid4();
   headers['Content-Type'] = 'application/json;charset=UTF-8';
-  return fetchPostWithinPage(page, url, [], headers);
+  return fetchPostWithinPage<FetchedAccountTransactionsData>(page, url, [], headers);
 }
 
-async function fetchAccountData(page, baseUrl, options) {
+async function fetchAccountData(page: Page, baseUrl: string, options: BaseScraperOptions) {
   const restContext = await getRestContext(page);
   const apiSiteUrl = `${baseUrl}/${restContext}`;
   const accountDataUrl = `${baseUrl}/ServerServices/general/accounts`;
-  const accountsInfo = await fetchGetWithinPage(page, accountDataUrl);
+  const accountsInfo = await fetchGetWithinPage<FetchedAccountData>(page, accountDataUrl) || [];
 
   const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
   const startDate = options.startDate || defaultStartMoment.toDate();
@@ -147,8 +159,8 @@ async function fetchAccountData(page, baseUrl, options) {
   return accountData;
 }
 
-function getPossibleLoginResults(baseUrl) {
-  const urls = {};
+function getPossibleLoginResults(baseUrl: string) {
+  const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [
     `${baseUrl}/portalserver/HomePage`,
     `${baseUrl}/ng-portals-bt/rb/he/homepage`,
@@ -161,7 +173,7 @@ function getPossibleLoginResults(baseUrl) {
   return urls;
 }
 
-function createLoginFields(credentials) {
+function createLoginFields(credentials: ScraperCredentials) {
   return [
     { selector: '#userCode', value: credentials.userCode },
     { selector: '#password', value: credentials.password },
@@ -174,7 +186,7 @@ class HapoalimScraper extends BaseScraperWithBrowser {
     return 'https://login.bankhapoalim.co.il';
   }
 
-  getLoginOptions(credentials) {
+  getLoginOptions(credentials: ScraperCredentials) {
     return {
       loginUrl: `${this.baseUrl}/cgi-bin/poalwwwc?reqName=getLogonPage`,
       fields: createLoginFields(credentials),

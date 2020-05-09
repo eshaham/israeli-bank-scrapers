@@ -1,10 +1,11 @@
 import IsracardAmexBaseScraper from './base-isracard-amex';
+import { BaseScraperOptions } from './base-scraper';
 
 const BASE_URL = 'https://digital.isracard.co.il';
 const COMPANY_CODE = '11';
 
 class IsracardScraper extends IsracardAmexBaseScraper {
-  constructor(options) {
+  constructor(options: BaseScraperOptions) {
     super(options, BASE_URL, COMPANY_CODE);
   }
 }
