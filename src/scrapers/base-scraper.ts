@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import { TimeoutError } from '../helpers/waiting';
 import { ErrorTypes, LegacyLoginResult, LegacyScrapingResult } from '../types';
+import { SCRAPERS } from '../definitions';
 
 const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';
 
@@ -22,15 +23,14 @@ function createGenericError(errorMessage: string) {
   return createErrorResult(ErrorTypes.Generic, errorMessage);
 }
 
-// TODO es consider browser type
 export interface BaseScraperOptions {
-  companyId: string;
+  companyId: keyof typeof SCRAPERS;
   verbose: boolean;
   startDate: Date;
   showBrowser: boolean;
   browser: any;
   executablePath?: string;
-  combineInstallments: boolean;
+  combineInstallments?: boolean;
 }
 
 

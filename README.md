@@ -85,7 +85,7 @@ The structure of the result object is as follows:
       chargedAmount: double,
       description: string,
       memo: string, // can be null or empty
-      installments: {
+      installments: { // only if exists
         number: int, // the current installment number
         total: int, // the total number of installments
       },

@@ -213,7 +213,7 @@ async function fetchTransactions(page: Page, options: ExtendedScraperOptions, st
         if (!options.combineInstallments) {
           allTxns = fixInstallments(allTxns);
         }
-        allTxns = filterOldTransactions(allTxns, startMoment, options.combineInstallments);
+        allTxns = filterOldTransactions(allTxns, startMoment, options.combineInstallments || false);
 
         accountTxns[account.accountNumber] = {
           accountNumber: account.accountNumber,

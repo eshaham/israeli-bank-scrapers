@@ -256,7 +256,7 @@ async function getTransactionsForAllAccounts(authHeader: Record<string, any>, st
             const rawTxns = await getTxnsOfCard(authHeader, bank.Cards[j], bankDebits.Debits);
             if (rawTxns) {
               let txns = convertTransactions(rawTxns);
-              txns = prepareTransactions(txns, startMoment, options.combineInstallments);
+              txns = prepareTransactions(txns, startMoment, options.combineInstallments || false);
               const result: ScraperAccount = {
                 accountNumber: bank.Cards[j].LastFourDigits,
                 txns,

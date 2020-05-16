@@ -169,7 +169,7 @@ function prepareTransactions(txns: Transaction[], startMoment: moment.Moment, co
     clonedTxns = fixInstallments(clonedTxns);
   }
   clonedTxns = sortTransactionsByDate(clonedTxns);
-  clonedTxns = filterOldTransactions(clonedTxns, startMoment, combineInstallments);
+  clonedTxns = filterOldTransactions(clonedTxns, startMoment, combineInstallments || false);
   return clonedTxns;
 }
 
@@ -187,7 +187,7 @@ async function fetchTransactions(page: Page, options: BaseScraperOptions) {
 
   Object.keys(allResults).forEach((accountNumber) => {
     let txns = allResults[accountNumber];
-    txns = prepareTransactions(txns, startMoment, options.combineInstallments);
+    txns = prepareTransactions(txns, startMoment, options.combineInstallments || false);
     allResults[accountNumber] = txns;
   });
 

@@ -7,6 +7,10 @@ export const SCRAPERS = {
     name: 'Bank Hapoalim',
     loginFields: ['userCode', PASSWORD_FIELD],
   },
+  hapoalimBeOnline: { // TODO remove in Major version
+    name: 'Bank Hapoalim',
+    loginFields: ['userCode', PASSWORD_FIELD],
+  },
   leumi: {
     name: 'Bank Leumi',
     loginFields: ['username', PASSWORD_FIELD],
