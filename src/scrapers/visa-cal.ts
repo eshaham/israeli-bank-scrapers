@@ -2,7 +2,10 @@ import _ from 'lodash';
 import buildUrl from 'build-url';
 import moment, { Moment } from 'moment';
 
-import { BaseScraper, ScrapeProgressTypes } from './base-scraper';
+import {
+  BaseScraper,
+  BaseScraperOptions, ScrapeProgressTypes, ScraperCredentials,
+} from './base-scraper';
 import {
   SHEKEL_CURRENCY_SYMBOL,
   SHEKEL_CURRENCY,
@@ -181,7 +184,7 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
       chargedAmount: -txn.DebitAmount.Value,
       description: txn.MerchantDetails.Name,
       memo: getTransactionMemo(txn),
-      installments: getInstallmentsInfo(txn),
+      installments: getInstallmentsInfo(txn) || undefined,
       status: TransactionStatuses.Completed,
     };
   });
@@ -197,18 +200,18 @@ function prepareTransactions(txns: Transaction[], startMoment: Moment, combineIn
   return clonedTxns;
 }
 
-async function getBankDebits(authHeader, accountId): Promise<BankDebitsResponse> {
+async function getBankDebits(authHeader: Record<string, any>, accountId: string): Promise<BankDebitsResponse> {
   const bankDebitsUrl = getBankDebitsUrl(accountId);
   return fetchGet(bankDebitsUrl, authHeader);
 }
 
-async function getTransactionsNextPage(authHeader) {
+async function getTransactionsNextPage(authHeader: Record<string, any>) {
   const hasNextPageUrl = `${BASE_URL}/CalTransNextPage`;
   return fetchGet<{ HasNextPage: boolean,
     Transactions?: ScrapedTransaction[]}>(hasNextPageUrl, authHeader);
 }
 
-async function fetchTxns(authHeader, cardId, debitDates): Promise<ScrapedTransaction[]> {
+async function fetchTxns(authHeader: Record<string, any>, cardId: string, debitDates: string[]): Promise<ScrapedTransaction[]> {
   const txns: ScrapedTransaction[] = [];
   for (const date of debitDates) {
     const fetchTxnUrl = getTransactionsUrl(cardId, date);
@@ -227,7 +230,7 @@ async function fetchTxns(authHeader, cardId, debitDates): Promise<ScrapedTransac
   return txns;
 }
 
-async function getTxnsOfCard(authHeader, card: BankAccountCard, bankDebits: BankDebitsResponse['Debits']): Promise<ScrapedTransaction[]> {
+async function getTxnsOfCard(authHeader: Record<string, any>, card: BankAccountCard, bankDebits: BankDebitsResponse['Debits']): Promise<ScrapedTransaction[]> {
   const cardId = card.Id;
   const cardDebitDates = bankDebits.filter((bankDebit) => {
     return bankDebit.CardId === cardId;
@@ -237,7 +240,7 @@ async function getTxnsOfCard(authHeader, card: BankAccountCard, bankDebits: Bank
   return fetchTxns(authHeader, cardId, cardDebitDates);
 }
 
-async function getTransactionsForAllAccounts(authHeader, startMoment, options) {
+async function getTransactionsForAllAccounts(authHeader: Record<string, any>, startMoment: Moment, options: BaseScraperOptions) {
   const cardsByAccountUrl = `${BASE_URL}/CardsByAccounts`;
   const banksResponse = await fetchGet<CardByAccountResponse>(cardsByAccountUrl, authHeader);
 
@@ -283,7 +286,7 @@ async function getTransactionsForAllAccounts(authHeader, startMoment, options) {
 class VisaCalScraper extends BaseScraper {
   private authHeader: string = '';
 
-  async login(credentials) {
+  async login(credentials: ScraperCredentials) {
     const authRequest = {
       username: credentials.username,
       password: credentials.password,

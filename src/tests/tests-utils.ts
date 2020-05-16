@@ -1,10 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 import moment from 'moment';
-import json2csv from 'json2csv';
+import * as json2csv from 'json2csv';
 import { ScraperAccount } from '../types';
 
-let testsConfig;
+let testsConfig: Record<string, any>;
 let configurationLoaded = false;
 
 const MISSING_ERROR_MESSAGE = 'Missing environment test configuration. To troubleshot this issue open CONTRIBUTING.md file and read section "F.A.Q regarding the tests".';
@@ -40,7 +40,7 @@ export function getTestsConfig() {
   }
 }
 
-export function maybeTestCompanyAPI(scraperId, filter?: (config: any) => boolean) {
+export function maybeTestCompanyAPI(scraperId: string, filter?: (config: any) => boolean) {
   if (!configurationLoaded) {
     getTestsConfig();
   }
@@ -53,7 +53,7 @@ export function extendAsyncTimeout(timeout = 120000) {
   jest.setTimeout(timeout);
 }
 
-export function exportTransactions(fileName, accounts) {
+export function exportTransactions(fileName: string, accounts: ScraperAccount[]) {
   const config = getTestsConfig();
 
   if (!config.companyAPI.enabled ||
@@ -62,7 +62,7 @@ export function exportTransactions(fileName, accounts) {
     return;
   }
 
-  let data: ScraperAccount[] | { comment: string}[] = [];
+  let data: any = [];
 
   for (let i = 0; i < accounts.length; i += 1) {
     const account = accounts[i];

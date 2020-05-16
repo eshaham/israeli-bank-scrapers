@@ -52,6 +52,7 @@
     "@babel/preset-env": "^7.4.5",
     "@babel/preset-typescript": "^7.9.0",
     "@types/jest": "^25.1.5",
+    "@types/json2csv": "^5.0.1",
     "@types/lodash": "^4.14.149",
     "@types/node-fetch": "^2.5.6",
     "@types/puppeteer": "^2.0.1",
@@ -67,7 +68,6 @@
     "eslint-config-airbnb-typescript": "^7.2.1",
     "eslint-plugin-import": "^2.20.2",
     "jest": "^25.3.0",
-    "json2csv": "^4.2.1",
     "ncp": "^2.0.0",
     "pre-commit": "^1.2.2",
     "rimraf": "^3.0.0",
@@ -82,6 +82,7 @@
     "moment": "^2.22.2",
     "node-fetch": "^2.2.0",
     "uuid": "^3.3.2",
+    "json2csv": "^4.5.4",
     "puppeteer": "^2.0.0"
   },
   "files": [

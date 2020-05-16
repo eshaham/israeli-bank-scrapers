@@ -5,6 +5,7 @@ import {
 import { SCRAPERS } from '../definitions';
 import { ISO_DATE_REGEX } from '../constants';
 import { LoginResults } from './base-scraper-with-browser';
+import { ScraperAccount } from '../types';
 
 const COMPANY_ID = 'mizrahi'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
@@ -47,9 +48,11 @@ describe('Mizrahi scraper', () => {
     const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
     expect(error).toBe('');
     expect(result.success).toBeTruthy();
-    expect(result.accounts[0].accountNumber).not.toBe('');
-
-    expect(result.accounts[0].txns[0].date).toMatch(ISO_DATE_REGEX);
+    expect(result.accounts).toBeDefined();
+    expect(result.accounts?.length).toBeGreaterThan(0);
+    const account: ScraperAccount = (result as any).accounts[0];
+    expect(account.accountNumber).not.toBe('');
+    expect(account.txns[0].date).toMatch(ISO_DATE_REGEX);
 
     exportTransactions(COMPANY_ID, result.accounts || []);
   });

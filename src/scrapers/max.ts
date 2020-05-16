@@ -126,7 +126,7 @@ function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
     status,
   };
 }
-interface FetchedTransactions{
+interface ScrapedTransactionsResult{
   result?: {
     transactions: ScrapedTransaction[]
   }
@@ -135,7 +135,7 @@ interface FetchedTransactions{
 async function fetchTransactionsForMonth(page: Page, monthMoment: Moment) {
   const url = getTransactionsUrl(monthMoment);
 
-  const data = await fetchGetWithinPage<FetchedTransactions>(page, url);
+  const data = await fetchGetWithinPage<ScrapedTransactionsResult>(page, url);
   const transactionsByAccount: Record<string, Transaction[]> = {};
 
   if (!data || !data.result) return transactionsByAccount;

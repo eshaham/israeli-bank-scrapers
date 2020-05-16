@@ -1,11 +1,13 @@
-import moment from 'moment';
-import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
+import moment, { Moment } from 'moment';
+import { Page } from 'puppeteer';
+import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 import { waitForNavigation } from '../helpers/navigation';
 import {
   clickButton, fillInput, pageEvalAll, waitUntilElementFound,
 } from '../helpers/elements-interactions';
 import { SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL } from '../constants';
 import { Transaction, TransactionStatuses, TransactionTypes } from '../types';
+import { ScraperCredentials } from './base-scraper';
 
 const BASE_URL = 'https://online.bankotsar.co.il';
 const DATE_FORMAT = 'DD/MM/YY';
@@ -22,7 +24,7 @@ interface ScrapedTransaction {
 }
 
 function getPossibleLoginResults() {
-  const urls = {};
+  const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [`${BASE_URL}/wps/myportal/FibiMenu/Online`];
   urls[LoginResults.InvalidPassword] = [`${BASE_URL}/LoginServices/login2.do`];
   // TODO: support change password
@@ -34,14 +36,14 @@ function getTransactionsUrl() {
   return `${BASE_URL}/wps/myportal/FibiMenu/Online/OnAccountMngment/OnBalanceTrans/PrivateAccountFlow`;
 }
 
-function createLoginFields(credentials) {
+function createLoginFields(credentials: ScraperCredentials) {
   return [
     { selector: '#username', value: credentials.username },
     { selector: '#password', value: credentials.password },
   ];
 }
 
-function getAmountData(amountStr, hasCurrency = false) {
+function getAmountData(amountStr: string, hasCurrency = false) {
   const amountStrCln = amountStr.replace(',', '');
   let currency: string | null = null;
   let amount: number | null = null;
@@ -66,8 +68,8 @@ function getAmountData(amountStr, hasCurrency = false) {
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((txn) => {
     const txnDate = moment(txn.date, DATE_FORMAT).toISOString();
-    const credit = getAmountData(txn.credit).amount;
-    const debit = getAmountData(txn.debit).amount;
+    const credit = getAmountData(txn.credit || '').amount;
+    const debit = getAmountData(txn.debit || '').amount;
     const amount = (Number.isNaN(credit) ? 0 : credit) - (Number.isNaN(debit) ? 0 : debit);
 
     const result: Transaction = {
@@ -87,11 +89,11 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   });
 }
 
-async function parseTransactionPage(page): Promise<ScrapedTransaction[]> {
-  const tdsValues = await pageEvalAll(page, '#dataTable077 tbody tr td', [], (tds) => {
-    return tds.map((td) => ({
-      classList: td.getAttribute('class'),
-      innerText: td.innerText,
+async function parseTransactionPage(page: Page): Promise<ScrapedTransaction[]> {
+  const tdsValues = await pageEvalAll<{ classList: string, innerText: string}[]>(page, '#dataTable077 tbody tr td', [], (tds) => {
+    return (tds as HTMLElement[]).map((td) => ({
+      classList: td.getAttribute('class') || '',
+      innerText: (td as HTMLElement).innerText || '',
     }));
   });
 
@@ -126,11 +128,11 @@ async function parseTransactionPage(page): Promise<ScrapedTransaction[]> {
   return txns;
 }
 
-async function getAccountSummary(page) {
+async function getAccountSummary(page: Page) {
   const balanceElm = await page.$('.current_balance');
-  const balanceInnerTextElm = await balanceElm.getProperty('innerText');
+  const balanceInnerTextElm = await balanceElm!.getProperty('innerText');
   const balanceText = await balanceInnerTextElm.jsonValue();
-  const balanceValue = getAmountData(balanceText, true);
+  const balanceValue = getAmountData(balanceText as string, true);
   // TODO: Find the credit field in bank website (could see it in my account)
   return {
     balance: Number.isNaN(balanceValue.amount) ? 0 : balanceValue.amount,
@@ -140,16 +142,16 @@ async function getAccountSummary(page) {
   };
 }
 
-async function fetchTransactionsForAccount(page, startDate) {
+async function fetchTransactionsForAccount(page: Page, startDate: Moment) {
   const summary = await getAccountSummary(page);
   await waitUntilElementFound(page, 'input#fromDate');
   // Get account number
   const branchNum = await page.$eval('.branch_num', (span) => {
-    return span.innerText;
+    return (span as HTMLElement).innerText;
   });
 
   const accountNmbr = await page.$eval('.acc_num', (span) => {
-    return span.innerText;
+    return (span as HTMLElement).innerText;
   });
   const accountNumber = `14-${branchNum}-${accountNmbr}`;
   // Search for relavant transaction from startDate
@@ -192,12 +194,12 @@ async function fetchTransactionsForAccount(page, startDate) {
   };
 }
 
-async function fetchTransactions(page, startDate) {
+async function fetchTransactions(page: Page, startDate: Moment) {
   // TODO need to extend to support multiple accounts and foreign accounts
   return [await fetchTransactionsForAccount(page, startDate)];
 }
 
-async function waitForPostLogin(page) {
+async function waitForPostLogin(page: Page) {
   // TODO check for condition to provide new password
   return Promise.race([
     waitUntilElementFound(page, 'div.lotusFrame', true),
@@ -206,7 +208,7 @@ async function waitForPostLogin(page) {
 }
 
 class OtsarHahayalScraper extends BaseScraperWithBrowser {
-  getLoginOptions(credentials) {
+  getLoginOptions(credentials: ScraperCredentials) {
     return {
       loginUrl: `${BASE_URL}/LoginServices/login2.do?bankId=OTSARPRTAL`,
       fields: createLoginFields(credentials),

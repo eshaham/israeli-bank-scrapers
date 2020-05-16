@@ -20,7 +20,7 @@ interface ScrapedTransaction {
   MC02TnuaTeurEZ: string,
 }
 
-interface FetchedTransactions {
+interface ScrapedTransactionsResult {
   header: {
     success: boolean
     messages: { text: string }[]
@@ -141,7 +141,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
     const data = CreateDataFromRequest(request, this.options.startDate);
     const headers = createHeadersFromRequest(request);
 
-    const response = await fetchPostWithinPage<FetchedTransactions>(this.page,
+    const response = await fetchPostWithinPage<ScrapedTransactionsResult>(this.page,
       TRANSACTIONS_REQUEST_URL, data, headers);
 
     if (!response || response.header.success === false) {

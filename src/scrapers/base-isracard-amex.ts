@@ -13,7 +13,7 @@ import {
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, filterOldTransactions } from '../helpers/transactions';
 import {
-  ErrorTypes, InstallmentsTransaction, LegacyScrapingResult, ScraperAccount, Transaction,
+  ErrorTypes, LegacyScrapingResult, ScraperAccount, Transaction, TransactionInstallments,
   TransactionStatuses, TransactionTypes,
 } from '../types';
 import { BaseScraperOptions, ScrapeProgressTypes, ScraperCredentials } from './base-scraper';
@@ -24,10 +24,12 @@ const INSTALLMENTS_KEYWORD = 'תשלום';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 
-interface ExtendedOptions extends BaseScraperOptions {
+interface ExtendedScraperOptions extends BaseScraperOptions {
   servicesUrl: string,
   companyCode: string
 }
+
+type ScrapedAccountsWithIndex = Record<string, ScraperAccount & { index: number }>;
 
 interface ScrapedTransaction {
   dealSumType: string,
@@ -45,7 +47,24 @@ interface ScrapedTransaction {
   paymentSumOutbound: number
 }
 
-interface FetchAccountsWithinPageResponse {
+
+interface ScrapedAccount {
+  index: number,
+  accountNumber: string,
+  processedDate: string
+}
+
+interface ScrapedLoginValidation {
+  Header: {
+    Status: string
+  },
+  ValidateIdDataBean?: {
+    userName?: string,
+    returnCode: string
+  }
+}
+
+interface ScrapedAccountsWithinPageResponse {
   Header: {
     Status: string
   },
@@ -56,6 +75,20 @@ interface FetchAccountsWithinPageResponse {
       billingDate: string
     }[]
   }
+}
+
+interface ScrapedCurrentCardTransactions {
+  txnIsrael?: ScrapedTransaction[],
+  txnAbroad?: ScrapedTransaction[]
+}
+
+interface ScrapedTransactionData {
+  Header?: {
+    Status: string
+  },
+  CardsTransactionsListBean?: Record<string, {
+    CurrentCardTransactions: ScrapedCurrentCardTransactions[]
+  }>
 }
 
 function getAccountsUrl(servicesUrl: string, monthMoment: Moment) {
@@ -70,9 +103,9 @@ function getAccountsUrl(servicesUrl: string, monthMoment: Moment) {
   });
 }
 
-async function fetchAccounts(page: Page, servicesUrl: string, monthMoment: Moment) {
+async function fetchAccounts(page: Page, servicesUrl: string, monthMoment: Moment): Promise<ScrapedAccount[]> {
   const dataUrl = getAccountsUrl(servicesUrl, monthMoment);
-  const dataResult = await fetchGetWithinPage<FetchAccountsWithinPageResponse>(page, dataUrl);
+  const dataResult = await fetchGetWithinPage<ScrapedAccountsWithinPageResponse>(page, dataUrl);
   if (dataResult && _.get(dataResult, 'Header.Status') === '1' && dataResult.DashboardMonthBean) {
     const { cardsCharges } = dataResult.DashboardMonthBean;
     if (cardsCharges) {
@@ -85,7 +118,7 @@ async function fetchAccounts(page: Page, servicesUrl: string, monthMoment: Momen
       });
     }
   }
-  return null;
+  return [];
 }
 
 function getTransactionsUrl(servicesUrl: string, monthMoment: Moment) {
@@ -109,7 +142,7 @@ function convertCurrency(currencyStr: string) {
   return currencyStr;
 }
 
-function getInstallmentsInfo(txn: ScrapedTransaction): InstallmentsTransaction['installments'] | undefined {
+function getInstallmentsInfo(txn: ScrapedTransaction): TransactionInstallments | undefined {
   if (!txn.moreInfo || !txn.moreInfo.includes(INSTALLMENTS_KEYWORD)) {
     return undefined;
   }
@@ -156,14 +189,14 @@ function convertTransactions(txns: ScrapedTransaction[], processedDate: string):
   });
 }
 
-async function fetchTransactions(page: Page, options: ExtendedOptions, startMoment: Moment, monthMoment: Moment) {
+async function fetchTransactions(page: Page, options: ExtendedScraperOptions, startMoment: Moment, monthMoment: Moment): Promise<ScrapedAccountsWithIndex> {
   const accounts = await fetchAccounts(page, options.servicesUrl, monthMoment);
   const dataUrl = getTransactionsUrl(options.servicesUrl, monthMoment);
-  const dataResult = await fetchGetWithinPage(page, dataUrl);
-  if (_.get(dataResult, 'Header.Status') === '1' && dataResult.CardsTransactionsListBean) {
-    const accountTxns: Record<string, ScraperAccount | { index: number }> = {};
+  const dataResult = await fetchGetWithinPage<ScrapedTransactionData>(page, dataUrl);
+  if (dataResult && _.get(dataResult, 'Header.Status') === '1' && dataResult.CardsTransactionsListBean) {
+    const accountTxns: ScrapedAccountsWithIndex = {};
     accounts.forEach((account) => {
-      const txnGroups = _.get(dataResult, `CardsTransactionsListBean.Index${account.index}.CurrentCardTransactions`);
+      const txnGroups: ScrapedCurrentCardTransactions[] = _.get(dataResult, `CardsTransactionsListBean.Index${account.index}.CurrentCardTransactions`);
       if (txnGroups) {
         let allTxns: Transaction[] = [];
         txnGroups.forEach((txnGroup) => {
@@ -192,16 +225,17 @@ async function fetchTransactions(page: Page, options: ExtendedOptions, startMome
     return accountTxns;
   }
 
-  return [];
+  return {};
 }
 
-async function fetchAllTransactions(page: Page, options: ExtendedOptions, startMoment: Moment) {
+async function fetchAllTransactions(page: Page, options: ExtendedScraperOptions, startMoment: Moment) {
   const allMonths = getAllMonthMoments(startMoment, true);
-  const results = await Promise.all(allMonths.map(async (monthMoment) => {
+  const results: ScrapedAccountsWithIndex[] = await Promise.all(allMonths.map(async (monthMoment) => {
     return fetchTransactions(page, options, startMoment, monthMoment);
   }));
 
-  const combinedTxns = {};
+  const combinedTxns: Record<string, Transaction[]> = {};
+
   results.forEach((result) => {
     Object.keys(result).forEach((accountNumber) => {
       let txnsForAccount = combinedTxns[accountNumber];
@@ -257,7 +291,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
       checkLevel: '1',
       companyCode: this.companyCode,
     };
-    const validateResult = await fetchPostWithinPage(this.page, validateUrl, validateRequest);
+    const validateResult = await fetchPostWithinPage<ScrapedLoginValidation>(this.page, validateUrl, validateRequest);
     if (!validateResult || !validateResult.Header || validateResult.Header.Status !== '1' || !validateResult.ValidateIdDataBean) {
       throw new Error('unknown error during login');
     }

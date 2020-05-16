@@ -23,13 +23,13 @@ interface ScrapedTransaction {
   OperationDescriptionToDisplay: string
 }
 
-interface FetchedAccountData {
+interface ScrapedAccountData {
   UserAccountsData: {
     DefaultAccountNumber: string
   }
 }
 
-interface FetchedTransactions {
+interface ScrapedTransactionData {
   Error?: { MsgText: string },
   CurrentAccountLastTransactions?: {
     OperationEntry: ScrapedTransaction[]
@@ -60,7 +60,7 @@ async function fetchAccountData(page: Page, options: BaseScraperOptions): Promis
   const apiSiteUrl = `${BASE_URL}/Titan/gatewayAPI`;
 
   const accountDataUrl = `${apiSiteUrl}/userAccountsData`;
-  const accountInfo = await fetchGetWithinPage<FetchedAccountData>(page, accountDataUrl);
+  const accountInfo = await fetchGetWithinPage<ScrapedAccountData>(page, accountDataUrl);
 
   if (!accountInfo) {
     return {
@@ -77,7 +77,7 @@ async function fetchAccountData(page: Page, options: BaseScraperOptions): Promis
 
   const startDateStr = startMoment.format(DATE_FORMAT);
   const txnsUrl = `${apiSiteUrl}/lastTransactions/${accountNumber}/Date?IsCategoryDescCode=True&IsTransactionDetails=True&IsEventNames=True&IsFutureTransactionFlag=True&FromDate=${startDateStr}`;
-  const txnsResult = await fetchGetWithinPage<FetchedTransactions>(page, txnsUrl);
+  const txnsResult = await fetchGetWithinPage<ScrapedTransactionData>(page, txnsUrl);
   if (!txnsResult || txnsResult.Error ||
     !txnsResult.CurrentAccountLastTransactions) {
     return {

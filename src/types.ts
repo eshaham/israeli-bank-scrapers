@@ -36,6 +36,11 @@ export enum TransactionStatuses {
   Pending = 'pending'
 }
 
+export interface TransactionInstallments {
+  number: number;
+  total: number;
+}
+
 export interface Transaction {
   type: TransactionTypes;
   identifier?: number;
@@ -47,8 +52,5 @@ export interface Transaction {
   description: string;
   memo?: string;
   status: TransactionStatuses;
-  installments?: {
-    number: number;
-    total: number;
-  };
+  installments?: TransactionInstallments;
 }
