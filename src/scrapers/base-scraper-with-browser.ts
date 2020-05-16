@@ -151,7 +151,7 @@ class BaseScraperWithBrowser extends BaseScraper {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  getLoginOptions(credentials: ScraperCredentials): LoginOptions {
+  getLoginOptions(_credentials: ScraperCredentials): LoginOptions {
     throw new Error(`getLoginOptions() is not created in ${this.options.companyId}`);
   }
 

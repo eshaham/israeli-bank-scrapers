@@ -113,7 +113,7 @@ export class BaseScraper {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async login(credentials: Record<string, string>): Promise<ScaperLoginResult> {
+  async login(_credentials: Record<string, string>): Promise<ScaperLoginResult> {
     throw new Error(`login() is not created in ${this.options.companyId}`);
   }
 

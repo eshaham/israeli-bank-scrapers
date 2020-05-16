@@ -3,7 +3,7 @@ export class TimeoutError extends Error {
 
 }
 function timeoutPromise(ms: number, promise: Promise<any>, description: string) {
-  const timeout = new Promise((resolve, reject) => {
+  const timeout = new Promise((_, reject) => {
     const id = setTimeout(() => {
       clearTimeout(id);
       const error = new TimeoutError(description);
