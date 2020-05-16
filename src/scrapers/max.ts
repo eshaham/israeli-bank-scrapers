@@ -7,8 +7,8 @@ import { waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound, elementPresentOnPage, clickButton } from '../helpers/elements-interactions';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
-import { Transaction, TransactionStatuses, TransactionTypes } from '../types';
-import { BaseScraperOptions, ScraperCredentials } from './base-scraper';
+import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
+import { ScaperOptions, ScraperCredentials } from './base-scraper';
 
 
 interface ScrapedTransaction {
@@ -173,7 +173,7 @@ function prepareTransactions(txns: Transaction[], startMoment: moment.Moment, co
   return clonedTxns;
 }
 
-async function fetchTransactions(page: Page, options: BaseScraperOptions) {
+async function fetchTransactions(page: Page, options: ScaperOptions) {
   const defaultStartMoment = moment().subtract(1, 'years');
   const startDate = options.startDate || defaultStartMoment.toDate();
   const startMoment = moment.max(defaultStartMoment, moment(startDate));

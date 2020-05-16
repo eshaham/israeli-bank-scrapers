@@ -11,8 +11,8 @@ import {
 import { waitForNavigation } from '../helpers/navigation';
 import { SHEKEL_CURRENCY } from '../constants';
 import {
-  ScraperAccount, Transaction, TransactionStatuses, TransactionTypes,
-} from '../types';
+  TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
+} from '../transactions';
 import { ScraperCredentials } from './base-scraper';
 
 const BASE_URL = 'https://online.fibi.co.il';
@@ -270,7 +270,7 @@ async function fetchAccountData(page: Page, startDate: Moment) {
 
 // TODO: Add support of multiple accounts
 async function fetchAccounts(page: Page, startDate: Moment) {
-  const accounts: ScraperAccount[] = [];
+  const accounts: TransactionsAccount[] = [];
   const accountData = await fetchAccountData(page, startDate);
   accounts.push(accountData);
   return accounts;

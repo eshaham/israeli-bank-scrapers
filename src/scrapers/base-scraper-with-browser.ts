@@ -1,9 +1,12 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 
-import { BaseScraper, ScrapeProgressTypes, ScraperCredentials } from './base-scraper';
+import {
+  ScraperErrorTypes,
+  BaseScraper, ScaperScrapingResult, ScaperProgressTypes,
+  ScraperCredentials,
+} from './base-scraper';
 import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { clickButton, fillInput, waitUntilElementFound } from '../helpers/elements-interactions';
-import { ErrorTypes, LegacyScrapingResult } from '../types';
 
 const VIEWPORT_WIDTH = 1024;
 const VIEWPORT_HEIGHT = 768;
@@ -59,32 +62,32 @@ async function getKeyByValue(object: PossibleLoginResults, value: string): Promi
 function handleLoginResult(scraper: BaseScraperWithBrowser, loginResult: LoginResults) {
   switch (loginResult) {
     case LoginResults.Success:
-      scraper.emitProgress(ScrapeProgressTypes.LoginSuccess);
+      scraper.emitProgress(ScaperProgressTypes.LoginSuccess);
       return { success: true };
     case LoginResults.InvalidPassword:
     case LoginResults.UnknownError:
-      scraper.emitProgress(ScrapeProgressTypes.LoginFailed);
+      scraper.emitProgress(ScaperProgressTypes.LoginFailed);
       return {
         success: false,
-        errorType: loginResult === LoginResults.InvalidPassword ? ErrorTypes.InvalidPassword :
-          ErrorTypes.General,
+        errorType: loginResult === LoginResults.InvalidPassword ? ScraperErrorTypes.InvalidPassword :
+          ScraperErrorTypes.General,
         errorMessage: `Login failed with ${loginResult} error`,
       };
     case LoginResults.ChangePassword:
-      scraper.emitProgress(ScrapeProgressTypes.ChangePassword);
+      scraper.emitProgress(ScaperProgressTypes.ChangePassword);
       return {
         success: false,
-        errorType: ErrorTypes.ChangePassword,
+        errorType: ScraperErrorTypes.ChangePassword,
       };
     default:
       throw new Error(`unexpected login result "${loginResult}"`);
   }
 }
 
-function createGeneralError(): LegacyScrapingResult {
+function createGeneralError(): ScaperScrapingResult {
   return {
     success: false,
-    errorType: ErrorTypes.General,
+    errorType: ScraperErrorTypes.General,
   };
 }
 
@@ -98,7 +101,7 @@ class BaseScraperWithBrowser extends BaseScraper {
   protected page!: Page;
 
   async initialize() {
-    this.emitProgress(ScrapeProgressTypes.Initializing);
+    this.emitProgress(ScaperProgressTypes.Initializing);
 
     let env: Record<string, any> | undefined;
     if (this.options.verbose) {
@@ -165,7 +168,7 @@ class BaseScraperWithBrowser extends BaseScraper {
     }
   }
 
-  async login(credentials: Record<string, string>): Promise<LegacyScrapingResult> {
+  async login(credentials: Record<string, string>): Promise<ScaperScrapingResult> {
     if (!credentials || !this.page) {
       return createGeneralError();
     }
@@ -184,7 +187,7 @@ class BaseScraperWithBrowser extends BaseScraper {
     }
     await this.fillInputs(loginOptions.fields);
     await clickButton(this.page, loginOptions.submitButtonSelector);
-    this.emitProgress(ScrapeProgressTypes.LoggingIn);
+    this.emitProgress(ScaperProgressTypes.LoggingIn);
 
     if (loginOptions.postAction) {
       await loginOptions.postAction();
@@ -198,7 +201,7 @@ class BaseScraperWithBrowser extends BaseScraper {
   }
 
   async terminate() {
-    this.emitProgress(ScrapeProgressTypes.Terminating);
+    this.emitProgress(ScaperProgressTypes.Terminating);
 
     if (!this.browser) {
       return;

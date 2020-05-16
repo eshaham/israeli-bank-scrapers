@@ -13,9 +13,9 @@ import {
 import { waitForNavigation } from '../helpers/navigation';
 import { SHEKEL_CURRENCY } from '../constants';
 import {
-  ScraperAccount, Transaction, TransactionStatuses,
+  TransactionsAccount, Transaction, TransactionStatuses,
   TransactionTypes,
-} from '../types';
+} from '../transactions';
 import { ScraperCredentials } from './base-scraper';
 
 const BASE_URL = 'https://hb.unionbank.co.il';
@@ -250,7 +250,7 @@ async function getAccountTransactions(page: Page): Promise<Transaction[]> {
   return scrapeTransactionsFromTable(page);
 }
 
-async function fetchAccountData(page: Page, startDate: Moment, accountId: string): Promise<ScraperAccount> {
+async function fetchAccountData(page: Page, startDate: Moment, accountId: string): Promise<TransactionsAccount> {
   await chooseAccount(page, accountId);
   await searchByDates(page, startDate);
   const accountNumber = await getAccountNumber(page);
@@ -262,7 +262,7 @@ async function fetchAccountData(page: Page, startDate: Moment, accountId: string
 }
 
 async function fetchAccounts(page: Page, startDate: Moment) {
-  const accounts: ScraperAccount[] = [];
+  const accounts: TransactionsAccount[] = [];
   const accountsList = await dropdownElements(page, ACCOUNTS_DROPDOWN_SELECTOR);
   for (const account of accountsList) {
     if (account.value !== '-1') { // Skip "All accounts" option

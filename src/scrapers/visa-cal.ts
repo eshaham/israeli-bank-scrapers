@@ -3,8 +3,8 @@ import buildUrl from 'build-url';
 import moment, { Moment } from 'moment';
 
 import {
-  BaseScraper,
-  BaseScraperOptions, ScrapeProgressTypes, ScraperCredentials,
+  ScraperErrorTypes, BaseScraper,
+  ScaperOptions, ScaperProgressTypes, ScraperCredentials,
 } from './base-scraper';
 import {
   SHEKEL_CURRENCY_SYMBOL,
@@ -15,8 +15,8 @@ import {
 import { fetchGet, fetchPost } from '../helpers/fetch';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
 import {
-  ErrorTypes, ScraperAccount, Transaction, TransactionStatuses, TransactionTypes,
-} from '../types';
+  TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
+} from '../transactions';
 
 const BASE_URL = 'https://cal4u.cal-online.co.il/Cal4U';
 const AUTH_URL = 'https://connect.cal-online.co.il/api/authentication/login';
@@ -240,12 +240,12 @@ async function getTxnsOfCard(authHeader: Record<string, any>, card: BankAccountC
   return fetchTxns(authHeader, cardId, cardDebitDates);
 }
 
-async function getTransactionsForAllAccounts(authHeader: Record<string, any>, startMoment: Moment, options: BaseScraperOptions) {
+async function getTransactionsForAllAccounts(authHeader: Record<string, any>, startMoment: Moment, options: ScaperOptions) {
   const cardsByAccountUrl = `${BASE_URL}/CardsByAccounts`;
   const banksResponse = await fetchGet<CardByAccountResponse>(cardsByAccountUrl, authHeader);
 
   if (_.get(banksResponse, 'Response.Status.Succeeded')) {
-    const accounts: ScraperAccount[] = [];
+    const accounts: TransactionsAccount[] = [];
     for (let i = 0; i < banksResponse.BankAccounts.length; i += 1) {
       const bank = banksResponse.BankAccounts[i];
       const bankDebits = await getBankDebits(authHeader, bank.AccountID);
@@ -257,7 +257,7 @@ async function getTransactionsForAllAccounts(authHeader: Record<string, any>, st
             if (rawTxns) {
               let txns = convertTransactions(rawTxns);
               txns = prepareTransactions(txns, startMoment, options.combineInstallments || false);
-              const result: ScraperAccount = {
+              const result: TransactionsAccount = {
                 accountNumber: bank.Cards[j].LastFourDigits,
                 txns,
               };
@@ -293,32 +293,32 @@ class VisaCalScraper extends BaseScraper {
       rememberMe: null,
     };
 
-    this.emitProgress(ScrapeProgressTypes.LoggingIn);
+    this.emitProgress(ScaperProgressTypes.LoggingIn);
 
     const authResponse = await fetchPost(AUTH_URL, authRequest, HEADER_SITE);
     if (authResponse === PASSWORD_EXPIRED_MSG) {
       return {
         success: false,
-        errorType: ErrorTypes.ChangePassword,
+        errorType: ScraperErrorTypes.ChangePassword,
       };
     }
 
     if (authResponse === INVALID_CREDENTIALS) {
       return {
         success: false,
-        errorType: ErrorTypes.InvalidPassword,
+        errorType: ScraperErrorTypes.InvalidPassword,
       };
     }
 
     if (!authResponse || !authResponse.token) {
       return {
         success: false,
-        errorType: ErrorTypes.General,
+        errorType: ScraperErrorTypes.General,
         errorMessage: `No token found in authResponse: ${JSON.stringify(authResponse)}`,
       };
     }
     this.authHeader = `CALAuthScheme ${authResponse.token}`;
-    this.emitProgress(ScrapeProgressTypes.LoginSuccess);
+    this.emitProgress(ScaperProgressTypes.LoginSuccess);
     return { success: true };
   }
 

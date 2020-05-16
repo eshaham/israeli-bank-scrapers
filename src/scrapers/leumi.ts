@@ -13,9 +13,9 @@ import {
 import { waitForNavigation } from '../helpers/navigation';
 import { SHEKEL_CURRENCY } from '../constants';
 import {
-  LegacyScrapingResult, ScraperAccount, Transaction, TransactionStatuses, TransactionTypes,
-} from '../types';
-import { ScraperCredentials } from './base-scraper';
+  TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
+} from '../transactions';
+import { ScaperScrapingResult, ScraperCredentials } from './base-scraper';
 
 const BASE_URL = 'https://hb2.bankleumi.co.il';
 const DATE_FORMAT = 'DD/MM/YY';
@@ -89,6 +89,7 @@ interface ScrapedTds {
   classList: string,
   innerText: string
 }
+
 async function extractCompletedTransactionsFromPage(page: Page): Promise<ScrapedTransaction[]> {
   const txns: ScrapedTransaction[] = [];
   const tdsValues = await pageEvalAll<ScrapedTds[]>(page, '#WorkSpaceBox #ctlActivityTable tr td', [], (tds) => {
@@ -129,7 +130,7 @@ async function extractCompletedTransactionsFromPage(page: Page): Promise<Scraped
 
 async function extractPendingTransactionsFromPage(page: Page): Promise<ScrapedTransaction[]> {
   const txns: ScrapedTransaction[] = [];
-  const tdsValues = await pageEvalAll<ScrapedTds[]>(page, '#WorkSpaceBox #trTodayActivityNapaTableUpper tr td', [], (tds) => {
+  const tdsValues = await pageEvalAll<ScrapedTds[]>(page, '#WorkSpaceBox table#ctlTodayActivityTableUpper tr td', [], (tds) => {
     return tds.map((td) => ({
       classList: td.getAttribute('class') || '',
       innerText: (td as HTMLElement).innerText,
@@ -175,7 +176,7 @@ async function isNoTransactionInDateRangeError(page: Page) {
   return false;
 }
 
-async function fetchTransactionsForAccount(page: Page, startDate: Moment, accountId: string): Promise<ScraperAccount> {
+async function fetchTransactionsForAccount(page: Page, startDate: Moment, accountId: string): Promise<TransactionsAccount> {
   await dropdownSelect(page, 'select#ddlAccounts_m_ddl', accountId);
   await dropdownSelect(page, 'select#ddlTransactionPeriod', '004');
   await waitUntilElementFound(page, 'select#ddlTransactionPeriod');
@@ -225,7 +226,7 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
 }
 
 async function fetchTransactions(page: Page, startDate: Moment) {
-  const res: ScraperAccount[] = [];
+  const res: TransactionsAccount[] = [];
   // Loop through all available accounts and collect transactions from all
   const accounts = await dropdownElements(page, 'select#ddlAccounts_m_ddl');
   for (const account of accounts) {
@@ -256,7 +257,7 @@ class LeumiScraper extends BaseScraperWithBrowser {
     };
   }
 
-  async fetchData(): Promise<LegacyScrapingResult> {
+  async fetchData(): Promise<ScaperScrapingResult> {
     const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));

@@ -7,9 +7,9 @@ import { waitForRedirect } from '../helpers/navigation';
 import { waitUntil } from '../helpers/waiting';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import {
-  ScraperAccount, Transaction, TransactionStatuses, TransactionTypes,
-} from '../types';
-import { BaseScraperOptions, ScraperCredentials } from './base-scraper';
+  TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
+} from '../transactions';
+import { ScaperOptions, ScraperCredentials } from './base-scraper';
 
 const DATE_FORMAT = 'YYYYMMDD';
 
@@ -120,7 +120,7 @@ async function fetchPoalimXSRFWithinPage(page: Page, url: string, pageUuid: stri
   return fetchPostWithinPage<FetchedAccountTransactionsData>(page, url, [], headers);
 }
 
-async function fetchAccountData(page: Page, baseUrl: string, options: BaseScraperOptions) {
+async function fetchAccountData(page: Page, baseUrl: string, options: ScaperOptions) {
   const restContext = await getRestContext(page);
   const apiSiteUrl = `${baseUrl}/${restContext}`;
   const accountDataUrl = `${baseUrl}/ServerServices/general/accounts`;
@@ -133,7 +133,7 @@ async function fetchAccountData(page: Page, baseUrl: string, options: BaseScrape
   const startDateStr = startMoment.format(DATE_FORMAT);
   const endDateStr = moment().format(DATE_FORMAT);
 
-  const accounts: ScraperAccount[] = [];
+  const accounts: TransactionsAccount[] = [];
   for (let accountIndex = 0; accountIndex < accountsInfo.length; accountIndex += 1) {
     const accountNumber = `${accountsInfo[accountIndex].bankNumber}-${accountsInfo[accountIndex].branchNumber}-${accountsInfo[accountIndex].accountNumber}`;
 

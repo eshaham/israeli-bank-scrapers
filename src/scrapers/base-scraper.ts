@@ -1,29 +1,34 @@
 import { EventEmitter } from 'events';
 import { TimeoutError } from '../helpers/waiting';
-import { ErrorTypes, LegacyLoginResult, LegacyScrapingResult } from '../types';
+import { TransactionsAccount } from '../transactions';
 import { SCRAPERS } from '../definitions';
 
 const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';
 
+export enum ScraperErrorTypes {
+  InvalidPassword ='INVALID_PASSWORD',
+  ChangePassword = 'CHANGE_PASSWORD',
+  Timeout = 'TIMEOUT',
+  Generic = 'GENERIC',
+  General = 'GENERAL_ERROR'
+}
+
+export interface ScaperLoginResult {
+  success: boolean;
+  errorType?: ScraperErrorTypes;
+  errorMessage?: string; // only on success=false
+}
+
+export interface ScaperScrapingResult {
+  success: boolean;
+  accounts?: TransactionsAccount[];
+  errorType?: ScraperErrorTypes;
+  errorMessage?: string; // only on success=false
+}
+
 export type ScraperCredentials = Record<string, string>;
 
-function createErrorResult(errorType: ErrorTypes, errorMessage: string) {
-  return {
-    success: false,
-    errorType,
-    errorMessage,
-  };
-}
-
-function createTimeoutError(errorMessage: string) {
-  return createErrorResult(ErrorTypes.Timeout, errorMessage);
-}
-
-function createGenericError(errorMessage: string) {
-  return createErrorResult(ErrorTypes.Generic, errorMessage);
-}
-
-export interface BaseScraperOptions {
+export interface ScaperOptions {
   companyId: keyof typeof SCRAPERS;
   verbose: boolean;
   startDate: Date;
@@ -33,8 +38,7 @@ export interface BaseScraperOptions {
   combineInstallments?: boolean;
 }
 
-
-export enum ScrapeProgressTypes {
+export enum ScaperProgressTypes {
   Initializing = 'INITIALIZING',
   StartScraping = 'START_SCRAPING',
   LoggingIn = 'LOGGING_IN',
@@ -45,18 +49,34 @@ export enum ScrapeProgressTypes {
   Terminating = 'TERMINATING',
 }
 
+function createErrorResult(errorType: ScraperErrorTypes, errorMessage: string) {
+  return {
+    success: false,
+    errorType,
+    errorMessage,
+  };
+}
+
+function createTimeoutError(errorMessage: string) {
+  return createErrorResult(ScraperErrorTypes.Timeout, errorMessage);
+}
+
+function createGenericError(errorMessage: string) {
+  return createErrorResult(ScraperErrorTypes.Generic, errorMessage);
+}
+
 export class BaseScraper {
   private eventEmitter = new EventEmitter();
 
-  constructor(public options: BaseScraperOptions) {
+  constructor(public options: ScaperOptions) {
   }
 
   async initialize() {
-    this.emitProgress(ScrapeProgressTypes.Initializing);
+    this.emitProgress(ScaperProgressTypes.Initializing);
   }
 
-  async scrape(credentials: ScraperCredentials): Promise<LegacyScrapingResult> {
-    this.emitProgress(ScrapeProgressTypes.StartScraping);
+  async scrape(credentials: ScraperCredentials): Promise<ScaperScrapingResult> {
+    this.emitProgress(ScaperProgressTypes.StartScraping);
     await this.initialize();
 
     let loginResult;
@@ -87,25 +107,25 @@ export class BaseScraper {
     } catch (e) {
       scrapeResult = createGenericError(e.message);
     }
-    this.emitProgress(ScrapeProgressTypes.EndScraping);
+    this.emitProgress(ScaperProgressTypes.EndScraping);
 
     return scrapeResult;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async login(credentials: Record<string, string>): Promise<LegacyLoginResult> {
+  async login(credentials: Record<string, string>): Promise<ScaperLoginResult> {
     throw new Error(`login() is not created in ${this.options.companyId}`);
   }
 
-  async fetchData(): Promise<LegacyScrapingResult> {
+  async fetchData(): Promise<ScaperScrapingResult> {
     throw new Error(`fetchData() is not created in ${this.options.companyId}`);
   }
 
   async terminate() {
-    this.emitProgress(ScrapeProgressTypes.Terminating);
+    this.emitProgress(ScaperProgressTypes.Terminating);
   }
 
-  emitProgress(type: ScrapeProgressTypes) {
+  emitProgress(type: ScaperProgressTypes) {
     this.emit(SCRAPE_PROGRESS, { type });
   }
 

@@ -13,10 +13,14 @@ import {
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, filterOldTransactions } from '../helpers/transactions';
 import {
-  ErrorTypes, LegacyScrapingResult, ScraperAccount, Transaction, TransactionInstallments,
+  TransactionsAccount, Transaction, TransactionInstallments,
   TransactionStatuses, TransactionTypes,
-} from '../types';
-import { BaseScraperOptions, ScrapeProgressTypes, ScraperCredentials } from './base-scraper';
+} from '../transactions';
+import {
+  ScraperErrorTypes,
+  ScaperOptions, ScaperScrapingResult, ScaperProgressTypes,
+  ScraperCredentials,
+} from './base-scraper';
 
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';
@@ -24,12 +28,12 @@ const INSTALLMENTS_KEYWORD = 'תשלום';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 
-interface ExtendedScraperOptions extends BaseScraperOptions {
+interface ExtendedScraperOptions extends ScaperOptions {
   servicesUrl: string,
   companyCode: string
 }
 
-type ScrapedAccountsWithIndex = Record<string, ScraperAccount & { index: number }>;
+type ScrapedAccountsWithIndex = Record<string, TransactionsAccount & { index: number }>;
 
 interface ScrapedTransaction {
   dealSumType: string,
@@ -269,7 +273,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
 
   private servicesUrl: string;
 
-  constructor(options: BaseScraperOptions, baseUrl: string, companyCode: string) {
+  constructor(options: ScaperOptions, baseUrl: string, companyCode: string) {
     super(options);
 
     this.baseUrl = baseUrl;
@@ -277,10 +281,10 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
     this.servicesUrl = `${baseUrl}/services/ProxyRequestHandler.ashx`;
   }
 
-  async login(credentials: ScraperCredentials): Promise<LegacyScrapingResult> {
+  async login(credentials: ScraperCredentials): Promise<ScaperScrapingResult> {
     await this.navigateTo(`${this.baseUrl}/personalarea/Login`);
 
-    this.emitProgress(ScrapeProgressTypes.LoggingIn);
+    this.emitProgress(ScaperProgressTypes.LoggingIn);
 
     const validateUrl = `${this.servicesUrl}?reqName=ValidateIdData`;
     const validateRequest = {
@@ -311,37 +315,37 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
       };
       const loginResult = await fetchPostWithinPage<{status: string}>(this.page, loginUrl, request);
       if (loginResult && loginResult.status === '1') {
-        this.emitProgress(ScrapeProgressTypes.LoginSuccess);
+        this.emitProgress(ScaperProgressTypes.LoginSuccess);
         return { success: true };
       }
 
       if (loginResult && loginResult.status === '3') {
-        this.emitProgress(ScrapeProgressTypes.ChangePassword);
+        this.emitProgress(ScaperProgressTypes.ChangePassword);
         return {
           success: false,
-          errorType: ErrorTypes.ChangePassword,
+          errorType: ScraperErrorTypes.ChangePassword,
         };
       }
 
-      this.emitProgress(ScrapeProgressTypes.LoginFailed);
+      this.emitProgress(ScaperProgressTypes.LoginFailed);
       return {
         success: false,
-        errorType: ErrorTypes.InvalidPassword,
+        errorType: ScraperErrorTypes.InvalidPassword,
       };
     }
 
     if (validateReturnCode === '4') {
-      this.emitProgress(ScrapeProgressTypes.ChangePassword);
+      this.emitProgress(ScaperProgressTypes.ChangePassword);
       return {
         success: false,
-        errorType: ErrorTypes.ChangePassword,
+        errorType: ScraperErrorTypes.ChangePassword,
       };
     }
 
-    this.emitProgress(ScrapeProgressTypes.LoginFailed);
+    this.emitProgress(ScaperProgressTypes.LoginFailed);
     return {
       success: false,
-      errorType: ErrorTypes.InvalidPassword,
+      errorType: ScraperErrorTypes.InvalidPassword,
     };
   }
 

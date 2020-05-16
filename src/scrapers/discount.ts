@@ -1,16 +1,17 @@
 import _ from 'lodash';
 import moment from 'moment';
-
 import { Page } from 'puppeteer';
 import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { fetchGetWithinPage } from '../helpers/fetch';
 import {
-  ErrorTypes, LegacyScrapingResult,
   Transaction, TransactionStatuses, TransactionTypes,
-} from '../types';
-import { BaseScraperOptions, ScraperCredentials } from './base-scraper';
+} from '../transactions';
+import {
+  ScaperOptions,
+  ScraperErrorTypes, ScaperScrapingResult, ScraperCredentials,
+} from './base-scraper';
 
 const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
@@ -56,7 +57,7 @@ function convertTransactions(txns: ScrapedTransaction[], txnStatus: TransactionS
 }
 
 
-async function fetchAccountData(page: Page, options: BaseScraperOptions): Promise<LegacyScrapingResult> {
+async function fetchAccountData(page: Page, options: ScaperOptions): Promise<ScaperScrapingResult> {
   const apiSiteUrl = `${BASE_URL}/Titan/gatewayAPI`;
 
   const accountDataUrl = `${apiSiteUrl}/userAccountsData`;
@@ -65,7 +66,7 @@ async function fetchAccountData(page: Page, options: BaseScraperOptions): Promis
   if (!accountInfo) {
     return {
       success: false,
-      errorType: ErrorTypes.Generic,
+      errorType: ScraperErrorTypes.Generic,
       errorMessage: 'failed to get account data',
     };
   }
@@ -82,7 +83,7 @@ async function fetchAccountData(page: Page, options: BaseScraperOptions): Promis
     !txnsResult.CurrentAccountLastTransactions) {
     return {
       success: false,
-      errorType: ErrorTypes.Generic,
+      errorType: ScraperErrorTypes.Generic,
       errorMessage: txnsResult && txnsResult.Error ? txnsResult.Error.MsgText : 'unknown error',
     };
   }

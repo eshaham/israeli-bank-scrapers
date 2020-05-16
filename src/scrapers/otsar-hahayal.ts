@@ -6,7 +6,7 @@ import {
   clickButton, fillInput, pageEvalAll, waitUntilElementFound,
 } from '../helpers/elements-interactions';
 import { SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL } from '../constants';
-import { Transaction, TransactionStatuses, TransactionTypes } from '../types';
+import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
 import { ScraperCredentials } from './base-scraper';
 
 const BASE_URL = 'https://online.bankotsar.co.il';

@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import moment from 'moment';
 import * as json2csv from 'json2csv';
-import { ScraperAccount } from '../types';
+import { TransactionsAccount } from '../transactions';
 
 let testsConfig: Record<string, any>;
 let configurationLoaded = false;
@@ -53,7 +53,7 @@ export function extendAsyncTimeout(timeout = 120000) {
   jest.setTimeout(timeout);
 }
 
-export function exportTransactions(fileName: string, accounts: ScraperAccount[]) {
+export function exportTransactions(fileName: string, accounts: TransactionsAccount[]) {
   const config = getTestsConfig();
 
   if (!config.companyAPI.enabled ||

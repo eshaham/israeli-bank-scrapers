@@ -8,9 +8,9 @@ import { fetchPostWithinPage } from '../helpers/fetch';
 import { waitForNavigation } from '../helpers/navigation';
 import { pageEvalAll } from '../helpers/elements-interactions';
 import {
-  ErrorTypes, Transaction, TransactionStatuses, TransactionTypes,
-} from '../types';
-import { ScraperCredentials } from './base-scraper';
+  Transaction, TransactionStatuses, TransactionTypes,
+} from '../transactions';
+import { ScraperErrorTypes, ScraperCredentials } from './base-scraper';
 
 interface ScrapedTransaction {
   RecTypeSpecified: boolean,
@@ -147,7 +147,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
     if (!response || response.header.success === false) {
       return {
         success: false,
-        errorType: ErrorTypes.Generic,
+        errorType: ScraperErrorTypes.Generic,
         errorMessage:
           `Error fetching transaction. Response message: ${response ? response.header.messages[0].text : ''}`,
       };
