@@ -49,7 +49,7 @@ describe('Mizrahi scraper', () => {
     expect(error).toBe('');
     expect(result.success).toBeTruthy();
     expect(result.accounts).toBeDefined();
-    expect(result.accounts?.length).toBeGreaterThan(0);
+    expect((result.accounts as any).length).toBeGreaterThan(0);
     const account: ScraperAccount = (result as any).accounts[0];
     expect(account.accountNumber).not.toBe('');
     expect(account.txns[0].date).toMatch(ISO_DATE_REGEX);
