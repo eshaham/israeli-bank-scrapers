@@ -3,7 +3,11 @@ import { Page } from 'puppeteer';
 import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 import { waitForNavigation } from '../helpers/navigation';
 import {
-  clickButton, fillInput, pageEvalAll, waitUntilElementFound,
+  fillInput,
+  clickButton,
+  waitUntilElementFound,
+  pageEvalAll,
+  elementPresentOnPage,
 } from '../helpers/elements-interactions';
 import { SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL } from '../constants';
 import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
@@ -23,10 +27,10 @@ interface ScrapedTransaction {
   date: string,
 }
 
-function getPossibleLoginResults() {
+function getPossibleLoginResults(page) {
   const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [`${BASE_URL}/wps/myportal/FibiMenu/Online`];
-  urls[LoginResults.InvalidPassword] = [`${BASE_URL}/LoginServices/login2.do`];
+  urls[LoginResults.InvalidPassword] = [() => elementPresentOnPage(page, '#validationMsg')];
   // TODO: support change password
   /* urls[LOGIN_RESULT.CHANGE_PASSWORD] = [``]; */
   return urls;
@@ -203,18 +207,18 @@ async function waitForPostLogin(page: Page) {
   // TODO check for condition to provide new password
   return Promise.race([
     waitUntilElementFound(page, 'div.lotusFrame', true),
-    waitUntilElementFound(page, 'div.fibi_pwd_error', true),
+    waitUntilElementFound(page, '#validationMsg'),
   ]);
 }
 
 class OtsarHahayalScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials: ScraperCredentials) {
     return {
-      loginUrl: `${BASE_URL}/LoginServices/login2.do?bankId=OTSARPRTAL`,
+      loginUrl: `${BASE_URL}/MatafLoginService/MatafLoginServlet?bankId=OTSARPRTAL&site=Private&KODSAFA=HE`,
       fields: createLoginFields(credentials),
-      submitButtonSelector: '#login_btn',
+      submitButtonSelector: '#continueBtn',
       postAction: async () => waitForPostLogin(this.page),
-      possibleResults: getPossibleLoginResults(),
+      possibleResults: getPossibleLoginResults(this.page),
     };
   }
 
