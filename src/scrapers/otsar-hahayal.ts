@@ -27,7 +27,7 @@ interface ScrapedTransaction {
   date: string,
 }
 
-function getPossibleLoginResults(page) {
+function getPossibleLoginResults(page: Page) {
   const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [`${BASE_URL}/wps/myportal/FibiMenu/Online`];
   urls[LoginResults.InvalidPassword] = [() => elementPresentOnPage(page, '#validationMsg')];
