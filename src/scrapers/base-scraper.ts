@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import { TimeoutError } from '../helpers/waiting';
 import { TransactionsAccount } from '../transactions';
-import { SCRAPERS } from '../definitions';
+import { CompanyTypes } from '../definitions';
 
 const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';
 
@@ -29,12 +29,41 @@ export interface ScaperScrapingResult {
 export type ScraperCredentials = Record<string, string>;
 
 export interface ScaperOptions {
-  companyId: keyof typeof SCRAPERS;
-  verbose: boolean;
+  /**
+   * The company you want to scrape
+   */
+  companyId: CompanyTypes;
+
+  /**
+   * include more debug info about in the output
+   */
+  verbose?: boolean;
+
+  /**
+   * the date to fetch transactions from (can't be before the minimum allowed time difference for the scraper)
+   */
   startDate: Date;
-  showBrowser: boolean;
-  browser: any;
+
+  /**
+   * shows the browser while scraping, good for debugging (default false)
+   */
+  showBrowser?: boolean;
+
+  /**
+   * option from init puppeteer browser instance outside the libary scope. you can get
+   * browser diretly from puppeteer via `puppeteer.launch()`
+   */
+  browser?: any;
+
+  /**
+   * provide a patch to local chromium to be used by puppeteer. Relevant when using
+   * `israeli-bank-scrapers-core` library
+   */
   executablePath?: string;
+
+  /**
+   * if set to true, all installment transactions will be combine into the first one
+   */
   combineInstallments?: boolean;
 }
 

@@ -15,14 +15,30 @@ export enum TransactionStatuses {
 }
 
 export interface TransactionInstallments {
+  /**
+   * the current installment number
+   */
   number: number;
+
+  /**
+   * the total number of installments
+   */
   total: number;
 }
 
 export interface Transaction {
   type: TransactionTypes;
+  /**
+   * sometimes called Asmachta
+   */
   identifier?: number;
+  /**
+   * ISO date string
+   */
   date: string;
+  /**
+   * ISO date string
+   */
   processedDate: string;
   originalAmount: number;
   originalCurrency: string;

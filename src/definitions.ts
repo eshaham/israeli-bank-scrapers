@@ -2,56 +2,72 @@
 
 export const PASSWORD_FIELD = 'password';
 
+export enum CompanyTypes {
+  hapoalim = 'hapoalim',
+  hapoalimBeOnline = 'hapoalimBeOnline',
+  beinleumi = 'beinleumi',
+  union = 'union',
+  amex = 'amex',
+  isracard = 'isracard',
+  visaCal = 'visaCal',
+  max = 'max',
+  leumiCard = 'leumiCard',
+  otsarHahayal = 'otsarHahayal',
+  discount = 'discount',
+  mizrahi = 'mizrahi',
+  leumi = 'leumi'
+}
+
 export const SCRAPERS = {
-  hapoalim: {
+  [CompanyTypes.hapoalim]: {
     name: 'Bank Hapoalim',
     loginFields: ['userCode', PASSWORD_FIELD],
   },
-  hapoalimBeOnline: { // TODO remove in Major version
+  [CompanyTypes.hapoalimBeOnline]: { // TODO remove in Major version
     name: 'Bank Hapoalim',
     loginFields: ['userCode', PASSWORD_FIELD],
   },
-  leumi: {
+  [CompanyTypes.leumi]: {
     name: 'Bank Leumi',
     loginFields: ['username', PASSWORD_FIELD],
   },
-  mizrahi: {
+  [CompanyTypes.mizrahi]: {
     name: 'Mizrahi Bank',
     loginFields: ['username', PASSWORD_FIELD],
   },
-  discount: {
+  [CompanyTypes.discount]: {
     name: 'Discount Bank',
     loginFields: ['id', PASSWORD_FIELD, 'num'],
   },
-  otsarHahayal: {
+  [CompanyTypes.otsarHahayal]: {
     name: 'Bank Otsar Hahayal',
     loginFields: ['username', PASSWORD_FIELD],
   },
-  leumiCard: { // TODO remove in Major version
+  [CompanyTypes.leumiCard]: { // TODO remove in Major version
     name: 'Leumi Card',
     loginFields: ['username', PASSWORD_FIELD],
   },
-  max: {
+  [CompanyTypes.max]: {
     name: 'Max',
     loginFields: ['username', PASSWORD_FIELD],
   },
-  visaCal: {
+  [CompanyTypes.visaCal]: {
     name: 'Visa Cal',
     loginFields: ['username', PASSWORD_FIELD],
   },
-  isracard: {
+  [CompanyTypes.isracard]: {
     name: 'Isracard',
     loginFields: ['id', 'card6Digits', PASSWORD_FIELD],
   },
-  amex: {
+  [CompanyTypes.amex]: {
     name: 'Amex',
     loginFields: ['id', 'card6Digits', PASSWORD_FIELD],
   },
-  union: {
+  [CompanyTypes.union]: {
     name: 'Union',
     loginFields: ['username', PASSWORD_FIELD],
   },
-  beinleumi: {
+  [CompanyTypes.beinleumi]: {
     name: 'Beinleumi',
     loginFields: ['username', PASSWORD_FIELD],
   },
