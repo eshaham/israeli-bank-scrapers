@@ -20,7 +20,7 @@ const BASE_URL = 'https://cal4u.cal-online.co.il/Cal4U';
 const AUTH_URL = 'https://connect.cal-online.co.il/api/authentication/login';
 const DATE_FORMAT = 'DD/MM/YYYY';
 
-const PASSWORD_EXPIRED_MSG = 'תוקף הסיסמא פג';
+const PASSWORD_EXPIRED_MSGS = ['תוקף הסיסמא פג', 'אנו מתנצלים, עקב תקלה לא ניתן לבצע את הפעולה כעת.|ניתן לנסות שנית במועד מאוחר יותר'];
 const INVALID_CREDENTIALS = 'שם המשתמש או הסיסמה שהוזנו שגויים';
 const NO_DATA_FOUND_MSG = 'לא נמצאו חיובים לטווח תאריכים זה';
 
@@ -238,7 +238,7 @@ class VisaCalScraper extends BaseScraper {
     this.emitProgress(SCRAPE_PROGRESS_TYPES.LOGGING_IN);
 
     const authResponse = await fetchPost(AUTH_URL, authRequest, HEADER_SITE);
-    if (authResponse === PASSWORD_EXPIRED_MSG) {
+    if (PASSWORD_EXPIRED_MSGS.includes(authResponse)) {
       return {
         success: false,
         errorType: LOGIN_RESULT.CHANGE_PASSWORD,
