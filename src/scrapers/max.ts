@@ -12,15 +12,15 @@ import { ScaperOptions, ScraperCredentials } from './base-scraper';
 
 
 interface ScrapedTransaction {
-  shortCardNumber: string,
-  paymentDate?: string,
-  purchaseDate: string,
-  actualPaymentAmount: string,
-  originalCurrency: string,
-  originalAmount: number,
-  planName: string,
-  comments: string,
-  merchantName: string,
+  shortCardNumber: string;
+  paymentDate?: string;
+  purchaseDate: string;
+  actualPaymentAmount: string;
+  originalCurrency: string;
+  originalAmount: number;
+  planName: string;
+  comments: string;
+  merchantName: string;
 }
 
 const BASE_ACTIONS_URL = 'https://online.max.co.il';
@@ -128,8 +128,8 @@ function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
 }
 interface ScrapedTransactionsResult{
   result?: {
-    transactions: ScrapedTransaction[]
-  }
+    transactions: ScrapedTransaction[];
+  };
 }
 
 async function fetchTransactionsForMonth(page: Page, monthMoment: Moment) {

@@ -13,42 +13,43 @@ import { ScaperOptions, ScraperCredentials } from './base-scraper';
 
 const DATE_FORMAT = 'YYYYMMDD';
 
-declare module window {
+// eslint-disable-next-line @typescript-eslint/no-namespace
+declare namespace window {
   const bnhpApp: any;
 }
 
 interface ScrapedTransaction {
-  serialNumber?: number,
-  activityDescription?: string,
-  eventAmount: number,
-  valueDate?: string,
-  eventDate?: string,
-  referenceNumber?: number,
-  ScrapedTransaction?: string,
-  eventActivityTypeCode: number,
+  serialNumber?: number;
+  activityDescription?: string;
+  eventAmount: number;
+  valueDate?: string;
+  eventDate?: string;
+  referenceNumber?: number;
+  ScrapedTransaction?: string;
+  eventActivityTypeCode: number;
   beneficiaryDetailsData?: {
-    partyHeadline?: string,
-    partyName?: string,
-    messageHeadline?: string,
-    messageDetail?: string,
-  }
+    partyHeadline?: string;
+    partyName?: string;
+    messageHeadline?: string;
+    messageDetail?: string;
+  };
 }
 
 type FetchedAccountData = {
-  bankNumber: string,
-  accountNumber: string,
-  branchNumber: string
+  bankNumber: string;
+  accountNumber: string;
+  branchNumber: string;
 }[];
 
 type FetchedAccountTransactionsData = {
-  transactions: ScrapedTransaction[]
+  transactions: ScrapedTransaction[];
 };
 
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((txn) => {
     const isOutbound = txn.eventActivityTypeCode === 2;
 
-    let memo: string = '';
+    let memo = '';
     if (txn.beneficiaryDetailsData) {
       const {
         partyHeadline,

@@ -52,14 +52,14 @@ function getAmountData(amountStr: string) {
 }
 
 interface ScrapedTransaction {
-  status: TransactionStatuses,
-  description?: string,
-  memo?: string,
-  balance?: string,
-  credit?: string,
-  debit?: string,
-  reference?: string,
-  date?: string,
+  status: TransactionStatuses;
+  description?: string;
+  memo?: string;
+  balance?: string;
+  credit?: string;
+  debit?: string;
+  reference?: string;
+  date?: string;
 }
 
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
@@ -86,8 +86,8 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   });
 }
 interface ScrapedTds {
-  classList: string,
-  innerText: string
+  classList: string;
+  innerText: string;
 }
 
 async function extractCompletedTransactionsFromPage(page: Page): Promise<ScrapedTransaction[]> {

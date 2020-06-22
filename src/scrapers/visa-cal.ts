@@ -44,52 +44,52 @@ const HEADER_SITE = { 'X-Site-Id': '8D37DF16-5812-4ACD-BAE7-CD1A5BFA2206' };
 interface BankDebitsResponse {
   Response: {
     Status: {
-      Succeeded: boolean,
-      Description: string,
-      Message: string
-    }
-  },
+      Succeeded: boolean;
+      Description: string;
+      Message: string;
+    };
+  };
   Debits: {
-    CardId: string,
-    Date: string,
-  }[]
+    CardId: string;
+    Date: string;
+  }[];
 }
 
 interface BankAccountCard {
-  Id: string,
-  IsEffectiveInd: boolean,
-  LastFourDigits: string,
+  Id: string;
+  IsEffectiveInd: boolean;
+  LastFourDigits: string;
 }
 
 interface CardByAccountResponse {
   Response: {
     Status: {
-      Succeeded: boolean,
-    }
-  }
+      Succeeded: boolean;
+    };
+  };
   BankAccounts: {
-    AccountID: string
-    Cards: BankAccountCard[]
-  }[]
+    AccountID: string;
+    Cards: BankAccountCard[];
+  }[];
 }
 
 interface ScrapedTransaction {
-  TransType: string,
-  Date: string,
-  DebitDate: string,
+  TransType: string;
+  Date: string;
+  DebitDate: string;
   Amount: {
-    Value: number,
-    Symbol: string
-  },
+    Value: number;
+    Symbol: string;
+  };
   DebitAmount: {
-    Value: number,
-  },
+    Value: number;
+  };
   MerchantDetails: {
-    Name: string
-  },
-  TransTypeDesc: string,
-  TotalPayments?: string,
-  CurrentPayment?: string
+    Name: string;
+  };
+  TransTypeDesc: string;
+  TotalPayments?: string;
+  CurrentPayment?: string;
 }
 
 function getBankDebitsUrl(accountId: string) {
@@ -207,16 +207,16 @@ async function getBankDebits(authHeader: Record<string, any>, accountId: string)
 
 async function getTransactionsNextPage(authHeader: Record<string, any>) {
   const hasNextPageUrl = `${BASE_URL}/CalTransNextPage`;
-  return fetchGet<{ HasNextPage: boolean,
-    Transactions?: ScrapedTransaction[]}>(hasNextPageUrl, authHeader);
+  return fetchGet<{ HasNextPage: boolean;
+    Transactions?: ScrapedTransaction[];}>(hasNextPageUrl, authHeader);
 }
 
 async function fetchTxns(authHeader: Record<string, any>, cardId: string, debitDates: string[]): Promise<ScrapedTransaction[]> {
   const txns: ScrapedTransaction[] = [];
   for (const date of debitDates) {
     const fetchTxnUrl = getTransactionsUrl(cardId, date);
-    let txnResponse = await fetchGet<{ HasNextPage: boolean,
-      Transactions?: ScrapedTransaction[]}>(fetchTxnUrl, authHeader);
+    let txnResponse = await fetchGet<{ HasNextPage: boolean;
+      Transactions?: ScrapedTransaction[];}>(fetchTxnUrl, authHeader);
     if (txnResponse.Transactions) {
       txns.push(...txnResponse.Transactions);
     }
@@ -284,7 +284,7 @@ async function getTransactionsForAllAccounts(authHeader: Record<string, any>, st
 }
 
 class VisaCalScraper extends BaseScraper {
-  private authHeader: string = '';
+  private authHeader = '';
 
   async login(credentials: ScraperCredentials) {
     const authRequest = {

@@ -58,7 +58,7 @@ export async function fetchGetWithinPage<TResult>(page: Page, url: string): Prom
 }
 
 export async function fetchPostWithinPage<TResult>(page: Page, url: string,
-  data: Record<string, any>, extraHeaders:Record<string, any> = {}): Promise<TResult | null> {
+  data: Record<string, any>, extraHeaders: Record<string, any> = {}): Promise<TResult | null> {
   return page.evaluate<(...args: any[]) => Promise<TResult | null>>((url: string, data: Record<string, any>,
     extraHeaders: Record<string, any>) => {
     return new Promise((resolve, reject) => {

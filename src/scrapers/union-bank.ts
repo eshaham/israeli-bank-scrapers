@@ -52,13 +52,13 @@ function getAmountData(amountStr: string) {
 }
 
 interface ScrapedTransaction {
-  credit: string,
-  debit: string,
-  date: string,
-  reference?: string,
-  description: string,
-  memo: string,
-  status: TransactionStatuses
+  credit: string;
+  debit: string;
+  date: string;
+  reference?: string;
+  description: string;
+  memo: string;
+  status: TransactionStatuses;
 }
 
 function getTxnAmount(txn: ScrapedTransaction) {
@@ -86,7 +86,7 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   });
 }
 
-type TransactionsTr = { id: string, innerTds: TransactionsTrTds; };
+type TransactionsTr = { id: string, innerTds: TransactionsTrTds };
 type TransactionTableHeaders = Record<string, number>;
 type TransactionsTrTds = string[];
 
@@ -167,7 +167,7 @@ async function extractTransactionsFromTable(page: Page, tableTypeId: string, txn
 
   const transactionsRows = await pageEvalAll<TransactionsTr[]>(page, `#WorkSpaceBox #${tableTypeId} tr[class]:not([class='header'])`, [], (trs) => {
     return (trs as HTMLElement[]).map((tr) => ({
-      id: (tr as HTMLElement).getAttribute('id') || '',
+      id: (tr).getAttribute('id') || '',
       innerTds: Array.from(tr.getElementsByTagName('td')).map((td) => (td as HTMLElement).innerText),
     }));
   });

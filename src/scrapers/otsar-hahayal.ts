@@ -17,14 +17,14 @@ const BASE_URL = 'https://online.bankotsar.co.il';
 const DATE_FORMAT = 'DD/MM/YY';
 
 interface ScrapedTransaction {
-  balance?: string,
-  debit?: string,
-  credit?: string,
-  memo?: string,
-  status?: string,
-  reference?: string,
-  description?: string,
-  date: string,
+  balance?: string;
+  debit?: string;
+  credit?: string;
+  memo?: string;
+  status?: string;
+  reference?: string;
+  description?: string;
+  date: string;
 }
 
 function getPossibleLoginResults(page: Page) {
@@ -97,7 +97,7 @@ async function parseTransactionPage(page: Page): Promise<ScrapedTransaction[]> {
   const tdsValues = await pageEvalAll<{ classList: string, innerText: string}[]>(page, '#dataTable077 tbody tr td', [], (tds) => {
     return (tds as HTMLElement[]).map((td) => ({
       classList: td.getAttribute('class') || '',
-      innerText: (td as HTMLElement).innerText || '',
+      innerText: (td).innerText || '',
     }));
   });
 

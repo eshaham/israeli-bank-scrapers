@@ -13,26 +13,26 @@ import {
 import { ScraperErrorTypes, ScraperCredentials } from './base-scraper';
 
 interface ScrapedTransaction {
-  RecTypeSpecified: boolean,
-  MC02PeulaTaaEZ: string,
-  MC02SchumEZ: number,
-  MC02AsmahtaMekoritEZ: string,
-  MC02TnuaTeurEZ: string,
+  RecTypeSpecified: boolean;
+  MC02PeulaTaaEZ: string;
+  MC02SchumEZ: number;
+  MC02AsmahtaMekoritEZ: string;
+  MC02TnuaTeurEZ: string;
 }
 
 interface ScrapedTransactionsResult {
   header: {
-    success: boolean
-    messages: { text: string }[]
-  }
+    success: boolean;
+    messages: { text: string }[];
+  };
   body: {
     fields: {
-      AccountNumber: string
-    },
+      AccountNumber: string;
+    };
     table: {
-      rows: ScrapedTransaction[]
-    }
-  }
+      rows: ScrapedTransaction[];
+    };
+  };
 }
 
 const BASE_WEBSITE_URL = 'https://www.mizrahi-tefahot.co.il';

@@ -17,24 +17,24 @@ const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
 
 interface ScrapedTransaction {
-  OperationNumber: number,
-  OperationDate: string,
-  ValueDate: string,
-  OperationAmount: number,
-  OperationDescriptionToDisplay: string
+  OperationNumber: number;
+  OperationDate: string;
+  ValueDate: string;
+  OperationAmount: number;
+  OperationDescriptionToDisplay: string;
 }
 
 interface ScrapedAccountData {
   UserAccountsData: {
-    DefaultAccountNumber: string
-  }
+    DefaultAccountNumber: string;
+  };
 }
 
 interface ScrapedTransactionData {
-  Error?: { MsgText: string },
+  Error?: { MsgText: string };
   CurrentAccountLastTransactions?: {
-    OperationEntry: ScrapedTransaction[]
-  }
+    OperationEntry: ScrapedTransaction[];
+  };
 }
 
 function convertTransactions(txns: ScrapedTransaction[], txnStatus: TransactionStatuses): Transaction[] {

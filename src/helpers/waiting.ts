@@ -17,7 +17,7 @@ function timeoutPromise(ms: number, promise: Promise<any>, description: string) 
   ]);
 }
 
-export function waitUntil(asyncTest: () => Promise<any>, description: string = '', timeout = 10000, interval = 100) {
+export function waitUntil(asyncTest: () => Promise<any>, description = '', timeout = 10000, interval = 100) {
   const promise = new Promise((resolve, reject) => {
     function wait() {
       asyncTest().then((value) => {

@@ -29,70 +29,70 @@ const INSTALLMENTS_KEYWORD = 'תשלום';
 const DATE_FORMAT = 'DD/MM/YYYY';
 
 interface ExtendedScraperOptions extends ScaperOptions {
-  servicesUrl: string,
-  companyCode: string
+  servicesUrl: string;
+  companyCode: string;
 }
 
 type ScrapedAccountsWithIndex = Record<string, TransactionsAccount & { index: number }>;
 
 interface ScrapedTransaction {
-  dealSumType: string,
-  voucherNumberRatzOutbound: string,
-  voucherNumberRatz: string,
-  moreInfo?: string,
-  dealSumOutbound: boolean,
-  currencyId: string,
-  dealSum: number,
-  fullPurchaseDate?: string,
-  fullPurchaseDateOutbound?: string,
-  fullSupplierNameHeb: string,
-  fullSupplierNameOutbound: string,
-  paymentSum: number,
-  paymentSumOutbound: number
+  dealSumType: string;
+  voucherNumberRatzOutbound: string;
+  voucherNumberRatz: string;
+  moreInfo?: string;
+  dealSumOutbound: boolean;
+  currencyId: string;
+  dealSum: number;
+  fullPurchaseDate?: string;
+  fullPurchaseDateOutbound?: string;
+  fullSupplierNameHeb: string;
+  fullSupplierNameOutbound: string;
+  paymentSum: number;
+  paymentSumOutbound: number;
 }
 
 
 interface ScrapedAccount {
-  index: number,
-  accountNumber: string,
-  processedDate: string
+  index: number;
+  accountNumber: string;
+  processedDate: string;
 }
 
 interface ScrapedLoginValidation {
   Header: {
-    Status: string
-  },
+    Status: string;
+  };
   ValidateIdDataBean?: {
-    userName?: string,
-    returnCode: string
-  }
+    userName?: string;
+    returnCode: string;
+  };
 }
 
 interface ScrapedAccountsWithinPageResponse {
   Header: {
-    Status: string
-  },
+    Status: string;
+  };
   DashboardMonthBean?: {
     cardsCharges: {
-      cardIndex: string,
-      cardNumber: string,
-      billingDate: string
-    }[]
-  }
+      cardIndex: string;
+      cardNumber: string;
+      billingDate: string;
+    }[];
+  };
 }
 
 interface ScrapedCurrentCardTransactions {
-  txnIsrael?: ScrapedTransaction[],
-  txnAbroad?: ScrapedTransaction[]
+  txnIsrael?: ScrapedTransaction[];
+  txnAbroad?: ScrapedTransaction[];
 }
 
 interface ScrapedTransactionData {
   Header?: {
-    Status: string
-  },
+    Status: string;
+  };
   CardsTransactionsListBean?: Record<string, {
-    CurrentCardTransactions: ScrapedCurrentCardTransactions[]
-  }>
+    CurrentCardTransactions: ScrapedCurrentCardTransactions[];
+  }>;
 }
 
 function getAccountsUrl(servicesUrl: string, monthMoment: Moment) {

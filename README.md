@@ -35,7 +35,6 @@ Then you can simply import and use it in your node module:
 
 ```node
 import { CompanyTypes, createScraper } from 'israeli-bank-scrapers';
-// const { createScraper, CompanyTypes } =  require('israeli-bank-scrapers'); // use require if you don't support modules import
 
 (async function() {
   try {
@@ -106,7 +105,6 @@ The structure of the result object is as follows:
 You can also use the `SCRAPERS` list to get scraper metadata:
 ```node
 import { SCRAPERS } from 'israeli-bank-scrapers';
-// const { SCRAPERS } = require('israeli-bank-scrapers');
 ```
 
 The return value is a list of scraper metadata:

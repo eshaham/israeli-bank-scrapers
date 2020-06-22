@@ -38,7 +38,7 @@ const NEXT_PAGE_LINK = 'a#Npage.paging';
 
 type TransactionsColsTypes = Record<string, number>;
 type TransactionsTrTds = string[];
-type TransactionsTr = { innerTds: TransactionsTrTds; };
+type TransactionsTr = { innerTds: TransactionsTrTds };
 
 interface ScrapedTransaction {
   reference: string;
@@ -47,7 +47,7 @@ interface ScrapedTransaction {
   debit: string;
   memo?: string;
   description: string;
-  status: TransactionStatuses
+  status: TransactionStatuses;
 }
 
 

@@ -8,7 +8,7 @@ function isNormalTransaction(txn: any): boolean {
   return txn && txn.type === TransactionTypes.Normal;
 }
 
-function isInstallmentTransaction(txn: any) : boolean {
+function isInstallmentTransaction(txn: any): boolean {
   return txn && txn.type === TransactionTypes.Installments;
 }
 

@@ -100,6 +100,7 @@ export class BaseScraper {
   constructor(public options: ScaperOptions) {
   }
 
+  // eslint-disable-next-line  @typescript-eslint/require-await
   async initialize() {
     this.emitProgress(ScaperProgressTypes.Initializing);
   }
@@ -141,15 +142,17 @@ export class BaseScraper {
     return scrapeResult;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
   async login(_credentials: Record<string, string>): Promise<ScaperLoginResult> {
     throw new Error(`login() is not created in ${this.options.companyId}`);
   }
 
+  // eslint-disable-next-line  @typescript-eslint/require-await
   async fetchData(): Promise<ScaperScrapingResult> {
     throw new Error(`fetchData() is not created in ${this.options.companyId}`);
   }
 
+  // eslint-disable-next-line  @typescript-eslint/require-await
   async terminate() {
     this.emitProgress(ScaperProgressTypes.Terminating);
   }
