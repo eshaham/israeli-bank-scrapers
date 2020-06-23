@@ -31,8 +31,8 @@ export function getTestsConfig() {
   }
 
   try {
-    const configPath = path.join(__dirname, '.tests-config');
-    testsConfig = require(configPath).default;
+    const configPath = path.join(__dirname, '.tests-config.js');
+    testsConfig = require(configPath);
     return testsConfig;
   } catch (e) {
     console.error(e);

@@ -6,10 +6,10 @@ module.exports = {
   coverageDirectory: 'coverage',
   rootDir: './src',
   transform: {
-    '^.+\\.(t|j)s$': 'ts-jest'
+    '^.+\\.ts$': 'ts-jest'
   },
   setupFiles: [
-    '../src/tests/jest-setup.ts',
+    './tests/jest-setup.ts',
   ],
   testEnvironment: 'node',
 };
