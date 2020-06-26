@@ -72,7 +72,8 @@ copy and adjust the json below with relevant credentials and assign it to enviro
      "startDate": "2019-06-01",
      "combineInstallments": false,
      "showBrowser": true,
-     "verbose": false
+     "verbose": false,
+     "args": []
    },
    "credentials": {
      "leumi": { "username": "demouser", "password": "demopassword" }

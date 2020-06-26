@@ -78,10 +78,12 @@ class BaseScraperWithBrowser extends BaseScraper {
       this.browser = this.options.browser;
     } else {
       const executablePath = this.options.executablePath || undefined;
+      const args = this.options.args || [];
       this.browser = await puppeteer.launch({
         env,
         headless: !this.options.showBrowser,
         executablePath,
+        args,
       });
     }
 
