@@ -125,14 +125,17 @@ async function fetchTransactionsForMonth(page, monthMoment) {
 
   if (!data.result) return transactionsByAccount;
 
-  data.result.transactions.forEach((transaction) => {
-    if (!transactionsByAccount[transaction.shortCardNumber]) {
-      transactionsByAccount[transaction.shortCardNumber] = [];
-    }
+  data.result.transactions
+    // Filter out non-transactions without a plan type, e.g. summary rows
+    .filter((transaction) => !!transaction.planName)
+    .forEach((transaction) => {
+      if (!transactionsByAccount[transaction.shortCardNumber]) {
+        transactionsByAccount[transaction.shortCardNumber] = [];
+      }
 
-    const mappedTransaction = mapTransaction(transaction);
-    transactionsByAccount[transaction.shortCardNumber].push(mappedTransaction);
-  });
+      const mappedTransaction = mapTransaction(transaction);
+      transactionsByAccount[transaction.shortCardNumber].push(mappedTransaction);
+    });
 
   return transactionsByAccount;
 }
