@@ -7,6 +7,7 @@
     "npm": ">= 5.3.0"
   },
   "main": "lib/index.js",
+  "publishConfig": { "registry": "https://npm.pkg.github.com/" }
   "scripts": {
     "clean": "rimraf lib",
     "test": "cross-env BABEL_ENV=test jest",
