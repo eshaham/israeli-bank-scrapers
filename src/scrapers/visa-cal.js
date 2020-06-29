@@ -23,6 +23,7 @@ const DATE_FORMAT = 'DD/MM/YYYY';
 const PASSWORD_EXPIRED_MSGS = ['תוקף הסיסמא פג', 'אנו מתנצלים, עקב תקלה לא ניתן לבצע את הפעולה כעת.|ניתן לנסות שנית במועד מאוחר יותר'];
 const INVALID_CREDENTIALS = 'שם המשתמש או הסיסמה שהוזנו שגויים';
 const NO_DATA_FOUND_MSG = 'לא נמצאו חיובים לטווח תאריכים זה';
+const BLOCKED_USER_MSG = 'הכניסה למנוי נחסמה עקב ריבוי נסיונות כושלים. לשחרור המנוי באפשרותך לחדש סיסמה על ידי בחירת שכחתי שם משתמש סיסמה';
 
 const NORMAL_TYPE_CODE = '5';
 const REFUND_TYPE_CODE = '6';
@@ -249,6 +250,13 @@ class VisaCalScraper extends BaseScraper {
       return {
         success: false,
         errorType: LOGIN_RESULT.INVALID_PASSWORD,
+      };
+    }
+
+    if (authResponse === BLOCKED_USER_MSG) {
+      return {
+        success: false,
+        errorType: LOGIN_RESULT.BLOCKED_USER,
       };
     }
 
