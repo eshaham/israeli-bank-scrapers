@@ -87,12 +87,21 @@ class BaseScraperWithBrowser extends BaseScraper {
       });
     }
 
+    if (this.options.prepareBrowser) {
+      await this.options.prepareBrowser(this.browser);
+    }
+
     const pages = await this.browser.pages();
     if (pages.length) {
       [this.page] = pages;
     } else {
       this.page = await this.browser.newPage();
     }
+
+    if (this.options.preparePage) {
+      await this.options.preparePage(this.page);
+    }
+
     await this.page.setViewport({
       width: VIEWPORT_WIDTH,
       height: VIEWPORT_HEIGHT,
