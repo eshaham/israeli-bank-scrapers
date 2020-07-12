@@ -92,7 +92,7 @@ The structure of the result object is as follows:
       status: string //can either be 'completed' or 'pending'
     }],
   }],
-  errorType: "invalidPassword"|"changePassword"|"timeout"|"generic", // only on success=false
+  errorType: "INVALID_PASSWORD"|"CHANGE_PASSWORD"|"ACCOUNT_BLOCKED"|"UNKNOWN_ERROR"|"TIMEOUT"|"GENERIC", // only on success=false
   errorMessage: string, // only on success=false
 }
 ```
