@@ -186,7 +186,7 @@ You can override this async function however way you want, as long as your retur
       status: string //can either be 'completed' or 'pending'
     }],
   }],
-  errorType: "invalidPassword"|"changePassword"|"timeout"|"generic", // only on success=false
+  errorType: "INVALID_PASSWORD"|"CHANGE_PASSWORD"|"ACCOUNT_BLOCKED"|"UNKNOWN_ERROR"|"TIMEOUT"|"GENERIC", // only on success=false
   errorMessage: string, // only on success=false
 }
 ```
