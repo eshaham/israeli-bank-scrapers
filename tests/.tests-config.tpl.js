@@ -7,6 +7,7 @@ export default {
     combineInstallments: false,
     showBrowser: true,
     verbose: false,
+    args: []
   },
   credentials: { // commented companies will be skipped automatically, uncomment those you wish to test
     // hapoalim: { userCode: '', password: '' },

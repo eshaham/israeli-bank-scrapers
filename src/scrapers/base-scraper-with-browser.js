@@ -78,11 +78,17 @@ class BaseScraperWithBrowser extends BaseScraper {
       this.browser = this.options.browser;
     } else {
       const executablePath = this.options.executablePath || undefined;
+      const args = this.options.args || [];
       this.browser = await puppeteer.launch({
         env,
         headless: !this.options.showBrowser,
         executablePath,
+        args,
       });
+    }
+
+    if (this.options.prepareBrowser) {
+      await this.options.prepareBrowser(this.browser);
     }
 
     const pages = await this.browser.pages();
@@ -91,6 +97,11 @@ class BaseScraperWithBrowser extends BaseScraper {
     } else {
       this.page = await this.browser.newPage();
     }
+
+    if (this.options.preparePage) {
+      await this.options.preparePage(this.page);
+    }
+
     await this.page.setViewport({
       width: VIEWPORT_WIDTH,
       height: VIEWPORT_HEIGHT,

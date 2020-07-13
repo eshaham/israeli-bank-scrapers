@@ -66,9 +66,14 @@ The definition of the `options` object is as follows:
   showBrowser: boolean, // shows the browser while scraping, good for debugging (default false)
   verbose: boolean, // include more debug info about in the output
   browser : Browser, // optional option from init puppeteer browser instance outside the libary scope. you can get browser diretly from puppeteer via `puppeteer.launch()` command.
-  executablePath: string // optional. provide a patch to local chromium to be used by puppeteer. Relevant when using `israeli-bank-scrapers-core` library 
+  executablePath: string, // optional. provide a patch to local chromium to be used by puppeteer. Relevant when using `israeli-bank-scrapers-core` library
+  args: {}, // optional.  additional arguments to pass to the browser instance. The list of flags can be found below in (*),
+  prepareBrowser: async (browser) => {}, // optional. adjust the browser instance before it is being used. 
+  preparePage: async (page) => {}, // optional. adjust the page instance before it is being used.
 }
 ```
+(*) links of flags that can be used with `args` options can be found [here](https://peter.sh/experiments/chromium-command-line-switches/), and [here](https://developer.mozilla.org/en-US/docs/Mozilla/Command_Line_Options) is the list of Firefox flags.
+
 The structure of the result object is as follows:
 ```node
 {
