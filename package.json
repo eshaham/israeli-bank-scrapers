@@ -65,6 +65,7 @@
     "uuid": "^3.3.2"
   },
   "files": [
-    "lib/**/*"
+    "lib/**/*",
+    "puppeteer-config.json"
   ]
 }
