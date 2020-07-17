@@ -1,8 +1,9 @@
-import puppeteerConfig from '../puppeteer-config.json';
-
 export { default as createScraper } from './scrapers/factory';
 export { SCRAPERS } from './definitions';
+import { PUPPETEER_REVISIONS } from 'puppeteer';
 
 export function getPuppeteerConfig() {
-  return { ...puppeteerConfig };
+  return {
+    chromiumRevision: PUPPETEER_REVISIONS.chromium
+  };
 }
