@@ -15,7 +15,6 @@ export default function createScraper(options) {
     case 'hapoalim':
       return new HapoalimScraper(options);
     case 'hapoalimBeOnline':
-      // eslint-disable-next-line no-console
       console.warn("hapoalimBeOnline is deprecated, use 'hapoalim' instead");
       return new HapoalimScraper(options);
     case 'leumi':
@@ -29,7 +28,6 @@ export default function createScraper(options) {
     case 'visaCal':
       return new VisaCalScraper(options);
     case 'leumiCard':
-      // eslint-disable-next-line no-console
       console.warn("leumiCard is deprecated, use 'max' instead");
       return new MaxScraper(options);
     case 'max':
