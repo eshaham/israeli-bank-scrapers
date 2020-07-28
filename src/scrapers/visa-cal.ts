@@ -22,9 +22,10 @@ const BASE_URL = 'https://cal4u.cal-online.co.il/Cal4U';
 const AUTH_URL = 'https://connect.cal-online.co.il/api/authentication/login';
 const DATE_FORMAT = 'DD/MM/YYYY';
 
-const PASSWORD_EXPIRED_MSG = 'תוקף הסיסמא פג';
+const PASSWORD_EXPIRED_MSGS = ['תוקף הסיסמא פג', 'אנו מתנצלים, עקב תקלה לא ניתן לבצע את הפעולה כעת.|ניתן לנסות שנית במועד מאוחר יותר'];
 const INVALID_CREDENTIALS = 'שם המשתמש או הסיסמה שהוזנו שגויים';
 const NO_DATA_FOUND_MSG = 'לא נמצאו חיובים לטווח תאריכים זה';
+const ACCOUNT_BLOCKED_MSG = 'הכניסה למנוי נחסמה עקב ריבוי נסיונות כושלים. לשחרור המנוי באפשרותך לחדש סיסמה על ידי בחירת שכחתי שם משתמש סיסמה';
 
 const NORMAL_TYPE_CODE = '5';
 const REFUND_TYPE_CODE = '6';
@@ -37,6 +38,7 @@ const MEMBERSHIP_FEE_TYPE_CODE = '67';
 const SERVICES_REFUND_TYPE_CODE = '71';
 const SERVICES_TYPE_CODE = '72';
 const REFUND_TYPE_CODE_2 = '76';
+const CANCEL_PAYMENT_CODE = '86';
 
 const HEADER_SITE = { 'X-Site-Id': '8D37DF16-5812-4ACD-BAE7-CD1A5BFA2206' };
 
@@ -127,6 +129,7 @@ function convertTransactionType(txnType: string) {
     case WITHDRAWAL_TYPE_CODE:
     case WITHDRAWAL_TYPE_CODE_2:
     case REFUND_TYPE_CODE_2:
+    case CANCEL_PAYMENT_CODE:
     case SERVICES_REFUND_TYPE_CODE:
     case MEMBERSHIP_FEE_TYPE_CODE:
     case SERVICES_TYPE_CODE:
@@ -296,7 +299,7 @@ class VisaCalScraper extends BaseScraper {
     this.emitProgress(ScaperProgressTypes.LoggingIn);
 
     const authResponse = await fetchPost(AUTH_URL, authRequest, HEADER_SITE);
-    if (authResponse === PASSWORD_EXPIRED_MSG) {
+    if (PASSWORD_EXPIRED_MSGS.includes(authResponse)) {
       return {
         success: false,
         errorType: ScraperErrorTypes.ChangePassword,
@@ -307,6 +310,13 @@ class VisaCalScraper extends BaseScraper {
       return {
         success: false,
         errorType: ScraperErrorTypes.InvalidPassword,
+      };
+    }
+
+    if (authResponse === ACCOUNT_BLOCKED_MSG) {
+      return {
+        success: false,
+        errorType: ScraperErrorTypes.AccountBlocked,
       };
     }
 

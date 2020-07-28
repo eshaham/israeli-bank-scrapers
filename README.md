@@ -97,7 +97,7 @@ The structure of the result object is as follows:
       status: string //can either be 'completed' or 'pending'
     }],
   }],
-  errorType: "invalidPassword"|"changePassword"|"timeout"|"generic", // only on success=false
+  errorType: "INVALID_PASSWORD"|"CHANGE_PASSWORD"|"ACCOUNT_BLOCKED"|"UNKNOWN_ERROR"|"TIMEOUT"|"GENERIC", // only on success=false
   errorMessage: string, // only on success=false
 }
 ```
@@ -271,6 +271,7 @@ These are the projects known to be using this module:
 - [Israeli YNAB updater](https://github.com/eshaham/israeli-ynab-updater) - A command line tool for exporting banks data to CSVs, formatted specifically for [YNAB](https://www.youneedabudget.com)
 - [Israel Finance Telegram Bot](https://github.com/GuyLewin/israel-finance-telegram-bot) - A simple telegram bot that sends notifications about new transactions and interacts with them
 - [Automated budget tracking app](https://github.com/brafdlog/budget-tracking) - An app for automatically sending transactions from Israeli banks and credit cards to budget tracking apps
+- [Oshi](https://github.com/baruchiro/israeli-bank-scrapers-desktop) - Secure desktop app for retriving your transactions from all israeli banks and credit cards
 
 Built something interesting you want to share here? [Let me know](https://goo.gl/forms/5Fb9JAjvzMIpmzqo2).
 

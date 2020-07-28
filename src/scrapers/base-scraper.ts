@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { Browser, Page } from 'puppeteer';
 import { TimeoutError } from '../helpers/waiting';
 import { TransactionsAccount } from '../transactions';
 import { CompanyTypes } from '../definitions';
@@ -9,6 +10,7 @@ export enum ScraperErrorTypes {
   InvalidPassword ='INVALID_PASSWORD',
   ChangePassword = 'CHANGE_PASSWORD',
   Timeout = 'TIMEOUT',
+  AccountBlocked = 'ACCOUNT_BLOCKED',
   Generic = 'GENERIC',
   General = 'GENERAL_ERROR'
 }
@@ -65,6 +67,28 @@ export interface ScaperOptions {
    * if set to true, all installment transactions will be combine into the first one
    */
   combineInstallments?: boolean;
+
+  /**
+   * additional arguments to pass to the browser instance. The list of flags can be found in
+   *
+   * https://developer.mozilla.org/en-US/docs/Mozilla/Command_Line_Options
+   * https://peter.sh/experiments/chromium-command-line-switches/
+   */
+  args?: string[];
+
+  /**
+   * adjust the browser instance before it is being used
+   *
+   * @param browser
+   */
+  prepareBrowser: (browser: Browser) => Promise<void>;
+
+  /**
+   * adjust the page instance before it is being used.
+   *
+   * @param page
+   */
+  preparePage: (page: Page) => Promise<void>;
 }
 
 export enum ScaperProgressTypes {

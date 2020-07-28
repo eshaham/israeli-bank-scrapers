@@ -12,12 +12,24 @@ const VIEWPORT_WIDTH = 1024;
 const VIEWPORT_HEIGHT = 768;
 const OK_STATUS = 200;
 
-export enum LoginResults {
-  Success = 'Success',
-  InvalidPassword = 'InvalidPassword',
-  ChangePassword = 'ChangePassword',
-  UnknownError = 'UnknownError',
+enum LoginBaseResults {
+  Success = 'SUCCESS',
+  UnknownError = 'UNKNOWN_ERROR'
 }
+
+const {
+  Timeout, Generic, General, ...rest
+} = ScraperErrorTypes;
+export const LoginResults = {
+  ...rest,
+  ...LoginBaseResults,
+};
+
+export type LoginResults = Exclude<ScraperErrorTypes,
+ScraperErrorTypes.Timeout
+| ScraperErrorTypes.Generic
+| ScraperErrorTypes.General> | LoginBaseResults;
+
 export type PossibleLoginResults = {
   [key in LoginResults]?: (string | RegExp | (() => Promise<boolean>))[]
 };
@@ -112,11 +124,17 @@ class BaseScraperWithBrowser extends BaseScraper {
       this.browser = this.options.browser;
     } else {
       const executablePath = this.options.executablePath || undefined;
+      const args = this.options.args || [];
       this.browser = await puppeteer.launch({
         env,
         headless: !this.options.showBrowser,
         executablePath,
+        args,
       });
+    }
+
+    if (this.options.prepareBrowser) {
+      await this.options.prepareBrowser(this.browser);
     }
 
     if (!this.browser) {
@@ -129,6 +147,11 @@ class BaseScraperWithBrowser extends BaseScraper {
     } else {
       this.page = await this.browser.newPage();
     }
+
+    if (this.options.preparePage) {
+      await this.options.preparePage(this.page);
+    }
+
     await this.page.setViewport({
       width: VIEWPORT_WIDTH,
       height: VIEWPORT_HEIGHT,

@@ -71,7 +71,8 @@ copy and adjust the json below with relevant credentials and assign it to enviro
      "startDate": "2019-06-01",
      "combineInstallments": false,
      "showBrowser": true,
-     "verbose": false
+     "verbose": false,
+     "args": []
    },
    "credentials": {
      "leumi": { "username": "demouser", "password": "demopassword" }
@@ -166,4 +167,4 @@ function getLoginOptions(credentials) {
 ```
 
 ### Overriding fetchData()
-You can override this async function however way you want, as long as your return results as `ScaperScrapingResult` (checkout declaration [here](./src/scrapers/base-scraper.ts)).
+You can override this async function however way you want, as long as your return results as `ScaperScrapingResult` (checkout declaration [here](./src/scrapers/base-scraper.ts#L151)).
