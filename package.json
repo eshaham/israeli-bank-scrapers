@@ -3,7 +3,7 @@
   "version": "0.9.1",
   "description": "Provide scrapers for all major Israeli banks and credit card companies",
   "engines": {
-    "node": ">= 8.2.1",
+    "node": ">= 10.22.0",
     "npm": ">= 5.3.0"
   },
   "main": "lib/index.js",
