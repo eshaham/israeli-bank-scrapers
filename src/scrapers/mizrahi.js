@@ -33,6 +33,14 @@ function createLoginFields(credentials) {
   ];
 }
 
+function getPossibleLoginResults(page) {
+  return {
+    [LOGIN_RESULT.SUCCESS]: [AFTER_LOGIN_BASE_URL],
+    [LOGIN_RESULT.INVALID_PASSWORD]: [() => page.$(invalidPasswordSelector)],
+    [LOGIN_RESULT.CHANGE_PASSWORD]: [CHANGE_PASSWORD_URL],
+  };
+}
+
 function CreateDataFromRequest(request, optionsStartDate) {
   const defaultStartMoment = moment().subtract(1, 'years');
   const startDate = optionsStartDate || defaultStartMoment.toDate();
@@ -100,14 +108,6 @@ async function postLogin(page) {
     waitUntilElementFound(page, afterLoginSelector),
     waitUntilElementFound(page, invalidPasswordSelector),
   ]);
-}
-
-function getPossibleLoginResults(page) {
-  return {
-    [LOGIN_RESULT.SUCCESS]: [AFTER_LOGIN_BASE_URL],
-    [LOGIN_RESULT.INVALID_PASSWORD]: [() => page.$(invalidPasswordSelector)],
-    [LOGIN_RESULT.CHANGE_PASSWORD]: [CHANGE_PASSWORD_URL],
-  };
 }
 
 class MizrahiScraper extends BaseScraperWithBrowser {

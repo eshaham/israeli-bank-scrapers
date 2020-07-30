@@ -2,10 +2,6 @@ async function waitUntilElementFound(page, elementSelector, onlyVisible = false,
   await page.waitForSelector(elementSelector, { visible: onlyVisible, timeout });
 }
 
-async function waitForText(page, text, elementSelector = 'body', timeout = 30000) {
-  await page.waitForFunction(`document.querySelector('${elementSelector}') && document.querySelector('${elementSelector}').innerText.includes('${text}')`, { timeout });
-}
-
 async function fillInput(page, inputSelector, inputValue) {
   await page.$eval(inputSelector, (input) => {
     const inputElement = input;
@@ -60,7 +56,6 @@ async function dropdownElements(page, selector) {
 
 export {
   waitUntilElementFound,
-  waitForText,
   fillInput,
   clickButton,
   clickLink,
