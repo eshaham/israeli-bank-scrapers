@@ -1,13 +1,12 @@
 import moment from 'moment';
 import {
-  SHEKEL_CURRENCY,
   NORMAL_TXN_TYPE,
+  SHEKEL_CURRENCY,
   TRANSACTION_STATUS,
 } from '../constants';
-import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
+import { pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
 import { fetchPostWithinPage } from '../helpers/fetch';
-import { waitForNavigation } from '../helpers/navigation';
-import { pageEvalAll, waitForText } from '../helpers/elements-interactions';
+import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 
 const BASE_WEBSITE_URL = 'https://www.mizrahi-tefahot.co.il';
 const LOGIN_URL = `${BASE_WEBSITE_URL}/login/index.html#/auth-page-he`;
@@ -16,13 +15,16 @@ const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/ngOnline\/
 const OSH_PAGE = `${BASE_APP_URL}/ngOnline/index.html#/main/uis/osh/p428/`;
 const TRANSACTIONS_REQUEST_URL = `${BASE_APP_URL}/Online/api/SkyOSH/get428Index`;
 const PENDING_TRANSACTIONS_PAGE = `${BASE_APP_URL}/Online/Osh/p420.aspx`;
+const CHANGE_PASSWORD_URL = `${AFTER_LOGIN_BASE_URL}/main/uis/ge/changePassword/`;
 const DATE_FORMAT = 'DD/MM/YYYY';
 const MAX_ROWS_PER_REQUEST = 10000000000;
 
 const usernameSelector = '#emailDesktopHeb';
 const passwordSelector = '#passwordIDDesktopHEB';
 const submitButtonSelector = '.form-desktop button';
-const invalidPasswordMessage = 'פרטי ההזדהות שהזנת שגויים, באפשרותך לנסות שנית.';
+const invalidPasswordSelector = 'a[href*="https://sc.mizrahi-tefahot.co.il/SCServices/SC/P010.aspx"]';
+const afterLoginSelector = '#stickyHeaderScrollRegion';
+const loginSpinnerSelector = 'div.ngx-overlay.loading-foreground';
 
 function createLoginFields(credentials) {
   return [
@@ -95,21 +97,16 @@ async function extractPendingTransactions(page) {
 
 async function postLogin(page) {
   await Promise.race([
-    waitForNavigation(page),
-    waitForText(page, invalidPasswordMessage),
+    waitUntilElementFound(page, afterLoginSelector),
+    waitUntilElementFound(page, invalidPasswordSelector),
   ]);
-}
-
-async function isInvalidPassword(page) {
-  const pageContent = await page.content();
-  return pageContent.includes(invalidPasswordMessage);
 }
 
 function getPossibleLoginResults(page) {
   return {
     [LOGIN_RESULT.SUCCESS]: [AFTER_LOGIN_BASE_URL],
-    [LOGIN_RESULT.INVALID_PASSWORD]: [() => isInvalidPassword(page)],
-    [LOGIN_RESULT.CHANGE_PASSWORD]: [`${AFTER_LOGIN_BASE_URL}/main/uis/ge/changePassword/`],
+    [LOGIN_RESULT.INVALID_PASSWORD]: [() => page.$(invalidPasswordSelector)],
+    [LOGIN_RESULT.CHANGE_PASSWORD]: [CHANGE_PASSWORD_URL],
   };
 }
 
@@ -119,7 +116,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
       loginUrl: `${LOGIN_URL}`,
       fields: createLoginFields(credentials),
       submitButtonSelector,
-      checkReadiness: async () => this.page.waitForSelector('div.ngx-overlay.loading-foreground', { hidden: true }),
+      checkReadiness: async () => this.page.waitForSelector(loginSpinnerSelector, { hidden: true }),
       postAction: () => postLogin(this.page),
       possibleResults: getPossibleLoginResults(this.page),
     };
