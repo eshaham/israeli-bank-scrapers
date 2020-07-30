@@ -9,7 +9,7 @@ const VIEWPORT_WIDTH = 1024;
 const VIEWPORT_HEIGHT = 768;
 const OK_STATUS = 200;
 
-async function getKeyByValue(object, value) {
+async function getKeyByValue(object, value, page) {
   const keys = Object.keys(object);
   for (const key of keys) {
     const conditions = object[key];
@@ -20,7 +20,7 @@ async function getKeyByValue(object, value) {
       if (condition instanceof RegExp) {
         result = condition.test(value);
       } else if (typeof condition === 'function') {
-        result = await condition();
+        result = await condition({ page, value });
       } else {
         result = value.toLowerCase() === condition.toLowerCase();
       }
@@ -160,7 +160,7 @@ class BaseScraperWithBrowser extends BaseScraper {
     }
 
     const current = await getCurrentUrl(this.page, true);
-    const loginResult = await getKeyByValue(loginOptions.possibleResults, current);
+    const loginResult = await getKeyByValue(loginOptions.possibleResults, current, this.page);
     return handleLoginResult(this, loginResult);
   }
 
