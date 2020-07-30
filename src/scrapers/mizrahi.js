@@ -7,33 +7,28 @@ import {
 import { BaseScraperWithBrowser, LOGIN_RESULT } from './base-scraper-with-browser';
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { waitForNavigation } from '../helpers/navigation';
-import { pageEvalAll } from '../helpers/elements-interactions';
+import { pageEvalAll, waitForText } from '../helpers/elements-interactions';
 
 const BASE_WEBSITE_URL = 'https://www.mizrahi-tefahot.co.il';
-const LOGIN_URL = `${BASE_WEBSITE_URL}/he/bank/Pages/Default.aspx`;
-const BASE_APP_URL = 'https://mto.mizrahi-tefahot.co.il/';
+const LOGIN_URL = `${BASE_WEBSITE_URL}/login/index.html#/auth-page-he`;
+const BASE_APP_URL = 'https://mto.mizrahi-tefahot.co.il';
 const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/ngOnline\/index\.html#\/main\/uis/;
-const OSH_PAGE = `${BASE_APP_URL}ngOnline/index.html#/main/uis/osh/p428/`;
-const TRANSACTIONS_REQUEST_URL = `${BASE_APP_URL}Online/api/SkyOSH/get428Index`;
-const PENDING_TRANSACTIONS_PAGE = `${BASE_APP_URL}Online/Osh/p420.aspx`;
+const OSH_PAGE = `${BASE_APP_URL}/ngOnline/index.html#/main/uis/osh/p428/`;
+const TRANSACTIONS_REQUEST_URL = `${BASE_APP_URL}/Online/api/SkyOSH/get428Index`;
+const PENDING_TRANSACTIONS_PAGE = `${BASE_APP_URL}/Online/Osh/p420.aspx`;
 const DATE_FORMAT = 'DD/MM/YYYY';
 const MAX_ROWS_PER_REQUEST = 10000000000;
 
+const usernameSelector = '#emailDesktopHeb';
+const passwordSelector = '#passwordIDDesktopHEB';
+const submitButtonSelector = '.form-desktop button';
+const invalidPasswordMessage = 'פרטי ההזדהות שהזנת שגויים, באפשרותך לנסות שנית.';
+
 function createLoginFields(credentials) {
   return [
-    { selector: '#ctl00_PlaceHolderLogin_ctl00_tbUserName', value: credentials.username },
-    { selector: '#ctl00_PlaceHolderLogin_ctl00_tbPassword', value: credentials.password },
+    { selector: usernameSelector, value: credentials.username },
+    { selector: passwordSelector, value: credentials.password },
   ];
-}
-
-function getPossibleLoginResults() {
-  const urls = {};
-  urls[LOGIN_RESULT.SUCCESS] = [AFTER_LOGIN_BASE_URL];
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = [`${BASE_WEBSITE_URL}/login/loginMTO.aspx`];
-  urls[LOGIN_RESULT.CHANGE_PASSWORD] = [
-    `${AFTER_LOGIN_BASE_URL}/main/uis/ge/changePassword/`,
-  ];
-  return urls;
 }
 
 function CreateDataFromRequest(request, optionsStartDate) {
@@ -98,14 +93,35 @@ async function extractPendingTransactions(page) {
   });
 }
 
+async function postLogin(page) {
+  await Promise.race([
+    waitForNavigation(page),
+    waitForText(page, invalidPasswordMessage),
+  ]);
+}
+
+async function isInvalidPassword(page) {
+  const pageContent = await page.content();
+  return pageContent.includes(invalidPasswordMessage);
+}
+
+function getPossibleLoginResults(page) {
+  return {
+    [LOGIN_RESULT.SUCCESS]: [AFTER_LOGIN_BASE_URL],
+    [LOGIN_RESULT.INVALID_PASSWORD]: [() => isInvalidPassword(page)],
+    [LOGIN_RESULT.CHANGE_PASSWORD]: [`${AFTER_LOGIN_BASE_URL}/main/uis/ge/changePassword/`],
+  };
+}
+
 class MizrahiScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials) {
     return {
       loginUrl: `${LOGIN_URL}`,
       fields: createLoginFields(credentials),
-      submitButtonSelector: '#ctl00_PlaceHolderLogin_ctl00_Enter',
-      postAction: async () => waitForNavigation(this.page, { waitUntil: 'networkidle0' }),
-      possibleResults: getPossibleLoginResults(),
+      submitButtonSelector,
+      checkReadiness: async () => this.page.waitForSelector('div.ngx-overlay.loading-foreground', { hidden: true }),
+      postAction: () => postLogin(this.page),
+      possibleResults: getPossibleLoginResults(this.page),
     };
   }
 
