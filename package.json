@@ -21,9 +21,11 @@
     "publish:default": "npm run prepare:default && npm test && npm publish --access public && npm run reset",
     "publish:all": "npm run publish:default && npm run publish:core"
   },
-  "pre-commit": [
-    "lint"
-  ],
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run lint"
+    }
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/eshaham/israeli-bank-scrapers.git"
@@ -49,10 +51,10 @@
     "eslint": "^6.6.0",
     "eslint-config-airbnb-base": "^14.0.0",
     "eslint-plugin-import": "^2.14.0",
+    "husky": "^4.2.5",
     "jest": "^25.3.0",
     "json2csv": "^4.2.1",
     "ncp": "^2.0.0",
-    "pre-commit": "^1.2.2",
     "rimraf": "^3.0.0"
   },
   "dependencies": {
