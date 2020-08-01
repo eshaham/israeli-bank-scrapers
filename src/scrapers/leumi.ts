@@ -242,7 +242,7 @@ async function waitForPostLogin(page: Page): Promise<void> {
   // TODO check for condition to provide new password
   await Promise.race([
     waitUntilElementFound(page, 'div.leumi-container', true),
-    waitUntilElementFound(page, '#loginErrMsg', true),
+    waitUntilElementFound(page, '#BodyContent_ctl00_loginErrMsg', true),
   ]);
 }
 

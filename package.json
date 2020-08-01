@@ -17,7 +17,7 @@
     "dev": "npm run type-check -- --watch",
     "build": "npm run lint && npm run clean && npm run build:types && npm run build:js && npm run build:puppeteer-config",
     "build:types": "tsc --emitDeclarationOnly",
-    "build:puppeteer-config": "cp src/puppeteer-config.json lib",
+    "build:puppeteer-config": "ncp src/puppeteer-config.json lib",
     "build:js": "babel src --out-dir lib --extensions \".ts\" --source-maps inline --verbose",
     "prebuild": "node utils/update-puppeteer-config.js",
     "postbuild": "rimraf lib/tests",
