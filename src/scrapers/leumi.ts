@@ -20,6 +20,7 @@ import { ScaperScrapingResult, ScraperCredentials } from './base-scraper';
 const BASE_URL = 'https://hb2.bankleumi.co.il';
 const DATE_FORMAT = 'DD/MM/YY';
 const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא קיימות תנועות מתאימות על פי הסינון שהוגדר';
+const ACCOUNT_BLOCKED_MSG = 'המנוי חסום';
 
 function getTransactionsUrl() {
   return `${BASE_URL}/ebanking/Accounts/ExtendedActivity.aspx?WidgetPar=1#/`;
@@ -29,6 +30,16 @@ function getPossibleLoginResults() {
   const urls: LoginOptions['possibleResults'] = {};
   urls[LoginResults.Success] = [/ebanking\/SO\/SPA.aspx/i];
   urls[LoginResults.InvalidPassword] = [/InternalSite\/CustomUpdate\/leumi\/LoginPage.ASP/];
+  urls[LoginResults.AccountBlocked] = [async (options) => {
+    if (!options || !options.page) {
+      throw new Error('missing page options argument');
+    }
+    const errorMessage = await pageEvalAll(options.page, '.errHeader', [], (label) => {
+      return (label[0] as HTMLElement).innerText;
+    });
+
+    return errorMessage.startsWith(ACCOUNT_BLOCKED_MSG);
+  }];
   // urls[LOGIN_RESULT.CHANGE_PASSWORD] = ``; // TODO should wait until my password expires
   return urls;
 }
@@ -243,6 +254,7 @@ async function waitForPostLogin(page: Page): Promise<void> {
   await Promise.race([
     waitUntilElementFound(page, 'div.leumi-container', true),
     waitUntilElementFound(page, '#BodyContent_ctl00_loginErrMsg', true),
+    waitUntilElementFound(page, '.ErrMsg', true),
   ]);
 }
 

@@ -28,9 +28,11 @@
     "publish:default": "npm run prepare:default && npm test && npm publish --access public && npm run reset",
     "publish:all": "npm run publish:default && npm run publish:core"
   },
-  "pre-commit": [
-    "lint"
-  ],
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run lint"
+    }
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/eshaham/israeli-bank-scrapers.git"
@@ -69,7 +71,6 @@
     "eslint-plugin-import": "^2.20.2",
     "jest": "^25.3.0",
     "ncp": "^2.0.0",
-    "pre-commit": "^1.2.2",
     "rimraf": "^3.0.0",
     "source-map-support": "^0.5.16",
     "ts-jest": "^25.3.0",
@@ -78,12 +79,13 @@
   "dependencies": {
     "build-url": "^2.0.0",
     "core-js": "^3.1.4",
+    "husky": "^4.2.5",
+    "json2csv": "^4.5.4",
     "lodash": "^4.17.10",
     "moment": "^2.22.2",
     "node-fetch": "^2.2.0",
-    "uuid": "^3.3.2",
-    "json2csv": "^4.5.4",
-    "puppeteer": "^2.0.0"
+    "puppeteer": "^2.0.0",
+    "uuid": "^3.3.2"
   },
   "files": [
     "lib/**/*"

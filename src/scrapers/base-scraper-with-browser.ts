@@ -31,7 +31,7 @@ ScraperErrorTypes.Timeout
 | ScraperErrorTypes.General> | LoginBaseResults;
 
 export type PossibleLoginResults = {
-  [key in LoginResults]?: (string | RegExp | (() => Promise<boolean>))[]
+  [key in LoginResults]?: (string | RegExp | ((options?: { page?: Page}) => Promise<boolean>))[]
 };
 
 export interface LoginOptions {
@@ -44,7 +44,7 @@ export interface LoginOptions {
   possibleResults: PossibleLoginResults;
 }
 
-async function getKeyByValue(object: PossibleLoginResults, value: string): Promise<LoginResults> {
+async function getKeyByValue(object: PossibleLoginResults, value: string, page: Page): Promise<LoginResults> {
   const keys = Object.keys(object);
   for (const key of keys) {
     // @ts-ignore
@@ -56,7 +56,7 @@ async function getKeyByValue(object: PossibleLoginResults, value: string): Promi
       if (condition instanceof RegExp) {
         result = condition.test(value);
       } else if (typeof condition === 'function') {
-        result = await condition();
+        result = await condition({ page, value });
       } else {
         result = value.toLowerCase() === condition.toLowerCase();
       }
@@ -219,7 +219,7 @@ class BaseScraperWithBrowser extends BaseScraper {
     }
 
     const current = await getCurrentUrl(this.page, true);
-    const loginResult = await getKeyByValue(loginOptions.possibleResults, current);
+    const loginResult = await getKeyByValue(loginOptions.possibleResults, current, this.page);
     return handleLoginResult(this, loginResult);
   }
 
