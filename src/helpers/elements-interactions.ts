@@ -15,11 +15,7 @@ async function fillInput(page: Page, inputSelector: string, inputValue: string):
 }
 
 async function clickButton(page: Page, buttonSelector: string) {
-  const button = await page.$(buttonSelector);
-  if (!button || typeof button.click === 'undefined') {
-    return;
-  }
-  await button.click();
+  await page.$eval(buttonSelector, (el) => (el as HTMLElement).click());
 }
 
 async function clickLink(page: Page, aSelector: string) {

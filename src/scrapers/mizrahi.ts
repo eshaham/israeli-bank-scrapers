@@ -5,8 +5,7 @@ import {
 } from '../constants';
 import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 import { fetchPostWithinPage } from '../helpers/fetch';
-import { waitForNavigation } from '../helpers/navigation';
-import { pageEvalAll } from '../helpers/elements-interactions';
+import { pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
 import {
   Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
@@ -36,30 +35,36 @@ interface ScrapedTransactionsResult {
 }
 
 const BASE_WEBSITE_URL = 'https://www.mizrahi-tefahot.co.il';
-const LOGIN_URL = `${BASE_WEBSITE_URL}/he/bank/Pages/Default.aspx`;
-const BASE_APP_URL = 'https://mto.mizrahi-tefahot.co.il/';
+const LOGIN_URL = `${BASE_WEBSITE_URL}/login/index.html#/auth-page-he`;
+const BASE_APP_URL = 'https://mto.mizrahi-tefahot.co.il';
 const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/ngOnline\/index\.html#\/main\/uis/;
-const OSH_PAGE = `${BASE_APP_URL}ngOnline/index.html#/main/uis/osh/p428/`;
-const TRANSACTIONS_REQUEST_URL = `${BASE_APP_URL}Online/api/SkyOSH/get428Index`;
-const PENDING_TRANSACTIONS_PAGE = `${BASE_APP_URL}Online/Osh/p420.aspx`;
+const OSH_PAGE = `${BASE_APP_URL}/ngOnline/index.html#/main/uis/osh/p428/`;
+const TRANSACTIONS_REQUEST_URL = `${BASE_APP_URL}/Online/api/SkyOSH/get428Index`;
+const PENDING_TRANSACTIONS_PAGE = `${BASE_APP_URL}/Online/Osh/p420.aspx`;
+const CHANGE_PASSWORD_URL = `${AFTER_LOGIN_BASE_URL}/main/uis/ge/changePassword/`;
 const DATE_FORMAT = 'DD/MM/YYYY';
 const MAX_ROWS_PER_REQUEST = 10000000000;
 
+const usernameSelector = '#emailDesktopHeb';
+const passwordSelector = '#passwordIDDesktopHEB';
+const submitButtonSelector = '.form-desktop button';
+const invalidPasswordSelector = 'a[href*="https://sc.mizrahi-tefahot.co.il/SCServices/SC/P010.aspx"]';
+const afterLoginSelector = '#stickyHeaderScrollRegion';
+const loginSpinnerSelector = 'div.ngx-overlay.loading-foreground';
+
 function createLoginFields(credentials: ScraperCredentials) {
   return [
-    { selector: '#ctl00_PlaceHolderLogin_ctl00_tbUserName', value: credentials.username },
-    { selector: '#ctl00_PlaceHolderLogin_ctl00_tbPassword', value: credentials.password },
+    { selector: usernameSelector, value: credentials.username },
+    { selector: passwordSelector, value: credentials.password },
   ];
 }
 
-function getPossibleLoginResults(): PossibleLoginResults {
-  const urls: PossibleLoginResults = {};
-  urls[LoginResults.Success] = [AFTER_LOGIN_BASE_URL];
-  urls[LoginResults.InvalidPassword] = [`${BASE_WEBSITE_URL}/login/loginMTO.aspx`];
-  urls[LoginResults.ChangePassword] = [
-    `${AFTER_LOGIN_BASE_URL}/main/uis/ge/changePassword/`,
-  ];
-  return urls;
+function getPossibleLoginResults(page: Page): PossibleLoginResults {
+  return {
+    [LoginResults.Success]: [AFTER_LOGIN_BASE_URL],
+    [LoginResults.InvalidPassword]: [async () => !!(await page.$(invalidPasswordSelector))],
+    [LoginResults.ChangePassword]: [CHANGE_PASSWORD_URL],
+  };
 }
 
 function CreateDataFromRequest(request: Request, optionsStartDate: Date) {
@@ -124,14 +129,22 @@ async function extractPendingTransactions(page: Page): Promise<Transaction[]> {
   });
 }
 
+async function postLogin(page: Page) {
+  await Promise.race([
+    waitUntilElementFound(page, afterLoginSelector),
+    waitUntilElementFound(page, invalidPasswordSelector),
+  ]);
+}
+
 class MizrahiScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials: ScraperCredentials) {
     return {
-      loginUrl: `${LOGIN_URL}`,
+      loginUrl: LOGIN_URL,
       fields: createLoginFields(credentials),
-      submitButtonSelector: '#ctl00_PlaceHolderLogin_ctl00_Enter',
-      postAction: async () => waitForNavigation(this.page, { waitUntil: 'networkidle0' }),
-      possibleResults: getPossibleLoginResults(),
+      submitButtonSelector,
+      checkReadiness: async () => this.page.waitForSelector(loginSpinnerSelector, { hidden: true }),
+      postAction: async () => postLogin(this.page),
+      possibleResults: getPossibleLoginResults(this.page),
     };
   }
 
