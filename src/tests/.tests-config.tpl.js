@@ -25,7 +25,7 @@ module.exports = {
   },
   companyAPI: { // enable companyAPI to execute tests against the real companies api
     enabled: true,
-    excelFilesDist: '', // optional - provide valid path to save scraper results (csv format)
+    excelFilesDist: '', // optional - provide exists directory path to save scraper results (csv format)
     invalidPassword: false, // enable to execute tests that execute with invalid credentials
   },
 };
