@@ -32,48 +32,48 @@ To use these scrapers you'll need to install the package from npm:
 npm install israeli-bank-scrapers --save
 ```
 Then you can simply import and use it in your node module:
-```node
-const { createScraper } = require('israeli-bank-scrapers');
 
-const credentials = {...}; // different for each bank
-const options = {...};
+```node
+import { CompanyTypes, createScraper } from 'israeli-bank-scrapers';
 
 (async function() {
-   try {
-      const scraper = createScraper(options);
-      const scrapeResult = await scraper.scrape(credentials);
-   
-      if (scrapeResult.success) {
-        scrapeResult.accounts.forEach((account) => {
-           console.log(`found ${account.txns.length} transactions for account number 
-            ${account.accountNumber}`);
-        });
-      }
-      else {
-         throw new Error(scrapeResult.errorType);
-      }
-   } catch(e) {
-      console.error(`scraping failed for the following reason: ${e.message}`);
-   }
+  try {
+    // read documentation below for available options
+    const options = {
+      companyId: CompanyTypes.leumi, 
+      startDate: new Date('2020-05-01'),
+      combineInstallments: false,
+      showBrowser: true 
+    };
+
+    // read documentation below for information about credentials
+    const credentials = {
+      username: 'vr29485',
+      password: 'sometingsomething'
+    };
+
+    const scraper = createScraper(options);
+    const scrapeResult = await scraper.scrape(credentials);
+
+    if (scrapeResult.success) {
+      scrapeResult.accounts.forEach((account) => {
+        console.log(`found ${account.txns.length} transactions for account number ${account.accountNumber}`);
+      });
+    }
+    else {
+      throw new Error(scrapeResult.errorType);
+    }
+  } catch(e) {
+    console.error(`scraping failed for the following reason: ${e.message}`);
+  }
 })();
 ```
-The definition of the `options` object is as follows:
-```node
-{
-  companyId: string, // mandatory; one of 'hapoalim', leumi', 'discount', 'mizrahi', 'otsarHahayal', 'visaCal', 'max', 'isracard', 'amex'
-  startDate: Date, // the date to fetch transactions from (can't be before the minimum allowed time difference for the scraper)
-  combineInstallments: boolean, // if set to true, all installment transactions will be combine into the first one
-  showBrowser: boolean, // shows the browser while scraping, good for debugging (default false)
-  verbose: boolean, // include more debug info about in the output
-  browser : Browser, // optional option from init puppeteer browser instance outside the libary scope. you can get browser diretly from puppeteer via `puppeteer.launch()` command.
-  executablePath: string, // optional. provide a patch to local chromium to be used by puppeteer. Relevant when using `israeli-bank-scrapers-core` library
-  args: {}, // optional.  additional arguments to pass to the browser instance. The list of flags can be found below in (*),
-  prepareBrowser: async (browser) => {}, // optional. adjust the browser instance before it is being used. 
-  preparePage: async (page) => {}, // optional. adjust the page instance before it is being used.
-}
-```
-(*) links of flags that can be used with `args` options can be found [here](https://peter.sh/experiments/chromium-command-line-switches/), and [here](https://developer.mozilla.org/en-US/docs/Mozilla/Command_Line_Options) is the list of Firefox flags.
 
+Check the options declaration [here](./src/scrapers/base-scraper.ts) for available options.
+
+Regarding credentials, you should provide the relevant credentials for the chosen company. See [this file](./src/definitions.ts) with list of credentials per company.
+
+```
 The structure of the result object is as follows:
 ```node
 {
@@ -90,7 +90,7 @@ The structure of the result object is as follows:
       chargedAmount: double,
       description: string,
       memo: string, // can be null or empty
-      installments: {
+      installments: { // only if exists
         number: int, // the current installment number
         total: int, // the total number of installments
       },
@@ -101,10 +101,12 @@ The structure of the result object is as follows:
   errorMessage: string, // only on success=false
 }
 ```
+
 You can also use the `SCRAPERS` list to get scraper metadata:
 ```node
-const { SCRAPERS } = require('israeli-bank-scrapers');
+import { SCRAPERS } from 'israeli-bank-scrapers';
 ```
+
 The return value is a list of scraper metadata:
 ```node
 {

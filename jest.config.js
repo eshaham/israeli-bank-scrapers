@@ -5,8 +5,11 @@ module.exports = {
   clearMocks: true,
   coverageDirectory: 'coverage',
   rootDir: './src',
+  transform: {
+    '^.+\\.ts$': 'ts-jest'
+  },
   setupFiles: [
-    '../jest-setup.js',
+    './tests/jest-setup.ts',
   ],
   testEnvironment: 'node',
 };
