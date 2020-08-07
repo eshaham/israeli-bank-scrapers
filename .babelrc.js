@@ -12,13 +12,15 @@ const presets = [
       corejs: "3"
     },
   ],
+  "@babel/typescript"
 ];
 
 module.exports = {
     presets,
     ignore: process.env.BABEL_ENV === 'test' ? [] : [
-      '**/*.test.js',
+      '**/*.test.(js,ts)',
       'tests/**/*',
+      'src/tests/**/*',
     ],
   "plugins": [
     importVisitor(node => {

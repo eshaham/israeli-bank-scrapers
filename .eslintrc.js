@@ -1,4 +1,5 @@
 module.exports = {
+  root: true,
   "rules": {
     "arrow-body-style": 0,
     "no-shadow": 0,
@@ -10,14 +11,29 @@ module.exports = {
       "WithStatement"
     ],
     "operator-linebreak": ["error", "after"],
-    "max-len": ["error", 100, 2, {
+    "max-len": ["error", 120, 2, {
       "ignoreUrls": true,
       "ignoreComments": true,
       "ignoreRegExpLiterals": true,
       "ignoreStrings": true,
-      "ignoreTemplateLiterals": true
+      "ignoreTemplateLiterals": true,
+      "ignorePattern": "^(async )?function "
     }],
-    "linebreak-style": process.platform === "win32"? 0: 2
+    "linebreak-style": process.platform === "win32"? 0: 2,
+    "@typescript-eslint/explicit-function-return-type": 0,
+    "@typescript-eslint/no-explicit-any": 0,
+    "@typescript-eslint/ban-ts-ignore": 0,
+    "@typescript-eslint/no-non-null-assertion": 0,
+    "@typescript-eslint/member-delimiter-style": [ "error", {
+      multiline: {
+        delimiter: 'semi',
+        requireLast: true,
+      },
+      singleline: {
+        delimiter: 'comma',
+        requireLast: false,
+      },
+    }]
   },
   "globals": {
     "document": true,
@@ -28,5 +44,13 @@ module.exports = {
   "env": {
     "jest": true
   },
-  "extends": "airbnb-base"
+  parserOptions:  {
+    project: './tsconfig.json',
+    ecmaVersion:  2018,  // Allows for the parsing of modern ECMAScript features
+    sourceType:  'module',  // Allows for the use of imports
+  },
+  extends: ['airbnb-typescript/base',
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended-requiring-type-checking"]
 }

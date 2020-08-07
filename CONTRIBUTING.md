@@ -11,9 +11,9 @@ Any kind of help is welcome, even if you just discover an issue and don't have t
 While there's no specific template for creating a new issue, please take the time to create a clear description so that it is easy to understand the problem.
 
 ## Testing the scrapers
-In order to run tests you need first to create test configuration file `./tests/tests-config.js` from template `./test/tests-config.tpl.js`. This file will be used by `jest` testing framework. 
+In order to run tests you need first to create test configuration file `./src/tests/tests-config.js` from template `./src/test/tests-config.tpl.js`. This file will be used by `jest` testing framework. 
 
-> IMPORTANT: Under `tests` library exists `.gitignore` file that ignore the test configuration file thus this file will not be commited to github. Still when you create new PRs make sure that you didn't explicitly added it to the PR.
+> IMPORTANT: Under `src/tests` folder exists `.gitignore` file that ignore the test configuration file thus this file will not be commited to github. Still when you create new PRs make sure that you didn't explicitly added it to the PR.
 
 This library supports both testing against credit card companies / banks api and also against mock data. Until we will have a good coverage of scrapers test with mock data, the default configuration is set to execute real companies api tests.
 
@@ -56,7 +56,6 @@ To save unit test scraper results provide a valid path in test configurations pr
       excelFilesDist: '/Users/xyz/Downloads/Transactions',
       
     },
-  
 }
 ```
 
@@ -98,10 +97,10 @@ EOF
 
 
 #### Trying to run the tests using the CLI fail saying the test configuration file is missing
-Make sure that you created test configuration file `./tests/.tests-config.js` from template `./test/tests-config.tpl.js`.
+Make sure that you created test configuration file `./src/tests/.tests-config.js` from template `./src/tests/tests-config.tpl.js`.
 
 #### Trying to run the tests using the IDE fail saying the test configuration file is missing
-1. Make sure that you created test configuration file `./tests/.tests-config.js` from template `./test/tests-config.tpl.js`.
+1. Make sure that you created test configuration file `./src/tests/.tests-config.js` from template `./src/test/tests-config.tpl.js`.
 2. Make sure that you added environment variable `BABEL_ENV=test` to the IDE test configuration.
 
 #### Tests of desired company are skipped without any errors
@@ -138,21 +137,25 @@ It is best to look at an existing example.
 Most scrapers inherit from `BaseScraper`, notice that you need to implement the following:
 
 ### Overriding getLoginOptions()
+> this section is relevant if you are extending class `BaseScraperWithBrowser`
+>
 Unless you plan to override the entire `login()` function, You can override this function to login regularly in a login form.
 
-```node
-function getPossibleLoginResults() {
-  const urls = {};
-  // in case of multiple possible login results, add them to the arrays as items
-  urls[LOGIN_RESULT.SUCCESS] = ['<SUCCESS_URL>' | <SUCCESS_REGEXP>];
-  urls[LOGIN_RESULT.INVALID_PASSWORD] = ['<INVALID_PASSWORD_URL>' | <INVALID_PASSWORD_REGEXP>];
-  urls[LOGIN_RESULT.CHANGE_PASSWORD] = ['<CHANGE_PASSWORD_URL>' | <CHANGE_PASSWORD_REGEXP>];
+```typescript
+import { LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
+
+function getPossibleLoginResults(): PossibleLoginResults {
+  // checkout file `base-scraper-with-browser.ts` for available result types 
+  const urls: PossibleLoginResults = {};
+  urls[LoginResults.Success] = [];
+  urls[LoginResults.InvalidPassword] = [];
+  urls[LoginResults.ChangePassword] = [];
   return urls;
 }
 
 function getLoginOptions(credentials) {
   return {
-    loginUrl: <LOGIN_URL>,
+    loginUrl: '<LOGIN_URL>',
     fields: [
       { selector: '<USER_NAME_FIELD>', value: credentials.username },
       { selector: `<PASSWORD_FIELD>`, value: credentials.password },
@@ -164,30 +167,4 @@ function getLoginOptions(credentials) {
 ```
 
 ### Overriding fetchData()
-You can override this async function however way you want, as long as your return results in the following form:
-
-```node
-{
-  success: boolean,
-  accounts: [{
-    accountNumber: string,
-    txns: [{
-      type: string, // can be either 'normal' or 'installments'
-      identifier: int, // only if exists
-      date: string, // ISO date string
-      processedDate: string, // ISO date string
-      originalAmount: double,
-      originalCurrency: string,
-      chargedAmount: double,
-      description: string,
-      installments: {
-        number: int, // the current installment number
-        total: int, // the total number of installments
-      },
-      status: string //can either be 'completed' or 'pending'
-    }],
-  }],
-  errorType: "INVALID_PASSWORD"|"CHANGE_PASSWORD"|"ACCOUNT_BLOCKED"|"UNKNOWN_ERROR"|"TIMEOUT"|"GENERIC", // only on success=false
-  errorMessage: string, // only on success=false
-}
-```
+You can override this async function however way you want, as long as your return results as `ScaperScrapingResult` (checkout declaration [here](./src/scrapers/base-scraper.ts#L151)).
