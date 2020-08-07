@@ -5,8 +5,10 @@ const checkIfCoreVariation = require('./core-utils');
 function getPuppeteerChromiumVersion() {
   const puppeteerLibrary = checkIfCoreVariation() ? 'puppeteer-core' : 'puppeteer';
   const puppeteerPath = path.dirname(require.resolve(puppeteerLibrary));
-  const revisionFilePath = path.join(puppeteerPath, 'lib/cjs/revisions.js');
-  // const revisionFilePath = path.join(puppeteerPath, 'lib/cjs/puppeteer/revisions.js');
+  const revisionFilePath = path.join(puppeteerPath,
+      checkIfCoreVariation()
+          ? 'lib/cjs/puppeteer/revisions.js'
+          : 'lib/cjs/revisions.js');
   // eslint-disable-next-line import/no-dynamic-require,global-require
   const revisionRaw = fs.readFileSync(revisionFilePath, 'utf-8');
   const [, revisionNumber] = revisionRaw.match(/chromium: ['"`](.+?)['"`][,]/);
