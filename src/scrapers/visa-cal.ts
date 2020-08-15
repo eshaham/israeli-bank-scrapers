@@ -33,6 +33,8 @@ const WITHDRAWAL_TYPE_CODE = '7';
 const INSTALLMENTS_TYPE_CODE = '8';
 const CANCEL_TYPE_CODE = '25';
 const WITHDRAWAL_TYPE_CODE_2 = '27';
+const DEBIT_TYPE_CODE = '41';
+const DEBIT_REFUND_TYPE_CODE = '42';
 const CREDIT_PAYMENTS_CODE = '59';
 const MEMBERSHIP_FEE_TYPE_CODE = '67';
 const SERVICES_REFUND_TYPE_CODE = '71';
@@ -133,6 +135,8 @@ function convertTransactionType(txnType: string) {
     case SERVICES_REFUND_TYPE_CODE:
     case MEMBERSHIP_FEE_TYPE_CODE:
     case SERVICES_TYPE_CODE:
+    case DEBIT_TYPE_CODE:
+    case DEBIT_REFUND_TYPE_CODE:
       return TransactionTypes.Normal;
     case INSTALLMENTS_TYPE_CODE:
     case CREDIT_PAYMENTS_CODE:
