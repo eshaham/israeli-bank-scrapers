@@ -85,7 +85,7 @@
     "moment": "^2.22.2",
     "node-fetch": "^2.2.0",
     "puppeteer": "^5.1.0",
-    "uuid": "^3.3.2"
+    "uuid": "^8.3.0"
   },
   "files": [
     "lib/**/*"
