@@ -24,7 +24,7 @@ Currently only the following banks are supported:
 - Beinleumi (Thanks to [@dudiventura](https://github.com/dudiventura) from the Intuit FDP OpenSource Team)
 
 # Prerequisites
-To use this you will need to have [Node.js](https://nodejs.org) >= 8.10.0 installed.
+To use this you will need to have [Node.js](https://nodejs.org) >= 10.x installed.
 
 # Getting started
 To use these scrapers you'll need to install the package from npm:
