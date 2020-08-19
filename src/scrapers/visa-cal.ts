@@ -78,6 +78,7 @@ interface CardByAccountResponse {
 }
 
 interface ScrapedTransaction {
+  Id: string;
   TransType: string;
   Date: string;
   DebitDate: string;
@@ -184,6 +185,7 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((txn) => {
     return {
       type: convertTransactionType(txn.TransType),
+      identifier: parseInt(txn.Id, 10),
       date: moment(txn.Date, DATE_FORMAT).toISOString(),
       processedDate: moment(txn.DebitDate, DATE_FORMAT).toISOString(),
       originalAmount: -txn.Amount.Value,
