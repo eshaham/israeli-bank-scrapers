@@ -11,6 +11,9 @@ module.exports = {
       "WithStatement"
     ],
     "operator-linebreak": ["error", "after"],
+    "import/prefer-default-export": 0,
+    "@typescript-eslint/require-await": 0,
+    "no-underscore-dangle": 0,
     "max-len": ["error", 120, 2, {
       "ignoreUrls": true,
       "ignoreComments": true,

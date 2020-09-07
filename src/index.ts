@@ -8,8 +8,8 @@ export function getPuppeteerConfig() {
 
 // Adapters exports
 export * from './adapters';
+export * from './runner';
 
 // Scrapers exports ( Backward Compatibility )
 export { default as createScraper } from './scrapers/factory';
 export { SCRAPERS, CompanyTypes } from './definitions';
-

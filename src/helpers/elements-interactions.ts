@@ -24,7 +24,6 @@ async function fillInputs(page: Page, fields: { selector: string, value: string}
   if (modified.length) {
     await fillInputs(page, modified);
   }
-  return;
 }
 
 async function clickButton(page: Page, buttonSelector: string) {

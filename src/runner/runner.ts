@@ -70,15 +70,14 @@ function validateAdapters(adapters: RunnerAdapter[]) {
   return errors;
 }
 
-export interface RunnerOptions extends RunnerContextOptions {
-
-}
+export type RunnerOptions = RunnerContextOptions;
 
 // TODO sakal improve result type
 export type RunnerResult = Promise<{ success: boolean, result?: any, errorType?: string, errorMessage?: string}>;
 
-export async function runner(options: RunnerOptions, adapters: RunnerAdapter[], cleanupAdapters: RunnerAdapter[] = [])
-: RunnerResult{
+export async function runner(options: RunnerOptions,
+  adapters: RunnerAdapter[],
+  cleanupAdapters: RunnerAdapter[] = []): RunnerResult {
   const validations = validateAdapters(adapters);
 
   if (validations.length > 0) {
@@ -91,9 +90,9 @@ export async function runner(options: RunnerOptions, adapters: RunnerAdapter[], 
 
   const runnerContext = new RunnerContext(options);
 
-  let result: RunnerResult  = Promise.resolve( {
+  let result: RunnerResult = Promise.resolve({
     success: false,
-    errorType: GENERAL_ERROR
+    errorType: GENERAL_ERROR,
   });
 
   // run adapters

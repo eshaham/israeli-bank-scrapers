@@ -1,6 +1,10 @@
-import { RunnerAdapter } from '@core/runner/runner-adapter';
+import { RunnerAdapter } from '@core/runner';
 
-export function exportSessionData(options): RunnerAdapter {
+export interface ExportSessionDataOptions {
+  sessionDataKey: string;
+  targetProperty: string;
+}
+export function exportSessionData(options: ExportSessionDataOptions): RunnerAdapter {
   return {
     name: 'exportSessionData()',
     validate: (context) => {
@@ -30,7 +34,12 @@ export function exportSessionData(options): RunnerAdapter {
   };
 }
 
-export function setSessionData(options) {
+export interface SetSessionDataOptions {
+  sessionDataKey: string;
+  sessionDataValue: any;
+}
+
+export function setSessionData(options: SetSessionDataOptions): RunnerAdapter {
   return {
     name: 'setSessionData()',
     validate: () => {
@@ -40,7 +49,7 @@ export function setSessionData(options) {
         result.push('expected options to contain \'sessionDataKey\'');
       }
 
-      if (!options.sessionDataValue) {
+      if (!options.sessionDataKey) {
         result.push('expected options to provide \'sessionDataValue\'');
       }
 

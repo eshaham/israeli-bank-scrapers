@@ -1,6 +1,6 @@
 import { Page } from 'puppeteer';
 import { SCRAPERS } from '@core/definitions';
-import {ScaperScrapingResult, ScraperErrorTypes} from "../scrapers/base-scraper";
+import { ScaperScrapingResult, ScraperErrorTypes } from '../scrapers/base-scraper';
 
 enum LoginBaseResults {
   Success = 'SUCCESS',
@@ -16,9 +16,9 @@ export const LoginResults = {
 };
 
 export type LoginResults = Exclude<ScraperErrorTypes,
-    ScraperErrorTypes.Timeout
-    | ScraperErrorTypes.Generic
-    | ScraperErrorTypes.General> | LoginBaseResults;
+ScraperErrorTypes.Timeout
+| ScraperErrorTypes.Generic
+| ScraperErrorTypes.General> | LoginBaseResults;
 
 
 export function isValidCredentials(scraperId: string, credentials: Record<string, string>) {
@@ -69,12 +69,13 @@ async function getLoginResult(possibleLoginResults: PossibleLoginResults, value:
 }
 
 export async function parseLoginResult(options: {
-  possibleLoginResults: PossibleLoginResults,
-  loginValue: string,
-  page: Page
-}
-) : Promise<{ success: boolean, errorType?: ScraperErrorTypes, errorMessage?: string}> {
-  const loginResult: LoginResults = await getLoginResult(options.possibleLoginResults, options.loginValue, options.page);
+  possibleLoginResults: PossibleLoginResults;
+  loginValue: string;
+  page: Page;
+}): Promise<{ success: boolean, errorType?: ScraperErrorTypes, errorMessage?: string}> {
+  const loginResult: LoginResults = await getLoginResult(options.possibleLoginResults,
+    options.loginValue,
+    options.page);
   switch (loginResult) {
     case LoginResults.Success:
       return { success: true };
@@ -83,7 +84,7 @@ export async function parseLoginResult(options: {
       return {
         success: false,
         errorType: loginResult === LoginResults.InvalidPassword ? ScraperErrorTypes.InvalidPassword :
-            ScraperErrorTypes.General,
+          ScraperErrorTypes.General,
         errorMessage: `Login failed with ${loginResult} error`,
       };
     case LoginResults.ChangePassword:
@@ -102,4 +103,3 @@ export function createGeneralError(): ScaperScrapingResult {
     errorType: ScraperErrorTypes.General,
   };
 }
-
