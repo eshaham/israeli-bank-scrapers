@@ -15,7 +15,7 @@ describe('Leumi login', () => {
   });
 
   maybeTestCompanyAPI(COMPANY_ID, (config) => {
-    return config.companyAPI.invalidLogin;
+    return config.companyAPI.invalidPassword;
   })('should fail on invalid credentials"', async () => {
     const {
       verbose, showBrowser, onProgress,

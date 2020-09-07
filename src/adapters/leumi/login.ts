@@ -13,7 +13,9 @@ import { ScraperCredentials } from '../../scrapers/base-scraper';
 
 const SCRAPER_ID = 'leumi';
 const ACCOUNT_BLOCKED_MSG = 'המנוי חסום';
+const CHANGE_PASSWORD_MSG = 'אחד או יותר מפרטי ההזדהות שמסרת שגויים.';
 const submitButtonSelector = '#enter';
+
 
 function createLoginFields(credentials: ScraperCredentials) {
   return [
@@ -34,7 +36,16 @@ async function waitForPostLogin(page: Page): Promise<void> {
 function getPossibleLoginResults(): PossibleLoginResults {
   const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [/ebanking\/SO\/SPA.aspx/i];
-  urls[LoginResults.InvalidPassword] = [/InternalSite\/CustomUpdate\/leumi\/LoginPage.ASP/];
+  urls[LoginResults.InvalidPassword] = [async (options) => {
+    if (!options || !options.page) {
+      throw new Error('missing page options argument');
+    }
+    const errorMessage = await pageEvalAll(options.page, '.errHeader', [], (label) => {
+      return (label[0] as HTMLElement).innerText;
+    });
+
+    return errorMessage === CHANGE_PASSWORD_MSG;
+  }];
   urls[LoginResults.AccountBlocked] = [async (options) => {
     if (!options || !options.page) {
       throw new Error('missing page options argument');
@@ -95,6 +106,7 @@ export function loginAdapter(options: LoginAdapterOptions): RunnerAdapter {
       } catch (error) {
         return {
           success: false,
+          errorMessage: error.message,
           errorType: LOGIN_RESULT.UNKNOWN_ERROR,
         };
       }

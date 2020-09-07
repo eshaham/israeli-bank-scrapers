@@ -23,6 +23,14 @@ module.exports = {
       'src/tests/**/*',
     ],
   "plugins": [
+    ["module-resolver", {
+      "alias": {
+        "@core/runner": "./src/runner",
+        "@core/definitions": "./src/definitions",
+        "@core/constants": "./src/constants",
+        "^@core/helpers/(.+)": "./src/helpers/\\1",
+      }
+    }],
     importVisitor(node => {
       if (packageJson.name !== 'israeli-bank-scrapers-core') {
         return;

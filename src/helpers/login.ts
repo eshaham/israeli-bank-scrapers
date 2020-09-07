@@ -1,6 +1,6 @@
 import { Page } from 'puppeteer';
-import { SCRAPERS } from '@core/definitions';
 import { ScaperScrapingResult, ScraperErrorTypes } from '../scrapers/base-scraper';
+import { SCRAPERS } from '../definitions';
 
 enum LoginBaseResults {
   Success = 'SUCCESS',
@@ -45,7 +45,7 @@ async function getLoginResult(possibleLoginResults: PossibleLoginResults, value:
   const keys = Object.keys(possibleLoginResults);
   for (const key of keys) {
     // @ts-ignore
-    const conditions = object[key];
+    const conditions = possibleLoginResults[key];
 
     for (const condition of conditions) {
       let result = false;

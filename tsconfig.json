@@ -9,7 +9,6 @@
     "rootDir": "./src",
     "baseUrl": "./src",                       /* Base directory to resolve non-absolute module names. */
     "paths": {
-      "@core/*": ["core/*"],
       "@core/runner": ["runner"],
       "@core/constants": ["constants"],
       "@core/helpers/*": ["helpers/*"],
