@@ -7,6 +7,14 @@
     "declaration": true,
     "outDir": "lib",
     "rootDir": "./src",
+    "baseUrl": "./src",                       /* Base directory to resolve non-absolute module names. */
+    "paths": {
+      "@core/*": ["core/*"],
+      "@core/runner": ["runner"],
+      "@core/constants": ["constants"],
+      "@core/helpers/*": ["helpers/*"],
+      "@core/definitions": ["definitions"]
+    },
     "strict": true,
     "noImplicitAny": true,
     "resolveJsonModule": true,

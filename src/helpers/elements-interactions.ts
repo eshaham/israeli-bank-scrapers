@@ -14,6 +14,19 @@ async function fillInput(page: Page, inputSelector: string, inputValue: string):
   await page.type(inputSelector, inputValue);
 }
 
+async function fillInputs(page: Page, fields: { selector: string, value: string}[]): Promise<void> {
+  const modified = [...fields];
+  const input = modified.shift();
+  if (!input) {
+    return;
+  }
+  await fillInput(page, input.selector, input.value);
+  if (modified.length) {
+    await fillInputs(page, modified);
+  }
+  return;
+}
+
 async function clickButton(page: Page, buttonSelector: string) {
   await page.$eval(buttonSelector, (el) => (el as HTMLElement).click());
 }
@@ -68,6 +81,7 @@ async function dropdownElements(page: Page, selector: string) {
 export {
   waitUntilElementFound,
   fillInput,
+  fillInputs,
   clickButton,
   clickLink,
   dropdownSelect,

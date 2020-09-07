@@ -1,3 +1,5 @@
+export const NORMAL_TXN_TYPE = 'normal';
+export const INSTALLMENTS_TXN_TYPE = 'installments';
 
 export const SHEKEL_CURRENCY_SYMBOL = '₪';
 export const SHEKEL_CURRENCY_KEYWORD = 'ש"ח';
@@ -7,6 +9,39 @@ export const SHEKEL_CURRENCY = 'ILS';
 export const DOLLAR_CURRENCY_SYMBOL = '$';
 export const DOLLAR_CURRENCY = 'USD';
 
-export const ISO_DATE_FORMAT = 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]';
+export enum SCRAPE_PROGRESS_TYPES {
+    INITIALIZING= 'INITIALIZING',
+    START_SCRAPING= 'START_SCRAPING',
+    LOGGING_IN= 'LOGGING_IN',
+    LOGIN_SUCCESS= 'LOGIN_SUCCESS',
+    LOGIN_FAILED= 'LOGIN_FAILED',
+    CHANGE_PASSWORD= 'CHANGE_PASSWORD',
+    END_SCRAPING= 'END_SCRAPING',
+    TERMINATING= 'TERMINATING',
+    VALIDATE_ADAPTER= 'VALIDATE_ADAPTER',
+    START_ADAPTER= 'START_ADAPTER',
+    END_ADAPTER= 'END_ADAPTER',
+    FAILED_ADAPTER= 'FAILED_ADAPTER',
+};
 
+export enum LOGIN_RESULT {
+    SUCCESS= 'SUCCESS',
+    INVALID_PASSWORD = 'INVALID_PASSWORD',
+    CHANGE_PASSWORD = 'CHANGE_PASSWORD',
+    UNKNOWN_ERROR = 'UNKNOWN_ERROR',
+};
+
+export const ERRORS = {
+    TIMEOUT: 'TIMEOUT',
+    GENERIC: 'GENERIC',
+};
+
+export const GENERAL_ERROR = 'GENERAL_ERROR';
+
+export const TRANSACTION_STATUS = {
+    COMPLETED: 'completed',
+    PENDING: 'pending',
+};
+
+export const ISO_DATE_FORMAT = 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]';
 export const ISO_DATE_REGEX = /^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([0-1][0-9]|2[0-3])(:[0-5][0-9]){2}\.[0-9]{3}Z$/;

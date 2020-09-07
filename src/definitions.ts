@@ -18,7 +18,7 @@ export enum CompanyTypes {
   leumi = 'leumi'
 }
 
-export const SCRAPERS = {
+export const SCRAPERS: Record<string, { name: string, loginFields: string[] }> = {
   [CompanyTypes.hapoalim]: {
     name: 'Bank Hapoalim',
     loginFields: ['userCode', PASSWORD_FIELD],
