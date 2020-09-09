@@ -81,14 +81,14 @@ export interface ScaperOptions {
    *
    * @param browser
    */
-  prepareBrowser: (browser: Browser) => Promise<void>;
+  prepareBrowser?: (browser: Browser) => Promise<void>;
 
   /**
    * adjust the page instance before it is being used.
    *
    * @param page
    */
-  preparePage: (page: Page) => Promise<void>;
+  preparePage?: (page: Page) => Promise<void>;
 }
 
 export enum ScaperProgressTypes {
