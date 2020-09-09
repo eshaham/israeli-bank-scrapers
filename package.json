@@ -21,7 +21,7 @@
     "build:js": "babel src --out-dir lib --extensions \".ts\" --source-maps inline --verbose",
     "prebuild": "node utils/update-puppeteer-config.js",
     "postbuild": "rimraf lib/tests",
-    "prepare:core": "node utils/prepare-israeli-bank-scrapers-core.js && npm run lint -- --fix && npm i --package-lock-only && npm ci && npm run build",
+    "prepare:core": "node utils/prepare-israeli-bank-scrapers-core.js && npm i --package-lock-only && npm ci && npm run lint -- --fix && npm run build",
     "prepare:default": "npm ci && npm run build",
     "reset": "git reset --hard && npm ci",
     "publish:core": "npm run prepare:core && npm publish --access public && npm run reset",
