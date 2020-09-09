@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const checkIfCoreVariation = require('./core-utils');
+const transformImports = require('./jscodeshift');
 
 function updatePackageJson() {
   const packagePath = path.join(__dirname, '..', 'package.json');
@@ -15,7 +16,7 @@ function updatePackageJson() {
   console.log('change package.json name to \'israeli-bank-scrapers-core\' and use \'puppeteer-core\'');
 }
 
-(function () {
+(async function () {
   if (checkIfCoreVariation()) {
     console.log('library is already in core variation');
     process.exit(1);
@@ -23,4 +24,5 @@ function updatePackageJson() {
   }
 
   updatePackageJson();
+  await transformImports();
 }());
