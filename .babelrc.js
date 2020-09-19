@@ -1,4 +1,3 @@
-const importVisitor = require('babel-plugin-import-visitor');
 const packageJson = require('./package.json');
 
 const presets = [
@@ -22,15 +21,5 @@ module.exports = {
       'tests/**/*',
       'src/tests/**/*',
     ],
-  "plugins": [
-    importVisitor(node => {
-      if (packageJson.name !== 'israeli-bank-scrapers-core') {
-        return;
-      }
-
-      if (node.value === 'puppeteer') {
-        node.value = 'puppeteer-core';
-      }
-    })
-  ]
+  "plugins": []
 };
