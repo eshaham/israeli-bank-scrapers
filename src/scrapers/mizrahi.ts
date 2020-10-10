@@ -3,13 +3,13 @@ import { Page, Request } from 'puppeteer';
 import {
   SHEKEL_CURRENCY,
 } from '../constants';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
+import { pageEvalAll, waitUntilElementDisappear, waitUntilElementFound } from '../helpers/elements-interactions';
 import { fetchPostWithinPage } from '../helpers/fetch';
-import { pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
 import {
   Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
-import { ScraperErrorTypes, ScraperCredentials } from './base-scraper';
+import { ScraperCredentials, ScraperErrorTypes } from './base-scraper';
+import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 
 interface ScrapedTransaction {
   RecTypeSpecified: boolean;
@@ -142,7 +142,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
       loginUrl: LOGIN_URL,
       fields: createLoginFields(credentials),
       submitButtonSelector,
-      checkReadiness: async () => this.page.waitForSelector(loginSpinnerSelector, { hidden: true }),
+      checkReadiness: async () => waitUntilElementDisappear(this.page, loginSpinnerSelector),
       postAction: async () => postLogin(this.page),
       possibleResults: getPossibleLoginResults(this.page),
     };
