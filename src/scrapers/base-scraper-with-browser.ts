@@ -36,7 +36,7 @@ export type PossibleLoginResults = {
 
 export interface LoginOptions {
   loginUrl: string;
-  checkReadiness?: () => Promise<unknown>;
+  checkReadiness?: () => Promise<void>;
   fields: {selector: string, value: string}[];
   submitButtonSelector: string;
   preAction?: () => Promise<void>;
