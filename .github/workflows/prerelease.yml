@@ -8,19 +8,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '10.x'
+          registry-url: 'https://registry.npmjs.org'
       - name: prepare default version
         run: npm run prepare:default
       - name: Make prerelease of default version to npm
-        uses: epeli/npm-release@bc78fc8
-        with:
-          type: prerelease
-          token: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --tag next
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: prepare core version
         run: |
           npm run reset
           npm run prepare:core
       - name: Make prerelease of core version to npm
-        uses: epeli/npm-release@bc78fc8
-        with:
-          type: prerelease
-          token: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --tag next
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
