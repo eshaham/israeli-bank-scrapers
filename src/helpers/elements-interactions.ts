@@ -5,6 +5,10 @@ async function waitUntilElementFound(page: Page, elementSelector: string,
   await page.waitForSelector(elementSelector, { visible: onlyVisible, timeout });
 }
 
+async function waitUntilElementDisappear(page: Page, elementSelector: string, timeout = 30000) {
+  await page.waitForSelector(elementSelector, { hidden: true, timeout });
+}
+
 async function fillInput(page: Page, inputSelector: string, inputValue: string): Promise<void> {
   await page.$eval(inputSelector, (input: Element) => {
     const inputElement = input;
@@ -79,6 +83,7 @@ async function dropdownElements(page: Page, selector: string) {
 
 export {
   waitUntilElementFound,
+  waitUntilElementDisappear,
   fillInput,
   fillInputs,
   clickButton,

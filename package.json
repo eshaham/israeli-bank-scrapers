@@ -1,6 +1,6 @@
 {
   "name": "israeli-bank-scrapers",
-  "version": "0.9.1",
+  "version": "1.0.0",
   "description": "Provide scrapers for all major Israeli banks and credit card companies",
   "engines": {
     "node": ">= 10.22.0",
@@ -21,7 +21,7 @@
     "build:js": "babel src --out-dir lib --extensions \".ts\" --source-maps inline --verbose",
     "prebuild": "node utils/update-puppeteer-config.js",
     "postbuild": "rimraf lib/tests",
-    "prepare:core": "node utils/prepare-israeli-bank-scrapers-core.js && npm i --package-lock-only && npm ci && npm run build",
+    "prepare:core": "node utils/prepare-israeli-bank-scrapers-core.js && npm i --package-lock-only && npm ci && npm run lint -- --fix && npm run build",
     "prepare:default": "npm ci && npm run build",
     "reset": "git reset --hard && npm ci",
     "publish:core": "npm run prepare:core && npm publish --access public && npm run reset",
@@ -63,7 +63,6 @@
     "@typescript-eslint/eslint-plugin": "^2.27.0",
     "@typescript-eslint/parser": "^2.26.0",
     "babel-jest": "^25.3.0",
-    "babel-plugin-import-visitor": "^0.2.0",
     "babel-plugin-module-resolver": "^4.0.0",
     "cross-env": "^6.0.3",
     "eslint": "^6.6.0",
@@ -71,6 +70,7 @@
     "eslint-config-airbnb-typescript": "^7.2.1",
     "eslint-plugin-import": "^2.20.2",
     "jest": "^25.3.0",
+    "jscodeshift": "^0.11.0",
     "ncp": "^2.0.0",
     "rimraf": "^3.0.0",
     "source-map-support": "^0.5.16",

@@ -1,4 +1,3 @@
-const importVisitor = require('babel-plugin-import-visitor');
 const packageJson = require('./package.json');
 
 const presets = [
