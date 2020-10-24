@@ -29,15 +29,6 @@ module.exports = {
         "@core/constants": "./src/constants",
         "^@core/helpers/(.+)": "./src/helpers/\\1",
       }
-    }],
-    importVisitor(node => {
-      if (packageJson.name !== 'israeli-bank-scrapers-core') {
-        return;
-      }
-
-      if (node.value === 'puppeteer') {
-        node.value = 'puppeteer-core';
-      }
-    })
+    }]
   ]
 };
