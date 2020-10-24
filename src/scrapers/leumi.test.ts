@@ -8,7 +8,7 @@ import { LoginResults } from './base-scraper-with-browser';
 const COMPANY_ID = 'leumi'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
 
-describe('Leumi legacy scraper', () => {
+describe('Leumi transactions scraper', () => {
   beforeAll(() => {
     extendAsyncTimeout(); // The default timeout is 5 seconds per async test, this function extends the timeout value
   });

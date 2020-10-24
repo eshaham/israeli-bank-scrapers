@@ -36,6 +36,10 @@ async function waitForPostLogin(page: Page): Promise<void> {
 function getPossibleLoginResults(): PossibleLoginResults {
   const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [/ebanking\/SO\/SPA.aspx/i];
+
+  // TODO [sakal] check which is the latest one
+  // urls[LoginResults.InvalidPassword] = [/InternalSite\/CustomUpdate\/leumi\/LoginPage.ASP/];
+
   urls[LoginResults.InvalidPassword] = [async (options) => {
     if (!options || !options.page) {
       throw new Error('missing page options argument');

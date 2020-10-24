@@ -1,6 +1,7 @@
 import moment, { Moment } from 'moment';
 import { Page } from 'puppeteer';
-import { BaseScraperWithBrowser, LoginResults, LoginOptions } from './base-scraper-with-browser';
+import { runner } from '@core/runner';
+import { BaseScraperWithBrowser } from './base-scraper-with-browser';
 import {
   dropdownSelect,
   dropdownElements,
@@ -15,40 +16,18 @@ import { SHEKEL_CURRENCY } from '../constants';
 import {
   TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
-import { ScaperScrapingResult, ScraperCredentials } from './base-scraper';
+import { ScaperLoginResult, ScaperScrapingResult, ScraperErrorTypes } from './base-scraper';
+import {
+  setBrowserPageAdapter,
+} from '../adapters/puppeteer';
+import { loginAdapter } from '../adapters/leumi';
 
 const BASE_URL = 'https://hb2.bankleumi.co.il';
 const DATE_FORMAT = 'DD/MM/YY';
 const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא קיימות תנועות מתאימות על פי הסינון שהוגדר';
-const ACCOUNT_BLOCKED_MSG = 'המנוי חסום';
 
 function getTransactionsUrl() {
   return `${BASE_URL}/ebanking/Accounts/ExtendedActivity.aspx?WidgetPar=1#/`;
-}
-
-function getPossibleLoginResults() {
-  const urls: LoginOptions['possibleResults'] = {};
-  urls[LoginResults.Success] = [/ebanking\/SO\/SPA.aspx/i];
-  urls[LoginResults.InvalidPassword] = [/InternalSite\/CustomUpdate\/leumi\/LoginPage.ASP/];
-  urls[LoginResults.AccountBlocked] = [async (options) => {
-    if (!options || !options.page) {
-      throw new Error('missing page options argument');
-    }
-    const errorMessage = await pageEvalAll(options.page, '.errHeader', [], (label) => {
-      return (label[0] as HTMLElement).innerText;
-    });
-
-    return errorMessage.startsWith(ACCOUNT_BLOCKED_MSG);
-  }];
-  // urls[LOGIN_RESULT.CHANGE_PASSWORD] = ``; // TODO should wait until my password expires
-  return urls;
-}
-
-function createLoginFields(credentials: ScraperCredentials) {
-  return [
-    { selector: '#wtr_uid', value: credentials.username },
-    { selector: '#wtr_password', value: credentials.password },
-  ];
 }
 
 function getAmountData(amountStr: string) {
@@ -249,24 +228,44 @@ async function fetchTransactions(page: Page, startDate: Moment) {
   return res;
 }
 
-async function waitForPostLogin(page: Page): Promise<void> {
-  // TODO check for condition to provide new password
-  await Promise.race([
-    waitUntilElementFound(page, 'div.leumi-container', true),
-    waitUntilElementFound(page, '#BodyContent_ctl00_loginErrMsg', true),
-    waitUntilElementFound(page, '.ErrMsg', true),
-  ]);
-}
+const LeumiScraperName = 'leumi';
 
 class LeumiScraper extends BaseScraperWithBrowser {
-  getLoginOptions(credentials: Record<string, string>) {
-    return {
-      loginUrl: `${BASE_URL}`,
-      fields: createLoginFields(credentials),
-      submitButtonSelector: '#enter',
-      postAction: async () => waitForPostLogin(this.page),
-      possibleResults: getPossibleLoginResults(),
+  // @ts-ignore
+  getLoginOptions() {
+    throw new Error(`this scraper is using login adapter. This method should not have been executed in ${this.options.companyId}`);
+  }
+
+  async login(credentials: Record<string, string>): Promise<ScaperLoginResult> {
+    const runnerOptions = {
+      onProgress: (adapterName: string, message: string) => {
+        this.eventEmitter.emit('', LeumiScraperName, `${adapterName}: ${message}`);
+      },
     };
+
+    const runnerAdapters = [
+      setBrowserPageAdapter({
+        page: this.page,
+      }),
+      loginAdapter({
+        credentials,
+      }),
+    ];
+
+    return runner(runnerOptions, runnerAdapters, []).then(
+      (result) => {
+        if (result.success) {
+          return {
+            success: true,
+          };
+        }
+
+        return {
+          success: false,
+          errorType: ScraperErrorTypes.General, // TODO [sakal] change
+        };
+      },
+    );
   }
 
   async fetchData(): Promise<ScaperScrapingResult> {

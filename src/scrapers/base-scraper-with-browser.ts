@@ -3,7 +3,7 @@ import puppeteer, { Browser, Page } from 'puppeteer';
 import {
   ScraperErrorTypes,
   BaseScraper, ScaperScrapingResult, ScaperProgressTypes,
-  ScraperCredentials,
+  ScraperCredentials, ScaperLoginResult,
 } from './base-scraper';
 import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { clickButton, fillInput, waitUntilElementFound } from '../helpers/elements-interactions';
@@ -191,7 +191,7 @@ class BaseScraperWithBrowser extends BaseScraper {
     }
   }
 
-  async login(credentials: Record<string, string>): Promise<ScaperScrapingResult> {
+  async login(credentials: Record<string, string>): Promise<ScaperLoginResult> {
     if (!credentials || !this.page) {
       return createGeneralError();
     }

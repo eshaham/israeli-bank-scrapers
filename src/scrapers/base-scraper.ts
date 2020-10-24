@@ -119,7 +119,7 @@ function createGenericError(errorMessage: string) {
 }
 
 export class BaseScraper {
-  private eventEmitter = new EventEmitter();
+  protected eventEmitter = new EventEmitter();
 
   constructor(public options: ScaperOptions) {
   }
