@@ -26,6 +26,11 @@ interface ScrapedTransaction {
 const BASE_ACTIONS_URL = 'https://online.max.co.il';
 const BASE_API_ACTIONS_URL = 'https://onlinelcapi.max.co.il';
 const BASE_WELCOME_URL = 'https://www.max.co.il';
+
+const LOGIN_URL = `${BASE_WELCOME_URL}/login`;
+const PASSWORD_EXPIRED_URL = `${BASE_ACTIONS_URL}/Anonymous/Login/PasswordExpired.aspx`;
+const SUCCESS_URL = `${BASE_WELCOME_URL}/homepage/personal`;
+
 const NORMAL_TYPE_NAME = 'רגילה';
 const ATM_TYPE_NAME = 'חיוב עסקות מיידי';
 const INTERNET_SHOPPING_TYPE_NAME = 'אינטרנט/חו"ל';
@@ -203,8 +208,8 @@ async function fetchTransactions(page: Page, options: ScaperOptions) {
 
 function getPossibleLoginResults(page: Page): PossibleLoginResults {
   const urls: PossibleLoginResults = {};
-  urls[LoginResults.Success] = [`${BASE_WELCOME_URL}/homepage/personal`];
-  urls[LoginResults.ChangePassword] = [`${BASE_ACTIONS_URL}/Anonymous/Login/PasswordExpired.aspx`];
+  urls[LoginResults.Success] = [SUCCESS_URL];
+  urls[LoginResults.ChangePassword] = [PASSWORD_EXPIRED_URL];
   urls[LoginResults.InvalidPassword] = [async () => {
     return elementPresentOnPage(page, INVALID_DETAILS_SELECTOR);
   }];
@@ -214,24 +219,24 @@ function getPossibleLoginResults(page: Page): PossibleLoginResults {
   return urls;
 }
 
-function createLoginFields(inputGroupName: string, credentials: ScraperCredentials) {
+function createLoginFields(credentials: ScraperCredentials) {
   return [
-    { selector: `#${inputGroupName}_txtUserName`, value: credentials.username },
-    { selector: '#txtPassword', value: credentials.password },
+    { selector: '#user-name', value: credentials.username },
+    { selector: '#password', value: credentials.password },
   ];
 }
 
 class MaxScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials: ScraperCredentials) {
-    const inputGroupName = 'PlaceHolderMain_CardHoldersLogin1';
     return {
-      loginUrl: `${BASE_ACTIONS_URL}/Anonymous/Login/CardholdersLogin.aspx`,
-      fields: createLoginFields(inputGroupName, credentials),
-      submitButtonSelector: `#${inputGroupName}_btnLogin`,
+      loginUrl: LOGIN_URL,
+      fields: createLoginFields(credentials),
+      submitButtonSelector: '#login-password #send-code',
       preAction: async () => {
         if (await elementPresentOnPage(this.page, '#closePopup')) {
           await clickButton(this.page, '#closePopup');
         }
+        await clickButton(this.page, '#login-password-link');
       },
       postAction: async () => redirectOrDialog(this.page),
       possibleResults: getPossibleLoginResults(this.page),
