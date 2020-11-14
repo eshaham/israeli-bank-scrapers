@@ -243,7 +243,6 @@ class MaxScraper extends BaseScraperWithBrowser {
       },
       checkReadiness: async () => {
         await waitUntilElementFound(this.page, '.personal-area > a.go-to-personal-area', true);
-
       },
       postAction: async () => redirectOrDialog(this.page),
       possibleResults: getPossibleLoginResults(this.page),
