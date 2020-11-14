@@ -27,7 +27,7 @@ const BASE_ACTIONS_URL = 'https://online.max.co.il';
 const BASE_API_ACTIONS_URL = 'https://onlinelcapi.max.co.il';
 const BASE_WELCOME_URL = 'https://www.max.co.il';
 
-const LOGIN_URL = `${BASE_WELCOME_URL}/login`;
+const LOGIN_URL = `${BASE_WELCOME_URL}/homepage/welcome`;
 const PASSWORD_EXPIRED_URL = `${BASE_ACTIONS_URL}/Anonymous/Login/PasswordExpired.aspx`;
 const SUCCESS_URL = `${BASE_WELCOME_URL}/homepage/personal`;
 
@@ -236,7 +236,14 @@ class MaxScraper extends BaseScraperWithBrowser {
         if (await elementPresentOnPage(this.page, '#closePopup')) {
           await clickButton(this.page, '#closePopup');
         }
+        await clickButton(this.page, '.personal-area > a.go-to-personal-area');
+        await waitUntilElementFound(this.page, '#login-password-link', true);
         await clickButton(this.page, '#login-password-link');
+        await waitUntilElementFound(this.page, '#login-password.tab-pane.active app-user-login-form', true);
+      },
+      checkReadiness: async () => {
+        await waitUntilElementFound(this.page, '.personal-area > a.go-to-personal-area', true);
+
       },
       postAction: async () => redirectOrDialog(this.page),
       possibleResults: getPossibleLoginResults(this.page),
