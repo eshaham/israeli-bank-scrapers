@@ -15,9 +15,6 @@ import {
 } from '../transactions';
 import { ScraperCredentials } from './base-scraper';
 
-const BASE_URL = 'https://online.fibi.co.il';
-const LOGIN_URL = `${BASE_URL}/MatafLoginService/MatafLoginServlet?bankId=FIBIPORTAL&site=Private&KODSAFA=HE`;
-const TRANSACTIONS_URL = `${BASE_URL}/wps/myportal/FibiMenu/Online/OnAccountMngment/OnBalanceTrans/PrivateAccountFlow`;
 const DATE_FORMAT = 'DD/MM/YYYY';
 const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא נמצאו נתונים בנושא המבוקש';
 const DATE_COLUMN_CLASS_COMPLETED = 'date first';
@@ -51,14 +48,14 @@ interface ScrapedTransaction {
 }
 
 
-function getPossibleLoginResults(): PossibleLoginResults {
+export function getPossibleLoginResults(): PossibleLoginResults {
   const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [/FibiMenu\/Online/];
   urls[LoginResults.InvalidPassword] = [/FibiMenu\/Marketing\/Private\/Home/];
   return urls;
 }
 
-function createLoginFields(credentials: ScraperCredentials) {
+export function createLoginFields(credentials: ScraperCredentials) {
   return [
     { selector: '#username', value: credentials.username },
     { selector: '#password', value: credentials.password },
@@ -276,7 +273,7 @@ async function fetchAccounts(page: Page, startDate: Moment) {
   return accounts;
 }
 
-async function waitForPostLogin(page: Page) {
+export async function waitForPostLogin(page: Page) {
   return Promise.race([
     waitUntilElementFound(page, '#matafLogoutLink', true),
     waitUntilElementFound(page, '#validationMsg', true),
@@ -284,9 +281,15 @@ async function waitForPostLogin(page: Page) {
 }
 
 class BeinleumiScraper extends BaseScraperWithBrowser {
+  BASE_URL = 'https://online.fibi.co.il';
+
+  LOGIN_URL = `${this.BASE_URL}/MatafLoginService/MatafLoginServlet?bankId=FIBIPORTAL&site=Private&KODSAFA=HE`;
+
+  TRANSACTIONS_URL = `${this.BASE_URL}/wps/myportal/FibiMenu/Online/OnAccountMngment/OnBalanceTrans/PrivateAccountFlow`;
+
   getLoginOptions(credentials: ScraperCredentials) {
     return {
-      loginUrl: `${LOGIN_URL}`,
+      loginUrl: `${this.LOGIN_URL}`,
       fields: createLoginFields(credentials),
       submitButtonSelector: '#continueBtn',
       postAction: async () => waitForPostLogin(this.page),
@@ -299,7 +302,7 @@ class BeinleumiScraper extends BaseScraperWithBrowser {
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-    await this.navigateTo(TRANSACTIONS_URL);
+    await this.navigateTo(this.TRANSACTIONS_URL);
 
     const accounts = await fetchAccounts(this.page, startMoment);
 
