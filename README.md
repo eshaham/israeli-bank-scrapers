@@ -22,6 +22,7 @@ Currently only the following banks are supported:
 - Amex (thanks [@erezd](https://github.com/erezd))
 - Union Bank (Thanks to Intuit FDP OpenSource Team [@dratler](https://github.com/dratler),[@kalinoy](https://github.com/kalinoy),[@shanigad](https://github.com/shanigad),[@dudiventura](https://github.com/dudiventura) and [@NoamGoren](https://github.com/NoamGoren))
 - Beinleumi (Thanks to [@dudiventura](https://github.com/dudiventura) from the Intuit FDP OpenSource Team)
+- Massad
 
 # Prerequisites
 To use this you will need to have [Node.js](https://nodejs.org) >= 10.x installed.
@@ -265,6 +266,15 @@ const credentials = {
 };
 ```
 This scraper supports fetching transaction from up to one year.
+
+## Beinleumi & Massad
+These scrapers are essentially identical and expect the following credentials object:
+```node
+const credentials = {
+  username: <user name>,
+  password: <user password>
+};
+```
 
 # Known projects
 These are the projects known to be using this module:
