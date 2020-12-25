@@ -80,6 +80,7 @@ The structure of the result object is as follows:
   success: boolean,
   accounts: [{
     accountNumber: string,
+    balance?: number, // Account balance. Not implemented for all accounts.
     txns: [{
       type: string, // can be either 'normal' or 'installments'
       identifier: int, // only if exists

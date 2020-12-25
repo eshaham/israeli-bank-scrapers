@@ -1,6 +1,7 @@
 
 export interface TransactionsAccount {
   accountNumber: string;
+  balance?: number;
   txns: Transaction[];
 }
 

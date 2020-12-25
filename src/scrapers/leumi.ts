@@ -205,6 +205,9 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
 
   const accountNumber = selectedSnifAccount.replace('/', '_');
 
+  const balanceValue = await page.$eval('#lblBalancesVal', (element) => element.textContent);
+  const balance = balanceValue ? parseFloat(balanceValue.replace(/[^\d.]/g, '')) : undefined;
+
   await Promise.race([
     waitUntilElementFound(page, 'table#WorkSpaceBox table#ctlActivityTable', false),
     waitUntilElementFound(page, '.errInfo', false),
@@ -213,6 +216,7 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
   if (await isNoTransactionInDateRangeError(page)) {
     return {
       accountNumber,
+      balance,
       txns: [],
     };
   }
