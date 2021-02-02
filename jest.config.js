@@ -2,6 +2,7 @@
 // https://jestjs.io/docs/en/configuration.html
 
 module.exports = {
+  preset: 'ts-jest/presets/js-with-babel',
   clearMocks: true,
   coverageDirectory: 'coverage',
   rootDir: './src',
@@ -12,4 +13,9 @@ module.exports = {
     './tests/jest-setup.ts',
   ],
   testEnvironment: 'node',
+  globals: {
+    'ts-jest': {
+      babelConfig: true,
+    }
+  },
 };

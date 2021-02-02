@@ -1,5 +1,3 @@
-const packageJson = require("./package.json");
-
 const presets = [
   [
     "@babel/preset-env",
