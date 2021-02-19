@@ -9,6 +9,7 @@ import AmexScraper from './amex';
 import MizrahiScraper from './mizrahi';
 import UnionBankScraper from './union-bank';
 import BeinleumiScraper from './beinleumi';
+import MassadScraper from './massad';
 import { ScaperOptions } from './base-scraper';
 import { CompanyTypes } from '../definitions';
 
@@ -44,6 +45,8 @@ export default function createScraper(options: ScaperOptions) {
       return new UnionBankScraper(options);
     case CompanyTypes.beinleumi:
       return new BeinleumiScraper(options);
+    case CompanyTypes.massad:
+      return new MassadScraper(options);
     default:
       throw new Error(`unknown company id ${options.companyId}`);
   }
