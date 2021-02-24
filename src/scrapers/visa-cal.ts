@@ -146,7 +146,7 @@ function convertTransactionType(txnType: string) {
     case CREDIT_PLUS30_TYPE_CODE:
       return TransactionTypes.Credit;
     default:
-      return `${TransactionTypes.Unknown} (type: ${txnType})`;
+      return TransactionTypes.Unknown;
   }
 }
 
