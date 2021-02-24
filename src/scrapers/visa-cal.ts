@@ -31,6 +31,7 @@ const NORMAL_TYPE_CODE = '5';
 const REFUND_TYPE_CODE = '6';
 const WITHDRAWAL_TYPE_CODE = '7';
 const INSTALLMENTS_TYPE_CODE = '8';
+const CREDIT_PLUS30_TYPE_CODE = '11';
 const CANCEL_TYPE_CODE = '25';
 const WITHDRAWAL_TYPE_CODE_2 = '27';
 const DEBIT_TYPE_CODE = '41';
@@ -142,8 +143,10 @@ function convertTransactionType(txnType: string) {
     case INSTALLMENTS_TYPE_CODE:
     case CREDIT_PAYMENTS_CODE:
       return TransactionTypes.Installments;
+    case CREDIT_PLUS30_TYPE_CODE:
+      return TransactionTypes.Credit;
     default:
-      throw new Error(`unknown transaction type ${txnType}`);
+      return `${TransactionTypes.Unknown} (type: ${txnType})`;
   }
 }
 
