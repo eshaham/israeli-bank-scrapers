@@ -8,6 +8,8 @@ export interface TransactionsAccount {
 export enum TransactionTypes {
   Normal = 'normal',
   Installments = 'installments'
+  Credit = 'credit',
+  Unknown = 'unknown',
 }
 
 export enum TransactionStatuses {
