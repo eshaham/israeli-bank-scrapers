@@ -7,7 +7,7 @@ export interface TransactionsAccount {
 
 export enum TransactionTypes {
   Normal = 'normal',
-  Installments = 'installments'
+  Installments = 'installments',
   Credit = 'credit',
   Unknown = 'unknown',
 }
