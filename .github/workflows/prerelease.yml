@@ -11,7 +11,7 @@ jobs:
       - name: prepare default version
         run: npm run prepare:default
       - name: Make prerelease of default version to npm
-        uses: epeli/npm-release@bc78fc8
+        uses: epeli/npm-release@bc78fc8caa52fa9541f83b3fbaa2fc9938bdf0ee
         with:
           type: prerelease
           token: ${{ secrets.NPM_TOKEN }}
@@ -20,7 +20,7 @@ jobs:
           npm run reset
           npm run prepare:core
       - name: Make prerelease of core version to npm
-        uses: epeli/npm-release@bc78fc8
+        uses: epeli/npm-release@bc78fc8caa52fa9541f83b3fbaa2fc9938bdf0ee
         with:
           type: prerelease
           token: ${{ secrets.NPM_TOKEN }}
