@@ -38,6 +38,7 @@ const INSTALLMENTS_TYPE_NAME = 'תשלומים';
 const MONTHLY_CHARGE_TYPE_NAME = 'חיוב חודשי';
 const ONE_MONTH_POSTPONED_TYPE_NAME = 'דחוי חודש';
 const MONTHLY_POSTPONED_TYPE_NAME = 'דחוי לחיוב החודשי';
+const CANCELLED_TRANSACTION = '68';
 const MONTHLY_PAYMENT_TYPE_NAME = 'תשלום חודשי';
 const FUTURE_PURCHASE_FINANCING = 'מימון לרכישה עתידית';
 const MONTHLY_POSTPONED_INSTALLMENTS_TYPE_NAME = 'דחוי חודש תשלומים';
@@ -92,6 +93,7 @@ function getTransactionType(txnTypeStr: string) {
     case INTERNET_SHOPPING_TYPE_NAME:
     case MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME:
     case POSTPONED_TRANSACTION_INSTALLMENTS:
+    case CANCELLED_TRANSACTION:
       return TransactionTypes.Normal;
     case INSTALLMENTS_TYPE_NAME:
     case CREDIT_TYPE_NAME:
