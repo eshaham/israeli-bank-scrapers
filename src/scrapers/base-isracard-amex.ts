@@ -232,8 +232,8 @@ async function fetchTransactions(page: Page, options: ExtendedScraperOptions, st
   return {};
 }
 
-async function fetchAllTransactions(page: Page, options: ExtendedScraperOptions, startMoment: Moment) {
-  const allMonths = getAllMonthMoments(startMoment, true);
+async function fetchAllTransactions(page: Page, options: ExtendedScraperOptions, startMoment: Moment, endMoment: Moment) {
+  const allMonths = getAllMonthMoments(startMoment, endMoment);
   const results: ScrapedAccountsWithIndex[] = await Promise.all(allMonths.map(async (monthMoment) => {
     return fetchTransactions(page, options, startMoment, monthMoment);
   }));
@@ -351,14 +351,17 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
 
   async fetchData() {
     const defaultStartMoment = moment().subtract(1, 'years');
+    const defaultEndMoment = moment().subtract(1, 'years').add(1, 'month').endOf('month');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
+    const endDate = this.options.endDate || defaultEndMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
+    const endMoment = moment.max(defaultEndMoment, moment(endDate));
 
     return fetchAllTransactions(this.page, {
       ...this.options,
       servicesUrl: this.servicesUrl,
       companyCode: this.companyCode,
-    }, startMoment);
+    }, startMoment, endMoment);
   }
 }
 

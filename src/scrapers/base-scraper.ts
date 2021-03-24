@@ -47,6 +47,11 @@ export interface ScaperOptions {
   startDate: Date;
 
   /**
+   * the date to fetch transactions to
+   */
+  endDate: Date;
+
+  /**
    * shows the browser while scraping, good for debugging (default false)
    */
   showBrowser?: boolean;

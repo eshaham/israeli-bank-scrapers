@@ -187,9 +187,12 @@ function prepareTransactions(txns: Transaction[], startMoment: moment.Moment, co
 
 async function fetchTransactions(page: Page, options: ScaperOptions) {
   const defaultStartMoment = moment().subtract(1, 'years');
+  const defaultEndMoment = moment().subtract(1, 'years').add(1, 'month').endOf('month');
   const startDate = options.startDate || defaultStartMoment.toDate();
+  const endDate = options.endDate || defaultEndMoment.toDate();
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
-  const allMonths = getAllMonthMoments(startMoment, true);
+  const endMoment = moment.max(defaultEndMoment, moment(endDate));
+  const allMonths = getAllMonthMoments(startMoment, endMoment);
 
   let allResults: Record<string, Transaction[]> = {};
   for (let i = 0; i < allMonths.length; i += 1) {
