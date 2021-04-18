@@ -145,19 +145,6 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
   return [
       await fetchTransactionsForAccount(page, startDate, account)
   ]
-  return new Promise((resolve) => {
-    setTimeout(() => {
-
-
-      if (!account) {
-        throw new Error('failed to extract account number');
-      }
-      resolve([
-
-      ]);
-    }, 5000);
-  })
-
 }
 
 async function waitForPostLogin(page: Page): Promise<void> {
