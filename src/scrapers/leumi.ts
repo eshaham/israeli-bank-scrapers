@@ -126,15 +126,15 @@ function hangProcess(timeout: number) {
 async function fetchTransactions(page: Page, startDate: Moment): Promise<TransactionsAccount[]> {
   // TODO should adjust logic to support multiple accounts (I don't have such an account)
 
-  // DEVELOPER NOTICE the account number received from the server is being altered at runtime for some accounts
-  // after 1-2 seconds so we need to hang the process for a short while.
+  // DEVELOPER NOTICE the account number received from the server is being altered at
+  // runtime for some accounts after 1-2 seconds so we need to hang the process for a short while.
   await hangProcess(4000);
 
   const accountSpanText = await page.$eval('app-masked-number-combo span.display-number-li', (span: any) => {
     return span.textContent;
   });
 
-  // due to a bug, the altered value might include undesired signs like & that are removed here
+  // due to a bug, the altered value might include undesired signs like & that should be removed
   const accountNumberMatches = accountSpanText.match(/\d+-\d+(\/)?\d+/);
   const account = accountNumberMatches ? accountNumberMatches[0] : null;
 
