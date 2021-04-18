@@ -51,7 +51,7 @@ function extractTransactionsFromPage(transactions: any[], status: TransactionSta
     return [];
   }
 
-  const result: Transaction[] = transactions.map(rawTransaction => {
+  const result: Transaction[] = transactions.map((rawTransaction) => {
     const newTransaction: Transaction = {
       status,
       type: TransactionTypes.Normal,
@@ -66,7 +66,7 @@ function extractTransactionsFromPage(transactions: any[], status: TransactionSta
     };
 
     return newTransaction;
-  })
+  });
 
   return result;
 }
@@ -79,21 +79,21 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
   await waitUntilElementFound(page, 'input[formcontrolname="txtInputFrom"]', true);
 
   await fillInput(
-      page,
-      'input[formcontrolname="txtInputFrom"]',
-      startDate.format(DATE_FORMAT),
+    page,
+    'input[formcontrolname="txtInputFrom"]',
+    startDate.format(DATE_FORMAT),
   );
 
   // we must blur the from control otherwise the search will use the previous value
   await page.focus("button[aria-label='סנן']");
 
   await clickButton(page, "button[aria-label='סנן']");
-  const finalResponse = await page.waitForResponse(response => {
-    return response.url() === FILTERED_TRANSACTIONS_URL
-        && response.request().method() === 'POST';
+  const finalResponse = await page.waitForResponse((response) => {
+    return response.url() === FILTERED_TRANSACTIONS_URL &&
+        response.request().method() === 'POST';
   });
 
-  let responseJson: any = await finalResponse.json();
+  const responseJson: any = await finalResponse.json();
 
   const accountNumber = accountId;
   const response = JSON.parse(responseJson.jsonResp);
@@ -120,8 +120,8 @@ function hangProcess(timeout: number) {
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve();
-    }, timeout)
-  })
+    }, timeout);
+  });
 }
 async function fetchTransactions(page: Page, startDate: Moment): Promise<TransactionsAccount[]> {
   // TODO should adjust logic to support multiple accounts (I don't have such an account)
@@ -143,8 +143,8 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
   }
 
   return [
-      await fetchTransactionsForAccount(page, startDate, account)
-  ]
+    await fetchTransactionsForAccount(page, startDate, account),
+  ];
 }
 
 async function waitForPostLogin(page: Page): Promise<void> {
