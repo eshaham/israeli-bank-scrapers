@@ -210,7 +210,7 @@ async function searchByDates(page: Page, startDate: Moment) {
 
 async function getAccountNumber(page: Page) {
   const selectedSnifAccount = await page.$eval('#ddlAccounts_m_ddl option[selected="selected"]', (option) => {
-    return (option as HTMLElement).innerText;
+    return (option as HTMLElement).innerText.replace(/[^ -~]+/g, '');
   });
 
   return selectedSnifAccount.replace('/', '_');
