@@ -274,10 +274,7 @@ async function fetchAccounts(page: Page, startDate: Moment) {
 }
 
 async function waitForPostLogin(page: Page) {
-  return Promise.race([
-    waitUntilElementFound(page, '#signoff', true),
-    waitUntilElementFound(page, '#restore', true),
-  ]);
+  return waitUntilElementFound(page, '.signoff_button', false);
 }
 
 class UnionBankScraper extends BaseScraperWithBrowser {
