@@ -95,7 +95,7 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
 
   const responseJson: any = await finalResponse.json();
 
-  const accountNumber = accountId;
+  const accountNumber = accountId.replace('/', '_');
   const response = JSON.parse(responseJson.jsonResp);
 
   const pendingTransactions = response.TodayTransactionsItems;
