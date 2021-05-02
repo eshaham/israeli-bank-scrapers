@@ -42,6 +42,7 @@ const SERVICES_TYPE_CODE = '72';
 const REFUND_TYPE_CODE_2 = '76';
 const CANCEL_PAYMENT_CODE = '86';
 const CANCELLED_TRANSACTION = '68';
+const TYPE_CODE_1 = '1';
 
 const HEADER_SITE = { 'X-Site-Id': '8D37DF16-5812-4ACD-BAE7-CD1A5BFA2206' };
 
@@ -135,6 +136,7 @@ function convertTransactionType(txnType: string) {
     case REFUND_TYPE_CODE_2:
     case CANCEL_PAYMENT_CODE:
     case CANCELLED_TRANSACTION:
+    case TYPE_CODE_1:
     case SERVICES_REFUND_TYPE_CODE:
     case MEMBERSHIP_FEE_TYPE_CODE:
     case SERVICES_TYPE_CODE:
