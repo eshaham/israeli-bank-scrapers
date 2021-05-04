@@ -86,7 +86,7 @@ async function clickByXPath(page: Page, xpath: string): Promise<void> {
 }
 
 function removeSpecialCharacters(str: string): string {
-  return str.replace(/[^0-9/-]/g, "");
+  return str.replace(/[^0-9/-]/g, '');
 }
 
 async function fetchTransactionsForAccount(page: Page, startDate: Moment, accountId: string): Promise<TransactionsAccount> {
