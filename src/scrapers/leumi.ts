@@ -79,6 +79,16 @@ function hangProcess(timeout: number) {
   });
 }
 
+async function clickByXPath(page: Page, xpath: string): Promise<void> {
+  await page.waitForXPath(xpath, { timeout: 30000, visible: true });
+  const elm = await page.$x(xpath);
+  await elm[0].click();
+}
+
+function removeSpecialCharacters(str: string): string {
+  return str.replace(/[^0-9/-]/g, "");
+}
+
 async function fetchTransactionsForAccount(page: Page, startDate: Moment, accountId: string): Promise<TransactionsAccount> {
   // this row prevent chromium crush
   await hangProcess(500);
@@ -128,12 +138,6 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
   };
 }
 
-async function clickByXPath(page: Page, xpath: string): Promise<void> {
-  await page.waitForXPath(xpath, { timeout: 30000, visible: true });
-  const elm = await page.$x(xpath);
-  await elm[0].click();
-}
-
 async function fetchTransactions(page: Page, startDate: Moment): Promise<TransactionsAccount[]> {
   const accounts: TransactionsAccount[] = [];
 
@@ -154,7 +158,7 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
     await clickByXPath(page, '//*[contains(@class, "number") and contains(@class, "combo-inner")]');
     await clickByXPath(page, `//span[contains(text(), '${accountId}')]`);
 
-    accounts.push(await fetchTransactionsForAccount(page, startDate, accountId.replace(' ', '')));
+    accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(accountId)));
   }
 
   return accounts;
