@@ -71,11 +71,33 @@ function extractTransactionsFromPage(transactions: any[], status: TransactionSta
   return result;
 }
 
+function hangProcess(timeout: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, timeout);
+  });
+}
+
+async function clickByXPath(page: Page, xpath: string): Promise<void> {
+  await page.waitForXPath(xpath, { timeout: 30000, visible: true });
+  const elm = await page.$x(xpath);
+  await elm[0].click();
+}
+
+function removeSpecialCharacters(str: string): string {
+  return str.replace(/[^0-9/-]/g, '');
+}
 
 async function fetchTransactionsForAccount(page: Page, startDate: Moment, accountId: string): Promise<TransactionsAccount> {
+  // this row prevent chromium crush
+  await hangProcess(500);
+
   await waitUntilElementFound(page, 'button[title="חיפוש מתקדם"]', true);
   await clickButton(page, 'button[title="חיפוש מתקדם"]');
-  await clickButton(page, '#bll-radio-3');
+  await waitUntilElementFound(page, 'bll-radio-button', true);
+  await clickButton(page, 'bll-radio-button:not([checked])');
+
   await waitUntilElementFound(page, 'input[formcontrolname="txtInputFrom"]', true);
 
   await fillInput(
@@ -90,7 +112,7 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
   await clickButton(page, "button[aria-label='סנן']");
   const finalResponse = await page.waitForResponse((response) => {
     return response.url() === FILTERED_TRANSACTIONS_URL &&
-        response.request().method() === 'POST';
+      response.request().method() === 'POST';
   });
 
   const responseJson: any = await finalResponse.json();
@@ -116,35 +138,30 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
   };
 }
 
-function hangProcess(timeout: number) {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve();
-    }, timeout);
-  });
-}
 async function fetchTransactions(page: Page, startDate: Moment): Promise<TransactionsAccount[]> {
-  // TODO should adjust logic to support multiple accounts (I don't have such an account)
+  const accounts: TransactionsAccount[] = [];
 
   // DEVELOPER NOTICE the account number received from the server is being altered at
   // runtime for some accounts after 1-2 seconds so we need to hang the process for a short while.
   await hangProcess(4000);
 
-  const accountSpanText = await page.$eval('app-masked-number-combo span.display-number-li', (span: any) => {
-    return span.textContent;
-  });
+  const accountsIds = await page.evaluate(() => Array.from(document.querySelectorAll('app-masked-number-combo span.display-number-li'), (e) => e.textContent)) as string[];
 
-  // due to a bug, the altered value might include undesired signs like & that should be removed
-  const accountNumberMatches = accountSpanText.match(/\d+-\d+(\/)?\d+/);
-  const account = accountNumberMatches ? accountNumberMatches[0] : null;
+  // // due to a bug, the altered value might include undesired signs like & that should be removed
 
-  if (!account) {
+  if (!accountsIds.length) {
     throw new Error('Failed to extract or parse the account number');
   }
 
-  return [
-    await fetchTransactionsForAccount(page, startDate, account),
-  ];
+  for (const accountId of accountsIds) {
+    // get list of accounts and check accountId
+    await clickByXPath(page, '//*[contains(@class, "number") and contains(@class, "combo-inner")]');
+    await clickByXPath(page, `//span[contains(text(), '${accountId}')]`);
+
+    accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(accountId)));
+  }
+
+  return accounts;
 }
 
 async function waitForPostLogin(page: Page): Promise<void> {
