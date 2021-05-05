@@ -142,6 +142,11 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
 
 async function fetchTransactions(page: Page, startDate: Moment): Promise<TransactionsAccount[]> {
   const accounts: TransactionsAccount[] = [];
+
+  // DEVELOPER NOTICE the account number received from the server is being altered at
+  // runtime for some accounts after 1-2 seconds so we need to hang the process for a short while.
+  await hangProcess(4000);
+
   const accountsIds = await page.evaluate(() => Array.from(document.querySelectorAll('app-masked-number-combo span.display-number-li'), (e) => e.textContent)) as string[];
 
   // due to a bug, the altered value might include undesired signs like & that should be removed
