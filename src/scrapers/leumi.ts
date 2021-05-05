@@ -90,8 +90,9 @@ function removeSpecialCharacters(str: string): string {
 }
 
 async function fetchTransactionsForAccount(page: Page, startDate: Moment, accountId: string): Promise<TransactionsAccount> {
-  // this row prevent chromium crush
-  await hangProcess(500);
+  // DEVELOPER NOTICE the account number received from the server is being altered at
+  // runtime for some accounts after 1-2 seconds so we need to hang the process for a short while.
+  await hangProcess(4000);
 
   await waitUntilElementFound(page, 'button[title="חיפוש מתקדם"]', true);
   await clickButton(page, 'button[title="חיפוש מתקדם"]');
@@ -117,7 +118,8 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
 
   const responseJson: any = await finalResponse.json();
 
-  const accountNumber = accountId.replace('/', '_');
+  const accountNumber = accountId.replace('/', '_').replace(/[^\d-_]/g, '');
+
   const response = JSON.parse(responseJson.jsonResp);
 
   const pendingTransactions = response.TodayTransactionsItems;
@@ -140,23 +142,20 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
 
 async function fetchTransactions(page: Page, startDate: Moment): Promise<TransactionsAccount[]> {
   const accounts: TransactionsAccount[] = [];
-
-  // DEVELOPER NOTICE the account number received from the server is being altered at
-  // runtime for some accounts after 1-2 seconds so we need to hang the process for a short while.
-  await hangProcess(4000);
-
   const accountsIds = await page.evaluate(() => Array.from(document.querySelectorAll('app-masked-number-combo span.display-number-li'), (e) => e.textContent)) as string[];
 
-  // // due to a bug, the altered value might include undesired signs like & that should be removed
+  // due to a bug, the altered value might include undesired signs like & that should be removed
 
   if (!accountsIds.length) {
     throw new Error('Failed to extract or parse the account number');
   }
 
   for (const accountId of accountsIds) {
-    // get list of accounts and check accountId
-    await clickByXPath(page, '//*[contains(@class, "number") and contains(@class, "combo-inner")]');
-    await clickByXPath(page, `//span[contains(text(), '${accountId}')]`);
+    if (accountsIds.length > 1) {
+      // get list of accounts and check accountId
+      await clickByXPath(page, '//*[contains(@class, "number") and contains(@class, "combo-inner")]');
+      await clickByXPath(page, `//span[contains(text(), '${accountId}')]`);
+    }
 
     accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(accountId)));
   }
