@@ -1,0 +1,60 @@
+name: Release
+on:
+  push:
+    branches:
+      - master
+      - beta
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: 10
+      - name: prepare default version
+        run: npm run prepare:default
+      - name: Release to Github
+        uses: cycjimmy/semantic-release-action@v2
+        id: semantic   # Need an `id` for output variables
+        with:
+          semantic_version: 16.0.2
+          branches: |
+            [
+              '+([0-9])?(.{+([0-9]),x}).x',
+              'main',
+              'next',
+              'next-major',
+              {
+                name: 'hotfix',
+                prerelease: true
+              },
+              {
+                name: 'beta',
+                prerelease: true
+              },
+              {
+                name: 'alpha',
+                prerelease: true
+              }
+            ]
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Release default to NPM
+        if: steps.semantic.outputs.new_release_published == 'true'
+        run: |
+          node utils/pre-publish.js --version ${{ steps.semantic.outputs.new_release_version }}
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+      - name: Release core to NPM
+        if: steps.semantic.outputs.new_release_published == 'true'
+        run: |
+          npm run prepare:core
+          node utils/pre-publish.js --version ${{ steps.semantic.outputs.new_release_version }}
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
