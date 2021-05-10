@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - master
-      - beta
+      - next
 jobs:
   release:
     name: Release
@@ -15,6 +15,7 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: 12
+          registry-url: https://registry.npmjs.org/
       - name: prepare default version
         run: npm run prepare:default
       - name: Release to Github
@@ -47,7 +48,7 @@ jobs:
         if: steps.semantic.outputs.new_release_published == 'true'
         run: |
           node utils/pre-publish.js --version ${{ steps.semantic.outputs.new_release_version }}
-          npm publish --access public
+      - run: npm publish --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
       - name: Release core to NPM
@@ -55,6 +56,6 @@ jobs:
         run: |
           npm run prepare:core
           node utils/pre-publish.js --version ${{ steps.semantic.outputs.new_release_version }}
-          npm publish --access public
+      - run: npm publish --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
