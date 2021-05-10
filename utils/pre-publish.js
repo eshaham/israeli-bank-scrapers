@@ -17,6 +17,5 @@ const packageJSON = fsExtra.readJSONSync(packageJSONPath);
 
 packageJSON.version = version;
 packageJSON.private = false;
-packageJSON.dependencies = {};
 
 fsExtra.writeJSONSync(packageJSONPath, packageJSON, { spaces: 2 })
