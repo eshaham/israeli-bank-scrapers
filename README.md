@@ -122,14 +122,7 @@ The return value is a list of scraper metadata:
 ```
 
 # Getting deployed version of latest changes in master
-This library is currently deployed to NPM manually and not as part of automatic process. You should expect situations when code was pushed to master and wasn't deployed to NPM yet.
-
-If you are a developer and want to access the `next` version, install the library with `next` tag as shown below:
-```sh
-npm install israeli-bank-scrapers@next --save
-```  
-
-> Keep in mind that although this `next` version should be stable as it passed our code review, it was deployed automatically using github action workflow without the usual tests we run manually before we deploy the official version.  
+This library is deployed automatically to NPM with any change merged into the master branch. 
 
 # `Israeli-bank-scrapers-core` library
 
