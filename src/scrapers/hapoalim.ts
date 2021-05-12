@@ -55,7 +55,7 @@ type BalanceAndCreditLimit = {
   currentAccountLimitsAmount: number;
   currentBalance: number;
   withdrawalBalance: number;
-}
+};
 
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((txn) => {
@@ -151,9 +151,9 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScaperOpti
     const accountNumber = `${accountsInfo[accountIndex].bankNumber}-${accountsInfo[accountIndex].branchNumber}-${accountsInfo[accountIndex].accountNumber}`;
 
     const balanceAndCreditLimitUrl = `${apiSiteUrl}/current-account/composite/balanceAndCreditLimit?accountId=${accountNumber}&view=details&lang=he`;
-    const balanceAndCreditLimit: BalanceAndCreditLimit = await fetchGetWithinPage(page, balanceAndCreditLimitUrl) as BalanceAndCreditLimit;
+    const balanceAndCreditLimit = await fetchGetWithinPage(page, balanceAndCreditLimitUrl) as BalanceAndCreditLimit;
     const balance: number = balanceAndCreditLimit?.currentBalance;
-    
+
     const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
     const txnsResult = await fetchPoalimXSRFWithinPage(page, txnsUrl, '/current-account/transactions');
     let txns: Transaction[] = [];
