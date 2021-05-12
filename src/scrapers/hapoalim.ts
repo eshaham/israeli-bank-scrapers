@@ -27,6 +27,7 @@ interface ScrapedTransaction {
   referenceNumber?: number;
   ScrapedTransaction?: string;
   eventActivityTypeCode: number;
+  currentBalance: number;
   beneficiaryDetailsData?: {
     partyHeadline?: string;
     partyName?: string;
@@ -44,6 +45,17 @@ type FetchedAccountData = {
 type FetchedAccountTransactionsData = {
   transactions: ScrapedTransaction[];
 };
+
+type BalanceAndCreditLimit = {
+  creditLimitAmount: number;
+  creditLimitDescription: string;
+  creditLimitUtilizationAmount: number;
+  creditLimitUtilizationExistanceCode: number;
+  creditLimitUtilizationPercent: number;
+  currentAccountLimitsAmount: number;
+  currentBalance: number;
+  withdrawalBalance: number;
+}
 
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((txn) => {
@@ -138,16 +150,21 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScaperOpti
   for (let accountIndex = 0; accountIndex < accountsInfo.length; accountIndex += 1) {
     const accountNumber = `${accountsInfo[accountIndex].bankNumber}-${accountsInfo[accountIndex].branchNumber}-${accountsInfo[accountIndex].accountNumber}`;
 
+    const balanceAndCreditLimitUrl = `${apiSiteUrl}/current-account/composite/balanceAndCreditLimit?accountId=${accountNumber}&view=details&lang=he`;
+    const balanceAndCreditLimit: BalanceAndCreditLimit = await fetchGetWithinPage(page, balanceAndCreditLimitUrl) as BalanceAndCreditLimit;
+    const balance: number = balanceAndCreditLimit?.currentBalance;
+    
     const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
-
     const txnsResult = await fetchPoalimXSRFWithinPage(page, txnsUrl, '/current-account/transactions');
     let txns: Transaction[] = [];
+
     if (txnsResult) {
       txns = convertTransactions(txnsResult.transactions);
     }
 
     accounts.push({
       accountNumber,
+      balance,
       txns,
     });
   }
