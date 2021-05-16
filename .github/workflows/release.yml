@@ -49,6 +49,7 @@ jobs:
         run: |
           node utils/pre-publish.js --version ${{ steps.semantic.outputs.new_release_version }}
       - name: Publish to NPM
+        if: steps.semantic.outputs.new_release_published == 'true'
         run: npm publish --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
@@ -58,6 +59,7 @@ jobs:
           npm run prepare:core
           node utils/pre-publish.js --version ${{ steps.semantic.outputs.new_release_version }}
       - name: Publish to NPM
+        if: steps.semantic.outputs.new_release_published == 'true'
         run: npm publish --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
