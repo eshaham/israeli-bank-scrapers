@@ -44,18 +44,20 @@ jobs:
             ]
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Release default to NPM
+      - name: Prepare release of default to NPM
         if: steps.semantic.outputs.new_release_published == 'true'
         run: |
           node utils/pre-publish.js --version ${{ steps.semantic.outputs.new_release_version }}
-      - run: npm publish --access public --ignore-scripts
+      - name: Publish to NPM
+        run: npm publish --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
-      - name: Release core to NPM
+      - name: Prepare release of core to NPM
         if: steps.semantic.outputs.new_release_published == 'true'
         run: |
           npm run prepare:core
           node utils/pre-publish.js --version ${{ steps.semantic.outputs.new_release_version }}
-      - run: npm publish --access public --ignore-scripts
+      - name: Publish to NPM
+        run: npm publish --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
