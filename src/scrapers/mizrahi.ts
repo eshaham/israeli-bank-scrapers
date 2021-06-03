@@ -27,6 +27,7 @@ interface ScrapedTransactionsResult {
   body: {
     fields: {
       AccountNumber: string;
+      YitraLeloChekim: string;
     };
     table: {
       rows: ScrapedTransaction[];
@@ -180,6 +181,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
         {
           accountNumber: response.body.fields.AccountNumber,
           txns: allTxn,
+          balance: +response.body.fields.YitraLeloChekim,
         },
       ],
     };
