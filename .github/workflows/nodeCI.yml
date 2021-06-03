@@ -4,14 +4,12 @@ on: [push, pull_request]
 
 jobs:
   build:
-
+    if: github.ref != 'refs/heads/master'
     runs-on: ${{ matrix.os }}
-
     strategy:
       matrix:
         node-version: [10.x, 12.x]
         os: [ubuntu-latest, windows-latest, macOS-latest]
-
     steps:
     - uses: actions/checkout@v1
     - name: Use Node.js ${{ matrix.node-version }}
@@ -21,4 +19,5 @@ jobs:
     - name: npm install and test
       run: |
         npm install
+        npm run lint
         npm run test:ci
