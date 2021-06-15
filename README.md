@@ -74,8 +74,8 @@ Check the options declaration [here](./src/scrapers/base-scraper.ts) for availab
 
 Regarding credentials, you should provide the relevant credentials for the chosen company. See [this file](./src/definitions.ts) with list of credentials per company.
 
-```
 The structure of the result object is as follows:
+
 ```node
 {
   success: boolean,
