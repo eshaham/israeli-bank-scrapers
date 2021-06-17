@@ -93,43 +93,18 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   });
 }
 
-async function parseTransactionPage(page: Page): Promise<ScrapedTransaction[]> {
-  const tdsValues = await pageEvalAll<{ classList: string, innerText: string}[]>(page, '#dataTable077 tbody tr td', [], (tds) => {
-    return (tds as HTMLElement[]).map((td) => ({
-      classList: td.getAttribute('class') || '',
-      innerText: (td).innerText || '',
+async function parseTransactionPage(page: Page) {
+  const tdsValues = await pageEvalAll(page, '#dataTable077 tbody tr', [], (trs: any) => {
+    return trs.map((el: any) => ({
+      date: (el.querySelector('.date') as HTMLElement).innerText,
+      description: (el.querySelector('.reference') as HTMLElement).innerText,
+      credit: (el.querySelector('.credit') as HTMLElement).innerText,
+      debit: (el.querySelector('.debit') as HTMLElement).innerText,
+      balance: (el.querySelector('.balance') as HTMLElement).innerText,
     }));
   });
 
-  const txns: ScrapedTransaction[] = [];
-  for (const element of tdsValues) {
-    const { classList, innerText } = element;
-    if (classList.includes('date')) {
-      const newTransaction: ScrapedTransaction = {
-        date: innerText,
-      };
-      txns.push(newTransaction);
-    } else {
-      const changedTransaction = txns.length ? txns[0] : null;
-
-      if (changedTransaction) {
-        if (classList.includes('reference')) {
-          changedTransaction.description = innerText;
-        } else if (classList.includes('details')) {
-          changedTransaction.reference = innerText;
-        } else if (classList.includes('credit')) {
-          changedTransaction.credit = innerText;
-        } else if (classList.includes('debit')) {
-          changedTransaction.debit = innerText;
-        } else if (classList.includes('balance')) {
-          changedTransaction.balance = innerText;
-        }
-        txns.push(changedTransaction);
-      }
-    }
-  }
-
-  return txns;
+  return tdsValues.splice(1);
 }
 
 async function getAccountSummary(page: Page) {
@@ -176,7 +151,11 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment) {
   if (noTransactionElm == null) {
     // Scape transactions (this maybe spanned on multiple pages)
     while (hasNextPage) {
+      // console.log({ txns });
+
       const pageTxns = await parseTransactionPage(page);
+      // console.log({ pageTxns });
+
       txns = txns.concat(pageTxns);
       const button = await page.$('#Npage');
       hasNextPage = false;
