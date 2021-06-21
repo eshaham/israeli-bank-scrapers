@@ -24,6 +24,10 @@ interface ScrapedTransaction {
   OperationDescriptionToDisplay: string;
 }
 
+interface CurrentAccountInfo {
+  AccountBalance: number;
+}
+
 interface ScrapedAccountData {
   UserAccountsData: {
     DefaultAccountNumber: string;
@@ -34,6 +38,7 @@ interface ScrapedTransactionData {
   Error?: { MsgText: string };
   CurrentAccountLastTransactions?: {
     OperationEntry: ScrapedTransaction[];
+    CurrentAccountInfo: CurrentAccountInfo;
   };
 }
 
