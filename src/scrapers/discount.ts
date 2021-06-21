@@ -99,6 +99,7 @@ async function fetchAccountData(page: Page, options: ScaperOptions): Promise<Sca
     success: true,
     accounts: [{
       accountNumber,
+      balance: txnsResult.CurrentAccountLastTransactions.CurrentAccountInfo.AccountBalance,
       txns: [...completedTxns, ...pendingTxns],
     }],
   };
