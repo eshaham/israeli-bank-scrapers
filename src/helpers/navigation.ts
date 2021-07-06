@@ -26,3 +26,10 @@ export async function waitForRedirect(page: Page, timeout = 20000,
     return current !== initial && !ignoreList.includes(current);
   }, `waiting for redirect from ${initial}`, timeout, 1000);
 }
+
+export async function waitForUrl(page: Page, url: string | RegExp, timeout = 20000, clientSide = false) {
+  await waitUntil(async () => {
+    const current = await getCurrentUrl(page, clientSide);
+    return url instanceof RegExp ? url.test(current) : url === current;
+  }, `waiting for url to be ${url}`, timeout, 1000);
+}
