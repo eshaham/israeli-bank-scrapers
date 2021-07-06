@@ -5,6 +5,7 @@ import {
 } from '../constants';
 import { pageEvalAll, waitUntilElementDisappear, waitUntilElementFound } from '../helpers/elements-interactions';
 import { fetchPostWithinPage } from '../helpers/fetch';
+import { waitForUrl } from '../helpers/navigation';
 import {
   Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
@@ -42,7 +43,7 @@ const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/ngOnline\/
 const OSH_PAGE = `${BASE_APP_URL}/ngOnline/index.html#/main/uis/osh/p428/`;
 const TRANSACTIONS_REQUEST_URL = `${BASE_APP_URL}/Online/api/SkyOSH/get428Index`;
 const PENDING_TRANSACTIONS_PAGE = `${BASE_APP_URL}/Online/Osh/p420.aspx`;
-const CHANGE_PASSWORD_URL = `${AFTER_LOGIN_BASE_URL}/main/uis/ge/changePassword/`;
+const CHANGE_PASSWORD_URL = /https:\/\/www\.mizrahi-tefahot\.co\.il\/login\/\w+\/index\.html#\/change-pass/;
 const DATE_FORMAT = 'DD/MM/YYYY';
 const MAX_ROWS_PER_REQUEST = 10000000000;
 
@@ -134,6 +135,7 @@ async function postLogin(page: Page) {
   await Promise.race([
     waitUntilElementFound(page, afterLoginSelector),
     waitUntilElementFound(page, invalidPasswordSelector),
+    waitForUrl(page, CHANGE_PASSWORD_URL),
   ]);
 }
 
