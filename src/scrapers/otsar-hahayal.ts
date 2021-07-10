@@ -94,42 +94,19 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
 }
 
 async function parseTransactionPage(page: Page): Promise<ScrapedTransaction[]> {
-  const tdsValues = await pageEvalAll<{ classList: string, innerText: string}[]>(page, '#dataTable077 tbody tr td', [], (tds) => {
-    return (tds as HTMLElement[]).map((td) => ({
-      classList: td.getAttribute('class') || '',
-      innerText: (td).innerText || '',
+  const tdsValues = await pageEvalAll(page, '#dataTable077 tbody tr', [], (trs) => {
+    return (trs).map((el) => ({
+      date: (el.querySelector('.date') as HTMLElement).innerText,
+      // reference and description have vice-versa class name
+      description: (el.querySelector('.reference') as HTMLElement).innerText,
+      reference: (el.querySelector('.details') as HTMLElement).innerText,
+      credit: (el.querySelector('.credit') as HTMLElement).innerText,
+      debit: (el.querySelector('.debit') as HTMLElement).innerText,
+      balance: (el.querySelector('.balance') as HTMLElement).innerText,
     }));
   });
 
-  const txns: ScrapedTransaction[] = [];
-  for (const element of tdsValues) {
-    const { classList, innerText } = element;
-    if (classList.includes('date')) {
-      const newTransaction: ScrapedTransaction = {
-        date: innerText,
-      };
-      txns.push(newTransaction);
-    } else {
-      const changedTransaction = txns.length ? txns[0] : null;
-
-      if (changedTransaction) {
-        if (classList.includes('reference')) {
-          changedTransaction.description = innerText;
-        } else if (classList.includes('details')) {
-          changedTransaction.reference = innerText;
-        } else if (classList.includes('credit')) {
-          changedTransaction.credit = innerText;
-        } else if (classList.includes('debit')) {
-          changedTransaction.debit = innerText;
-        } else if (classList.includes('balance')) {
-          changedTransaction.balance = innerText;
-        }
-        txns.push(changedTransaction);
-      }
-    }
-  }
-
-  return txns;
+  return tdsValues;
 }
 
 async function getAccountSummary(page: Page) {
