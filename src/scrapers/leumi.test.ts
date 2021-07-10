@@ -34,7 +34,7 @@ describe('Leumi legacy scraper', () => {
     expect(result.errorType).toBe(LoginResults.InvalidPassword);
   });
 
-  maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions"', async () => {
+  maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions', async () => {
     const options = {
       ...testsConfig.options,
       companyId: COMPANY_ID,
