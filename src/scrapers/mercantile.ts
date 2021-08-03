@@ -5,7 +5,7 @@ class MercantileScraper extends DiscountScraper {
   getLoginOptions(credentials: ScraperCredentials) {
     return {
       ...super.getLoginOptions(credentials),
-      loginUrl: `https://start.telebank.co.il/apollo/core/templates/lobby/masterPage.html?t=P&bank=M&multilang=he`,
+      loginUrl: `https://start.telebank.co.il/apollo/core/templates/lobby/masterPage.html?bank=M`,
     };
   }
 }
