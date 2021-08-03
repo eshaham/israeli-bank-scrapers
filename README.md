@@ -14,6 +14,7 @@ Currently only the following banks are supported:
 - Bank Hapoalim (thanks [@sebikaplun](https://github.com/sebikaplun))
 - Leumi Bank (thanks [@esakal](https://github.com/esakal))
 - Discount Bank
+- Mercantile Bank
 - Mizrahi Bank (thanks [@baruchiro](https://github.com/baruchiro))
 - Otsar Hahayal Bank (thanks [@matanelgabsi](https://github.com/matanelgabsi))
 - Visa Cal (thanks [@nirgin](https://github.com/nirgin))
@@ -186,6 +187,17 @@ const credentials = {
 This scraper supports fetching transaction from up to one year.
 
 ## Discount scraper
+This scraper expects the following credentials object:
+```node
+const credentials = {
+  id: <user identification number>,
+  password: <user password>,
+  num: <user identificaiton code>
+};
+```
+This scraper supports fetching transaction from up to one year (minus 1 day).
+
+## Mercantile scraper
 This scraper expects the following credentials object:
 ```node
 const credentials = {

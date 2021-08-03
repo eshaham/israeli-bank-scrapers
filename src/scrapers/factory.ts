@@ -29,7 +29,7 @@ export default function createScraper(options: ScaperOptions) {
     case CompanyTypes.discount:
       return new DiscountScraper(options);
     case CompanyTypes.mercantile:
-      return new MercantileScraper(options);      
+      return new MercantileScraper(options);
     case CompanyTypes.otsarHahayal:
       return new OtsarHahayalScraper(options);
     case CompanyTypes.visaCal:
