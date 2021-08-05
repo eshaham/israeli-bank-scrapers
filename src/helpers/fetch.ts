@@ -20,8 +20,13 @@ export async function fetchGet<TResult>(url: string,
     method: 'GET',
     headers,
   };
-  const result = await nodeFetch(url, request);
-  return result.json();
+  const fetchResult = await nodeFetch(url, request);
+
+  if (fetchResult.status !== 200) {
+    throw new Error(`sending a request to the institute server returned with status code ${fetchResult.status}`);
+  }
+
+  return fetchResult.json();
 }
 
 export async function fetchPost(url: string, data: Record<string, any>,
