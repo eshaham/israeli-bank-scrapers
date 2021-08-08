@@ -19,7 +19,7 @@ import {
 } from '../transactions';
 
 const BASE_URL = 'https://cal4u.cal-online.co.il/Cal4U';
-const AUTH_URL = 'https://connect.cal-online.co.il/api/authentication/login';
+const AUTH_URL = 'https://connect.cal-online.co.il/col-rest/calconnect/authentication/login';
 const DATE_FORMAT = 'DD/MM/YYYY';
 
 const PASSWORD_EXPIRED_MSGS = ['תוקף הסיסמא פג', 'אנו מתנצלים, עקב תקלה לא ניתן לבצע את הפעולה כעת.|ניתן לנסות שנית במועד מאוחר יותר'];
@@ -43,7 +43,7 @@ const REFUND_TYPE_CODE_2 = '76';
 const CANCEL_PAYMENT_CODE = '86';
 const CANCELLED_TRANSACTION = '68';
 
-const HEADER_SITE = { 'X-Site-Id': '8D37DF16-5812-4ACD-BAE7-CD1A5BFA2206' };
+const HEADER_SITE = { 'X-Site-Id': '05D905EB-810A-4680-9B23-1A2AC46533BF' };
 
 
 interface BankDebitsResponse {
@@ -255,6 +255,7 @@ async function getTransactionsForAllAccounts(authHeader: Record<string, any>, st
   const cardsByAccountUrl = `${BASE_URL}/CardsByAccounts`;
   const banksResponse = await fetchGet<CardByAccountResponse>(cardsByAccountUrl, authHeader);
 
+
   if (_.get(banksResponse, 'Response.Status.Succeeded')) {
     const accounts: TransactionsAccount[] = [];
     for (let i = 0; i < banksResponse.BankAccounts.length; i += 1) {
@@ -301,12 +302,13 @@ class VisaCalScraper extends BaseScraper {
     const authRequest = {
       username: credentials.username,
       password: credentials.password,
-      rememberMe: null,
+      recaptcha: '',
     };
 
     this.emitProgress(ScaperProgressTypes.LoggingIn);
 
     const authResponse = await fetchPost(AUTH_URL, authRequest, HEADER_SITE);
+
     if (PASSWORD_EXPIRED_MSGS.includes(authResponse)) {
       return {
         success: false,
