@@ -1,12 +1,18 @@
 import _ from 'lodash';
 import buildUrl from 'build-url';
-import moment, {Moment} from 'moment';
+import moment, { Moment } from 'moment';
 
-import {BaseScraper, ScaperOptions, ScaperProgressTypes, ScraperCredentials, ScraperErrorTypes,} from './base-scraper';
-import {DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,} from '../constants';
-import {fetchGet, fetchPost} from '../helpers/fetch';
-import {filterOldTransactions, fixInstallments, sortTransactionsByDate} from '../helpers/transactions';
-import {Transaction, TransactionsAccount, TransactionStatuses, TransactionTypes,} from '../transactions';
+import {
+  BaseScraper, ScaperOptions, ScaperProgressTypes, ScraperCredentials, ScraperErrorTypes,
+} from './base-scraper';
+import {
+  DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,
+} from '../constants';
+import { fetchGet, fetchPost } from '../helpers/fetch';
+import { filterOldTransactions, fixInstallments, sortTransactionsByDate } from '../helpers/transactions';
+import {
+  Transaction, TransactionsAccount, TransactionStatuses, TransactionTypes,
+} from '../transactions';
 
 const BASE_URL = 'https://cal4u.cal-online.co.il/Cal4U';
 const AUTH_URL = 'https://connect.cal-online.co.il/col-rest/calconnect/authentication/login';
@@ -100,8 +106,7 @@ function getTransactionsUrl(cardId: string, debitDate: string) {
 }
 
 function convertTransactionType(txn: ScrapedTransaction) {
-  if (txn.TotalPayments !== null)
-  {
+  if (txn.TotalPayments !== null) {
     return TransactionTypes.Installments;
   }
 
