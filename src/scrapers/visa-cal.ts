@@ -1,22 +1,12 @@
 import _ from 'lodash';
 import buildUrl from 'build-url';
-import moment, { Moment } from 'moment';
+import moment, {Moment} from 'moment';
 
-import {
-  ScraperErrorTypes, BaseScraper,
-  ScaperOptions, ScaperProgressTypes, ScraperCredentials,
-} from './base-scraper';
-import {
-  SHEKEL_CURRENCY_SYMBOL,
-  SHEKEL_CURRENCY,
-  DOLLAR_CURRENCY_SYMBOL,
-  DOLLAR_CURRENCY,
-} from '../constants';
-import { fetchGet, fetchPost } from '../helpers/fetch';
-import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
-import {
-  TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
-} from '../transactions';
+import {BaseScraper, ScaperOptions, ScaperProgressTypes, ScraperCredentials, ScraperErrorTypes,} from './base-scraper';
+import {DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,} from '../constants';
+import {fetchGet, fetchPost} from '../helpers/fetch';
+import {filterOldTransactions, fixInstallments, sortTransactionsByDate} from '../helpers/transactions';
+import {Transaction, TransactionsAccount, TransactionStatuses, TransactionTypes,} from '../transactions';
 
 const BASE_URL = 'https://cal4u.cal-online.co.il/Cal4U';
 const AUTH_URL = 'https://connect.cal-online.co.il/col-rest/calconnect/authentication/login';
@@ -26,22 +16,6 @@ const PASSWORD_EXPIRED_MSGS = ['תוקף הסיסמא פג', 'אנו מתנצל�
 const INVALID_CREDENTIALS = 'שם המשתמש או הסיסמה שהוזנו שגויים';
 const NO_DATA_FOUND_MSG = 'לא נמצאו חיובים לטווח תאריכים זה';
 const ACCOUNT_BLOCKED_MSG = 'הכניסה למנוי נחסמה עקב ריבוי נסיונות כושלים. לשחרור המנוי באפשרותך לחדש סיסמה על ידי בחירת שכחתי שם משתמש סיסמה';
-
-const NORMAL_TYPE_CODE = '5';
-const REFUND_TYPE_CODE = '6';
-const WITHDRAWAL_TYPE_CODE = '7';
-const INSTALLMENTS_TYPE_CODE = '8';
-const CANCEL_TYPE_CODE = '25';
-const WITHDRAWAL_TYPE_CODE_2 = '27';
-const DEBIT_TYPE_CODE = '41';
-const DEBIT_REFUND_TYPE_CODE = '42';
-const CREDIT_PAYMENTS_CODE = '59';
-const MEMBERSHIP_FEE_TYPE_CODE = '67';
-const SERVICES_REFUND_TYPE_CODE = '71';
-const SERVICES_TYPE_CODE = '72';
-const REFUND_TYPE_CODE_2 = '76';
-const CANCEL_PAYMENT_CODE = '86';
-const CANCELLED_TRANSACTION = '68';
 
 const HEADER_SITE = { 'X-Site-Id': '05D905EB-810A-4680-9B23-1A2AC46533BF' };
 
@@ -125,28 +99,13 @@ function getTransactionsUrl(cardId: string, debitDate: string) {
   });
 }
 
-function convertTransactionType(txnType: string) {
-  switch (txnType) {
-    case NORMAL_TYPE_CODE:
-    case REFUND_TYPE_CODE:
-    case CANCEL_TYPE_CODE:
-    case WITHDRAWAL_TYPE_CODE:
-    case WITHDRAWAL_TYPE_CODE_2:
-    case REFUND_TYPE_CODE_2:
-    case CANCEL_PAYMENT_CODE:
-    case CANCELLED_TRANSACTION:
-    case SERVICES_REFUND_TYPE_CODE:
-    case MEMBERSHIP_FEE_TYPE_CODE:
-    case SERVICES_TYPE_CODE:
-    case DEBIT_TYPE_CODE:
-    case DEBIT_REFUND_TYPE_CODE:
-      return TransactionTypes.Normal;
-    case INSTALLMENTS_TYPE_CODE:
-    case CREDIT_PAYMENTS_CODE:
-      return TransactionTypes.Installments;
-    default:
-      throw new Error(`unknown transaction type ${txnType}`);
+function convertTransactionType(txn: ScrapedTransaction) {
+  if (txn.TotalPayments !== null)
+  {
+    return TransactionTypes.Installments;
   }
+
+  return TransactionTypes.Normal;
 }
 
 function convertCurrency(currency: string) {
@@ -171,12 +130,12 @@ function getInstallmentsInfo(txn: ScrapedTransaction) {
   };
 }
 
-function getTransactionMemo(txn: ScrapedTransaction) {
-  const { TransType: txnType, TransTypeDesc: txnTypeDescription } = txn;
+function getTransactionMemo(txn: ScrapedTransaction, txnType: TransactionTypes) {
+  const { TransTypeDesc: txnTypeDescription } = txn;
   switch (txnType) {
-    case NORMAL_TYPE_CODE:
+    case TransactionTypes.Normal:
       return txnTypeDescription === 'רכישה רגילה' ? '' : txnTypeDescription;
-    case INSTALLMENTS_TYPE_CODE:
+    case TransactionTypes.Installments:
       return `תשלום ${txn.CurrentPayment} מתוך ${txn.TotalPayments}`;
     default:
       return txn.TransTypeDesc;
@@ -185,8 +144,9 @@ function getTransactionMemo(txn: ScrapedTransaction) {
 
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((txn) => {
+    const txnType = convertTransactionType(txn);
     return {
-      type: convertTransactionType(txn.TransType),
+      type: txnType,
       identifier: parseInt(txn.Id, 10),
       date: moment(txn.Date, DATE_FORMAT).toISOString(),
       processedDate: moment(txn.DebitDate, DATE_FORMAT).toISOString(),
@@ -194,7 +154,7 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
       originalCurrency: convertCurrency(txn.Amount.Symbol),
       chargedAmount: -txn.DebitAmount.Value,
       description: txn.MerchantDetails.Name,
-      memo: getTransactionMemo(txn),
+      memo: getTransactionMemo(txn, txnType),
       installments: getInstallmentsInfo(txn) || undefined,
       status: TransactionStatuses.Completed,
     };
