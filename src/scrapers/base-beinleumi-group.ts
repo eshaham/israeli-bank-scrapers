@@ -31,7 +31,7 @@ const SHOW_SEARCH_BY_DATES_BUTTON_VALUE = 'הצג';
 const COMPLETED_TRANSACTIONS_TABLE = 'table#dataTable077';
 const PENDING_TRANSACTIONS_TABLE = 'table#dataTable023';
 const NEXT_PAGE_LINK = 'a#Npage.paging';
-
+const CURRENT_BALANCE = '.main_balance';
 
 type TransactionsColsTypes = Record<string, number>;
 type TransactionsTrTds = string[];
@@ -277,7 +277,7 @@ async function fetchAccounts(page: Page, startDate: Moment) {
 }
 
 async function getCurrentBalance(page: Page) {
-  const balanceStr = await page.$eval('.main_balance', (option) => {
+  const balanceStr = await page.$eval(CURRENT_BALANCE, (option) => {
     return (option as HTMLElement).innerText;
   });
   const balance = getAmountData(balanceStr)
