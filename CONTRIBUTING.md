@@ -11,7 +11,7 @@ Any kind of help is welcome, even if you just discover an issue and don't have t
 While there's no specific template for creating a new issue, please take the time to create a clear description so that it is easy to understand the problem.
 
 ## Testing the scrapers
-In order to run tests you need first to create test configuration file `./src/tests/tests-config.js` from template `./src/test/tests-config.tpl.js`. This file will be used by `jest` testing framework. 
+In order to run tests you need first to create test configuration file `./src/tests/tests-config.js` from template `./src/tests/tests-config.tpl.js`. This file will be used by `jest` testing framework. 
 
 > IMPORTANT: Under `src/tests` folder exists `.gitignore` file that ignore the test configuration file thus this file will not be commited to github. Still when you create new PRs make sure that you didn't explicitly added it to the PR.
 

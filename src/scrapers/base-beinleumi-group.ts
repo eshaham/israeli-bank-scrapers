@@ -259,9 +259,12 @@ async function fetchAccountData(page: Page, startDate: Moment) {
   await searchByDates(page, startDate);
   const accountNumber = await getAccountNumber(page);
   const txns = await getAccountTransactions(page);
+  const balance = await getCurrentBalance(page);
+
   return {
     accountNumber,
     txns,
+    balance
   };
 }
 
@@ -271,6 +274,14 @@ async function fetchAccounts(page: Page, startDate: Moment) {
   const accountData = await fetchAccountData(page, startDate);
   accounts.push(accountData);
   return accounts;
+}
+
+async function getCurrentBalance(page: Page) {
+  const balanceStr = await page.$eval('.main_balance', (option) => {
+    return (option as HTMLElement).innerText;
+  });
+  const balance = getAmountData(balanceStr)
+  return balance;
 }
 
 export async function waitForPostLogin(page: Page) {
