@@ -280,8 +280,7 @@ async function getCurrentBalance(page: Page) {
   const balanceStr = await page.$eval(CURRENT_BALANCE, (option) => {
     return (option as HTMLElement).innerText;
   });
-  const balance = getAmountData(balanceStr)
-  return balance;
+  return getAmountData(balanceStr);
 }
 
 export async function waitForPostLogin(page: Page) {
