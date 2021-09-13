@@ -276,6 +276,7 @@ These are the projects known to be using this module:
 - [Israel Finance Telegram Bot](https://github.com/GuyLewin/israel-finance-telegram-bot) - A simple telegram bot that sends notifications about new transactions and interacts with them
 - [Automated budget tracking app](https://github.com/brafdlog/budget-tracking) - An app for automatically sending transactions from Israeli banks and credit cards to budget tracking apps
 - [Oshi](https://github.com/baruchiro/israeli-bank-scrapers-desktop) - Secure desktop app for retriving your transactions from all israeli banks and credit cards
+- [Finance Notifier](https://github.com/LiranBri/finance-notifier) - A simple script with the ability to send custom financial alerts to multiple contacts and platforms
 
 Built something interesting you want to share here? [Let me know](https://goo.gl/forms/5Fb9JAjvzMIpmzqo2).
 
