@@ -176,7 +176,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
 
     // workaround for a bug which the bank's API returns transactions before the requested start date
     const startMoment = getStartMoment(this.options.startDate);
-    const oshTxnAfterStartDate = oshTxn.filter(txn => !moment(txn.date).isBefore(startMoment));
+    const oshTxnAfterStartDate = oshTxn.filter(txn => moment(txn.date). isSameOrAfter(startMoment));
 
     await this.navigateTo(PENDING_TRANSACTIONS_PAGE, this.page);
     const pendingTxn = await extractPendingTransactions(this.page);
