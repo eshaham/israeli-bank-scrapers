@@ -255,27 +255,6 @@ async function getAccountTransactions(page: Page) {
   return txns;
 }
 
-async function fetchAccountData(page: Page, startDate: Moment) {
-  await searchByDates(page, startDate);
-  const accountNumber = await getAccountNumber(page);
-  const txns = await getAccountTransactions(page);
-  const balance = await getCurrentBalance(page);
-
-  return {
-    accountNumber,
-    txns,
-    balance
-  };
-}
-
-// TODO: Add support of multiple accounts
-async function fetchAccounts(page: Page, startDate: Moment) {
-  const accounts: TransactionsAccount[] = [];
-  const accountData = await fetchAccountData(page, startDate);
-  accounts.push(accountData);
-  return accounts;
-}
-
 async function getCurrentBalance(page: Page) {
   const balanceStr = await page.$eval(CURRENT_BALANCE, (option) => {
     return (option as HTMLElement).innerText;
@@ -288,6 +267,27 @@ export async function waitForPostLogin(page: Page) {
     waitUntilElementFound(page, '#matafLogoutLink', true),
     waitUntilElementFound(page, '#validationMsg', true),
   ]);
+}
+
+async function fetchAccountData(page: Page, startDate: Moment) {
+  await searchByDates(page, startDate);
+  const accountNumber = await getAccountNumber(page);
+  const txns = await getAccountTransactions(page);
+  const balance = await getCurrentBalance(page);
+
+  return {
+    accountNumber,
+    txns,
+    balance,
+  };
+}
+
+// TODO: Add support of multiple accounts
+async function fetchAccounts(page: Page, startDate: Moment) {
+  const accounts: TransactionsAccount[] = [];
+  const accountData = await fetchAccountData(page, startDate);
+  accounts.push(accountData);
+  return accounts;
 }
 
 class BeinleumiGroupBaseScraper extends BaseScraperWithBrowser {
