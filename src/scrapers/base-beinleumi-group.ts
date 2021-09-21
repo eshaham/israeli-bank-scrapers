@@ -31,7 +31,7 @@ const SHOW_SEARCH_BY_DATES_BUTTON_VALUE = 'הצג';
 const COMPLETED_TRANSACTIONS_TABLE = 'table#dataTable077';
 const PENDING_TRANSACTIONS_TABLE = 'table#dataTable023';
 const NEXT_PAGE_LINK = 'a#Npage.paging';
-
+const CURRENT_BALANCE = '.main_balance';
 
 type TransactionsColsTypes = Record<string, number>;
 type TransactionsTrTds = string[];
@@ -255,13 +255,30 @@ async function getAccountTransactions(page: Page) {
   return txns;
 }
 
+async function getCurrentBalance(page: Page) {
+  const balanceStr = await page.$eval(CURRENT_BALANCE, (option) => {
+    return (option as HTMLElement).innerText;
+  });
+  return getAmountData(balanceStr);
+}
+
+export async function waitForPostLogin(page: Page) {
+  return Promise.race([
+    waitUntilElementFound(page, '#matafLogoutLink', true),
+    waitUntilElementFound(page, '#validationMsg', true),
+  ]);
+}
+
 async function fetchAccountData(page: Page, startDate: Moment) {
   await searchByDates(page, startDate);
   const accountNumber = await getAccountNumber(page);
   const txns = await getAccountTransactions(page);
+  const balance = await getCurrentBalance(page);
+
   return {
     accountNumber,
     txns,
+    balance,
   };
 }
 
@@ -271,13 +288,6 @@ async function fetchAccounts(page: Page, startDate: Moment) {
   const accountData = await fetchAccountData(page, startDate);
   accounts.push(accountData);
   return accounts;
-}
-
-export async function waitForPostLogin(page: Page) {
-  return Promise.race([
-    waitUntilElementFound(page, '#matafLogoutLink', true),
-    waitUntilElementFound(page, '#validationMsg', true),
-  ]);
 }
 
 class BeinleumiGroupBaseScraper extends BaseScraperWithBrowser {
