@@ -1,4 +1,4 @@
-import puppeteer, { Browser, Page } from 'puppeteer';
+import puppeteer, {Browser, Frame, Page} from 'puppeteer';
 
 import {
   ScraperErrorTypes,
@@ -39,7 +39,7 @@ export interface LoginOptions {
   checkReadiness?: () => Promise<void>;
   fields: {selector: string, value: string}[];
   submitButtonSelector: string;
-  preAction?: () => Promise<void>;
+  preAction?: () => Promise<Frame | void>;
   postAction?: () => Promise<void>;
   possibleResults: PossibleLoginResults;
 }
@@ -125,6 +125,7 @@ class BaseScraperWithBrowser extends BaseScraper {
     } else {
       const executablePath = this.options.executablePath || undefined;
       const args = this.options.args || [];
+
       this.browser = await puppeteer.launch({
         env,
         headless: !this.options.showBrowser,
@@ -178,16 +179,16 @@ class BaseScraperWithBrowser extends BaseScraper {
     throw new Error(`getLoginOptions() is not created in ${this.options.companyId}`);
   }
 
-  async fillInputs(fields: { selector: string, value: string}[]): Promise<void> {
+  async fillInputs(pageOrFrame: Page | Frame, fields: { selector: string, value: string}[]): Promise<void> {
     const modified = [...fields];
     const input = modified.shift();
 
     if (!input) {
       return;
     }
-    await fillInput(this.page, input.selector, input.value);
+    await fillInput(pageOrFrame, input.selector, input.value);
     if (modified.length) {
-      await this.fillInputs(modified);
+      await this.fillInputs(pageOrFrame, modified);
     }
   }
 
@@ -205,11 +206,13 @@ class BaseScraperWithBrowser extends BaseScraper {
       await waitUntilElementFound(this.page, loginOptions.submitButtonSelector);
     }
 
+    let loginFrameOrPage: (Page | Frame | null) = this.page;
     if (loginOptions.preAction) {
-      await loginOptions.preAction();
+      loginFrameOrPage = await loginOptions.preAction() || this.page;
     }
-    await this.fillInputs(loginOptions.fields);
-    await clickButton(this.page, loginOptions.submitButtonSelector);
+
+    await this.fillInputs(loginFrameOrPage, loginOptions.fields);
+    await clickButton(loginFrameOrPage, loginOptions.submitButtonSelector);
     this.emitProgress(ScaperProgressTypes.LoggingIn);
 
     if (loginOptions.postAction) {
