@@ -69,15 +69,17 @@ function getPossibleLoginResults(page: Page): PossibleLoginResults {
   };
 }
 
-function CreateDataFromRequest(request: Request, optionsStartDate: Date) {
+function getStartMoment(optionsStartDate: Date) {
   const defaultStartMoment = moment().subtract(1, 'years');
   const startDate = optionsStartDate || defaultStartMoment.toDate();
-  const startMoment = moment.max(defaultStartMoment, moment(startDate));
+  return moment.max(defaultStartMoment, moment(startDate));
+}
 
+function createDataFromRequest(request: Request, optionsStartDate: Date) {
   const data = JSON.parse(request.postData() || '{}');
 
+  data.inFromDate = getStartMoment(optionsStartDate).format(DATE_FORMAT);
   data.inToDate = moment().format(DATE_FORMAT);
-  data.inFromDate = startMoment.format(DATE_FORMAT);
   data.table.maxRow = MAX_ROWS_PER_REQUEST;
 
   return data;
@@ -154,7 +156,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
   async fetchData() {
     await this.navigateTo(OSH_PAGE, this.page);
     const request = await this.page.waitForRequest(TRANSACTIONS_REQUEST_URL);
-    const data = CreateDataFromRequest(request, this.options.startDate);
+    const data = createDataFromRequest(request, this.options.startDate);
     const headers = createHeadersFromRequest(request);
 
     const response = await fetchPostWithinPage<ScrapedTransactionsResult>(this.page,
@@ -172,10 +174,14 @@ class MizrahiScraper extends BaseScraperWithBrowser {
     const relevantRows = response.body.table.rows.filter((row) => row.RecTypeSpecified);
     const oshTxn = convertTransactions(relevantRows);
 
+    // workaround for a bug which the bank's API returns transactions before the requested start date
+    const startMoment = getStartMoment(this.options.startDate);
+    const oshTxnAfterStartDate = oshTxn.filter((txn) => moment(txn.date).isSameOrAfter(startMoment));
+
     await this.navigateTo(PENDING_TRANSACTIONS_PAGE, this.page);
     const pendingTxn = await extractPendingTransactions(this.page);
 
-    const allTxn = oshTxn.concat(pendingTxn);
+    const allTxn = oshTxnAfterStartDate.concat(pendingTxn);
 
     return {
       success: true,
