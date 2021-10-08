@@ -1,4 +1,4 @@
-import {Frame, Page} from 'puppeteer';
+import { Frame, Page } from 'puppeteer';
 
 async function waitUntilElementFound(page: Page | Frame, elementSelector: string,
   onlyVisible = false, timeout = 30000) {
@@ -48,7 +48,7 @@ async function pageEvalAll<R>(page: Page, selector: string,
 }
 
 async function pageEval<R>(page: Page, selector: string,
-                              defaultResult: any, callback: (elements: Element, ...args: any) => R, ...args: any[]): Promise<R> {
+  defaultResult: any, callback: (elements: Element, ...args: any) => R, ...args: any[]): Promise<R> {
   let result = defaultResult;
   try {
     result = await page.$eval(selector, callback, ...args);

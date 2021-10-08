@@ -1,28 +1,32 @@
-import moment, {Moment} from 'moment';
-import {Page} from 'puppeteer';
-import {BaseScraperWithBrowser, LoginOptions, LoginResults} from './base-scraper-with-browser';
-import {clickButton, fillInput, pageEvalAll, waitUntilElementFound,} from '../helpers/elements-interactions';
+import moment, { Moment } from 'moment';
+import { Page } from 'puppeteer';
+import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
+import {
+  clickButton, fillInput, pageEvalAll, waitUntilElementFound,
+} from '../helpers/elements-interactions';
 import {
   Transaction,
   TransactionInstallments,
   TransactionsAccount,
   TransactionStatuses,
-  TransactionTypes
+  TransactionTypes,
 } from '../transactions';
-import {ScaperScrapingResult, ScraperCredentials} from './base-scraper';
-import {waitForNavigationAndDomLoad} from "../helpers/navigation";
-import {DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL} from "../constants";
+import { ScaperScrapingResult, ScraperCredentials } from './base-scraper';
+import { waitForNavigationAndDomLoad } from '../helpers/navigation';
+import {
+  DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,
+} from '../constants';
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
-const TRANSACTIONS_URL = `https://services.cal-online.co.il/Card-Holders/Screens/Transactions/Transactions.aspx`;
+const TRANSACTIONS_URL = 'https://services.cal-online.co.il/Card-Holders/Screens/Transactions/Transactions.aspx';
 const DATE_FORMAT = 'DD/MM/YY';
 
 interface ScrapedTransaction {
-  date: string,
-  description: string,
-  originalAmount: string,
-  chargedAmount: string,
-  memo: string
+  date: string;
+  description: string;
+  originalAmount: string;
+  chargedAmount: string;
+  memo: string;
 }
 
 function getPossibleLoginResults() {
@@ -69,16 +73,16 @@ function getAmountData(amountStr: string) {
 }
 
 function getTransactionInstallments(memo: string): TransactionInstallments | null {
-  const parsedMemo = (memo || '').match(/תשלום (\d+) מתוך (\d+)/);
+  const parsedMemo = (/תשלום (\d+) מתוך (\d+)/).exec(memo || '');
 
   if (!parsedMemo || parsedMemo.length === 0) {
     return null;
   }
 
   return {
-    number: parseInt(parsedMemo[1]),
-    total: parseInt(parsedMemo[2])
-  }
+    number: parseInt(parsedMemo[1], 10),
+    total: parseInt(parsedMemo[2], 10),
+  };
 }
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((txn) => {
@@ -114,7 +118,7 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
   const dateHiddenFieldSelector = '[id$="FormAreaNoBorder_FormArea_ctlDateScopeStart_ctlMonthYearList_HiddenField"]';
   const buttonSelector = '[id$="FormAreaNoBorder_FormArea_ctlSubmitRequest"]';
 
-  const hiddenFieldValue = await pageEvalAll(page, '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_OptionList"] li',[], (items, startDateValue) => {
+  const hiddenFieldValue = await pageEvalAll(page, '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_OptionList"] li', [], (items, startDateValue) => {
     return items.findIndex((element: any) => element.innerText === startDateValue);
   }, [startDateValue]);
 
@@ -125,7 +129,7 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
   await clickButton(page, buttonSelector);
   await waitForNavigationAndDomLoad(page);
 
-  const rawTransactions = await pageEvalAll(page, '#ctlMainGrid > tbody:nth-child(2) tr',[], (items) => {
+  const rawTransactions = await pageEvalAll(page, '#ctlMainGrid > tbody:nth-child(2) tr', [], (items) => {
     return (items).map((el) => {
       const columns = el.getElementsByTagName('td');
       return {
@@ -133,8 +137,8 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
         description: columns[1].innerText,
         originalAmount: columns[2].innerText,
         chargedAmount: columns[3].innerText,
-        memo: columns[4].innerText
-      }
+        memo: columns[4].innerText,
+      };
     });
   }, []);
 
@@ -151,7 +155,7 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
   const accounts: TransactionsAccount[] = [];
 
   // TODO multiple accounts
- // const accountsIds = await page.evaluate(() => Array.from(document.querySelectorAll('app-masked-number-combo span.display-number-li'), (e) => e.textContent)) as string[];
+  // const accountsIds = await page.evaluate(() => Array.from(document.querySelectorAll('app-masked-number-combo span.display-number-li'), (e) => e.textContent)) as string[];
 
   // due to a bug, the altered value might include undesired signs like & that should be removed
 
@@ -160,14 +164,14 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
   // }
 
   // for (const accountId of accountsIds) {
-    // if (accountsIds.length > 1) {
-    //   // get list of accounts and check accountId
-    //   await clickByXPath(page, '//*[contains(@class, "number") and contains(@class, "combo-inner")]');
-    //   await clickByXPath(page, `//span[contains(text(), '${accountId}')]`);
-    // }
+  // if (accountsIds.length > 1) {
+  //   // get list of accounts and check accountId
+  //   await clickByXPath(page, '//*[contains(@class, "number") and contains(@class, "combo-inner")]');
+  //   await clickByXPath(page, `//span[contains(text(), '${accountId}')]`);
+  // }
 
-  const accountId = 'dummy'
-    accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(accountId)));
+  const accountId = '';
+  accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(accountId)));
   // }
 
   return accounts;
@@ -179,20 +183,20 @@ class VisaCalScraper extends BaseScraperWithBrowser {
     await clickButton(this.page, '#ccLoginDesktopBtn');
 
     await waitUntilElementFound(this.page, 'iframe[src*="connect.cal-online"]');
-    await this.page.waitFor(3000)
-    const frame = await this.page
-        .frames()
-        .find(f => f.url().includes('connect.cal-online'));
+    await this.page.waitFor(3000);
+    const frame = this.page
+      .frames()
+      .find((f) => f.url().includes('connect.cal-online'));
 
     if (!frame) {
-      throw new Error('failed to extract login iframe')
+      throw new Error('failed to extract login iframe');
     }
     await waitUntilElementFound(frame, '#regular-login');
     await clickButton(frame, '#regular-login');
     await waitUntilElementFound(frame, 'regular-login');
 
     return frame;
-  }
+  };
 
   getLoginOptions(credentials: Record<string, string>) {
     return {
@@ -201,7 +205,7 @@ class VisaCalScraper extends BaseScraperWithBrowser {
       submitButtonSelector: 'button[type="submit"]',
       possibleResults: getPossibleLoginResults(),
       checkReadiness: async () => waitUntilElementFound(this.page, '#ccLoginDesktopBtn'),
-      preAction: this.openLoginPopup
+      preAction: this.openLoginPopup,
     };
   }
 
@@ -210,9 +214,9 @@ class VisaCalScraper extends BaseScraperWithBrowser {
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-     await this.navigateTo(TRANSACTIONS_URL);
+    await this.navigateTo(TRANSACTIONS_URL);
 
-     const accounts = await fetchTransactions(this.page, startMoment);
+    const accounts = await fetchTransactions(this.page, startMoment);
     return {
       success: true,
       accounts,

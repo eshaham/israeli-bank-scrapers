@@ -1,4 +1,4 @@
-import puppeteer, {Browser, Frame, Page} from 'puppeteer';
+import puppeteer, { Browser, Frame, Page } from 'puppeteer';
 
 import {
   ScraperErrorTypes,
