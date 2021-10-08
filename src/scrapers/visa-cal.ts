@@ -2,7 +2,7 @@ import moment, { Moment } from 'moment';
 import { Page } from 'puppeteer';
 import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
 import {
-  clickButton, fillInput, pageEvalAll, waitUntilElementFound,
+  clickButton, elementPresentOnPage, fillInput, pageEval, pageEvalAll, waitUntilElementFound,
 } from '../helpers/elements-interactions';
 import {
   Transaction,
@@ -46,9 +46,6 @@ function createLoginFields(credentials: ScraperCredentials) {
   ];
 }
 
-function removeSpecialCharacters(str: string): string {
-  return str.replace(/[^0-9/-]/g, '');
-}
 
 function getAmountData(amountStr: string) {
   const amountStrCln = amountStr.replace(',', '');
@@ -117,6 +114,7 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
   const dateSelector = '[id$="FormAreaNoBorder_FormArea_ctlDateScopeStart_ctlMonthYearList_TextBox"]';
   const dateHiddenFieldSelector = '[id$="FormAreaNoBorder_FormArea_ctlDateScopeStart_ctlMonthYearList_HiddenField"]';
   const buttonSelector = '[id$="FormAreaNoBorder_FormArea_ctlSubmitRequest"]';
+  const nextPageSelector = '[id$="FormAreaNoBorder_FormArea_ctlGridPager_btnNext"]';
 
   const hiddenFieldValue = await pageEvalAll(page, '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_OptionList"] li', [], (items, startDateValue) => {
     return items.findIndex((element: any) => element.innerText === startDateValue);
@@ -129,24 +127,38 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
   await clickButton(page, buttonSelector);
   await waitForNavigationAndDomLoad(page);
 
-  const rawTransactions = await pageEvalAll(page, '#ctlMainGrid > tbody:nth-child(2) tr', [], (items) => {
-    return (items).map((el) => {
-      const columns = el.getElementsByTagName('td');
-      return {
-        date: columns[0].innerText,
-        description: columns[1].innerText,
-        originalAmount: columns[2].innerText,
-        chargedAmount: columns[3].innerText,
-        memo: columns[4].innerText,
-      };
-    });
-  }, []);
+  let hasNextPage = false;
+  const txns: Transaction[] = [];
+  do {
+    const rawTransactions = await pageEvalAll<(ScrapedTransaction | null)[]>(page, '#ctlMainGrid > tbody tr', [], (items) => {
+      return (items).map((el) => {
+        const columns = el.getElementsByTagName('td');
+        if (columns.length !== 2) {
+          return {
+            date: columns[0].innerText,
+            description: columns[1].innerText,
+            originalAmount: columns[2].innerText,
+            chargedAmount: columns[3].innerText,
+            memo: columns[4].innerText,
+          };
+        }
+        return null;
+      });
+    }, []);
 
-  const txns = convertTransactions(rawTransactions);
+
+    txns.push(...convertTransactions((rawTransactions as ScrapedTransaction[]).filter((item) => !!item)));
+
+    hasNextPage = await elementPresentOnPage(page, nextPageSelector);
+
+    if (hasNextPage) {
+      await clickButton(page, '[id$=FormAreaNoBorder_FormArea_ctlGridPager_btnNext]');
+      await waitForNavigationAndDomLoad(page);
+    }
+  } while (hasNextPage);
 
   return {
     accountNumber,
-    balance: 0, // TODO handle balance
     txns,
   };
 }
@@ -170,8 +182,12 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
   //   await clickByXPath(page, `//span[contains(text(), '${accountId}')]`);
   // }
 
-  const accountId = '';
-  accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(accountId)));
+  const accountId = await pageEval(page, '[id$=cboCardList_categoryList_lblCollapse]', '', (item) => {
+    return (item as HTMLInputElement).value;
+  }, []);
+
+  const accountNumber = /\d+$/.exec(accountId.trim())?.[0] ?? '';
+  accounts.push(await fetchTransactionsForAccount(page, startDate, accountNumber));
   // }
 
   return accounts;
