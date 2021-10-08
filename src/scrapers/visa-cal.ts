@@ -16,10 +16,12 @@ import { waitForNavigation, waitForNavigationAndDomLoad } from '../helpers/navig
 import {
   DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,
 } from '../constants';
+import { waitUntil } from '../helpers/waiting';
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_URL = 'https://services.cal-online.co.il/Card-Holders/Screens/Transactions/Transactions.aspx';
 const DATE_FORMAT = 'DD/MM/YY';
+const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו שגויים';
 
 interface ScrapedTransaction {
   date: string;
@@ -41,6 +43,15 @@ function getLoginFrame(page: Page) {
   return frame;
 }
 
+async function hasInvalidPasswordError(page: Page) {
+  const frame = getLoginFrame(page);
+  const errorFound = await elementPresentOnPage(frame, 'div.general-error > div');
+  const errorMessage = errorFound ? await pageEval(frame, 'div.general-error > div', '', (item) => {
+    return (item as HTMLDivElement).innerText;
+  }) : '';
+  return errorMessage === InvalidPasswordMessage;
+}
+
 function getPossibleLoginResults() {
   const urls: LoginOptions['possibleResults'] = {
     [LoginResults.Success]: [/AccountManagement/i],
@@ -49,12 +60,7 @@ function getPossibleLoginResults() {
       if (!page) {
         return false;
       }
-      const frame = getLoginFrame(page);
-      const errorFound = await elementPresentOnPage(frame, 'div.general-error > div');
-      const errorMessage = errorFound ? await pageEval(frame, 'div.general-error > div', '', (item) => {
-        return (item as HTMLDivElement).innerText;
-      }) : '';
-      return errorMessage === 'שם המשתמש או הסיסמה שהוזנו שגויים';
+      return hasInvalidPasswordError(page);
     }],
     // [LoginResults.AccountBlocked]: [], // TODO add when reaching this scenario
     // [LoginResults.ChangePassword]: [], // TODO add when reaching this scenario
@@ -219,10 +225,15 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
 async function redirectOrDialog(page: Page): Promise<any> {
   return Promise.race([
     waitForNavigation(page),
-    async () => {
-      const frame = getLoginFrame(page);
-      return waitForNavigation(frame);
-    },
+    (async () => {
+      try {
+        await waitUntil(async () => {
+          return hasInvalidPasswordError(page);
+        }, 'wait for concrete error message', 10000, 1000);
+      } catch (e) {
+        // this is a valid scenario, waitUntil will fail once promise.race will handle the first promise
+      }
+    })(),
   ]);
 }
 
