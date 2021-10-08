@@ -1,19 +1,29 @@
-import moment, { Moment } from 'moment';
-import { Page } from 'puppeteer';
-import { BaseScraperWithBrowser, LoginResults, LoginOptions } from './base-scraper-with-browser';
+import moment, {Moment} from 'moment';
+import {Page} from 'puppeteer';
+import {BaseScraperWithBrowser, LoginOptions, LoginResults} from './base-scraper-with-browser';
+import {clickButton, fillInput, pageEvalAll, waitUntilElementFound,} from '../helpers/elements-interactions';
 import {
-  clickButton,
-  waitUntilElementFound, fillInput, pageEvalAll,
-} from '../helpers/elements-interactions';
-import {
-  TransactionsAccount
+  Transaction,
+  TransactionInstallments,
+  TransactionsAccount,
+  TransactionStatuses,
+  TransactionTypes
 } from '../transactions';
-import { ScaperScrapingResult, ScraperCredentials } from './base-scraper';
+import {ScaperScrapingResult, ScraperCredentials} from './base-scraper';
 import {waitForNavigationAndDomLoad} from "../helpers/navigation";
+import {DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL} from "../constants";
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_URL = `https://services.cal-online.co.il/Card-Holders/Screens/Transactions/Transactions.aspx`;
+const DATE_FORMAT = 'DD/MM/YY';
 
+interface ScrapedTransaction {
+  date: string,
+  description: string,
+  originalAmount: string,
+  chargedAmount: string,
+  memo: string
+}
 
 function getPossibleLoginResults() {
   const urls: LoginOptions['possibleResults'] = {
@@ -36,7 +46,69 @@ function removeSpecialCharacters(str: string): string {
   return str.replace(/[^0-9/-]/g, '');
 }
 
-async function fetchTransactionsForAccount(page: Page, startDate: Moment, accountId: string): Promise<TransactionsAccount> {
+function getAmountData(amountStr: string) {
+  const amountStrCln = amountStr.replace(',', '');
+  let currency: string | null = null;
+  let amount: number | null = null;
+  if (amountStrCln.includes(SHEKEL_CURRENCY_SYMBOL)) {
+    amount = parseFloat(amountStrCln.replace(SHEKEL_CURRENCY_SYMBOL, ''));
+    currency = SHEKEL_CURRENCY;
+  } else if (amountStrCln.includes(DOLLAR_CURRENCY_SYMBOL)) {
+    amount = parseFloat(amountStrCln.replace(DOLLAR_CURRENCY_SYMBOL, ''));
+    currency = DOLLAR_CURRENCY;
+  } else {
+    const parts = amountStrCln.split(' ');
+    amount = parseFloat(parts[0]);
+    [, currency] = parts;
+  }
+
+  return {
+    amount,
+    currency,
+  };
+}
+
+function getTransactionInstallments(memo: string): TransactionInstallments | null {
+  const parsedMemo = (memo || '').match(/תשלום (\d+) מתוך (\d+)/);
+
+  if (!parsedMemo || parsedMemo.length === 0) {
+    return null;
+  }
+
+  return {
+    number: parseInt(parsedMemo[1]),
+    total: parseInt(parsedMemo[2])
+  }
+}
+function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
+  return txns.map((txn) => {
+    const txnDate = moment(txn.date, DATE_FORMAT).toISOString();
+    const originalAmountTuple = getAmountData(txn.originalAmount || '');
+    const chargedAmountTuple = getAmountData(txn.chargedAmount || '');
+
+    const installments = getTransactionInstallments(txn.memo);
+    const result: Transaction = {
+      type: installments ? TransactionTypes.Installments : TransactionTypes.Normal,
+      status: TransactionStatuses.Completed,
+      date: txnDate,
+      processedDate: txnDate,
+      originalAmount: originalAmountTuple.amount,
+      originalCurrency: originalAmountTuple.currency,
+      chargedAmount: chargedAmountTuple.amount,
+      chargedCurrency: chargedAmountTuple.currency,
+      description: txn.description || '',
+      memo: txn.memo || '',
+    };
+
+    if (installments) {
+      result.installments = installments;
+    }
+
+    return result;
+  });
+}
+
+async function fetchTransactionsForAccount(page: Page, startDate: Moment, accountNumber: string): Promise<TransactionsAccount> {
   const startDateValue = startDate.format('MM/YYYY');
   const dateSelector = '[id$="FormAreaNoBorder_FormArea_ctlDateScopeStart_ctlMonthYearList_TextBox"]';
   const dateHiddenFieldSelector = '[id$="FormAreaNoBorder_FormArea_ctlDateScopeStart_ctlMonthYearList_HiddenField"]';
@@ -53,25 +125,26 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
   await clickButton(page, buttonSelector);
   await waitForNavigationAndDomLoad(page);
 
-  // TODO fetch transactions
-  throw new Error(accountId);
-  //
-  // const pendingTransactions = response.TodayTransactionsItems;
-  // const transactions = response.HistoryTransactionsItems;
-  // const balance = response.BalanceDisplay ? parseFloat(response.BalanceDisplay) : undefined;
-  //
-  // const pendingTxns = extractTransactionsFromPage(pendingTransactions, TransactionStatuses.Pending);
-  // const completedTxns = extractTransactionsFromPage(transactions, TransactionStatuses.Completed);
-  // const txns = [
-  //   ...pendingTxns,
-  //   ...completedTxns,
-  // ];
-  //
-  // return {
-  //   accountNumber,
-  //   balance,
-  //   txns,
-  // };
+  const rawTransactions = await pageEvalAll(page, '#ctlMainGrid > tbody:nth-child(2) tr',[], (items) => {
+    return (items).map((el) => {
+      const columns = el.getElementsByTagName('td');
+      return {
+        date: columns[0].innerText,
+        description: columns[1].innerText,
+        originalAmount: columns[2].innerText,
+        chargedAmount: columns[3].innerText,
+        memo: columns[4].innerText
+      }
+    });
+  }, []);
+
+  const txns = convertTransactions(rawTransactions);
+
+  return {
+    accountNumber,
+    balance: 0, // TODO handle balance
+    txns,
+  };
 }
 
 async function fetchTransactions(page: Page, startDate: Moment): Promise<TransactionsAccount[]> {
