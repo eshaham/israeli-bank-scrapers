@@ -83,16 +83,17 @@ function getTransactionInstallments(memo: string): TransactionInstallments | nul
 }
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((txn) => {
-    const txnDate = moment(txn.date, DATE_FORMAT).toISOString();
     const originalAmountTuple = getAmountData(txn.originalAmount || '');
     const chargedAmountTuple = getAmountData(txn.chargedAmount || '');
 
     const installments = getTransactionInstallments(txn.memo);
+    const txnDate = moment(txn.date, DATE_FORMAT);
+
     const result: Transaction = {
       type: installments ? TransactionTypes.Installments : TransactionTypes.Normal,
       status: TransactionStatuses.Completed,
-      date: txnDate,
-      processedDate: txnDate,
+      date: txnDate.toISOString(),
+      processedDate: installments ? txnDate.add(installments.number - 1, 'month').toISOString() : txnDate.toISOString(),
       originalAmount: originalAmountTuple.amount,
       originalCurrency: originalAmountTuple.currency,
       chargedAmount: chargedAmountTuple.amount,
@@ -145,7 +146,6 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
         return null;
       });
     }, []);
-
 
     txns.push(...convertTransactions((rawTransactions as ScrapedTransaction[]).filter((item) => !!item)));
 
