@@ -1,8 +1,8 @@
-import { NavigationOptions, Page } from 'puppeteer';
+import { Frame, NavigationOptions, Page } from 'puppeteer';
 import { waitUntil } from './waiting';
 
-export async function waitForNavigation(page: Page, options?: NavigationOptions) {
-  await page.waitForNavigation(options);
+export async function waitForNavigation(pageOrFrame: Page | Frame, options?: NavigationOptions) {
+  await pageOrFrame.waitForNavigation(options);
 }
 
 export async function waitForNavigationAndDomLoad(page: Page) {

@@ -47,11 +47,11 @@ async function pageEvalAll<R>(page: Page, selector: string,
   return result;
 }
 
-async function pageEval<R>(page: Page, selector: string,
+async function pageEval<R>(pageOrFrame: Page | Frame, selector: string,
   defaultResult: any, callback: (elements: Element, ...args: any) => R, ...args: any[]): Promise<R> {
   let result = defaultResult;
   try {
-    result = await page.$eval(selector, callback, ...args);
+    result = await pageOrFrame.$eval(selector, callback, ...args);
   } catch (e) {
     // TODO temporary workaround to puppeteer@1.5.0 which breaks $$eval bevahvior until they will release a new version.
     if (e.message.indexOf('Error: failed to find elements matching selector') !== 0) {
@@ -62,8 +62,8 @@ async function pageEval<R>(page: Page, selector: string,
   return result;
 }
 
-async function elementPresentOnPage(page: Page, selector: string) {
-  return await page.$(selector) !== null;
+async function elementPresentOnPage(pageOrFrame: Page | Frame, selector: string) {
+  return await pageOrFrame.$(selector) !== null;
 }
 
 async function dropdownSelect(page: Page, selectSelector: string, value: string) {

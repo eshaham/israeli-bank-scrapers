@@ -12,7 +12,7 @@ import {
   TransactionTypes,
 } from '../transactions';
 import { ScaperScrapingResult, ScraperCredentials } from './base-scraper';
-import { waitForNavigationAndDomLoad } from '../helpers/navigation';
+import { waitForNavigation, waitForNavigationAndDomLoad } from '../helpers/navigation';
 import {
   DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,
 } from '../constants';
@@ -29,10 +29,33 @@ interface ScrapedTransaction {
   memo: string;
 }
 
+function getLoginFrame(page: Page) {
+  const frame = page
+    .frames()
+    .find((f) => f.url().includes('connect.cal-online'));
+
+  if (!frame) {
+    throw new Error('failed to extract login iframe');
+  }
+
+  return frame;
+}
+
 function getPossibleLoginResults() {
   const urls: LoginOptions['possibleResults'] = {
     [LoginResults.Success]: [/AccountManagement/i],
-    // [LoginResults.InvalidPassword]: [], // TODO add when reaching this scenario
+    [LoginResults.InvalidPassword]: [async (options?: { page?: Page}) => {
+      const page = options?.page;
+      if (!page) {
+        return false;
+      }
+      const frame = getLoginFrame(page);
+      const errorFound = await elementPresentOnPage(frame, 'div.general-error > div');
+      const errorMessage = errorFound ? await pageEval(frame, 'div.general-error > div', '', (item) => {
+        return (item as HTMLDivElement).innerText;
+      }) : '';
+      return errorMessage === 'שם המשתמש או הסיסמה שהוזנו שגויים';
+    }],
     // [LoginResults.AccountBlocked]: [], // TODO add when reaching this scenario
     // [LoginResults.ChangePassword]: [], // TODO add when reaching this scenario
   };
@@ -193,6 +216,16 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
   return accounts;
 }
 
+async function redirectOrDialog(page: Page): Promise<any> {
+  return Promise.race([
+    waitForNavigation(page),
+    async () => {
+      const frame = getLoginFrame(page);
+      return waitForNavigation(frame);
+    },
+  ]);
+}
+
 
 class VisaCalScraper extends BaseScraperWithBrowser {
   openLoginPopup = async () => {
@@ -200,13 +233,7 @@ class VisaCalScraper extends BaseScraperWithBrowser {
 
     await waitUntilElementFound(this.page, 'iframe[src*="connect.cal-online"]');
     await this.page.waitFor(3000);
-    const frame = this.page
-      .frames()
-      .find((f) => f.url().includes('connect.cal-online'));
-
-    if (!frame) {
-      throw new Error('failed to extract login iframe');
-    }
+    const frame = getLoginFrame(this.page);
     await waitUntilElementFound(frame, '#regular-login');
     await clickButton(frame, '#regular-login');
     await waitUntilElementFound(frame, 'regular-login');
@@ -222,6 +249,7 @@ class VisaCalScraper extends BaseScraperWithBrowser {
       possibleResults: getPossibleLoginResults(),
       checkReadiness: async () => waitUntilElementFound(this.page, '#ccLoginDesktopBtn'),
       preAction: this.openLoginPopup,
+      postAction: () => redirectOrDialog(this.page),
     };
   }
 
