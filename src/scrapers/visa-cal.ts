@@ -1,5 +1,5 @@
 import moment, { Moment } from 'moment';
-import { Page } from 'puppeteer';
+import { Frame, Page } from 'puppeteer';
 import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
 import {
   clickButton, elementPresentOnPage, fillInput, pageEval, pageEvalAll, waitUntilElementFound,
@@ -31,10 +31,14 @@ interface ScrapedTransaction {
   memo: string;
 }
 
-function getLoginFrame(page: Page) {
-  const frame = page
-    .frames()
-    .find((f) => f.url().includes('connect.cal-online'));
+async function getLoginFrame(page: Page) {
+  let frame: Frame | null = null;
+  await waitUntil(() => {
+    frame = page
+      .frames()
+      .find((f) => f.url().includes('connect.cal-online')) || null;
+    return Promise.resolve(!!frame);
+  }, 'wait for iframe with login form', 10000, 1000);
 
   if (!frame) {
     throw new Error('failed to extract login iframe');
@@ -44,7 +48,7 @@ function getLoginFrame(page: Page) {
 }
 
 async function hasInvalidPasswordError(page: Page) {
-  const frame = getLoginFrame(page);
+  const frame = await getLoginFrame(page);
   const errorFound = await elementPresentOnPage(frame, 'div.general-error > div');
   const errorMessage = errorFound ? await pageEval(frame, 'div.general-error > div', '', (item) => {
     return (item as HTMLDivElement).innerText;
@@ -240,11 +244,9 @@ async function redirectOrDialog(page: Page): Promise<any> {
 
 class VisaCalScraper extends BaseScraperWithBrowser {
   openLoginPopup = async () => {
+    await waitUntilElementFound(this.page, '#ccLoginDesktopBtn', true);
     await clickButton(this.page, '#ccLoginDesktopBtn');
-
-    await waitUntilElementFound(this.page, 'iframe[src*="connect.cal-online"]');
-    await this.page.waitFor(3000);
-    const frame = getLoginFrame(this.page);
+    const frame = await getLoginFrame(this.page);
     await waitUntilElementFound(frame, '#regular-login');
     await clickButton(frame, '#regular-login');
     await waitUntilElementFound(frame, 'regular-login');
@@ -261,6 +263,7 @@ class VisaCalScraper extends BaseScraperWithBrowser {
       checkReadiness: async () => waitUntilElementFound(this.page, '#ccLoginDesktopBtn'),
       preAction: this.openLoginPopup,
       postAction: () => redirectOrDialog(this.page),
+      userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36',
     };
   }
 

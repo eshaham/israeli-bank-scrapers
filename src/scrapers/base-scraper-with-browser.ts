@@ -42,6 +42,7 @@ export interface LoginOptions {
   preAction?: () => Promise<Frame | void>;
   postAction?: () => Promise<void>;
   possibleResults: PossibleLoginResults;
+  userAgent?: string;
 }
 
 async function getKeyByValue(object: PossibleLoginResults, value: string, page: Page): Promise<LoginResults> {
@@ -198,6 +199,10 @@ class BaseScraperWithBrowser extends BaseScraper {
     }
 
     const loginOptions = this.getLoginOptions(credentials);
+
+    if (loginOptions.userAgent) {
+      await this.page.setUserAgent(loginOptions.userAgent);
+    }
 
     await this.navigateTo(loginOptions.loginUrl);
     if (loginOptions.checkReadiness) {
