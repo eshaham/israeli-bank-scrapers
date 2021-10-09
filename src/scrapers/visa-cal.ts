@@ -85,14 +85,14 @@ function getAmountData(amountStr: string) {
   let currency: string | null = null;
   let amount: number | null = null;
   if (amountStrCln.includes(SHEKEL_CURRENCY_SYMBOL)) {
-    amount = parseFloat(amountStrCln.replace(SHEKEL_CURRENCY_SYMBOL, ''));
+    amount = -parseFloat(amountStrCln.replace(SHEKEL_CURRENCY_SYMBOL, ''));
     currency = SHEKEL_CURRENCY;
   } else if (amountStrCln.includes(DOLLAR_CURRENCY_SYMBOL)) {
-    amount = parseFloat(amountStrCln.replace(DOLLAR_CURRENCY_SYMBOL, ''));
+    amount = -parseFloat(amountStrCln.replace(DOLLAR_CURRENCY_SYMBOL, ''));
     currency = DOLLAR_CURRENCY;
   } else {
     const parts = amountStrCln.split(' ');
-    amount = parseFloat(parts[0]);
+    amount = -parseFloat(parts[0]);
     [, currency] = parts;
   }
 
