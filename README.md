@@ -16,7 +16,7 @@ Currently only the following banks are supported:
 - Discount Bank
 - Mizrahi Bank (thanks [@baruchiro](https://github.com/baruchiro))
 - Otsar Hahayal Bank (thanks [@matanelgabsi](https://github.com/matanelgabsi))
-- Visa Cal (thanks [@nirgin](https://github.com/nirgin))
+- Visa Cal (thanks [@erikash](https://github.com/erikash), [@esakal](https://github.com/esakal) and [@nirgin](https://github.com/nirgin))
 - Max (Formerly Leumi Card)
 - Isracard
 - Amex (thanks [@erezd](https://github.com/erezd))
