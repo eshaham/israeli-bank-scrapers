@@ -2,7 +2,7 @@ import moment, { Moment } from 'moment';
 import { Frame, Page } from 'puppeteer';
 import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
 import {
-  clickButton, elementPresentOnPage, fillInput, pageEval, pageEvalAll, waitUntilElementFound,
+  clickButton, elementPresentOnPage, pageEval, pageEvalAll, setValue, waitUntilElementFound,
 } from '../helpers/elements-interactions';
 import {
   Transaction,
@@ -125,8 +125,8 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
     const result: Transaction = {
       type: installments ? TransactionTypes.Installments : TransactionTypes.Normal,
       status: TransactionStatuses.Completed,
-      date: txnDate.toISOString(),
-      processedDate: installments ? txnDate.add(installments.number - 1, 'month').toISOString() : txnDate.toISOString(),
+      date: installments ? txnDate.add(installments.number - 1, 'month').toISOString() : txnDate.toISOString(),
+      processedDate: txnDate.toISOString(),
       originalAmount: originalAmountTuple.amount,
       originalCurrency: originalAmountTuple.currency,
       chargedAmount: chargedAmountTuple.amount,
@@ -143,52 +143,54 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   });
 }
 
+// @eran.sakal - I don't have any load more links.. are they still needed in the monthly view?
 async function fetchTransactionsForAccount(page: Page, startDate: Moment, accountNumber: string): Promise<TransactionsAccount> {
   const startDateValue = startDate.format('MM/YYYY');
-  const dateSelector = '[id$="FormAreaNoBorder_FormArea_ctlDateScopeStart_ctlMonthYearList_TextBox"]';
-  const dateHiddenFieldSelector = '[id$="FormAreaNoBorder_FormArea_ctlDateScopeStart_ctlMonthYearList_HiddenField"]';
+  const dateSelector = '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_TextBox"]';
+  const dateHiddenFieldSelector = '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_HiddenField"]';
   const buttonSelector = '[id$="FormAreaNoBorder_FormArea_ctlSubmitRequest"]';
   const nextPageSelector = '[id$="FormAreaNoBorder_FormArea_ctlGridPager_btnNext"]';
 
-  const hiddenFieldValue = await pageEvalAll(page, '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_OptionList"] li', [], (items, startDateValue) => {
-    return items.findIndex((element: any) => element.innerText === startDateValue);
-  }, [startDateValue]);
+  const options = await pageEvalAll(page, '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_OptionList"] li', [], (items) => {
+    return items.map((el: any) => el.innerText);
+  });
+  const startDateIndex = options.findIndex((option) => option === startDateValue);
 
-  await clickButton(page, '#ctl00_FormAreaNoBorder_FormArea_rdoTransactionDate');
-  await waitUntilElementFound(page, dateSelector, true);
-  await fillInput(page, dateSelector, startDateValue);
-  await fillInput(page, dateHiddenFieldSelector, `${hiddenFieldValue}`);
-  await clickButton(page, buttonSelector);
-  await waitForNavigationAndDomLoad(page);
-
-  let hasNextPage = false;
   const txns: Transaction[] = [];
-  do {
-    const rawTransactions = await pageEvalAll<(ScrapedTransaction | null)[]>(page, '#ctlMainGrid > tbody tr', [], (items) => {
-      return (items).map((el) => {
-        const columns = el.getElementsByTagName('td');
-        if (columns.length !== 2) {
-          return {
-            date: columns[0].innerText,
-            description: columns[1].innerText,
-            originalAmount: columns[2].innerText,
-            chargedAmount: columns[3].innerText,
-            memo: columns[4].innerText,
-          };
-        }
-        return null;
-      });
-    }, []);
+  for (let currentDateIndex = startDateIndex; currentDateIndex < options.length; currentDateIndex += 1) {
+    await waitUntilElementFound(page, dateSelector, true);
+    await setValue(page, dateHiddenFieldSelector, `${currentDateIndex}`);
+    await clickButton(page, buttonSelector);
+    await waitForNavigationAndDomLoad(page);
 
-    txns.push(...convertTransactions((rawTransactions as ScrapedTransaction[]).filter((item) => !!item)));
+    let hasNextPage = false;
+    do {
+      const rawTransactions = await pageEvalAll<(ScrapedTransaction | null)[]>(page, '#ctlMainGrid > tbody tr', [], (items) => {
+        return (items).map((el) => {
+          const columns = el.getElementsByTagName('td');
+          if (columns.length !== 2) {
+            return {
+              date: columns[0].innerText,
+              description: columns[1].innerText,
+              originalAmount: columns[2].innerText,
+              chargedAmount: columns[3].innerText,
+              memo: columns[4].innerText,
+            };
+          }
+          return null;
+        });
+      }, []);
 
-    hasNextPage = await elementPresentOnPage(page, nextPageSelector);
+      txns.push(...convertTransactions((rawTransactions as ScrapedTransaction[]).filter((item) => !!item)));
 
-    if (hasNextPage) {
-      await clickButton(page, '[id$=FormAreaNoBorder_FormArea_ctlGridPager_btnNext]');
-      await waitForNavigationAndDomLoad(page);
-    }
-  } while (hasNextPage);
+      hasNextPage = await elementPresentOnPage(page, nextPageSelector);
+
+      if (hasNextPage) {
+        await clickButton(page, '[id$=FormAreaNoBorder_FormArea_ctlGridPager_btnNext]');
+        await waitForNavigationAndDomLoad(page);
+      }
+    } while (hasNextPage);
+  }
 
   return {
     accountNumber,

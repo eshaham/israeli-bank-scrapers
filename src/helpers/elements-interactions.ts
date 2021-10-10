@@ -18,6 +18,14 @@ async function fillInput(pageOrFrame: Page | Frame, inputSelector: string, input
   await pageOrFrame.type(inputSelector, inputValue);
 }
 
+async function setValue(pageOrFrame: Page | Frame, inputSelector: string, inputValue: string): Promise<void> {
+  await pageOrFrame.$eval(inputSelector, (input: Element, inputValue) => {
+    const inputElement = input;
+    // @ts-ignore
+    inputElement.value = inputValue;
+  }, [inputValue]);
+}
+
 async function clickButton(page: Page | Frame, buttonSelector: string) {
   await page.$eval(buttonSelector, (el) => (el as HTMLElement).click());
 }
@@ -95,4 +103,5 @@ export {
   pageEval,
   pageEvalAll,
   elementPresentOnPage,
+  setValue,
 };
