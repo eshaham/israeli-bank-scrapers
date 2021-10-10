@@ -11,12 +11,13 @@ import {
   TransactionStatuses,
   TransactionTypes,
 } from '../transactions';
-import { ScaperScrapingResult, ScraperCredentials } from './base-scraper';
+import {ScaperOptions, ScaperScrapingResult, ScraperCredentials} from './base-scraper';
 import { waitForNavigation, waitForNavigationAndDomLoad } from '../helpers/navigation';
 import {
   DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,
 } from '../constants';
 import { waitUntil } from '../helpers/waiting';
+import {filterOldTransactions} from "../helpers/transactions";
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_URL = 'https://services.cal-online.co.il/Card-Holders/Screens/Transactions/Transactions.aspx';
@@ -25,6 +26,7 @@ const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו
 
 interface ScrapedTransaction {
   date: string;
+  processedDate: string;
   description: string;
   originalAmount: string;
   chargedAmount: string;
@@ -35,8 +37,8 @@ async function getLoginFrame(page: Page) {
   let frame: Frame | null = null;
   await waitUntil(() => {
     frame = page
-      .frames()
-      .find((f) => f.url().includes('connect.cal-online')) || null;
+        .frames()
+        .find((f) => f.url().includes('connect.cal-online')) || null;
     return Promise.resolve(!!frame);
   }, 'wait for iframe with login form', 10000, 1000);
 
@@ -121,12 +123,13 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
 
     const installments = getTransactionInstallments(txn.memo);
     const txnDate = moment(txn.date, DATE_FORMAT);
+    const txnProcessedDate = moment(txn.processedDate, DATE_FORMAT);
 
     const result: Transaction = {
       type: installments ? TransactionTypes.Installments : TransactionTypes.Normal,
       status: TransactionStatuses.Completed,
       date: installments ? txnDate.add(installments.number - 1, 'month').toISOString() : txnDate.toISOString(),
-      processedDate: txnDate.toISOString(),
+      processedDate: txnProcessedDate.toISOString(),
       originalAmount: originalAmountTuple.amount,
       originalCurrency: originalAmountTuple.currency,
       chargedAmount: chargedAmountTuple.amount,
@@ -143,33 +146,51 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   });
 }
 
-// @eran.sakal - I don't have any load more links.. are they still needed in the monthly view?
-async function fetchTransactionsForAccount(page: Page, startDate: Moment, accountNumber: string): Promise<TransactionsAccount> {
+async function fetchTransactionsForAccount(page: Page, startDate: Moment, accountNumber: string, scraperOptions: ScaperOptions): Promise<TransactionsAccount> {
   const startDateValue = startDate.format('MM/YYYY');
   const dateSelector = '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_TextBox"]';
   const dateHiddenFieldSelector = '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_HiddenField"]';
   const buttonSelector = '[id$="FormAreaNoBorder_FormArea_ctlSubmitRequest"]';
   const nextPageSelector = '[id$="FormAreaNoBorder_FormArea_ctlGridPager_btnNext"]';
+  const billingLabelSelector = '[id$=FormAreaNoBorder_FormArea_ctlMainToolBar_lblCaption]';
 
   const options = await pageEvalAll(page, '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_OptionList"] li', [], (items) => {
     return items.map((el: any) => el.innerText);
   });
   const startDateIndex = options.findIndex((option) => option === startDateValue);
 
-  const txns: Transaction[] = [];
+  const accountTransactions: Transaction[] = [];
   for (let currentDateIndex = startDateIndex; currentDateIndex < options.length; currentDateIndex += 1) {
     await waitUntilElementFound(page, dateSelector, true);
     await setValue(page, dateHiddenFieldSelector, `${currentDateIndex}`);
     await clickButton(page, buttonSelector);
     await waitForNavigationAndDomLoad(page);
+    const billingDate = await pageEval(page, billingLabelSelector, '',(element => {
+      const label = (element as HTMLSpanElement).innerText;
+      return /\d{2}[/]\d{2}[/]\d{2}/.exec(label)?.[0];
+    }));
+
+    if (!billingDate) {
+      throw new Error('failed to fetch process date')
+    }
 
     let hasNextPage = false;
     do {
-      const rawTransactions = await pageEvalAll<(ScrapedTransaction | null)[]>(page, '#ctlMainGrid > tbody tr', [], (items) => {
+      const rawTransactions = await pageEvalAll<(ScrapedTransaction | null)[]>(page, '#ctlMainGrid > tbody tr, #ctlSecondaryGrid > tbody tr', [], (items, billingDate) => {
         return (items).map((el) => {
           const columns = el.getElementsByTagName('td');
-          if (columns.length !== 2) {
+          if (columns.length === 6) {
             return {
+              processedDate: columns[0].innerText,
+              date: columns[1].innerText,
+              description: columns[2].innerText,
+              originalAmount: columns[3].innerText,
+              chargedAmount: columns[4].innerText,
+              memo: columns[5].innerText,
+            };
+          } else if (columns.length === 5) {
+            return {
+              processedDate: billingDate,
               date: columns[0].innerText,
               description: columns[1].innerText,
               originalAmount: columns[2].innerText,
@@ -179,12 +200,11 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
           }
           return null;
         });
-      }, []);
+      }, billingDate);
 
-      txns.push(...convertTransactions((rawTransactions as ScrapedTransaction[]).filter((item) => !!item)));
+      accountTransactions.push(...convertTransactions((rawTransactions as ScrapedTransaction[]).filter((item) => !!item)));
 
       hasNextPage = await elementPresentOnPage(page, nextPageSelector);
-
       if (hasNextPage) {
         await clickButton(page, '[id$=FormAreaNoBorder_FormArea_ctlGridPager_btnNext]');
         await waitForNavigationAndDomLoad(page);
@@ -192,37 +212,23 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
     } while (hasNextPage);
   }
 
+  const txns = filterOldTransactions(accountTransactions, startDate, scraperOptions.combineInstallments || false)
+
   return {
     accountNumber,
     txns,
   };
 }
 
-async function fetchTransactions(page: Page, startDate: Moment): Promise<TransactionsAccount[]> {
+async function fetchTransactions(page: Page, startDate: Moment, scraperOptions: ScaperOptions): Promise<TransactionsAccount[]> {
   const accounts: TransactionsAccount[] = [];
-
-  // TODO multiple accounts
-  // const accountsIds = await page.evaluate(() => Array.from(document.querySelectorAll('app-masked-number-combo span.display-number-li'), (e) => e.textContent)) as string[];
-
-  // due to a bug, the altered value might include undesired signs like & that should be removed
-
-  // if (!accountsIds.length) {
-  //   throw new Error('Failed to extract or parse the account number');
-  // }
-
-  // for (const accountId of accountsIds) {
-  // if (accountsIds.length > 1) {
-  //   // get list of accounts and check accountId
-  //   await clickByXPath(page, '//*[contains(@class, "number") and contains(@class, "combo-inner")]');
-  //   await clickByXPath(page, `//span[contains(text(), '${accountId}')]`);
-  // }
 
   const accountId = await pageEval(page, '[id$=cboCardList_categoryList_lblCollapse]', '', (item) => {
     return (item as HTMLInputElement).value;
   }, []);
 
   const accountNumber = /\d+$/.exec(accountId.trim())?.[0] ?? '';
-  accounts.push(await fetchTransactionsForAccount(page, startDate, accountNumber));
+  accounts.push(await fetchTransactionsForAccount(page, startDate, accountNumber, scraperOptions));
   // }
 
   return accounts;
@@ -276,7 +282,7 @@ class VisaCalScraper extends BaseScraperWithBrowser {
 
     await this.navigateTo(TRANSACTIONS_URL);
 
-    const accounts = await fetchTransactions(this.page, startMoment);
+    const accounts = await fetchTransactions(this.page, startMoment, this.options);
     return {
       success: true,
       accounts,
