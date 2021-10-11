@@ -11,13 +11,13 @@ import {
   TransactionStatuses,
   TransactionTypes,
 } from '../transactions';
-import {ScaperOptions, ScaperScrapingResult, ScraperCredentials} from './base-scraper';
+import { ScaperOptions, ScaperScrapingResult, ScraperCredentials } from './base-scraper';
 import { waitForNavigation, waitForNavigationAndDomLoad } from '../helpers/navigation';
 import {
   DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,
 } from '../constants';
 import { waitUntil } from '../helpers/waiting';
-import {filterOldTransactions} from "../helpers/transactions";
+import { filterOldTransactions } from '../helpers/transactions';
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_URL = 'https://services.cal-online.co.il/Card-Holders/Screens/Transactions/Transactions.aspx';
@@ -37,8 +37,8 @@ async function getLoginFrame(page: Page) {
   let frame: Frame | null = null;
   await waitUntil(() => {
     frame = page
-        .frames()
-        .find((f) => f.url().includes('connect.cal-online')) || null;
+      .frames()
+      .find((f) => f.url().includes('connect.cal-online')) || null;
     return Promise.resolve(!!frame);
   }, 'wait for iframe with login form', 10000, 1000);
 
@@ -165,13 +165,13 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
     await setValue(page, dateHiddenFieldSelector, `${currentDateIndex}`);
     await clickButton(page, buttonSelector);
     await waitForNavigationAndDomLoad(page);
-    const billingDate = await pageEval(page, billingLabelSelector, '',(element => {
+    const billingDate = await pageEval(page, billingLabelSelector, '', ((element) => {
       const label = (element as HTMLSpanElement).innerText;
       return /\d{2}[/]\d{2}[/]\d{2}/.exec(label)?.[0];
     }));
 
     if (!billingDate) {
-      throw new Error('failed to fetch process date')
+      throw new Error('failed to fetch process date');
     }
 
     let hasNextPage = false;
@@ -188,7 +188,7 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
               chargedAmount: columns[4].innerText,
               memo: columns[5].innerText,
             };
-          } else if (columns.length === 5) {
+          } if (columns.length === 5) {
             return {
               processedDate: billingDate,
               date: columns[0].innerText,
@@ -202,7 +202,8 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
         });
       }, billingDate);
 
-      accountTransactions.push(...convertTransactions((rawTransactions as ScrapedTransaction[]).filter((item) => !!item)));
+      accountTransactions.push(...convertTransactions((rawTransactions as ScrapedTransaction[])
+        .filter((item) => !!item)));
 
       hasNextPage = await elementPresentOnPage(page, nextPageSelector);
       if (hasNextPage) {
@@ -212,7 +213,7 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
     } while (hasNextPage);
   }
 
-  const txns = filterOldTransactions(accountTransactions, startDate, scraperOptions.combineInstallments || false)
+  const txns = filterOldTransactions(accountTransactions, startDate, scraperOptions.combineInstallments || false);
 
   return {
     accountNumber,
