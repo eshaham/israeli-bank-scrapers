@@ -12,7 +12,7 @@ import {
   TransactionTypes,
 } from '../transactions';
 import { ScaperOptions, ScaperScrapingResult, ScraperCredentials } from './base-scraper';
-import { waitForNavigation, waitForNavigationAndDomLoad } from '../helpers/navigation';
+import { waitForNavigationAndDomLoad } from '../helpers/navigation';
 import {
   DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,
 } from '../constants';
@@ -165,10 +165,11 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
     await setValue(page, dateHiddenFieldSelector, `${currentDateIndex}`);
     await clickButton(page, buttonSelector);
     await waitForNavigationAndDomLoad(page);
-    const billingDate = await pageEval(page, billingLabelSelector, '', ((element) => {
-      const label = (element as HTMLSpanElement).innerText;
-      return /\d{2}[/]\d{2}[/]\d{2}/.exec(label)?.[0];
+    const billingDateLabel = await pageEval(page, billingLabelSelector, '', ((element) => {
+      return (element as HTMLSpanElement).innerText;
     }));
+
+    const billingDate = /\d{1,2}[/]\d{2}[/]\d{2,4}/.exec(billingDateLabel)?.[0];
 
     if (!billingDate) {
       throw new Error('failed to fetch process date');
@@ -235,20 +236,20 @@ async function fetchTransactions(page: Page, startDate: Moment, scraperOptions: 
   return accounts;
 }
 
-async function redirectOrDialog(page: Page): Promise<any> {
-  return Promise.race([
-    waitForNavigation(page),
-    (async () => {
-      try {
-        await waitUntil(async () => {
-          return hasInvalidPasswordError(page);
-        }, 'wait for concrete error message', 10000, 1000);
-      } catch (e) {
-        // this is a valid scenario, waitUntil will fail once promise.race will handle the first promise
-      }
-    })(),
-  ]);
-}
+// async function redirectOrDialog(page: Page): Promise<any> {
+//   return Promise.race([
+//     waitForNavigation(page),
+//     (async () => {
+//       try {
+//         await waitUntil(async () => {
+//           return hasInvalidPasswordError(page);
+//         }, 'wait for concrete error message', 10000, 1000);
+//       } catch (e) {
+//         // this is a valid scenario, waitUntil will fail once promise.race will handle the first promise
+//       }
+//     })(),
+//   ]);
+// }
 
 
 class VisaCalScraper extends BaseScraperWithBrowser {
@@ -271,7 +272,6 @@ class VisaCalScraper extends BaseScraperWithBrowser {
       possibleResults: getPossibleLoginResults(),
       checkReadiness: async () => waitUntilElementFound(this.page, '#ccLoginDesktopBtn'),
       preAction: this.openLoginPopup,
-      postAction: () => redirectOrDialog(this.page),
       userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36',
     };
   }
@@ -281,7 +281,7 @@ class VisaCalScraper extends BaseScraperWithBrowser {
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-    await this.navigateTo(TRANSACTIONS_URL);
+    await this.navigateTo(TRANSACTIONS_URL, undefined, 60000);
 
     const accounts = await fetchTransactions(this.page, startMoment, this.options);
     return {
