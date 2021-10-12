@@ -21,6 +21,7 @@ import { filterOldTransactions } from '../helpers/transactions';
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_URL = 'https://services.cal-online.co.il/Card-Holders/Screens/Transactions/Transactions.aspx';
+const LONG_DATE_FORMAT = 'DD/MM/YYYY';
 const DATE_FORMAT = 'DD/MM/YY';
 const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו שגויים';
 
@@ -123,7 +124,15 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
 
     const installments = getTransactionInstallments(txn.memo);
     const txnDate = moment(txn.date, DATE_FORMAT);
-    const txnProcessedDate = moment(txn.processedDate, DATE_FORMAT);
+    const processedDateFormat = txn.processedDate.length === 8
+    ? DATE_FORMAT
+        : txn.processedDate.length === 10
+    ? LONG_DATE_FORMAT
+            : null;
+    if (!processedDateFormat) {
+      throw new Error('invalid processed date');
+    }
+    const txnProcessedDate = moment(txn.processedDate, processedDateFormat);
 
     const result: Transaction = {
       type: installments ? TransactionTypes.Installments : TransactionTypes.Normal,
