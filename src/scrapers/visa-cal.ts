@@ -124,11 +124,11 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
 
     const installments = getTransactionInstallments(txn.memo);
     const txnDate = moment(txn.date, DATE_FORMAT);
-    const processedDateFormat = txn.processedDate.length === 8
-    ? DATE_FORMAT
-        : txn.processedDate.length === 10
-    ? LONG_DATE_FORMAT
-            : null;
+    const processedDateFormat = txn.processedDate.length === 8 ?
+      DATE_FORMAT :
+      txn.processedDate.length === 10 ?
+        LONG_DATE_FORMAT :
+        null;
     if (!processedDateFormat) {
       throw new Error('invalid processed date');
     }
