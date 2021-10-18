@@ -240,26 +240,9 @@ async function fetchTransactions(page: Page, startDate: Moment, scraperOptions: 
 
   const accountNumber = /\d+$/.exec(accountId.trim())?.[0] ?? '';
   accounts.push(await fetchTransactionsForAccount(page, startDate, accountNumber, scraperOptions));
-  // }
 
   return accounts;
 }
-
-// async function redirectOrDialog(page: Page): Promise<any> {
-//   return Promise.race([
-//     waitForNavigation(page),
-//     (async () => {
-//       try {
-//         await waitUntil(async () => {
-//           return hasInvalidPasswordError(page);
-//         }, 'wait for concrete error message', 10000, 1000);
-//       } catch (e) {
-//         // this is a valid scenario, waitUntil will fail once promise.race will handle the first promise
-//       }
-//     })(),
-//   ]);
-// }
-
 
 class VisaCalScraper extends BaseScraperWithBrowser {
   openLoginPopup = async () => {
