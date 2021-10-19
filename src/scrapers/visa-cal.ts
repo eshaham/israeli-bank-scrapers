@@ -233,25 +233,23 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
 }
 
 async function getAccountNumbers(page: Page): Promise<string[]> {
-  return pageEvalAll(page, "[id$=lnkItem]", [], (elements) =>
-    elements.map((e) => (e as HTMLAnchorElement).text)
-  ).then((res) => res.map((text) => /\d+$/.exec(text.trim())?.[0] ?? ""));
+  return pageEvalAll(page, '[id$=lnkItem]', [], (elements) => elements.map((e) => (e as HTMLAnchorElement).text)).then((res) => res.map((text) => /\d+$/.exec(text.trim())?.[0] ?? ''));
 }
 
 async function setAccount(page: Page, account: string) {
   await pageEvalAll(
     page,
-    "[id$=lnkItem]",
+    '[id$=lnkItem]',
     null,
     (elements, account) => {
-      for (let elem of elements) {
+      for (const elem of elements) {
         const a = elem as HTMLAnchorElement;
         if (a.text.includes(account)) {
           a.click();
         }
       }
     },
-    account
+    account,
   );
 }
 
@@ -259,15 +257,15 @@ async function fetchTransactions(page: Page, startDate: Moment, scraperOptions: 
   const accountNumbers: string[] = await getAccountNumbers(page);
   const accounts: TransactionsAccount[] = [];
 
-  for (let account of accountNumbers) {
+  for (const account of accountNumbers) {
     await setAccount(page, account);
     accounts.push(
       await fetchTransactionsForAccount(
         page,
         startDate,
         account,
-        scraperOptions
-      )
+        scraperOptions,
+      ),
     );
   }
 
