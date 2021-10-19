@@ -46,7 +46,8 @@ describe('VisaCal legacy scraper', () => {
     const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
     expect(error).toBe('');
     expect(result.success).toBeTruthy();
-
+    // uncomment to test multiple accounts
+    // expect(result?.accounts?.length).toEqual(2)
     exportTransactions(COMPANY_ID, result.accounts || []);
   });
 });
