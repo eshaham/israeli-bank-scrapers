@@ -1,354 +1,286 @@
-import _ from 'lodash';
-import buildUrl from 'build-url';
 import moment, { Moment } from 'moment';
-
+import { Frame, Page } from 'puppeteer';
+import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
 import {
-  ScraperErrorTypes, BaseScraper,
-  ScaperOptions, ScaperProgressTypes, ScraperCredentials,
-} from './base-scraper';
+  clickButton, elementPresentOnPage, pageEval, pageEvalAll, setValue, waitUntilElementFound,
+} from '../helpers/elements-interactions';
 import {
-  SHEKEL_CURRENCY_SYMBOL,
-  SHEKEL_CURRENCY,
-  DOLLAR_CURRENCY_SYMBOL,
-  DOLLAR_CURRENCY,
-} from '../constants';
-import { fetchGet, fetchPost } from '../helpers/fetch';
-import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
-import {
-  TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
+  Transaction,
+  TransactionInstallments,
+  TransactionsAccount,
+  TransactionStatuses,
+  TransactionTypes,
 } from '../transactions';
+import { ScaperOptions, ScaperScrapingResult, ScraperCredentials } from './base-scraper';
+import { waitForNavigationAndDomLoad } from '../helpers/navigation';
+import {
+  DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,
+} from '../constants';
+import { waitUntil } from '../helpers/waiting';
+import { filterOldTransactions } from '../helpers/transactions';
 
-const BASE_URL = 'https://cal4u.cal-online.co.il/Cal4U';
-const AUTH_URL = 'https://connect.cal-online.co.il/col-rest/calconnect/authentication/login';
-const DATE_FORMAT = 'DD/MM/YYYY';
-
-const PASSWORD_EXPIRED_MSGS = ['תוקף הסיסמא פג', 'אנו מתנצלים, עקב תקלה לא ניתן לבצע את הפעולה כעת.|ניתן לנסות שנית במועד מאוחר יותר'];
-const INVALID_CREDENTIALS = 'שם המשתמש או הסיסמה שהוזנו שגויים';
-const NO_DATA_FOUND_MSG = 'לא נמצאו חיובים לטווח תאריכים זה';
-const ACCOUNT_BLOCKED_MSG = 'הכניסה למנוי נחסמה עקב ריבוי נסיונות כושלים. לשחרור המנוי באפשרותך לחדש סיסמה על ידי בחירת שכחתי שם משתמש סיסמה';
-
-const NORMAL_TYPE_CODE = '5';
-const REFUND_TYPE_CODE = '6';
-const WITHDRAWAL_TYPE_CODE = '7';
-const INSTALLMENTS_TYPE_CODE = '8';
-const CANCEL_TYPE_CODE = '25';
-const WITHDRAWAL_TYPE_CODE_2 = '27';
-const DEBIT_TYPE_CODE = '41';
-const DEBIT_REFUND_TYPE_CODE = '42';
-const CREDIT_PAYMENTS_CODE = '59';
-const MEMBERSHIP_FEE_TYPE_CODE = '67';
-const SERVICES_REFUND_TYPE_CODE = '71';
-const SERVICES_TYPE_CODE = '72';
-const REFUND_TYPE_CODE_2 = '76';
-const CANCEL_PAYMENT_CODE = '86';
-const CANCELLED_TRANSACTION = '68';
-
-const HEADER_SITE = { 'X-Site-Id': '05D905EB-810A-4680-9B23-1A2AC46533BF' };
-
-
-interface BankDebitsResponse {
-  Response: {
-    Status: {
-      Succeeded: boolean;
-      Description: string;
-      Message: string;
-    };
-  };
-  Debits: {
-    CardId: string;
-    Date: string;
-  }[];
-}
-
-interface BankAccountCard {
-  Id: string;
-  IsEffectiveInd: boolean;
-  LastFourDigits: string;
-}
-
-interface CardByAccountResponse {
-  Response: {
-    Status: {
-      Succeeded: boolean;
-    };
-  };
-  BankAccounts: {
-    AccountID: string;
-    Cards: BankAccountCard[];
-  }[];
-}
+const LOGIN_URL = 'https://www.cal-online.co.il/';
+const TRANSACTIONS_URL = 'https://services.cal-online.co.il/Card-Holders/Screens/Transactions/Transactions.aspx';
+const LONG_DATE_FORMAT = 'DD/MM/YYYY';
+const DATE_FORMAT = 'DD/MM/YY';
+const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו שגויים';
 
 interface ScrapedTransaction {
-  Id: string;
-  TransType: string;
-  Date: string;
-  DebitDate: string;
-  Amount: {
-    Value: number;
-    Symbol: string;
-  };
-  DebitAmount: {
-    Value: number;
-  };
-  MerchantDetails: {
-    Name: string;
-  };
-  TransTypeDesc: string;
-  TotalPayments?: string;
-  CurrentPayment?: string;
+  date: string;
+  processedDate: string;
+  description: string;
+  originalAmount: string;
+  chargedAmount: string;
+  memo: string;
 }
 
-function getBankDebitsUrl(accountId: string) {
-  const toDate = moment().add(2, 'months');
-  const fromDate = moment().subtract(6, 'months');
+async function getLoginFrame(page: Page) {
+  let frame: Frame | null = null;
+  await waitUntil(() => {
+    frame = page
+      .frames()
+      .find((f) => f.url().includes('connect.cal-online')) || null;
+    return Promise.resolve(!!frame);
+  }, 'wait for iframe with login form', 10000, 1000);
 
-  return buildUrl(BASE_URL, {
-    path: `CalBankDebits/${accountId}`,
-    queryParams: {
-      DebitLevel: 'A',
-      DebitType: '2',
-      FromMonth: (fromDate.month() + 1).toString().padStart(2, '0'),
-      FromYear: fromDate.year().toString(),
-      ToMonth: (toDate.month() + 1).toString().padStart(2, '0'),
-      ToYear: toDate.year().toString(),
-    },
-  });
-}
-
-function getTransactionsUrl(cardId: string, debitDate: string) {
-  return buildUrl(BASE_URL, {
-    path: `CalTransactions/${cardId}`,
-    queryParams: {
-      ToDate: debitDate,
-      FromDate: debitDate,
-    },
-  });
-}
-
-function convertTransactionType(txnType: string) {
-  switch (txnType) {
-    case NORMAL_TYPE_CODE:
-    case REFUND_TYPE_CODE:
-    case CANCEL_TYPE_CODE:
-    case WITHDRAWAL_TYPE_CODE:
-    case WITHDRAWAL_TYPE_CODE_2:
-    case REFUND_TYPE_CODE_2:
-    case CANCEL_PAYMENT_CODE:
-    case CANCELLED_TRANSACTION:
-    case SERVICES_REFUND_TYPE_CODE:
-    case MEMBERSHIP_FEE_TYPE_CODE:
-    case SERVICES_TYPE_CODE:
-    case DEBIT_TYPE_CODE:
-    case DEBIT_REFUND_TYPE_CODE:
-      return TransactionTypes.Normal;
-    case INSTALLMENTS_TYPE_CODE:
-    case CREDIT_PAYMENTS_CODE:
-      return TransactionTypes.Installments;
-    default:
-      throw new Error(`unknown transaction type ${txnType}`);
+  if (!frame) {
+    throw new Error('failed to extract login iframe');
   }
+
+  return frame;
 }
 
-function convertCurrency(currency: string) {
-  switch (currency) {
-    case SHEKEL_CURRENCY_SYMBOL:
-      return SHEKEL_CURRENCY;
-    case DOLLAR_CURRENCY_SYMBOL:
-      return DOLLAR_CURRENCY;
-    default:
-      return currency;
+async function hasInvalidPasswordError(page: Page) {
+  const frame = await getLoginFrame(page);
+  const errorFound = await elementPresentOnPage(frame, 'div.general-error > div');
+  const errorMessage = errorFound ? await pageEval(frame, 'div.general-error > div', '', (item) => {
+    return (item as HTMLDivElement).innerText;
+  }) : '';
+  return errorMessage === InvalidPasswordMessage;
+}
+
+function getPossibleLoginResults() {
+  const urls: LoginOptions['possibleResults'] = {
+    [LoginResults.Success]: [/AccountManagement/i],
+    [LoginResults.InvalidPassword]: [async (options?: { page?: Page}) => {
+      const page = options?.page;
+      if (!page) {
+        return false;
+      }
+      return hasInvalidPasswordError(page);
+    }],
+    // [LoginResults.AccountBlocked]: [], // TODO add when reaching this scenario
+    // [LoginResults.ChangePassword]: [], // TODO add when reaching this scenario
+  };
+  return urls;
+}
+
+function createLoginFields(credentials: ScraperCredentials) {
+  return [
+    { selector: '[formcontrolname="userName"]', value: credentials.username },
+    { selector: '[formcontrolname="password"]', value: credentials.password },
+  ];
+}
+
+
+function getAmountData(amountStr: string) {
+  const amountStrCln = amountStr.replace(',', '');
+  let currency: string | null = null;
+  let amount: number | null = null;
+  if (amountStrCln.includes(SHEKEL_CURRENCY_SYMBOL)) {
+    amount = -parseFloat(amountStrCln.replace(SHEKEL_CURRENCY_SYMBOL, ''));
+    currency = SHEKEL_CURRENCY;
+  } else if (amountStrCln.includes(DOLLAR_CURRENCY_SYMBOL)) {
+    amount = -parseFloat(amountStrCln.replace(DOLLAR_CURRENCY_SYMBOL, ''));
+    currency = DOLLAR_CURRENCY;
+  } else {
+    const parts = amountStrCln.split(' ');
+    amount = -parseFloat(parts[0]);
+    [, currency] = parts;
   }
+
+  return {
+    amount,
+    currency,
+  };
 }
 
-function getInstallmentsInfo(txn: ScrapedTransaction) {
-  if (!txn.CurrentPayment || txn.CurrentPayment === '0') {
+function getTransactionInstallments(memo: string): TransactionInstallments | null {
+  const parsedMemo = (/תשלום (\d+) מתוך (\d+)/).exec(memo || '');
+
+  if (!parsedMemo || parsedMemo.length === 0) {
     return null;
   }
 
   return {
-    number: parseInt(txn.CurrentPayment, 10),
-    total: txn.TotalPayments ? parseInt(txn.TotalPayments, 10) : Number.NaN,
+    number: parseInt(parsedMemo[1], 10),
+    total: parseInt(parsedMemo[2], 10),
+  };
+}
+function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
+  return txns.map((txn) => {
+    const originalAmountTuple = getAmountData(txn.originalAmount || '');
+    const chargedAmountTuple = getAmountData(txn.chargedAmount || '');
+
+    const installments = getTransactionInstallments(txn.memo);
+    const txnDate = moment(txn.date, DATE_FORMAT);
+    const processedDateFormat =
+      txn.processedDate.length === 8 ?
+        DATE_FORMAT :
+        txn.processedDate.length === 9 || txn.processedDate.length === 10 ?
+          LONG_DATE_FORMAT :
+          null;
+    if (!processedDateFormat) {
+      throw new Error('invalid processed date');
+    }
+    const txnProcessedDate = moment(txn.processedDate, processedDateFormat);
+
+    const result: Transaction = {
+      type: installments ? TransactionTypes.Installments : TransactionTypes.Normal,
+      status: TransactionStatuses.Completed,
+      date: installments ? txnDate.add(installments.number - 1, 'month').toISOString() : txnDate.toISOString(),
+      processedDate: txnProcessedDate.toISOString(),
+      originalAmount: originalAmountTuple.amount,
+      originalCurrency: originalAmountTuple.currency,
+      chargedAmount: chargedAmountTuple.amount,
+      chargedCurrency: chargedAmountTuple.currency,
+      description: txn.description || '',
+      memo: txn.memo || '',
+    };
+
+    if (installments) {
+      result.installments = installments;
+    }
+
+    return result;
+  });
+}
+
+async function fetchTransactionsForAccount(page: Page, startDate: Moment, accountNumber: string, scraperOptions: ScaperOptions): Promise<TransactionsAccount> {
+  const startDateValue = startDate.format('MM/YYYY');
+  const dateSelector = '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_TextBox"]';
+  const dateHiddenFieldSelector = '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_HiddenField"]';
+  const buttonSelector = '[id$="FormAreaNoBorder_FormArea_ctlSubmitRequest"]';
+  const nextPageSelector = '[id$="FormAreaNoBorder_FormArea_ctlGridPager_btnNext"]';
+  const billingLabelSelector = '[id$=FormAreaNoBorder_FormArea_ctlMainToolBar_lblCaption]';
+
+  const options = await pageEvalAll(page, '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_OptionList"] li', [], (items) => {
+    return items.map((el: any) => el.innerText);
+  });
+  const startDateIndex = options.findIndex((option) => option === startDateValue);
+
+  const accountTransactions: Transaction[] = [];
+  for (let currentDateIndex = startDateIndex; currentDateIndex < options.length; currentDateIndex += 1) {
+    await waitUntilElementFound(page, dateSelector, true);
+    await setValue(page, dateHiddenFieldSelector, `${currentDateIndex}`);
+    await clickButton(page, buttonSelector);
+    await waitForNavigationAndDomLoad(page);
+    const billingDateLabel = await pageEval(page, billingLabelSelector, '', ((element) => {
+      return (element as HTMLSpanElement).innerText;
+    }));
+
+    const billingDate = /\d{1,2}[/]\d{2}[/]\d{2,4}/.exec(billingDateLabel)?.[0];
+
+    if (!billingDate) {
+      throw new Error('failed to fetch process date');
+    }
+
+    let hasNextPage = false;
+    do {
+      const rawTransactions = await pageEvalAll<(ScrapedTransaction | null)[]>(page, '#ctlMainGrid > tbody tr, #ctlSecondaryGrid > tbody tr', [], (items, billingDate) => {
+        return (items).map((el) => {
+          const columns = el.getElementsByTagName('td');
+          if (columns.length === 6) {
+            return {
+              processedDate: columns[0].innerText,
+              date: columns[1].innerText,
+              description: columns[2].innerText,
+              originalAmount: columns[3].innerText,
+              chargedAmount: columns[4].innerText,
+              memo: columns[5].innerText,
+            };
+          } if (columns.length === 5) {
+            return {
+              processedDate: billingDate,
+              date: columns[0].innerText,
+              description: columns[1].innerText,
+              originalAmount: columns[2].innerText,
+              chargedAmount: columns[3].innerText,
+              memo: columns[4].innerText,
+            };
+          }
+          return null;
+        });
+      }, billingDate);
+
+      accountTransactions.push(...convertTransactions((rawTransactions as ScrapedTransaction[])
+        .filter((item) => !!item)));
+
+      hasNextPage = await elementPresentOnPage(page, nextPageSelector);
+      if (hasNextPage) {
+        await clickButton(page, '[id$=FormAreaNoBorder_FormArea_ctlGridPager_btnNext]');
+        await waitForNavigationAndDomLoad(page);
+      }
+    } while (hasNextPage);
+  }
+
+  const txns = filterOldTransactions(accountTransactions, startDate, scraperOptions.combineInstallments || false);
+
+  return {
+    accountNumber,
+    txns,
   };
 }
 
-function getTransactionMemo(txn: ScrapedTransaction) {
-  const { TransType: txnType, TransTypeDesc: txnTypeDescription } = txn;
-  switch (txnType) {
-    case NORMAL_TYPE_CODE:
-      return txnTypeDescription === 'רכישה רגילה' ? '' : txnTypeDescription;
-    case INSTALLMENTS_TYPE_CODE:
-      return `תשלום ${txn.CurrentPayment} מתוך ${txn.TotalPayments}`;
-    default:
-      return txn.TransTypeDesc;
-  }
+async function fetchTransactions(page: Page, startDate: Moment, scraperOptions: ScaperOptions): Promise<TransactionsAccount[]> {
+  const accounts: TransactionsAccount[] = [];
+
+  const accountId = await pageEval(page, '[id$=cboCardList_categoryList_lblCollapse]', '', (item) => {
+    return (item as HTMLInputElement).value;
+  }, []);
+
+  const accountNumber = /\d+$/.exec(accountId.trim())?.[0] ?? '';
+  accounts.push(await fetchTransactionsForAccount(page, startDate, accountNumber, scraperOptions));
+
+  return accounts;
 }
 
-function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
-  return txns.map((txn) => {
+class VisaCalScraper extends BaseScraperWithBrowser {
+  openLoginPopup = async () => {
+    await waitUntilElementFound(this.page, '#ccLoginDesktopBtn', true);
+    await clickButton(this.page, '#ccLoginDesktopBtn');
+    const frame = await getLoginFrame(this.page);
+    await waitUntilElementFound(frame, '#regular-login');
+    await clickButton(frame, '#regular-login');
+    await waitUntilElementFound(frame, 'regular-login');
+
+    return frame;
+  };
+
+  getLoginOptions(credentials: Record<string, string>) {
     return {
-      type: convertTransactionType(txn.TransType),
-      identifier: parseInt(txn.Id, 10),
-      date: moment(txn.Date, DATE_FORMAT).toISOString(),
-      processedDate: moment(txn.DebitDate, DATE_FORMAT).toISOString(),
-      originalAmount: -txn.Amount.Value,
-      originalCurrency: convertCurrency(txn.Amount.Symbol),
-      chargedAmount: -txn.DebitAmount.Value,
-      description: txn.MerchantDetails.Name,
-      memo: getTransactionMemo(txn),
-      installments: getInstallmentsInfo(txn) || undefined,
-      status: TransactionStatuses.Completed,
+      loginUrl: `${LOGIN_URL}`,
+      fields: createLoginFields(credentials),
+      submitButtonSelector: 'button[type="submit"]',
+      possibleResults: getPossibleLoginResults(),
+      checkReadiness: async () => waitUntilElementFound(this.page, '#ccLoginDesktopBtn'),
+      preAction: this.openLoginPopup,
+      userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36',
     };
-  });
-}
-
-function prepareTransactions(txns: Transaction[], startMoment: Moment, combineInstallments: boolean): Transaction[] {
-  let clonedTxns: Transaction[] = Array.from(txns);
-  if (!combineInstallments) {
-    clonedTxns = fixInstallments(clonedTxns);
   }
-  clonedTxns = sortTransactionsByDate(clonedTxns);
-  clonedTxns = filterOldTransactions(clonedTxns, startMoment, combineInstallments);
-  return clonedTxns;
-}
 
-async function getBankDebits(authHeader: Record<string, any>, accountId: string): Promise<BankDebitsResponse> {
-  const bankDebitsUrl = getBankDebitsUrl(accountId);
-  return fetchGet(bankDebitsUrl, authHeader);
-}
+  async fetchData(): Promise<ScaperScrapingResult> {
+    const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
+    const startDate = this.options.startDate || defaultStartMoment.toDate();
+    const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-async function getTransactionsNextPage(authHeader: Record<string, any>) {
-  const hasNextPageUrl = `${BASE_URL}/CalTransNextPage`;
-  return fetchGet<{ HasNextPage: boolean;
-    Transactions?: ScrapedTransaction[];}>(hasNextPageUrl, authHeader);
-}
+    await this.navigateTo(TRANSACTIONS_URL, undefined, 60000);
 
-async function fetchTxns(authHeader: Record<string, any>, cardId: string, debitDates: string[]): Promise<ScrapedTransaction[]> {
-  const txns: ScrapedTransaction[] = [];
-  for (const date of debitDates) {
-    const fetchTxnUrl = getTransactionsUrl(cardId, date);
-    let txnResponse = await fetchGet<{ HasNextPage: boolean;
-      Transactions?: ScrapedTransaction[];}>(fetchTxnUrl, authHeader);
-    if (txnResponse.Transactions) {
-      txns.push(...txnResponse.Transactions);
-    }
-    while (txnResponse.HasNextPage) {
-      txnResponse = await getTransactionsNextPage(authHeader);
-      if (txnResponse.Transactions != null) {
-        txns.push(...txnResponse.Transactions);
-      }
-    }
-  }
-  return txns;
-}
-
-async function getTxnsOfCard(authHeader: Record<string, any>, card: BankAccountCard, bankDebits: BankDebitsResponse['Debits']): Promise<ScrapedTransaction[]> {
-  const cardId = card.Id;
-  const cardDebitDates = bankDebits.filter((bankDebit) => {
-    return bankDebit.CardId === cardId;
-  }).map((cardDebit) => {
-    return cardDebit.Date;
-  });
-  return fetchTxns(authHeader, cardId, cardDebitDates);
-}
-
-async function getTransactionsForAllAccounts(authHeader: Record<string, any>, startMoment: Moment, options: ScaperOptions) {
-  const cardsByAccountUrl = `${BASE_URL}/CardsByAccounts`;
-  const banksResponse = await fetchGet<CardByAccountResponse>(cardsByAccountUrl, authHeader);
-
-
-  if (_.get(banksResponse, 'Response.Status.Succeeded')) {
-    const accounts: TransactionsAccount[] = [];
-    for (let i = 0; i < banksResponse.BankAccounts.length; i += 1) {
-      const bank = banksResponse.BankAccounts[i];
-      const bankDebits = await getBankDebits(authHeader, bank.AccountID);
-      // Check that the bank has an active card to scrape
-      if (bank.Cards.some((card) => card.IsEffectiveInd)) {
-        if (_.get(bankDebits, 'Response.Status.Succeeded')) {
-          for (let j = 0; j < bank.Cards.length; j += 1) {
-            const rawTxns = await getTxnsOfCard(authHeader, bank.Cards[j], bankDebits.Debits);
-            if (rawTxns) {
-              let txns = convertTransactions(rawTxns);
-              txns = prepareTransactions(txns, startMoment, options.combineInstallments || false);
-              const result: TransactionsAccount = {
-                accountNumber: bank.Cards[j].LastFourDigits,
-                txns,
-              };
-              accounts.push(result);
-            }
-          }
-        } else {
-          const { Description, Message } = bankDebits.Response.Status;
-
-          if (Message !== NO_DATA_FOUND_MSG) {
-            const message = `${Description}. ${Message}`;
-            throw new Error(message);
-          }
-        }
-      }
-    }
+    const accounts = await fetchTransactions(this.page, startMoment, this.options);
     return {
       success: true,
       accounts,
     };
-  }
-
-  return { success: false };
-}
-
-class VisaCalScraper extends BaseScraper {
-  private authHeader = '';
-
-  async login(credentials: ScraperCredentials) {
-    const authRequest = {
-      username: credentials.username,
-      password: credentials.password,
-      recaptcha: '',
-    };
-
-    this.emitProgress(ScaperProgressTypes.LoggingIn);
-
-    const authResponse = await fetchPost(AUTH_URL, authRequest, HEADER_SITE);
-
-    if (PASSWORD_EXPIRED_MSGS.includes(authResponse)) {
-      return {
-        success: false,
-        errorType: ScraperErrorTypes.ChangePassword,
-      };
-    }
-
-    if (authResponse === INVALID_CREDENTIALS) {
-      return {
-        success: false,
-        errorType: ScraperErrorTypes.InvalidPassword,
-      };
-    }
-
-    if (authResponse === ACCOUNT_BLOCKED_MSG) {
-      return {
-        success: false,
-        errorType: ScraperErrorTypes.AccountBlocked,
-      };
-    }
-
-    if (!authResponse || !authResponse.token) {
-      return {
-        success: false,
-        errorType: ScraperErrorTypes.General,
-        errorMessage: `No token found in authResponse: ${JSON.stringify(authResponse)}`,
-      };
-    }
-    this.authHeader = `CALAuthScheme ${authResponse.token}`;
-    this.emitProgress(ScaperProgressTypes.LoginSuccess);
-    return { success: true };
-  }
-
-  async fetchData() {
-    const defaultStartMoment = moment().subtract(1, 'years');
-    const startDate = this.options.startDate || defaultStartMoment.toDate();
-    const startMoment = moment.max(defaultStartMoment, moment(startDate));
-
-    const authHeader = { Authorization: this.authHeader, ...HEADER_SITE };
-    return getTransactionsForAllAccounts(authHeader, startMoment, this.options);
   }
 }
 

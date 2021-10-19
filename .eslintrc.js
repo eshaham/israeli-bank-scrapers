@@ -1,6 +1,7 @@
 module.exports = {
   root: true,
   "rules": {
+    "no-nested-ternary": 0,
     "arrow-body-style": 0,
     "no-shadow": 0,
     "no-await-in-loop": 0,

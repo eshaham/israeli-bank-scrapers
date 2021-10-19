@@ -72,7 +72,7 @@ export function exportTransactions(fileName: string, accounts: TransactionsAccou
       ...account.txns.map((txn) => {
         return {
           account: account.accountNumber,
-          balance: account.balance,
+          balance: `account balance: ${account.balance}`,
           ...txn,
           date: moment(txn.date).format('DD/MM/YYYY'),
           processedDate: moment(txn.processedDate).format('DD/MM/YYYY'),
