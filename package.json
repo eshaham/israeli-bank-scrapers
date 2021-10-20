@@ -52,6 +52,7 @@
     "@babel/plugin-proposal-class-properties": "^7.12.1",
     "@babel/preset-env": "^7.4.5",
     "@babel/preset-typescript": "^7.9.0",
+    "@types/debug": "^4.1.7",
     "@types/jest": "^25.1.5",
     "@types/json2csv": "^5.0.1",
     "@types/lodash": "^4.14.149",
@@ -80,6 +81,7 @@
   "dependencies": {
     "build-url": "^2.0.0",
     "core-js": "^3.1.4",
+    "debug": "^4.3.2",
     "husky": "^4.2.5",
     "json2csv": "^4.5.4",
     "lodash": "^4.17.10",

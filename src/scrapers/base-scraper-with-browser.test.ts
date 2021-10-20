@@ -32,9 +32,9 @@ describe('Base scraper with browser', () => {
       expect(baseScraperWithBrowser.browser).toBeDefined();
       // @ts-ignore
       expect(isNoSandbox(baseScraperWithBrowser.browser)).toBe(false);
-      await baseScraperWithBrowser.terminate();
+      await baseScraperWithBrowser.terminate(true);
     } catch (e) {
-      await baseScraperWithBrowser.terminate();
+      await baseScraperWithBrowser.terminate(false);
       throw e;
     }
 
@@ -51,9 +51,9 @@ describe('Base scraper with browser', () => {
       expect(baseScraperWithBrowser.browser).toBeDefined();
       // @ts-ignore
       expect(isNoSandbox(baseScraperWithBrowser.browser)).toBe(true);
-      await baseScraperWithBrowser.terminate();
+      await baseScraperWithBrowser.terminate(true);
     } catch (e) {
-      await baseScraperWithBrowser.terminate();
+      await baseScraperWithBrowser.terminate(false);
       throw e;
     }
   });
