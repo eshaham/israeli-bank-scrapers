@@ -1,6 +1,7 @@
 module.exports = {
   root: true,
   "rules": {
+    "import/prefer-default-export": 0,
     "no-nested-ternary": 0,
     "arrow-body-style": 0,
     "no-shadow": 0,

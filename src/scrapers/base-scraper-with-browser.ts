@@ -7,7 +7,7 @@ import {
 } from './base-scraper';
 import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { clickButton, fillInput, waitUntilElementFound } from '../helpers/elements-interactions';
-import {getDebug} from "../helpers/debug";
+import { getDebug } from '../helpers/debug';
 
 const VIEWPORT_WIDTH = 1024;
 const VIEWPORT_HEIGHT = 768;
@@ -117,7 +117,7 @@ class BaseScraperWithBrowser extends BaseScraper {
   protected page!: Page;
 
   async initialize() {
-    debug('initialize scraper')
+    debug('initialize scraper');
     this.emitProgress(ScaperProgressTypes.Initializing);
 
     let env: Record<string, any> | undefined;
@@ -126,14 +126,14 @@ class BaseScraperWithBrowser extends BaseScraper {
     }
 
     if (typeof this.options.browser !== 'undefined' && this.options.browser !== null) {
-      debug('use custom browser instance provided in options')
+      debug('use custom browser instance provided in options');
       this.browser = this.options.browser;
     } else {
       const executablePath = this.options.executablePath || undefined;
       const args = this.options.args || [];
 
       const headless = !this.options.showBrowser;
-      debug(`launch a browser with headless mode = ${headless}`)
+      debug(`launch a browser with headless mode = ${headless}`);
       this.browser = await puppeteer.launch({
         env,
         headless,
@@ -143,30 +143,30 @@ class BaseScraperWithBrowser extends BaseScraper {
     }
 
     if (this.options.prepareBrowser) {
-      debug(`execute 'prepareBrowser' interceptor provided in options`)
+      debug('execute \'prepareBrowser\' interceptor provided in options');
       await this.options.prepareBrowser(this.browser);
     }
 
     if (!this.browser) {
-      debug(`failed to initiate a browser, exit`)
+      debug('failed to initiate a browser, exit');
       return;
     }
 
     const pages = await this.browser.pages();
     if (pages.length) {
-      debug(`browser has already pages open, use the first one`);
+      debug('browser has already pages open, use the first one');
       [this.page] = pages;
     } else {
-      debug(`create a new browser page`)
+      debug('create a new browser page');
       this.page = await this.browser.newPage();
     }
 
     if (this.options.preparePage) {
-      debug(`execute 'preparePage' interceptor provided in options`)
+      debug('execute \'preparePage\' interceptor provided in options');
       await this.options.preparePage(this.page);
     }
 
-    debug(`set viewport to width ${VIEWPORT_WIDTH}, height ${VIEWPORT_HEIGHT}`)
+    debug(`set viewport to width ${VIEWPORT_WIDTH}, height ${VIEWPORT_HEIGHT}`);
     await this.page.setViewport({
       width: VIEWPORT_WIDTH,
       height: VIEWPORT_HEIGHT,
@@ -212,61 +212,61 @@ class BaseScraperWithBrowser extends BaseScraper {
       return createGeneralError();
     }
 
-    debug('execute login process')
+    debug('execute login process');
     const loginOptions = this.getLoginOptions(credentials);
 
     if (loginOptions.userAgent) {
-      debug('set custom user agent provided in options')
+      debug('set custom user agent provided in options');
       await this.page.setUserAgent(loginOptions.userAgent);
     }
 
-    debug(`navigate to login url`)
+    debug('navigate to login url');
     await this.navigateTo(loginOptions.loginUrl);
     if (loginOptions.checkReadiness) {
-      debug(`execute 'checkReadiness' interceptor provided in login options`)
+      debug('execute \'checkReadiness\' interceptor provided in login options');
       await loginOptions.checkReadiness();
     } else {
-      debug(`wait until submit button is available`)
+      debug('wait until submit button is available');
       await waitUntilElementFound(this.page, loginOptions.submitButtonSelector);
     }
 
     let loginFrameOrPage: (Page | Frame | null) = this.page;
     if (loginOptions.preAction) {
-      debug(`execute 'preAction' interceptor provided in login options`)
+      debug('execute \'preAction\' interceptor provided in login options');
       loginFrameOrPage = await loginOptions.preAction() || this.page;
     }
 
-    debug(`fill login components input with relevant values`)
+    debug('fill login components input with relevant values');
     await this.fillInputs(loginFrameOrPage, loginOptions.fields);
-    debug(`click on login submit button`)
+    debug('click on login submit button');
     await clickButton(loginFrameOrPage, loginOptions.submitButtonSelector);
     this.emitProgress(ScaperProgressTypes.LoggingIn);
 
     if (loginOptions.postAction) {
-      debug(`execute 'postAction' interceptor provided in login options`)
+      debug('execute \'postAction\' interceptor provided in login options');
       await loginOptions.postAction();
     } else {
-      debug('wait for page navigation')
+      debug('wait for page navigation');
       await waitForNavigation(this.page);
     }
 
-    debug('check login result')
+    debug('check login result');
     const current = await getCurrentUrl(this.page, true);
     const loginResult = await getKeyByValue(loginOptions.possibleResults, current, this.page);
-    debug(`handle login results ${loginResult}`)
+    debug(`handle login results ${loginResult}`);
     return handleLoginResult(this, loginResult);
   }
 
   async terminate(_success: boolean) {
-    debug(`terminating browser with success = ${_success}`)
+    debug(`terminating browser with success = ${_success}`);
     this.emitProgress(ScaperProgressTypes.Terminating);
 
     if (!_success && !!this.options.storeFailureScreenShotPath) {
-      debug(`create a snapshot before terminated in ${this.options.storeFailureScreenShotPath}`)
+      debug(`create a snapshot before terminated in ${this.options.storeFailureScreenShotPath}`);
       await this.page.screenshot({
         path: this.options.storeFailureScreenShotPath,
         fullPage: true,
-      })
+      });
     }
 
     if (!this.browser) {

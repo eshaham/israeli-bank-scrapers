@@ -93,7 +93,7 @@ export interface ScaperOptions {
   /**
    * if set, store a screnshot if failed to scrape. Used for debug purposes
    */
-  storeFailureScreenShotPath?: string
+  storeFailureScreenShotPath?: string;
 }
 
 export enum ScaperProgressTypes {
