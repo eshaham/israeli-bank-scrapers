@@ -10,7 +10,7 @@ const testsConfig = getTestsConfig();
 
 describe('VisaCal legacy scraper', () => {
   beforeAll(() => {
-    extendAsyncTimeout(); // The default timeout is 5 seconds per async test, this function extends the timeout value
+    extendAsyncTimeout(180000); // The default timeout is 5 seconds per async test, this function extends the timeout value
   });
 
   test('should expose login fields in scrapers constant', () => {
