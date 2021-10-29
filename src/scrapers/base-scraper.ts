@@ -89,6 +89,11 @@ export interface ScaperOptions {
    * @param page
    */
   preparePage?: (page: Page) => Promise<void>;
+
+  /**
+   * if set, store a screnshot if failed to scrape. Used for debug purposes
+   */
+  storeFailureScreenShotPath?: string;
 }
 
 export enum ScaperProgressTypes {
@@ -157,7 +162,8 @@ export class BaseScraper {
     }
 
     try {
-      await this.terminate();
+      const success = scrapeResult && scrapeResult.success === true;
+      await this.terminate(success);
     } catch (e) {
       scrapeResult = createGenericError(e.message);
     }
@@ -176,8 +182,8 @@ export class BaseScraper {
     throw new Error(`fetchData() is not created in ${this.options.companyId}`);
   }
 
-  // eslint-disable-next-line  @typescript-eslint/require-await
-  async terminate() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
+  async terminate(_success: boolean) {
     this.emitProgress(ScaperProgressTypes.Terminating);
   }
 

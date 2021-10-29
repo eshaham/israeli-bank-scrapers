@@ -18,12 +18,15 @@ import {
 } from '../constants';
 import { waitUntil } from '../helpers/waiting';
 import { filterOldTransactions } from '../helpers/transactions';
+import { getDebug } from '../helpers/debug';
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_URL = 'https://services.cal-online.co.il/Card-Holders/Screens/Transactions/Transactions.aspx';
 const LONG_DATE_FORMAT = 'DD/MM/YYYY';
 const DATE_FORMAT = 'DD/MM/YY';
 const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו שגויים';
+
+const debug = getDebug('visa-cal');
 
 interface ScrapedTransaction {
   date: string;
@@ -36,6 +39,7 @@ interface ScrapedTransaction {
 
 async function getLoginFrame(page: Page) {
   let frame: Frame | null = null;
+  debug('wait until login frame found');
   await waitUntil(() => {
     frame = page
       .frames()
@@ -44,6 +48,7 @@ async function getLoginFrame(page: Page) {
   }, 'wait for iframe with login form', 10000, 1000);
 
   if (!frame) {
+    debug('failed to find login frame for 10 seconds');
     throw new Error('failed to extract login iframe');
   }
 
@@ -60,6 +65,7 @@ async function hasInvalidPasswordError(page: Page) {
 }
 
 function getPossibleLoginResults() {
+  debug('return possible login results');
   const urls: LoginOptions['possibleResults'] = {
     [LoginResults.Success]: [/AccountManagement/i],
     [LoginResults.InvalidPassword]: [async (options?: { page?: Page}) => {
@@ -76,6 +82,7 @@ function getPossibleLoginResults() {
 }
 
 function createLoginFields(credentials: ScraperCredentials) {
+  debug('create login fields for username and password');
   return [
     { selector: '[formcontrolname="userName"]', value: credentials.username },
     { selector: '[formcontrolname="password"]', value: credentials.password },
@@ -118,6 +125,7 @@ function getTransactionInstallments(memo: string): TransactionInstallments | nul
   };
 }
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
+  debug(`convert ${txns.length} raw transactions to official Transaction structure`);
   return txns.map((txn) => {
     const originalAmountTuple = getAmountData(txn.originalAmount || '');
     const chargedAmountTuple = getAmountData(txn.chargedAmount || '');
@@ -164,17 +172,26 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
   const nextPageSelector = '[id$="FormAreaNoBorder_FormArea_ctlGridPager_btnNext"]';
   const billingLabelSelector = '[id$=FormAreaNoBorder_FormArea_ctlMainToolBar_lblCaption]';
 
+  debug('find the start date index in the dropbox');
   const options = await pageEvalAll(page, '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_OptionList"] li', [], (items) => {
     return items.map((el: any) => el.innerText);
   });
   const startDateIndex = options.findIndex((option) => option === startDateValue);
 
+  debug(`scrape ${options.length - startDateIndex} billing cycles`);
   const accountTransactions: Transaction[] = [];
   for (let currentDateIndex = startDateIndex; currentDateIndex < options.length; currentDateIndex += 1) {
+    debug('wait for date selector to be found');
     await waitUntilElementFound(page, dateSelector, true);
+    debug(`set hidden value of the date selector to be the index ${currentDateIndex}`);
     await setValue(page, dateHiddenFieldSelector, `${currentDateIndex}`);
+    debug('wait a second to workaround navigation issue in headless browser mode');
+    await page.waitFor(1000);
+    debug('click on the filter submit button');
     await clickButton(page, buttonSelector);
+    debug('wait for page navigation');
     await waitForNavigationAndDomLoad(page);
+    debug('find the billing date');
     const billingDateLabel = await pageEval(page, billingLabelSelector, '', ((element) => {
       return (element as HTMLSpanElement).innerText;
     }));
@@ -185,8 +202,10 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
       throw new Error('failed to fetch process date');
     }
 
+    debug(`found the billing date for that month ${billingDate}`);
     let hasNextPage = false;
     do {
+      debug('fetch raw transactions from page');
       const rawTransactions = await pageEvalAll<(ScrapedTransaction | null)[]>(page, '#ctlMainGrid > tbody tr, #ctlSecondaryGrid > tbody tr', [], (items, billingDate) => {
         return (items).map((el) => {
           const columns = el.getElementsByTagName('td');
@@ -212,20 +231,24 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
           return null;
         });
       }, billingDate);
-
+      debug(`fetched ${rawTransactions.length} raw transactions from page`);
       accountTransactions.push(...convertTransactions((rawTransactions as ScrapedTransaction[])
         .filter((item) => !!item)));
 
+      debug('check for existance of another page');
       hasNextPage = await elementPresentOnPage(page, nextPageSelector);
       if (hasNextPage) {
+        debug('has another page, click on button next');
         await clickButton(page, '[id$=FormAreaNoBorder_FormArea_ctlGridPager_btnNext]');
+        debug('wait for page navigation');
         await waitForNavigationAndDomLoad(page);
       }
     } while (hasNextPage);
   }
 
+  debug('filer out old transactions');
   const txns = filterOldTransactions(accountTransactions, startDate, scraperOptions.combineInstallments || false);
-
+  debug(`found ${txns.length} valid transactions out of ${accountTransactions.length} transactions for account ending with ${accountNumber.substring(accountNumber.length - 2)}`);
   return {
     accountNumber,
     txns,
@@ -258,7 +281,9 @@ async function fetchTransactions(page: Page, startDate: Moment, scraperOptions: 
   const accounts: TransactionsAccount[] = [];
 
   for (const account of accountNumbers) {
+    debug(`setting account: ${account}`);
     await setAccount(page, account);
+    await page.waitFor(1000);
     accounts.push(
       await fetchTransactionsForAccount(
         page,
@@ -272,13 +297,20 @@ async function fetchTransactions(page: Page, startDate: Moment, scraperOptions: 
   return accounts;
 }
 
+
 class VisaCalScraper extends BaseScraperWithBrowser {
   openLoginPopup = async () => {
+    debug('open login popup, wait until login button available');
     await waitUntilElementFound(this.page, '#ccLoginDesktopBtn', true);
+    debug('click on the login button');
     await clickButton(this.page, '#ccLoginDesktopBtn');
+    debug('get the frame that holds the login');
     const frame = await getLoginFrame(this.page);
+    debug('wait until the password login tab header is available');
     await waitUntilElementFound(frame, '#regular-login');
+    debug('navigate to the password login tab');
     await clickButton(frame, '#regular-login');
+    debug('wait until the password login tab is active');
     await waitUntilElementFound(frame, 'regular-login');
 
     return frame;
@@ -300,10 +332,14 @@ class VisaCalScraper extends BaseScraperWithBrowser {
     const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
+    debug(`fetch transactions starting ${startMoment.format()}`);
 
+    debug('navigate to transactions page');
     await this.navigateTo(TRANSACTIONS_URL, undefined, 60000);
 
+    debug('fetch accounts transactions');
     const accounts = await fetchTransactions(this.page, startMoment, this.options);
+    debug('return the scraped accounts');
     return {
       success: true,
       accounts,
