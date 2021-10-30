@@ -255,18 +255,48 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
   };
 }
 
+async function getAccountNumbers(page: Page): Promise<string[]> {
+  return pageEvalAll(page, '[id$=lnkItem]', [], (elements) => elements.map((e) => (e as HTMLAnchorElement).text)).then((res) => res.map((text) => /\d+$/.exec(text.trim())?.[0] ?? ''));
+}
+
+async function setAccount(page: Page, account: string) {
+  await pageEvalAll(
+    page,
+    '[id$=lnkItem]',
+    null,
+    (elements, account) => {
+      for (const elem of elements) {
+        const a = elem as HTMLAnchorElement;
+        if (a.text.includes(account)) {
+          a.click();
+        }
+      }
+    },
+    account,
+  );
+}
+
 async function fetchTransactions(page: Page, startDate: Moment, scraperOptions: ScaperOptions): Promise<TransactionsAccount[]> {
+  const accountNumbers: string[] = await getAccountNumbers(page);
   const accounts: TransactionsAccount[] = [];
 
-  const accountId = await pageEval(page, '[id$=cboCardList_categoryList_lblCollapse]', '', (item) => {
-    return (item as HTMLInputElement).value;
-  }, []);
-
-  const accountNumber = /\d+$/.exec(accountId.trim())?.[0] ?? '';
-  accounts.push(await fetchTransactionsForAccount(page, startDate, accountNumber, scraperOptions));
+  for (const account of accountNumbers) {
+    debug(`setting account: ${account}`);
+    await setAccount(page, account);
+    await page.waitFor(1000);
+    accounts.push(
+      await fetchTransactionsForAccount(
+        page,
+        startDate,
+        account,
+        scraperOptions,
+      ),
+    );
+  }
 
   return accounts;
 }
+
 
 class VisaCalScraper extends BaseScraperWithBrowser {
   openLoginPopup = async () => {
