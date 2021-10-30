@@ -188,8 +188,8 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
     await page.waitFor(1000);
     debug('click on the filter submit button and wait for navigation');
     await Promise.all([
-      clickButton(page, buttonSelector),
       page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
+      clickButton(page, buttonSelector),
     ]);
     debug('find the billing date');
     const billingDateLabel = await pageEval(page, billingLabelSelector, '', ((element) => {
@@ -240,8 +240,8 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
       if (hasNextPage) {
         debug('has another page, click on button next and wait for page navigation');
         await Promise.all([
-          await clickButton(page, '[id$=FormAreaNoBorder_FormArea_ctlGridPager_btnNext]'),
           page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
+          await clickButton(page, '[id$=FormAreaNoBorder_FormArea_ctlGridPager_btnNext]'),
         ]);
       }
     } while (hasNextPage);
