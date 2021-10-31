@@ -12,7 +12,6 @@ import {
   TransactionTypes,
 } from '../transactions';
 import { ScaperOptions, ScaperScrapingResult, ScraperCredentials } from './base-scraper';
-import { waitForNavigationAndDomLoad } from '../helpers/navigation';
 import {
   DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,
 } from '../constants';
@@ -187,10 +186,11 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
     await setValue(page, dateHiddenFieldSelector, `${currentDateIndex}`);
     debug('wait a second to workaround navigation issue in headless browser mode');
     await page.waitFor(1000);
-    debug('click on the filter submit button');
-    await clickButton(page, buttonSelector);
-    debug('wait for page navigation');
-    await waitForNavigationAndDomLoad(page);
+    debug('click on the filter submit button and wait for navigation');
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
+      clickButton(page, buttonSelector),
+    ]);
     debug('find the billing date');
     const billingDateLabel = await pageEval(page, billingLabelSelector, '', ((element) => {
       return (element as HTMLSpanElement).innerText;
@@ -238,10 +238,11 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
       debug('check for existance of another page');
       hasNextPage = await elementPresentOnPage(page, nextPageSelector);
       if (hasNextPage) {
-        debug('has another page, click on button next');
-        await clickButton(page, '[id$=FormAreaNoBorder_FormArea_ctlGridPager_btnNext]');
-        debug('wait for page navigation');
-        await waitForNavigationAndDomLoad(page);
+        debug('has another page, click on button next and wait for page navigation');
+        await Promise.all([
+          page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
+          await clickButton(page, '[id$=FormAreaNoBorder_FormArea_ctlGridPager_btnNext]'),
+        ]);
       }
     } while (hasNextPage);
   }
