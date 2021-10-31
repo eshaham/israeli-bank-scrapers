@@ -6,7 +6,7 @@ export default function getAllMonthMoments(startMoment: Moment | string, include
   const allMonths: Moment[] = [];
   let lastMonth = moment().startOf('month');
   if (includeNext) {
-    lastMonth = lastMonth.add(1, 'month');
+    lastMonth = lastMonth.add(3, 'month');
   }
   while (monthMoment.isSameOrBefore(lastMonth)) {
     allMonths.push(monthMoment);
