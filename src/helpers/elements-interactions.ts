@@ -1,4 +1,5 @@
 import { Frame, Page } from 'puppeteer';
+import { waitUntil } from './waiting';
 
 async function waitUntilElementFound(page: Page | Frame, elementSelector: string,
   onlyVisible = false, timeout = 30000) {
@@ -7,6 +8,22 @@ async function waitUntilElementFound(page: Page | Frame, elementSelector: string
 
 async function waitUntilElementDisappear(page: Page, elementSelector: string, timeout = 30000) {
   await page.waitForSelector(elementSelector, { hidden: true, timeout });
+}
+
+async function waitUntilIframeFound(page: Page, framePredicate: (frame: Frame) => boolean, description = '', timeout = 30000) {
+  let frame: Frame | undefined;
+  await waitUntil(() => {
+    frame = page
+      .frames()
+      .find(framePredicate);
+    return Promise.resolve(!!frame);
+  }, description, timeout, 1000);
+
+  if (!frame) {
+    throw new Error('failed to find iframe');
+  }
+
+  return frame;
 }
 
 async function fillInput(pageOrFrame: Page | Frame, inputSelector: string, inputValue: string): Promise<void> {
@@ -40,7 +57,7 @@ async function clickLink(page: Page, aSelector: string) {
   });
 }
 
-async function pageEvalAll<R>(page: Page, selector: string,
+async function pageEvalAll<R>(page: Page | Frame, selector: string,
   defaultResult: any, callback: (elements: Element[], ...args: any) => R, ...args: any[]): Promise<R> {
   let result = defaultResult;
   try {
@@ -95,6 +112,7 @@ async function dropdownElements(page: Page, selector: string) {
 export {
   waitUntilElementFound,
   waitUntilElementDisappear,
+  waitUntilIframeFound,
   fillInput,
   clickButton,
   clickLink,

@@ -1,13 +1,13 @@
 import moment from 'moment';
-import { Page, Request } from 'puppeteer';
+import { Frame, Page, Request } from 'puppeteer';
+import { SHEKEL_CURRENCY } from '../constants';
 import {
-  SHEKEL_CURRENCY,
-} from '../constants';
-import { pageEvalAll, waitUntilElementDisappear, waitUntilElementFound } from '../helpers/elements-interactions';
+  pageEvalAll, waitUntilElementDisappear, waitUntilElementFound, waitUntilIframeFound,
+} from '../helpers/elements-interactions';
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { waitForUrl } from '../helpers/navigation';
 import {
-  Transaction, TransactionStatuses, TransactionTypes,
+  Transaction, TransactionsAccount, TransactionStatuses, TransactionTypes,
 } from '../transactions';
 import { ScraperCredentials, ScraperErrorTypes } from './base-scraper';
 import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
@@ -42,7 +42,8 @@ const BASE_APP_URL = 'https://mto.mizrahi-tefahot.co.il';
 const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/ngOnline\/index\.html#\/main\/uis/;
 const OSH_PAGE = `${BASE_APP_URL}/ngOnline/index.html#/main/uis/osh/p428/`;
 const TRANSACTIONS_REQUEST_URL = `${BASE_APP_URL}/Online/api/SkyOSH/get428Index`;
-const PENDING_TRANSACTIONS_PAGE = `${BASE_APP_URL}/Online/Osh/p420.aspx`;
+const PENDING_TRANSACTIONS_PAGE = `${BASE_APP_URL}/ngOnline/index.html#/main/uis/legacy/Osh/p420//legacy.Osh.p420`;
+const PENDING_TRANSACTIONS_IFRAME = 'p420.aspx';
 const CHANGE_PASSWORD_URL = /https:\/\/www\.mizrahi-tefahot\.co\.il\/login\/\w+\/index\.html#\/change-pass/;
 const DATE_FORMAT = 'DD/MM/YYYY';
 const MAX_ROWS_PER_REQUEST = 10000000000;
@@ -53,6 +54,8 @@ const submitButtonSelector = '.form-desktop button';
 const invalidPasswordSelector = 'a[href*="https://sc.mizrahi-tefahot.co.il/SCServices/SC/P010.aspx"]';
 const afterLoginSelector = '#stickyHeaderScrollRegion';
 const loginSpinnerSelector = 'div.ngx-overlay.loading-foreground';
+const accountDropDownItemSelector = '#sky-account-combo-list ul li .sky-acc-value';
+const pendingTrxIdentifierId = '#ctl00_ContentPlaceHolder2_panel1';
 
 function createLoginFields(credentials: ScraperCredentials) {
   return [
@@ -112,7 +115,7 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   });
 }
 
-async function extractPendingTransactions(page: Page): Promise<Transaction[]> {
+async function extractPendingTransactions(page: Frame): Promise<Transaction[]> {
   const pendingTxn = await pageEvalAll(page, 'tr.rgRow', [], (trs) => {
     return trs.map((tr) => Array.from(tr.querySelectorAll('td'), (td: HTMLTableDataCellElement) => td.textContent || ''));
   });
@@ -154,7 +157,30 @@ class MizrahiScraper extends BaseScraperWithBrowser {
   }
 
   async fetchData() {
+    const numOfAccounts = (await this.page.$$(accountDropDownItemSelector)).length;
+    try {
+      const results: TransactionsAccount[] = [];
+      for (let i = 0; i < numOfAccounts; i += 1) {
+        await this.page.$$eval(accountDropDownItemSelector, (els, i) => (els[i] as HTMLElement).click(), i);
+        results.push(await this.fetchAccount());
+      }
+
+      return {
+        success: true,
+        accounts: results,
+      };
+    } catch (e) {
+      return {
+        success: false,
+        errorType: ScraperErrorTypes.Generic,
+        errorMessage: (e as Error).message,
+      };
+    }
+  }
+
+  private async fetchAccount() {
     await this.navigateTo(OSH_PAGE, this.page);
+
     const request = await this.page.waitForRequest(TRANSACTIONS_REQUEST_URL);
     const data = createDataFromRequest(request, this.options.startDate);
     const headers = createHeadersFromRequest(request);
@@ -163,12 +189,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
       TRANSACTIONS_REQUEST_URL, data, headers);
 
     if (!response || response.header.success === false) {
-      return {
-        success: false,
-        errorType: ScraperErrorTypes.Generic,
-        errorMessage:
-          `Error fetching transaction. Response message: ${response ? response.header.messages[0].text : ''}`,
-      };
+      throw new Error(`Error fetching transaction. Response message: ${response ? response.header.messages[0].text : ''}`);
     }
 
     const relevantRows = response.body.table.rows.filter((row) => row.RecTypeSpecified);
@@ -179,19 +200,16 @@ class MizrahiScraper extends BaseScraperWithBrowser {
     const oshTxnAfterStartDate = oshTxn.filter((txn) => moment(txn.date).isSameOrAfter(startMoment));
 
     await this.navigateTo(PENDING_TRANSACTIONS_PAGE, this.page);
-    const pendingTxn = await extractPendingTransactions(this.page);
+    const frame = await waitUntilIframeFound(this.page, (f) => f.url().includes(PENDING_TRANSACTIONS_IFRAME));
+    await waitUntilElementFound(frame, pendingTrxIdentifierId);
+    const pendingTxn = await extractPendingTransactions(frame);
 
     const allTxn = oshTxnAfterStartDate.concat(pendingTxn);
 
     return {
-      success: true,
-      accounts: [
-        {
-          accountNumber: response.body.fields.AccountNumber,
-          txns: allTxn,
-          balance: +response.body.fields.YitraLeloChekim,
-        },
-      ],
+      accountNumber: response.body.fields.AccountNumber,
+      txns: allTxn,
+      balance: +response.body.fields.YitraLeloChekim,
     };
   }
 }
