@@ -104,7 +104,7 @@ function getAmountData(amountStr: string) {
     currency = EURO_CURRENCY;
   } else {
     const parts = amountStrCln.split(' ');
-    currency = parts[0];
+    [currency] = parts;
     amount = -parseFloat(parts[1]);
   }
 
