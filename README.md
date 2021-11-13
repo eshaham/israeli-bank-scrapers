@@ -274,7 +274,7 @@ This scraper supports fetching transaction from up to one year.
 These are the projects known to be using this module:
 - [Israeli YNAB updater](https://github.com/eshaham/israeli-ynab-updater) - A command line tool for exporting banks data to CSVs, formatted specifically for [YNAB](https://www.youneedabudget.com)
 - [Israel Finance Telegram Bot](https://github.com/GuyLewin/israel-finance-telegram-bot) - A simple telegram bot that sends notifications about new transactions and interacts with them
-- [Automated budget tracking app](https://github.com/brafdlog/budget-tracking) - An app for automatically sending transactions from Israeli banks and credit cards to budget tracking apps
+- [Caspion](https://github.com/brafdlog/caspion) - An app for automatically sending transactions from Israeli banks and credit cards to budget tracking apps
 - [Oshi](https://github.com/baruchiro/israeli-bank-scrapers-desktop) - Secure desktop app for retriving your transactions from all israeli banks and credit cards
 - [Finance Notifier](https://github.com/LiranBri/finance-notifier) - A simple script with the ability to send custom financial alerts to multiple contacts and platforms
 
