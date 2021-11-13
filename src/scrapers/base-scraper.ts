@@ -51,6 +51,12 @@ export interface ScaperOptions {
    */
   showBrowser?: boolean;
 
+
+  /**
+   * scrape transactions to be processed X months in the future
+   */
+  futureMonthsToScrape?: number;
+
   /**
    * option from init puppeteer browser instance outside the libary scope. you can get
    * browser diretly from puppeteer via `puppeteer.launch()`

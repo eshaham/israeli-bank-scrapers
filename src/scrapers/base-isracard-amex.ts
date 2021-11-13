@@ -233,7 +233,8 @@ async function fetchTransactions(page: Page, options: ExtendedScraperOptions, st
 }
 
 async function fetchAllTransactions(page: Page, options: ExtendedScraperOptions, startMoment: Moment) {
-  const allMonths = getAllMonthMoments(startMoment, true);
+  const futureMonthsToScrape = options.futureMonthsToScrape ?? 2;
+  const allMonths = getAllMonthMoments(startMoment, futureMonthsToScrape);
   const results: ScrapedAccountsWithIndex[] = await Promise.all(allMonths.map(async (monthMoment) => {
     return fetchTransactions(page, options, startMoment, monthMoment);
   }));

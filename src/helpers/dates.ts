@@ -1,12 +1,12 @@
 import moment, { Moment } from 'moment';
 
-export default function getAllMonthMoments(startMoment: Moment | string, includeNext: boolean) {
+export default function getAllMonthMoments(startMoment: Moment | string, scrapeXFutureMonths?: number) {
   let monthMoment = moment(startMoment).startOf('month');
 
   const allMonths: Moment[] = [];
   let lastMonth = moment().startOf('month');
-  if (includeNext) {
-    lastMonth = lastMonth.add(4, 'month');
+  if (scrapeXFutureMonths && scrapeXFutureMonths > 0) {
+    lastMonth = lastMonth.add(scrapeXFutureMonths, 'month');
   }
   while (monthMoment.isSameOrBefore(lastMonth)) {
     allMonths.push(monthMoment);
