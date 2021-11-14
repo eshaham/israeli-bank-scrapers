@@ -186,7 +186,7 @@ function prepareTransactions(txns: Transaction[], startMoment: moment.Moment, co
 }
 
 async function fetchTransactions(page: Page, options: ScaperOptions) {
-  const futureMonthsToScrape = options.futureMonthsToScrape ?? 2;
+  const futureMonthsToScrape = options.futureMonthsToScrape ?? 1;
   const defaultStartMoment = moment().subtract(1, 'years');
   const startDate = options.startDate || defaultStartMoment.toDate();
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
