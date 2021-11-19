@@ -13,7 +13,7 @@ import {
 } from '../transactions';
 import { ScaperOptions, ScaperScrapingResult, ScraperCredentials } from './base-scraper';
 import {
-  DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,
+  DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, EURO_CURRENCY, EURO_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,
 } from '../constants';
 import { waitUntil } from '../helpers/waiting';
 import { filterOldTransactions } from '../helpers/transactions';
@@ -99,10 +99,13 @@ function getAmountData(amountStr: string) {
   } else if (amountStrCln.includes(DOLLAR_CURRENCY_SYMBOL)) {
     amount = -parseFloat(amountStrCln.replace(DOLLAR_CURRENCY_SYMBOL, ''));
     currency = DOLLAR_CURRENCY;
+  } else if (amountStrCln.includes(EURO_CURRENCY_SYMBOL)) {
+    amount = -parseFloat(amountStrCln.replace(EURO_CURRENCY_SYMBOL, ''));
+    currency = EURO_CURRENCY;
   } else {
     const parts = amountStrCln.split(' ');
-    amount = -parseFloat(parts[0]);
-    [, currency] = parts;
+    [currency] = parts;
+    amount = -parseFloat(parts[1]);
   }
 
   return {
