@@ -23,6 +23,7 @@ Currently only the following banks are supported:
 - Union Bank (Thanks to Intuit FDP OpenSource Team [@dratler](https://github.com/dratler),[@kalinoy](https://github.com/kalinoy),[@shanigad](https://github.com/shanigad),[@dudiventura](https://github.com/dudiventura) and [@NoamGoren](https://github.com/NoamGoren))
 - Beinleumi (Thanks to [@dudiventura](https://github.com/dudiventura) from the Intuit FDP OpenSource Team)
 - Massad
+- Yahav (Thanks to [@gczobel](https://github.com/gczobel))
 
 # Prerequisites
 To use this you will need to have [Node.js](https://nodejs.org) >= 10.x installed.
@@ -263,12 +264,23 @@ This scraper supports fetching transaction from up to one year.
 This scraper expects the following credentials object:
 ```node
 const credentials = {
-  id: <user identification number>,
+  username: <user identification number>,
   card6Digits: <6 last digits of card>
   password: <user password>
 };
 ```
 This scraper supports fetching transaction from up to one year.
+
+## Yahav
+This scraper expects the following credentials object:
+```node
+const credentials = {
+  username: <user name>,
+  password: <user password>,
+  nationalID: <user national ID>
+};
+```
+This scraper supports fetching transaction from up to six months.
 
 # Known projects
 These are the projects known to be using this module:
