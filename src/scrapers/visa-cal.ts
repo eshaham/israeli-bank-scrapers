@@ -173,6 +173,7 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
   const buttonSelector = '[id$="FormAreaNoBorder_FormArea_ctlSubmitRequest"]';
   const nextPageSelector = '[id$="FormAreaNoBorder_FormArea_ctlGridPager_btnNext"]';
   const billingLabelSelector = '[id$=FormAreaNoBorder_FormArea_ctlMainToolBar_lblCaption]';
+  const noDataSelector = '[id$=FormAreaNoBorder_FormArea_msgboxErrorMessages]';
 
   debug('find the start date index in the dropbox');
   const options = await pageEvalAll(page, '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_OptionList"] li', [], (items) => {
@@ -194,60 +195,71 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
       page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
       clickButton(page, buttonSelector),
     ]);
-    debug('find the billing date');
-    const billingDateLabel = await pageEval(page, billingLabelSelector, '', ((element) => {
-      return (element as HTMLSpanElement).innerText;
+    debug('check if month has no transactions');
+    const pageHasNoTransactions = await pageEval(page, noDataSelector, false, ((element) => {
+      const siteValue = ((element as HTMLSpanElement).innerText || '').replace(/[^ א-ת]/g, '');
+      return siteValue === 'לא נמצאו נתונים';
     }));
 
-    const billingDate = /\d{1,2}[/]\d{2}[/]\d{2,4}/.exec(billingDateLabel)?.[0];
+    if (pageHasNoTransactions) {
+      debug('page has no transactions');
+    } else {
+      debug('find the billing date');
+      const billingDateLabel = await pageEval(page, billingLabelSelector, '', ((element) => {
+        return (element as HTMLSpanElement).innerText;
+      }));
 
-    if (!billingDate) {
-      throw new Error('failed to fetch process date');
-    }
+      const billingDate = /\d{1,2}[/]\d{2}[/]\d{2,4}/.exec(billingDateLabel)?.[0];
 
-    debug(`found the billing date for that month ${billingDate}`);
-    let hasNextPage = false;
-    do {
-      debug('fetch raw transactions from page');
-      const rawTransactions = await pageEvalAll<(ScrapedTransaction | null)[]>(page, '#ctlMainGrid > tbody tr, #ctlSecondaryGrid > tbody tr', [], (items, billingDate) => {
-        return (items).map((el) => {
-          const columns = el.getElementsByTagName('td');
-          if (columns.length === 6) {
-            return {
-              processedDate: columns[0].innerText,
-              date: columns[1].innerText,
-              description: columns[2].innerText,
-              originalAmount: columns[3].innerText,
-              chargedAmount: columns[4].innerText,
-              memo: columns[5].innerText,
-            };
-          } if (columns.length === 5) {
-            return {
-              processedDate: billingDate,
-              date: columns[0].innerText,
-              description: columns[1].innerText,
-              originalAmount: columns[2].innerText,
-              chargedAmount: columns[3].innerText,
-              memo: columns[4].innerText,
-            };
-          }
-          return null;
-        });
-      }, billingDate);
-      debug(`fetched ${rawTransactions.length} raw transactions from page`);
-      accountTransactions.push(...convertTransactions((rawTransactions as ScrapedTransaction[])
-        .filter((item) => !!item)));
-
-      debug('check for existance of another page');
-      hasNextPage = await elementPresentOnPage(page, nextPageSelector);
-      if (hasNextPage) {
-        debug('has another page, click on button next and wait for page navigation');
-        await Promise.all([
-          page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-          await clickButton(page, '[id$=FormAreaNoBorder_FormArea_ctlGridPager_btnNext]'),
-        ]);
+      if (!billingDate) {
+        throw new Error('failed to fetch process date');
       }
-    } while (hasNextPage);
+
+      debug(`found the billing date for that month ${billingDate}`);
+      let hasNextPage = false;
+      do {
+        debug('fetch raw transactions from page');
+        const rawTransactions = await pageEvalAll<(ScrapedTransaction | null)[]>(page, '#ctlMainGrid > tbody tr, #ctlSecondaryGrid > tbody tr', [], (items, billingDate) => {
+          return (items).map((el) => {
+            const columns = el.getElementsByTagName('td');
+            if (columns.length === 6) {
+              return {
+                processedDate: columns[0].innerText,
+                date: columns[1].innerText,
+                description: columns[2].innerText,
+                originalAmount: columns[3].innerText,
+                chargedAmount: columns[4].innerText,
+                memo: columns[5].innerText,
+              };
+            }
+            if (columns.length === 5) {
+              return {
+                processedDate: billingDate,
+                date: columns[0].innerText,
+                description: columns[1].innerText,
+                originalAmount: columns[2].innerText,
+                chargedAmount: columns[3].innerText,
+                memo: columns[4].innerText,
+              };
+            }
+            return null;
+          });
+        }, billingDate);
+        debug(`fetched ${rawTransactions.length} raw transactions from page`);
+        accountTransactions.push(...convertTransactions((rawTransactions as ScrapedTransaction[])
+          .filter((item) => !!item)));
+
+        debug('check for existance of another page');
+        hasNextPage = await elementPresentOnPage(page, nextPageSelector);
+        if (hasNextPage) {
+          debug('has another page, click on button next and wait for page navigation');
+          await Promise.all([
+            page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
+            await clickButton(page, '[id$=FormAreaNoBorder_FormArea_ctlGridPager_btnNext]'),
+          ]);
+        }
+      } while (hasNextPage);
+    }
   }
 
   debug('filer out old transactions');
