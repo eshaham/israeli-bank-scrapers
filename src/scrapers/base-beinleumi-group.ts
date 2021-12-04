@@ -272,8 +272,8 @@ export async function waitForPostLogin(page: Page) {
 async function fetchAccountData(page: Page, startDate: Moment) {
   await searchByDates(page, startDate);
   const accountNumber = await getAccountNumber(page);
-  const txns = await getAccountTransactions(page);
   const balance = await getCurrentBalance(page);
+  const txns = await getAccountTransactions(page);
 
   return {
     accountNumber,
