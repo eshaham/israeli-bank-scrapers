@@ -49,4 +49,5 @@ export interface Transaction {
   memo?: string;
   status: TransactionStatuses;
   installments?: TransactionInstallments;
+  category?: string;
 }

@@ -9,7 +9,9 @@ import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
 import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
 import { ScaperOptions, ScraperCredentials } from './base-scraper';
+import { getDebug } from '../helpers/debug';
 
+const debug = getDebug('max');
 
 interface ScrapedTransaction {
   shortCardNumber: string;
@@ -21,6 +23,7 @@ interface ScrapedTransaction {
   planName: string;
   comments: string;
   merchantName: string;
+  categoryId: number;
 }
 
 const BASE_ACTIONS_URL = 'https://online.max.co.il';
@@ -51,6 +54,8 @@ const POSTPONED_TRANSACTION_INSTALLMENTS = 'פריסת העסקה הדחויה';
 const INVALID_DETAILS_SELECTOR = '#popupWrongDetails';
 const LOGIN_ERROR_SELECTOR = '#popupCardHoldersLoginError';
 
+const categories = new Map<number, string>();
+
 function redirectOrDialog(page: Page) {
   return Promise.race([
     waitForRedirect(page, 20000, false, [BASE_WELCOME_URL, `${BASE_WELCOME_URL}/`]),
@@ -73,6 +78,22 @@ function getTransactionsUrl(monthMoment: Moment) {
   return buildUrl(BASE_API_ACTIONS_URL, {
     path: `/api/registered/transactionDetails/getTransactionsAndGraphs?filterData={"userIndex":-1,"cardIndex":-1,"monthView":true,"date":"${date}","dates":{"startDate":"0","endDate":"0"},"bankAccount":{"bankAccountIndex":-1,"cards":null}}&firstCallCardIndex=-1&v=V3.69-HF-CarLoanLeviModel.2.57`,
   });
+}
+
+interface FetchCategoryResult {
+  result? : Array<{
+    id: number;
+    name: string;
+  }>;
+}
+
+async function loadCategories(page: Page) {
+  debug('Loading categories');
+  const res = await fetchGetWithinPage<FetchCategoryResult>(page, `${BASE_API_ACTIONS_URL}/api/contents/getCategories`);
+  if (res && Array.isArray(res.result)) {
+    debug(`${res.result.length} categories loaded`);
+      res.result?.forEach(({ id, name }) => categories.set(id, name));
+  }
 }
 
 function getTransactionType(txnTypeStr: string) {
@@ -131,6 +152,7 @@ function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
     chargedAmount: -rawTransaction.actualPaymentAmount,
     description: rawTransaction.merchantName.trim(),
     memo: rawTransaction.comments,
+    category: categories.get(rawTransaction?.categoryId),
     installments: getInstallmentsInfo(rawTransaction.comments) || undefined,
     status,
   };
@@ -191,6 +213,8 @@ async function fetchTransactions(page: Page, options: ScaperOptions) {
   const startDate = options.startDate || defaultStartMoment.toDate();
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
   const allMonths = getAllMonthMoments(startMoment, futureMonthsToScrape);
+
+  await loadCategories(page);
 
   let allResults: Record<string, Transaction[]> = {};
   for (let i = 0; i < allMonths.length; i += 1) {
