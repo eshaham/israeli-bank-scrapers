@@ -73,11 +73,11 @@ function getAmountData(amountStr: string, hasCurrency = false) {
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((txn) => {
     const dateFormat =
-        txn.date.length === 8
-            ? DATE_FORMAT
-            : txn.date.length === 10
-                ? LONG_DATE_FORMAT
-                : null;
+        txn.date.length === 8 ?
+          DATE_FORMAT :
+          txn.date.length === 10 ?
+            LONG_DATE_FORMAT :
+            null;
     if (!dateFormat) {
       throw new Error('invalid date format');
     }
