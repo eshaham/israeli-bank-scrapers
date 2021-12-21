@@ -171,6 +171,10 @@ class BaseScraperWithBrowser extends BaseScraper {
       width: VIEWPORT_WIDTH,
       height: VIEWPORT_HEIGHT,
     });
+
+    this.page.on('requestfailed', (request) => {
+      debug('Request failed: %s %s', request.failure()?.errorText, request.url());
+    });
   }
 
   async navigateTo(url: string, page?: Page, timeout?: number): Promise<void> {
