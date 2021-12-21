@@ -10,6 +10,9 @@ import {
   TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
 import { ScaperOptions, ScraperCredentials } from './base-scraper';
+import { getDebug } from '../helpers/debug';
+
+const debug = getDebug('hapoalim');
 
 const DATE_FORMAT = 'YYYYMMDD';
 
@@ -137,7 +140,10 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScaperOpti
   const restContext = await getRestContext(page);
   const apiSiteUrl = `${baseUrl}/${restContext}`;
   const accountDataUrl = `${baseUrl}/ServerServices/general/accounts`;
+
+  debug('fetching accounts data');
   const accountsInfo = await fetchGetWithinPage<FetchedAccountData>(page, accountDataUrl) || [];
+  debug('got %d accounts, fetching txns and balance', accountsInfo.length);
 
   const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
   const startDate = options.startDate || defaultStartMoment.toDate();
@@ -173,7 +179,7 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScaperOpti
     success: true,
     accounts,
   };
-
+  debug('fetching ended');
   return accountData;
 }
 
