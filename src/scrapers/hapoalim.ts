@@ -43,6 +43,7 @@ type FetchedAccountData = {
   bankNumber: string;
   accountNumber: string;
   branchNumber: string;
+  accountClosingReasonCode: number;
 }[];
 
 type FetchedAccountTransactionsData = {
@@ -153,20 +154,24 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScaperOpti
   const endDateStr = moment().format(DATE_FORMAT);
 
   const accounts: TransactionsAccount[] = [];
-  for (let accountIndex = 0; accountIndex < accountsInfo.length; accountIndex += 1) {
-    const accountNumber = `${accountsInfo[accountIndex].bankNumber}-${accountsInfo[accountIndex].branchNumber}-${accountsInfo[accountIndex].accountNumber}`;
 
-    const balanceAndCreditLimitUrl = `${apiSiteUrl}/current-account/composite/balanceAndCreditLimit?accountId=${accountNumber}&view=details&lang=he`;
-    const balanceAndCreditLimit = await fetchGetWithinPage(page, balanceAndCreditLimitUrl) as BalanceAndCreditLimit;
-    const balance: number = balanceAndCreditLimit?.currentBalance;
+  for (const account of accountsInfo) {
+    let balance: number | undefined;
+    const accountNumber = `${account.bankNumber}-${account.branchNumber}-${account.accountNumber}`;
 
-    const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDateStr}&retrievalStartDate=${startDateStr}&sortCode=1`;
-    const txnsResult = await fetchPoalimXSRFWithinPage(page, txnsUrl, '/current-account/transactions');
-    let txns: Transaction[] = [];
+    const isActiveAccount = account.accountClosingReasonCode === 0;
+    if (isActiveAccount) {
+      const balanceAndCreditLimitUrl = `${apiSiteUrl}/current-account/composite/balanceAndCreditLimit?accountId=${accountNumber}&view=details&lang=he`;
+      const balanceAndCreditLimit = await fetchGetWithinPage<BalanceAndCreditLimit>(page, balanceAndCreditLimitUrl);
 
-    if (txnsResult) {
-      txns = convertTransactions(txnsResult.transactions);
+      balance = balanceAndCreditLimit?.currentBalance;
+    } else {
+      debug('Skipping balance for a closed account, balance will be undefined');
     }
+
+    const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDate}&retrievalStartDate=${startDate}&sortCode=1`;
+    const txnsResult = await fetchPoalimXSRFWithinPage(page, txnsUrl, '/current-account/transactions');
+    const txns = convertTransactions(txnsResult?.transactions ?? []);
 
     accounts.push({
       accountNumber,
