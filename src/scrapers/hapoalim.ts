@@ -137,6 +137,20 @@ async function fetchPoalimXSRFWithinPage(page: Page, url: string, pageUuid: stri
   return fetchPostWithinPage<FetchedAccountTransactionsData>(page, url, [], headers);
 }
 
+async function getAccountTransactions(apiSiteUrl: string, page: Page, accountNumber: string, startDate: string, endDate: string) {
+  const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDate}&retrievalStartDate=${startDate}&sortCode=1`;
+  const txnsResult = await fetchPoalimXSRFWithinPage(page, txnsUrl, '/current-account/transactions');
+
+  return convertTransactions(txnsResult?.transactions ?? []);
+}
+
+async function getAccountBalance(apiSiteUrl: string, page: Page, accountNumber: string) {
+  const balanceAndCreditLimitUrl = `${apiSiteUrl}/current-account/composite/balanceAndCreditLimit?accountId=${accountNumber}&view=details&lang=he`;
+  const balanceAndCreditLimit = await fetchGetWithinPage<BalanceAndCreditLimit>(page, balanceAndCreditLimitUrl);
+
+  return balanceAndCreditLimit?.currentBalance;
+}
+
 async function fetchAccountData(page: Page, baseUrl: string, options: ScaperOptions) {
   const restContext = await getRestContext(page);
   const apiSiteUrl = `${baseUrl}/${restContext}`;
@@ -161,17 +175,12 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScaperOpti
 
     const isActiveAccount = account.accountClosingReasonCode === 0;
     if (isActiveAccount) {
-      const balanceAndCreditLimitUrl = `${apiSiteUrl}/current-account/composite/balanceAndCreditLimit?accountId=${accountNumber}&view=details&lang=he`;
-      const balanceAndCreditLimit = await fetchGetWithinPage<BalanceAndCreditLimit>(page, balanceAndCreditLimitUrl);
-
-      balance = balanceAndCreditLimit?.currentBalance;
+      balance = await getAccountBalance(apiSiteUrl, page, accountNumber);
     } else {
       debug('Skipping balance for a closed account, balance will be undefined');
     }
 
-    const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDate}&retrievalStartDate=${startDate}&sortCode=1`;
-    const txnsResult = await fetchPoalimXSRFWithinPage(page, txnsUrl, '/current-account/transactions');
-    const txns = convertTransactions(txnsResult?.transactions ?? []);
+    const txns = await getAccountTransactions(apiSiteUrl, page, accountNumber, startDateStr, endDateStr);
 
     accounts.push({
       accountNumber,
