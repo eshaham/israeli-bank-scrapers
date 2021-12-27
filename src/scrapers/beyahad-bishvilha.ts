@@ -14,7 +14,7 @@ import {
   SHEKEL_CURRENCY_SYMBOL,
 } from '../constants';
 
-const debug = getDebug('beyhadBishvilha');
+const debug = getDebug('beyahadBishvilha');
 
 const DATE_FORMAT = 'DD/MM/YY';
 const LOGIN_URL = 'https://www.hist.org.il/login';
@@ -142,7 +142,7 @@ function createLoginFields(credentials: ScraperCredentials) {
   ];
 }
 
-class BeyhadBishvilhaScraper extends BaseScraperWithBrowser {
+class BeyahadBishvilhaScraper extends BaseScraperWithBrowser {
   protected getViewPort(): { width: number, height: number } {
     return {
       width: 1500,
@@ -173,4 +173,4 @@ class BeyhadBishvilhaScraper extends BaseScraperWithBrowser {
   }
 }
 
-export default BeyhadBishvilhaScraper;
+export default BeyahadBishvilhaScraper;

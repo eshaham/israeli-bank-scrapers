@@ -1,11 +1,11 @@
-import BeyhadBishvilhaScraper from './beyhad-bishvilha';
+import BeyahadBishvilhaScraper from './beyahad-bishvilha';
 import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
 } from '../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
 import { LoginResults } from './base-scraper-with-browser';
 
-const COMPANY_ID = 'beyhadBishvilha'; // TODO this property should be hard-coded in the provider
+const COMPANY_ID = 'beyahadBishvilha'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
 
 describe('Beyahad Bishvilha scraper', () => {
@@ -14,9 +14,9 @@ describe('Beyahad Bishvilha scraper', () => {
   });
 
   test('should expose login fields in scrapers constant', () => {
-    expect(SCRAPERS.beyhadBishvilha).toBeDefined();
-    expect(SCRAPERS.beyhadBishvilha.loginFields).toContain('id');
-    expect(SCRAPERS.beyhadBishvilha.loginFields).toContain('password');
+    expect(SCRAPERS.beyahadBishvilha).toBeDefined();
+    expect(SCRAPERS.beyahadBishvilha.loginFields).toContain('id');
+    expect(SCRAPERS.beyahadBishvilha.loginFields).toContain('password');
   });
 
   maybeTestCompanyAPI(COMPANY_ID, (config) => config.companyAPI.invalidPassword)('should fail on invalid user/password"', async () => {
@@ -25,7 +25,7 @@ describe('Beyahad Bishvilha scraper', () => {
       companyId: COMPANY_ID,
     };
 
-    const scraper = new BeyhadBishvilhaScraper(options);
+    const scraper = new BeyahadBishvilhaScraper(options);
 
     const result = await scraper.scrape({ id: 'e10s12', password: '3f3ss3d' });
 
@@ -40,8 +40,8 @@ describe('Beyahad Bishvilha scraper', () => {
       companyId: COMPANY_ID,
     };
 
-    const scraper = new BeyhadBishvilhaScraper(options);
-    const result = await scraper.scrape(testsConfig.credentials.beyhadBishvilha);
+    const scraper = new BeyahadBishvilhaScraper(options);
+    const result = await scraper.scrape(testsConfig.credentials.beyahadBishvilha);
     expect(result).toBeDefined();
     const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
     expect(error).toBe('');
