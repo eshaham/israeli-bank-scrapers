@@ -26,6 +26,7 @@ module.exports = {
     // union: {username:'',password:''}
     // beinleumi: { username: '', password: ''},
     //yahav: {username: '', nationalID: '', password: ''}
+    // beyhadBishvilha: { id: '', password: ''},
   },
   companyAPI: { // enable companyAPI to execute tests against the real companies api
     enabled: true,

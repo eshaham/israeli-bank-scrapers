@@ -24,6 +24,7 @@ Currently only the following banks are supported:
 - Beinleumi (Thanks to [@dudiventura](https://github.com/dudiventura) from the Intuit FDP OpenSource Team)
 - Massad
 - Yahav (Thanks to [@gczobel](https://github.com/gczobel))
+- Beyhad Bishvilha (thanks [@esakal](https://github.com/esakal))
 
 # Prerequisites
 To use this you will need to have [Node.js](https://nodejs.org) >= 10.x installed.
@@ -281,6 +282,16 @@ const credentials = {
 };
 ```
 This scraper supports fetching transaction from up to six months.
+
+## Beyhad Bishvilha
+This scraper expects the following credentials object::
+```node
+const credentials = {
+  id: <user identification number>,
+  password: <user password>
+};
+```
+
 
 # Known projects
 These are the projects known to be using this module:
