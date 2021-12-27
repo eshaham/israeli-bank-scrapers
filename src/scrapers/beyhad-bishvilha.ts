@@ -1,177 +1,176 @@
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
-import {ScaperOptions, ScraperCredentials} from './base-scraper';
-import {Page} from "puppeteer";
+import { Page } from 'puppeteer';
 import moment from 'moment';
-import {Transaction, TransactionStatuses, TransactionTypes} from "../transactions";
-import {pageEval, pageEvalAll, waitUntilElementFound} from "../helpers/elements-interactions";
+import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
+import { ScaperOptions, ScraperCredentials } from './base-scraper';
+import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
+import { pageEval, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
 import { getDebug } from '../helpers/debug';
-import {filterOldTransactions} from "../helpers/transactions";
+import { filterOldTransactions } from '../helpers/transactions';
 import {
-    DOLLAR_CURRENCY,
-    DOLLAR_CURRENCY_SYMBOL, EURO_CURRENCY,
-    EURO_CURRENCY_SYMBOL,
-    SHEKEL_CURRENCY,
-    SHEKEL_CURRENCY_SYMBOL
-} from "../constants";
+  DOLLAR_CURRENCY,
+  DOLLAR_CURRENCY_SYMBOL, EURO_CURRENCY,
+  EURO_CURRENCY_SYMBOL,
+  SHEKEL_CURRENCY,
+  SHEKEL_CURRENCY_SYMBOL,
+} from '../constants';
 
 const debug = getDebug('beyhadBishvilha');
 
 const DATE_FORMAT = 'DD/MM/YY';
-const LOGIN_URL = `https://www.hist.org.il/login`;
-const SUCCESS_URL = `https://www.hist.org.il/`;
-const CARD_URL = `https://www.hist.org.il/card/balanceAndUses`;
+const LOGIN_URL = 'https://www.hist.org.il/login';
+const SUCCESS_URL = 'https://www.hist.org.il/';
+const CARD_URL = 'https://www.hist.org.il/card/balanceAndUses';
 
 interface ScrapedTransaction {
-    date: string;
-    description: string;
-    type: string;
-    chargedAmount: string;
-    identifier: string;
+  date: string;
+  description: string;
+  type: string;
+  chargedAmount: string;
+  identifier: string;
 }
 
 function getAmountData(amountStr: string) {
-    const amountStrCln = amountStr.replace(',', '');
-    let currency: string | null = null;
-    let amount: number | null = null;
-    if (amountStrCln.includes(SHEKEL_CURRENCY_SYMBOL)) {
-        amount = parseFloat(amountStrCln.replace(SHEKEL_CURRENCY_SYMBOL, ''));
-        currency = SHEKEL_CURRENCY;
-    } else if (amountStrCln.includes(DOLLAR_CURRENCY_SYMBOL)) {
-        amount = parseFloat(amountStrCln.replace(DOLLAR_CURRENCY_SYMBOL, ''));
-        currency = DOLLAR_CURRENCY;
-    } else if (amountStrCln.includes(EURO_CURRENCY_SYMBOL)) {
-        amount = parseFloat(amountStrCln.replace(EURO_CURRENCY_SYMBOL, ''));
-        currency = EURO_CURRENCY;
-    } else {
-        const parts = amountStrCln.split(' ');
-        [currency] = parts;
-        amount = parseFloat(parts[1]);
-    }
+  const amountStrCln = amountStr.replace(',', '');
+  let currency: string | null = null;
+  let amount: number | null = null;
+  if (amountStrCln.includes(SHEKEL_CURRENCY_SYMBOL)) {
+    amount = parseFloat(amountStrCln.replace(SHEKEL_CURRENCY_SYMBOL, ''));
+    currency = SHEKEL_CURRENCY;
+  } else if (amountStrCln.includes(DOLLAR_CURRENCY_SYMBOL)) {
+    amount = parseFloat(amountStrCln.replace(DOLLAR_CURRENCY_SYMBOL, ''));
+    currency = DOLLAR_CURRENCY;
+  } else if (amountStrCln.includes(EURO_CURRENCY_SYMBOL)) {
+    amount = parseFloat(amountStrCln.replace(EURO_CURRENCY_SYMBOL, ''));
+    currency = EURO_CURRENCY;
+  } else {
+    const parts = amountStrCln.split(' ');
+    [currency] = parts;
+    amount = parseFloat(parts[1]);
+  }
 
-    return {
-        amount,
-        currency,
-    };
+  return {
+    amount,
+    currency,
+  };
 }
 
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
-    debug(`convert ${txns.length} raw transactions to official Transaction structure`);
-    return txns.map((txn) => {
-        const chargedAmountTuple = getAmountData(txn.chargedAmount || '');
-        const txnProcessedDate = moment(txn.date, DATE_FORMAT);
+  debug(`convert ${txns.length} raw transactions to official Transaction structure`);
+  return txns.map((txn) => {
+    const chargedAmountTuple = getAmountData(txn.chargedAmount || '');
+    const txnProcessedDate = moment(txn.date, DATE_FORMAT);
 
-        const result: Transaction = {
-            type: TransactionTypes.Normal,
-            status: TransactionStatuses.Completed,
-            date: txnProcessedDate.toISOString(),
-            processedDate: txnProcessedDate.toISOString(),
-            originalAmount: chargedAmountTuple.amount,
-            originalCurrency: chargedAmountTuple.currency,
-            chargedAmount: chargedAmountTuple.amount,
-            chargedCurrency: chargedAmountTuple.currency,
-            description: txn.description || '',
-            memo: '',
-            identifier: txn.identifier
-        };
+    const result: Transaction = {
+      type: TransactionTypes.Normal,
+      status: TransactionStatuses.Completed,
+      date: txnProcessedDate.toISOString(),
+      processedDate: txnProcessedDate.toISOString(),
+      originalAmount: chargedAmountTuple.amount,
+      originalCurrency: chargedAmountTuple.currency,
+      chargedAmount: chargedAmountTuple.amount,
+      chargedCurrency: chargedAmountTuple.currency,
+      description: txn.description || '',
+      memo: '',
+      identifier: txn.identifier,
+    };
 
-        return result;
-    });
+    return result;
+  });
 }
 
 
 async function fetchTransactions(page: Page, options: ScaperOptions) {
-    await page.goto(CARD_URL);
-    await waitUntilElementFound(page, '.react-loading.hide' ,false);
-    const defaultStartMoment = moment().subtract(1, 'years');
-    const startDate = options.startDate || defaultStartMoment.toDate();
-    const startMoment = moment.max(defaultStartMoment, moment(startDate));
+  await page.goto(CARD_URL);
+  await waitUntilElementFound(page, '.react-loading.hide', false);
+  const defaultStartMoment = moment().subtract(1, 'years');
+  const startDate = options.startDate || defaultStartMoment.toDate();
+  const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-    const accountNumber = await pageEval(page, '.wallet-details div:nth-of-type(2)', null, (element) => {
-        return (element as any).innerText.replace('מספר כרטיס ', '')
-    })
+  const accountNumber = await pageEval(page, '.wallet-details div:nth-of-type(2)', null, (element) => {
+    return (element as any).innerText.replace('מספר כרטיס ', '');
+  });
 
-    const balance = await pageEval(page, '.wallet-details div:nth-of-type(4) > span:nth-of-type(2)', null, (element) => {
-        return (element as any).innerText;
-    })
+  const balance = await pageEval(page, '.wallet-details div:nth-of-type(4) > span:nth-of-type(2)', null, (element) => {
+    return (element as any).innerText;
+  });
 
-    debug('fetch raw transactions from page');
+  debug('fetch raw transactions from page');
 
-    const rawTransactions: (ScrapedTransaction | null)[] = await pageEvalAll<(ScrapedTransaction | null)[]>(page, '.transaction-container, .transaction-component-container', [], (items) => {
-        return (items).map((el) => {
-            const columns = el.querySelectorAll('.transaction-item > span') as NodeListOf<HTMLSpanElement>;
-            if (columns.length === 7) {
-                return {
-                    date: columns[0].innerText,
-                    identifier: columns[1].innerText,
-                    description: columns[3].innerText,
-                    type: columns[5].innerText,
-                    chargedAmount: columns[6].innerText,
-                };
-            }
-            return null;
-        });
+  const rawTransactions: (ScrapedTransaction | null)[] = await pageEvalAll<(ScrapedTransaction | null)[]>(page, '.transaction-container, .transaction-component-container', [], (items) => {
+    return (items).map((el) => {
+      const columns: NodeListOf<HTMLSpanElement> = el.querySelectorAll('.transaction-item > span');
+      if (columns.length === 7) {
+        return {
+          date: columns[0].innerText,
+          identifier: columns[1].innerText,
+          description: columns[3].innerText,
+          type: columns[5].innerText,
+          chargedAmount: columns[6].innerText,
+        };
+      }
+      return null;
     });
-    debug(`fetched ${rawTransactions.length} raw transactions from page`);
+  });
+  debug(`fetched ${rawTransactions.length} raw transactions from page`);
 
-    const accountTransactions = convertTransactions(rawTransactions.filter((item) => !!item) as ScrapedTransaction[]);
+  const accountTransactions = convertTransactions(rawTransactions.filter((item) => !!item) as ScrapedTransaction[]);
 
-    debug('filer out old transactions');
-    const txns = filterOldTransactions(accountTransactions, startMoment, false);
-    debug(`found ${txns.length} valid transactions out of ${accountTransactions.length} transactions for account ending with ${accountNumber.substring(accountNumber.length - 2)}`);
+  debug('filer out old transactions');
+  const txns = filterOldTransactions(accountTransactions, startMoment, false);
+  debug(`found ${txns.length} valid transactions out of ${accountTransactions.length} transactions for account ending with ${accountNumber.substring(accountNumber.length - 2)}`);
 
-    return {
-        accountNumber,
-        balance: getAmountData(balance).amount,
-        txns
-    };
+  return {
+    accountNumber,
+    balance: getAmountData(balance).amount,
+    txns,
+  };
 }
 
 function getPossibleLoginResults(): PossibleLoginResults {
-    const urls: PossibleLoginResults = {};
-    urls[LoginResults.Success] = [SUCCESS_URL];
-    urls[LoginResults.ChangePassword] = []; // TODO
-    urls[LoginResults.InvalidPassword] = []; // TODO
-    urls[LoginResults.UnknownError] = []; // TODO
-    return urls;
+  const urls: PossibleLoginResults = {};
+  urls[LoginResults.Success] = [SUCCESS_URL];
+  urls[LoginResults.ChangePassword] = []; // TODO
+  urls[LoginResults.InvalidPassword] = []; // TODO
+  urls[LoginResults.UnknownError] = []; // TODO
+  return urls;
 }
 
 function createLoginFields(credentials: ScraperCredentials) {
-    return [
-        { selector: '#loginId', value: credentials.id },
-        { selector: '#loginPassword', value: credentials.password },
-    ];
+  return [
+    { selector: '#loginId', value: credentials.id },
+    { selector: '#loginPassword', value: credentials.password },
+  ];
 }
 
 class BeyhadBishvilhaScraper extends BaseScraperWithBrowser {
+  protected getViewPort(): { width: number, height: number } {
+    return {
+      width: 1500,
+      height: 800,
+    };
+  }
 
-    protected getViewPort(): { width: number; height: number } {
-        return {
-            width: 1500,
-            height: 800
+  getLoginOptions(credentials: ScraperCredentials) {
+    return {
+      loginUrl: LOGIN_URL,
+      fields: createLoginFields(credentials),
+      submitButtonSelector: async () => {
+        const [button] = await this.page.$x("//button[contains(., 'התחבר')]");
+        if (button) {
+          await button.click();
         }
-    }
+      },
+      possibleResults: getPossibleLoginResults(),
+    };
+  }
 
-    getLoginOptions(credentials: ScraperCredentials) {
-        return {
-            loginUrl: LOGIN_URL,
-            fields: createLoginFields(credentials),
-            submitButtonSelector: async () => {
-                const [button] = await this.page.$x("//button[contains(., 'התחבר')]");
-                if (button) {
-                    await button.click();
-                }
-            },
-            possibleResults: getPossibleLoginResults(),
-        };
-    }
-
-    async fetchData() {
-        const account = await fetchTransactions(this.page, this.options);
-        return {
-            success: true,
-            accounts: [account]
-        }
-    }
+  async fetchData() {
+    const account = await fetchTransactions(this.page, this.options);
+    return {
+      success: true,
+      accounts: [account],
+    };
+  }
 }
 
 export default BeyhadBishvilhaScraper;

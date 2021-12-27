@@ -120,8 +120,9 @@ class BaseScraperWithBrowser extends BaseScraper {
     return {
       width: VIEWPORT_WIDTH,
       height: VIEWPORT_HEIGHT,
-    }
+    };
   }
+
   async initialize() {
     debug('initialize scraper');
     this.emitProgress(ScaperProgressTypes.Initializing);
