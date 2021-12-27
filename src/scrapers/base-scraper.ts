@@ -97,9 +97,10 @@ export interface ScaperOptions {
   preparePage?: (page: Page) => Promise<void>;
 
   /**
-   * if set, store a screnshot if failed to scrape. Used for debug purposes
+   * if set, store a screenshot if failed to scrape. Used for debug purposes
    */
   storeFailureScreenShotPath?: string;
+
 }
 
 export enum ScaperProgressTypes {

@@ -17,7 +17,8 @@ export enum CompanyTypes {
   mizrahi = 'mizrahi',
   leumi = 'leumi',
   massad = 'massad',
-  yahav = 'yahav'
+  yahav = 'yahav',
+  beyhadBishvilha = 'beyhadBishvilha'
 }
 
 export const SCRAPERS = {
@@ -80,5 +81,9 @@ export const SCRAPERS = {
   [CompanyTypes.yahav]: {
     name: 'Bank Yahav',
     loginFields: ['username', 'nationalID', PASSWORD_FIELD],
+  },
+  [CompanyTypes.beyhadBishvilha]: {
+    name: 'Beyahad Bishvilha',
+    loginFields: ['id', PASSWORD_FIELD],
   },
 };
