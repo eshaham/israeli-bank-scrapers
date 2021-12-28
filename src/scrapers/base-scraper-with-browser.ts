@@ -233,11 +233,9 @@ class BaseScraperWithBrowser extends BaseScraper {
     if (loginOptions.checkReadiness) {
       debug('execute \'checkReadiness\' interceptor provided in login options');
       await loginOptions.checkReadiness();
-    } else {
+    } else if (typeof loginOptions.submitButtonSelector === 'string') {
       debug('wait until submit button is available');
-      if (typeof loginOptions.submitButtonSelector === 'string') {
-        await waitUntilElementFound(this.page, loginOptions.submitButtonSelector);
-      }
+      await waitUntilElementFound(this.page, loginOptions.submitButtonSelector);
     }
 
     let loginFrameOrPage: (Page | Frame | null) = this.page;
