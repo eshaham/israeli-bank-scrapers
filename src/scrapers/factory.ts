@@ -13,6 +13,7 @@ import MassadScraper from './massad';
 import YahavScraper from './yahav';
 import { ScaperOptions } from './base-scraper';
 import { CompanyTypes } from '../definitions';
+import BeyahadBishvilhaScraper from './beyahad-bishvilha';
 
 export default function createScraper(options: ScaperOptions) {
   switch (options.companyId) {
@@ -24,6 +25,8 @@ export default function createScraper(options: ScaperOptions) {
       return new HapoalimScraper(options);
     case CompanyTypes.leumi:
       return new LeumiScraper(options);
+    case CompanyTypes.beyahadBishvilha:
+      return new BeyahadBishvilhaScraper(options);
     case CompanyTypes.mizrahi:
       return new MizrahiScraper(options);
     case CompanyTypes.discount:
