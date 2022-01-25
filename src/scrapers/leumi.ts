@@ -174,6 +174,7 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
 async function waitForPostLogin(page: Page): Promise<void> {
   // TODO check for condition to provide new password
   await Promise.race([
+    waitUntilElementFound(page, 'a[title="דלג לחשבון"]', true),
     waitUntilElementFound(page, 'div.leumi-container', true),
     waitUntilElementFound(page, '#BodyContent_ctl00_loginErrMsg', true),
     waitUntilElementFound(page, '.ErrMsg', true),
