@@ -1,0 +1,30 @@
+name: Run Jest tests
+
+on:
+  pull_request_target:
+    branches:
+      - main
+
+jobs:
+  run_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        with:
+          node-version: 14
+          check-latest: true
+          registry-url: https://npm.pkg.github.com
+          always-auth: true
+          scope: '@everybyte-io' 
+      - name: Install compile dependencies
+        run: npm ci --ignore-scripts 
+      - name: Run tests
+        run: npm run test

@@ -1,61 +1,63 @@
 {
   "name": "@everybyte-io/israeli-bank-scrapers",
-  "version": "1.0.4",
-  "private": true,
-  "description": "Provide scrapers for all major Israeli banks and credit card companies",
-  "engines": {
-    "node": ">= 10.22.0",
-    "npm": ">= 5.3.0"
-  },
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "version": "1.0.0",
+  "description": "israeli banks scrapers",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "clean": "rimraf lib",
-    "test": "cross-env BABEL_ENV=test jest",
-    "test:ci": "ncp src/tests/.tests-config.tpl.js src/tests/.tests-config.js && npm run test",
-    "lint": "eslint src --ext .ts",
-    "type-check": "tsc --noEmit",
-    "dev": "npm run type-check -- --watch",
-    "build": "npm run lint && npm run clean && npm run build:types && npm run build:js && npm run build:puppeteer-config",
-    "build:types": "tsc --emitDeclarationOnly",
-    "build:puppeteer-config": "ncp src/puppeteer-config.json lib/puppeteer-config.json",
-    "build:js": "babel src --out-dir lib --extensions \".ts\" --source-maps inline --verbose",
-    "prebuild": "node utils/update-puppeteer-config.js",
-    "postbuild": "rimraf lib/tests",
-    "prepare:core": "git reset --hard && node utils/prepare-israeli-bank-scrapers-core.js && npm i --package-lock-only && npm ci && npm run lint -- --fix && npm run build",
-    "prepare:default": "git reset --hard && npm ci && npm run build",
-    "reset": "git reset --hard && npm ci"
+    "build": "rm -rf dist && npx tsc",
+    "lint": "eslint . --ext .ts",
+    "lint-fix": "eslint --fix . --ext .ts",
+    "lint-fix-dry": "eslint --fix-dry-run . --ext .ts",
+    "prepare": "is-ci || husky install",
+    "test": "jest --detectOpenHandles"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "npm run lint"
-    }
+  "author": "Eliron Giny",
+  "license": "ISC",
+  "release": {
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/changelog",
+      "@semantic-release/npm",
+      "@semantic-release/git",
+      "@semantic-release/github"
+    ],
+    "branches": [
+      "main"
+    ]
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eshaham/israeli-bank-scrapers.git"
+    "url": "git+https://github.com/everybyte-io/boilerplate-nodets-lib.git"
   },
-  "keywords": [
-    "israel",
-    "israeli bank",
-    "israeli bank scraper"
-  ],
-  "author": "Elad Shaham",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/eshaham/israeli-bank-scrapers/issues"
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
   },
-  "homepage": "https://github.com/eshaham/israeli-bank-scrapers#readme",
+  "dependencies": {
+    "is-ci": "^3.0.0",
+    "build-url": "^2.0.0",
+    "core-js": "^3.1.4",
+    "debug": "^4.3.2",
+    "json2csv": "^4.5.4",
+    "lodash": "^4.17.10",
+    "moment": "^2.22.2",
+    "node-fetch": "^2.2.0",
+    "puppeteer": "^5.1.0",
+    "uuid": "^3.3.2"
+  },
   "devDependencies": {
     "@babel/cli": "^7.4.4",
     "@babel/core": "^7.4.5",
     "@babel/plugin-proposal-class-properties": "^7.12.1",
     "@babel/preset-env": "^7.4.5",
     "@babel/preset-typescript": "^7.9.0",
+    "@everybyte-io/eslint-config-typescript": "^1.0.2",
     "@types/debug": "^4.1.7",
     "@types/jest": "^25.1.5",
     "@types/json2csv": "^5.0.1",
     "@types/lodash": "^4.14.149",
+    "@types/node": "^16.11.2",
     "@types/node-fetch": "^2.5.6",
     "@types/puppeteer": "^2.0.1",
     "@types/source-map-support": "^0.5.1",
@@ -69,28 +71,17 @@
     "eslint-config-airbnb-typescript": "^7.2.1",
     "eslint-plugin-import": "^2.20.2",
     "fs-extra": "^10.0.0",
+    "husky": "^7.0.0",
     "jest": "^25.3.0",
     "jscodeshift": "^0.11.0",
     "minimist": "^1.2.5",
     "ncp": "^2.0.0",
+    "nodemon": "^2.0.14",
     "rimraf": "^3.0.0",
     "source-map-support": "^0.5.16",
     "ts-jest": "^25.3.0",
+    "ts-node": "^10.3.1",
+    "tslint": "^6.1.3",
     "typescript": "^3.8.3"
-  },
-  "dependencies": {
-    "build-url": "^2.0.0",
-    "core-js": "^3.1.4",
-    "debug": "^4.3.2",
-    "husky": "^4.2.5",
-    "json2csv": "^4.5.4",
-    "lodash": "^4.17.10",
-    "moment": "^2.22.2",
-    "node-fetch": "^2.2.0",
-    "puppeteer": "^5.1.0",
-    "uuid": "^3.3.2"
-  },
-  "files": [
-    "lib/**/*"
-  ]
+  }
 }
