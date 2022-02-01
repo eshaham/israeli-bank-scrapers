@@ -1,5 +1,5 @@
 {
-  "name": "@everybyte.io/israeli-bank-scrapers",
+  "name": "@everybyte-io/israeli-bank-scrapers",
   "version": "1.0.4",
   "private": true,
   "description": "Provide scrapers for all major Israeli banks and credit card companies",
