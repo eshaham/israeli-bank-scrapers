@@ -95,7 +95,6 @@ function createHeadersFromRequest(request: Request) {
   };
 }
 
-
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((row) => {
     const txnDate = moment(row.MC02PeulaTaaEZ, moment.HTML5_FMT.DATETIME_LOCAL_SECONDS)

@@ -81,7 +81,7 @@ function getTransactionsUrl(monthMoment: Moment) {
 }
 
 interface FetchCategoryResult {
-  result? : Array<{
+  result?: Array<{
     id: number;
     name: string;
   }>;
@@ -92,12 +92,13 @@ async function loadCategories(page: Page) {
   const res = await fetchGetWithinPage<FetchCategoryResult>(page, `${BASE_API_ACTIONS_URL}/api/contents/getCategories`);
   if (res && Array.isArray(res.result)) {
     debug(`${res.result.length} categories loaded`);
-      res.result?.forEach(({ id, name }) => categories.set(id, name));
+    res.result?.forEach(({ id, name }) => categories.set(id, name));
   }
 }
 
 function getTransactionType(txnTypeStr: string) {
   const cleanedUpTxnTypeStr = txnTypeStr.replace('\t', ' ').trim();
+
   switch (cleanedUpTxnTypeStr) {
     case ATM_TYPE_NAME:
     case NORMAL_TYPE_NAME:
@@ -118,7 +119,7 @@ function getTransactionType(txnTypeStr: string) {
     case CREDIT_TYPE_NAME:
       return TransactionTypes.Installments;
     default:
-      throw new Error(`Unknown transaction type ${cleanedUpTxnTypeStr}`);
+      return TransactionTypes.Normal;
   }
 }
 
@@ -157,7 +158,7 @@ function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
     status,
   };
 }
-interface ScrapedTransactionsResult{
+interface ScrapedTransactionsResult {
   result?: {
     transactions: ScrapedTransaction[];
   };

@@ -198,7 +198,6 @@ async function searchByDates(page: Page, startDate: Moment) {
   }
 }
 
-
 async function fetchAccountData(page: Page, startDate: Moment, accountID: string): Promise<TransactionsAccount> {
   await waitUntilElementDisappear(page, '.loading-bar-spinner');
   await searchByDates(page, startDate);

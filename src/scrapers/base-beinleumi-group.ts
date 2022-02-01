@@ -47,7 +47,6 @@ interface ScrapedTransaction {
   status: TransactionStatuses;
 }
 
-
 export function getPossibleLoginResults(): PossibleLoginResults {
   const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [/FibiMenu\/Online/];

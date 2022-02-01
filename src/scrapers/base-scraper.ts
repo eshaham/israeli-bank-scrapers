@@ -51,7 +51,6 @@ export interface ScaperOptions {
    */
   showBrowser?: boolean;
 
-
   /**
    * scrape transactions to be processed X months in the future
    */

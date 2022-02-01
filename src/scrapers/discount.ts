@@ -61,7 +61,6 @@ function convertTransactions(txns: ScrapedTransaction[], txnStatus: TransactionS
   });
 }
 
-
 async function fetchAccountData(page: Page, options: ScaperOptions): Promise<ScaperScrapingResult> {
   const apiSiteUrl = `${BASE_URL}/Titan/gatewayAPI`;
 

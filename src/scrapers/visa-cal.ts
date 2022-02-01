@@ -88,7 +88,6 @@ function createLoginFields(credentials: ScraperCredentials) {
   ];
 }
 
-
 function getAmountData(amountStr: string) {
   const amountStrCln = amountStr.replace(',', '');
   let currency: string | null = null;
@@ -312,7 +311,6 @@ async function fetchTransactions(page: Page, startDate: Moment, scraperOptions: 
 
   return accounts;
 }
-
 
 class VisaCalScraper extends BaseScraperWithBrowser {
   openLoginPopup = async () => {

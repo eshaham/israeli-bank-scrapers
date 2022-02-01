@@ -51,7 +51,6 @@ interface ScrapedTransaction {
   paymentSumOutbound: number;
 }
 
-
 interface ScrapedAccount {
   index: number;
   accountNumber: string;
@@ -265,7 +264,6 @@ async function fetchAllTransactions(page: Page, options: ExtendedScraperOptions,
     accounts,
   };
 }
-
 
 class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
   private baseUrl: string;
