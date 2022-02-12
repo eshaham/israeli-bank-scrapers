@@ -51,3 +51,10 @@ export interface Transaction {
   installments?: TransactionInstallments;
   category?: string;
 }
+
+export interface FutureDebit {
+  amount: number;
+  amountCurrency: string;
+  chargeDate?: string;
+  bankAccountNumber?: string;
+}

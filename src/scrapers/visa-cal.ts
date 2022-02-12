@@ -313,6 +313,32 @@ async function fetchTransactions(page: Page, startDate: Moment, scraperOptions: 
   return accounts;
 }
 
+async function fetchFutureDebits(page: Page) {
+  const result = await pageEvalAll(page, '.homepage-banks-top', [], (items) => {
+    return items.map((currBankEl: any) => {
+      const amount = currBankEl.getElementsByClassName('amount')[0].innerText;
+      const whenCharge = currBankEl.getElementsByClassName('when-charge')[0].innerText;
+      const bankNumber = currBankEl.getElementsByClassName('bankDesc')[0].innerText;
+      return {
+        amount,
+        whenCharge,
+        bankNumber,
+      };
+    });
+  });
+  const futureDebits = result.map((item) => {
+    const amountData = getAmountData(item.amount);
+    const chargeDate = /\d{1,2}[/]\d{2}[/]\d{2,4}/.exec(item.whenCharge)?.[0];
+    const bankAccountNumber = /\d+-\d+/.exec(item.bankNumber)?.[0];
+    return {
+      amount: amountData.amount,
+      amountCurrency: amountData.currency,
+      chargeDate,
+      bankAccountNumber,
+    };
+  });
+  return futureDebits;
+}
 
 class VisaCalScraper extends BaseScraperWithBrowser {
   openLoginPopup = async () => {
@@ -350,15 +376,20 @@ class VisaCalScraper extends BaseScraperWithBrowser {
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
     debug(`fetch transactions starting ${startMoment.format()}`);
 
+    debug('fetch future debits');
+    const futureDebits = await fetchFutureDebits(this.page);
+
     debug('navigate to transactions page');
     await this.navigateTo(TRANSACTIONS_URL, undefined, 60000);
 
     debug('fetch accounts transactions');
     const accounts = await fetchTransactions(this.page, startMoment, this.options);
+
     debug('return the scraped accounts');
     return {
       success: true,
       accounts,
+      futureDebits,
     };
   }
 }

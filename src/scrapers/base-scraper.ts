@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import { Browser, Page } from 'puppeteer';
 import { TimeoutError } from '../helpers/waiting';
-import { TransactionsAccount } from '../transactions';
+import { FutureDebit, TransactionsAccount } from '../transactions';
 import { CompanyTypes } from '../definitions';
 
 const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';
@@ -24,6 +24,7 @@ export interface ScaperLoginResult {
 export interface ScaperScrapingResult {
   success: boolean;
   accounts?: TransactionsAccount[];
+  futureDebits?: FutureDebit[];
   errorType?: ScraperErrorTypes;
   errorMessage?: string; // only on success=false
 }
