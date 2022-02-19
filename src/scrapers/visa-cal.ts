@@ -173,6 +173,7 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
   const buttonSelector = '[id$="FormAreaNoBorder_FormArea_ctlSubmitRequest"]';
   const nextPageSelector = '[id$="FormAreaNoBorder_FormArea_ctlGridPager_btnNext"]';
   const billingLabelSelector = '[id$=FormAreaNoBorder_FormArea_ctlMainToolBar_lblCaption]';
+  const secondaryBillingLabelSelector = '[id$=FormAreaNoBorder_FormArea_ctlSecondaryToolBar_lblCaption]';
   const noDataSelector = '[id$=FormAreaNoBorder_FormArea_msgboxErrorMessages]';
 
   debug('find the start date index in the dropbox');
@@ -205,11 +206,19 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
       debug('page has no transactions');
     } else {
       debug('find the billing date');
-      const billingDateLabel = await pageEval(page, billingLabelSelector, '', ((element) => {
+      let billingDateLabel = await pageEval(page, billingLabelSelector, '', ((element) => {
         return (element as HTMLSpanElement).innerText;
       }));
+      let settlementDateRegex = /\d{1,2}[/]\d{2}[/]\d{2,4}/;
 
-      const billingDate = /\d{1,2}[/]\d{2}[/]\d{2,4}/.exec(billingDateLabel)?.[0];
+      if (billingDateLabel === '') {
+        billingDateLabel = await pageEval(page, secondaryBillingLabelSelector, '', ((element) => {
+          return (element as HTMLSpanElement).innerText;
+        }));
+        settlementDateRegex = /\d{1,2}[/]\d{2,4}/;
+      }
+
+      const billingDate = settlementDateRegex.exec(billingDateLabel)?.[0];
 
       if (!billingDate) {
         throw new Error('failed to fetch process date');
