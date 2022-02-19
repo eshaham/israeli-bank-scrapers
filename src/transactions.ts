@@ -32,7 +32,7 @@ export interface Transaction {
   /**
    * sometimes called Asmachta
    */
-  identifier?: number;
+  identifier?: string | number;
   /**
    * ISO date string
    */

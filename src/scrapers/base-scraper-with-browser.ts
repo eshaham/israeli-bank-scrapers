@@ -41,7 +41,7 @@ export interface LoginOptions {
   loginUrl: string;
   checkReadiness?: () => Promise<void>;
   fields: {selector: string, value: string}[];
-  submitButtonSelector: string;
+  submitButtonSelector: string | (() => Promise<void>);
   preAction?: () => Promise<Frame | void>;
   postAction?: () => Promise<void>;
   possibleResults: PossibleLoginResults;
@@ -116,6 +116,13 @@ class BaseScraperWithBrowser extends BaseScraper {
   // all the classes that inherit from this base assume is it mandatory.
   protected page!: Page;
 
+  protected getViewPort() {
+    return {
+      width: VIEWPORT_WIDTH,
+      height: VIEWPORT_HEIGHT,
+    };
+  }
+
   async initialize() {
     debug('initialize scraper');
     this.emitProgress(ScaperProgressTypes.Initializing);
@@ -166,10 +173,11 @@ class BaseScraperWithBrowser extends BaseScraper {
       await this.options.preparePage(this.page);
     }
 
-    debug(`set viewport to width ${VIEWPORT_WIDTH}, height ${VIEWPORT_HEIGHT}`);
+    const viewport = this.getViewPort();
+    debug(`set viewport to width ${viewport.width}, height ${viewport.height}`);
     await this.page.setViewport({
-      width: VIEWPORT_WIDTH,
-      height: VIEWPORT_HEIGHT,
+      width: viewport.width,
+      height: viewport.height,
     });
 
     this.page.on('requestfailed', (request) => {
@@ -229,7 +237,7 @@ class BaseScraperWithBrowser extends BaseScraper {
     if (loginOptions.checkReadiness) {
       debug('execute \'checkReadiness\' interceptor provided in login options');
       await loginOptions.checkReadiness();
-    } else {
+    } else if (typeof loginOptions.submitButtonSelector === 'string') {
       debug('wait until submit button is available');
       await waitUntilElementFound(this.page, loginOptions.submitButtonSelector);
     }
@@ -243,7 +251,11 @@ class BaseScraperWithBrowser extends BaseScraper {
     debug('fill login components input with relevant values');
     await this.fillInputs(loginFrameOrPage, loginOptions.fields);
     debug('click on login submit button');
-    await clickButton(loginFrameOrPage, loginOptions.submitButtonSelector);
+    if (typeof loginOptions.submitButtonSelector === 'string') {
+      await clickButton(loginFrameOrPage, loginOptions.submitButtonSelector);
+    } else {
+      await loginOptions.submitButtonSelector();
+    }
     this.emitProgress(ScaperProgressTypes.LoggingIn);
 
     if (loginOptions.postAction) {
