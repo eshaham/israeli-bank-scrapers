@@ -19,12 +19,24 @@ const FILTERED_TRANSACTIONS_URL = `${BASE_URL}/ChannelWCF/Broker.svc/ProcessRequ
 
 const DATE_FORMAT = 'DD.MM.YY';
 const ACCOUNT_BLOCKED_MSG = 'המנוי חסום';
+const INVALID_PASSWORD_MSG = 'אחד או יותר מפרטי ההזדהות שמסרת שגויים';
 
 
 function getPossibleLoginResults() {
   const urls: LoginOptions['possibleResults'] = {
     [LoginResults.Success]: [/ebanking\/SO\/SPA.aspx/i],
-    [LoginResults.InvalidPassword]: [/InternalSite\/CustomUpdate\/leumi\/LoginPage.ASP/],
+    [LoginResults.InvalidPassword]: [async options => {
+      if (!options || !options.page) {
+        throw new Error('missing page options argument');
+      }
+
+      const errorMessage = await (0, _elementsInteractions.pageEvalAll)(options.page, '.errHeader', [], label => {
+        var _ref;
+
+        return (_ref = label[0]) === null || _ref === void 0 ? void 0 : _ref.innerText;
+      });
+      return errorMessage === null || errorMessage === void 0 ? void 0 : errorMessage.startsWith(INVALID_PASSWORD_MSG);
+    }],
     [LoginResults.AccountBlocked]: [
       async (options) => {
         if (!options || !options.page) {
