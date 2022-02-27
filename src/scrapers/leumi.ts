@@ -30,7 +30,7 @@ function getPossibleLoginResults() {
         if (!options || !options.page) {
           throw new Error('missing page options argument');
         }
-        const errorMessage = await pageEvalAll(options.page, '.errHeader', [], (label) => {
+        const errorMessage = await pageEvalAll(options.page, '.errHeader', '', (label) => {
           return (label[0] as HTMLElement)?.innerText;
         });
 
@@ -42,7 +42,7 @@ function getPossibleLoginResults() {
         if (!options || !options.page) {
           throw new Error('missing page options argument');
         }
-        const errorMessage = await pageEvalAll(options.page, '.errHeader', [], (label) => {
+        const errorMessage = await pageEvalAll(options.page, '.errHeader', '', (label) => {
           return (label[0] as HTMLElement)?.innerText;
         });
 
