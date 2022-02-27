@@ -14,6 +14,7 @@ import {
 import { ScaperScrapingResult, ScraperCredentials } from './base-scraper';
 
 const BASE_URL = 'https://hb2.bankleumi.co.il';
+const LOGIN_URL = 'https://www.leumi.co.il/';
 const TRANSACTIONS_URL = `${BASE_URL}/eBanking/SO/SPA.aspx#/ts/BusinessAccountTrx?WidgetPar=1`;
 const FILTERED_TRANSACTIONS_URL = `${BASE_URL}/ChannelWCF/Broker.svc/ProcessRequest?moduleName=UC_SO_27_GetBusinessAccountTrx`;
 
@@ -171,6 +172,14 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
   return accounts;
 }
 
+
+async function navigateToLogin(page: Page): Promise<void> {
+  const loginButtonSelector = '#enter_your_account a';
+  await waitUntilElementFound(page, loginButtonSelector);
+  await clickButton(page, loginButtonSelector);
+  await waitUntilElementFound(page, '#enter');
+}
+
 async function waitForPostLogin(page: Page): Promise<void> {
   // TODO check for condition to provide new password
   await Promise.race([
@@ -185,9 +194,10 @@ async function waitForPostLogin(page: Page): Promise<void> {
 class LeumiScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials: Record<string, string>) {
     return {
-      loginUrl: `${BASE_URL}`,
+      loginUrl: LOGIN_URL,
       fields: createLoginFields(credentials),
       submitButtonSelector: '#enter',
+      checkReadiness: async () => navigateToLogin(this.page),
       postAction: async () => waitForPostLogin(this.page),
       possibleResults: getPossibleLoginResults(),
     };
