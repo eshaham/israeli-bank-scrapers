@@ -190,7 +190,7 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
     debug(`set hidden value of the date selector to be the index ${currentDateIndex}`);
     await setValue(page, dateHiddenFieldSelector, `${currentDateIndex}`);
     debug('wait a second to workaround navigation issue in headless browser mode');
-    await page.waitFor(1000);
+    await page.waitForTimeout(1000);
     debug('click on the filter submit button and wait for navigation');
     await Promise.all([
       page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
@@ -308,7 +308,7 @@ async function fetchTransactions(page: Page, startDate: Moment, scraperOptions: 
   for (const account of accountNumbers) {
     debug(`setting account: ${account}`);
     await setAccount(page, account);
-    await page.waitFor(1000);
+    await page.waitForTimeout(1000);
     accounts.push(
       await fetchTransactionsForAccount(
         page,
