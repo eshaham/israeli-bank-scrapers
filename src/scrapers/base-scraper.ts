@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import { Browser, Page } from 'puppeteer';
 import { TimeoutError } from '../helpers/waiting';
-import { FutureDebit, TransactionsAccount } from '../transactions';
+import { TransactionsAccount } from '../transactions';
 import { CompanyTypes } from '../definitions';
 
 const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';
