@@ -50,19 +50,4 @@ describe('VisaCal legacy scraper', () => {
     // expect(result?.accounts?.length).toEqual(2)
     exportTransactions(COMPANY_ID, result.accounts || []);
   });
-
-  maybeTestCompanyAPI(COMPANY_ID)('should scrape future debits"', async () => {
-    const options = {
-      ...testsConfig.options,
-      companyId: COMPANY_ID,
-    };
-
-    const scraper = new VisaCalScraper(options);
-    const result = await scraper.scrape(testsConfig.credentials.visaCal);
-    expect(result).toBeDefined();
-    const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
-    expect(error).toBe('');
-    expect(result.success).toBeTruthy();
-    expect(result.futureDebits?.length).toBeGreaterThan(0);
-  });
 });
