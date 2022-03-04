@@ -21,9 +21,17 @@ export interface ScaperLoginResult {
   errorMessage?: string; // only on success=false
 }
 
+export interface FutureDebit {
+  amount: number;
+  amountCurrency: string;
+  chargeDate?: string;
+  bankAccountNumber?: string;
+}
+
 export interface ScaperScrapingResult {
   success: boolean;
   accounts?: TransactionsAccount[];
+  futureDebits?: FutureDebit[];
   errorType?: ScraperErrorTypes;
   errorMessage?: string; // only on success=false
 }
