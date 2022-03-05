@@ -324,11 +324,12 @@ async function fetchTransactions(page: Page, startDate: Moment, scraperOptions: 
 
 async function fetchFutureDebits(page: Page) {
   const futureDebitsSelector = '.homepage-banks-top';
-  const debitMountClass = 'amount';
-  const debitWhenChargeClass = 'when-charge';
-  const debitBankNumberClass = 'bankDesc';
 
   const result = await pageEvalAll(page, futureDebitsSelector, [], (items) => {
+    const debitMountClass = 'amount';
+    const debitWhenChargeClass = 'when-charge';
+    const debitBankNumberClass = 'bankDesc';
+
     return items.map((currBankEl: any) => {
       const amount = currBankEl.getElementsByClassName(debitMountClass)[0].innerText;
       const whenCharge = currBankEl.getElementsByClassName(debitWhenChargeClass)[0].innerText;
