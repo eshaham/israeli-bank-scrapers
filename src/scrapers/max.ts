@@ -258,8 +258,8 @@ class MaxScraper extends BaseScraperWithBrowser {
       fields: createLoginFields(credentials),
       submitButtonSelector: '#login-password #send-code',
       preAction: async () => {
-        if (await elementPresentOnPage(this.page, '#closePopup')) {
-          await clickButton(this.page, '#closePopup');
+        if (await elementPresentOnPage(this.page, '.close')) {
+          await clickButton(this.page, '.close');
         }
         await clickButton(this.page, '.personal-area > a.go-to-personal-area');
         await waitUntilElementFound(this.page, '#login-password-link', true);
