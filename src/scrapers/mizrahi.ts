@@ -56,7 +56,9 @@ const afterLoginSelector = '#stickyHeaderScrollRegion';
 const loginSpinnerSelector = 'div.ngx-overlay.loading-foreground';
 const accountDropDownItemSelector = '#sky-account-combo-list ul li .sky-acc-value';
 const pendingTrxIdentifierId = '#ctl00_ContentPlaceHolder2_panel1';
-const emailUpdatePageTitle = "עדכון כתובת דוא''ל";
+const emailUpdatePageHebrewTitle = "עדכון כתובת דוא''ל";
+const emailUpdatePageEnglishTitle = 'Update email address';
+
 
 function createLoginFields(credentials: ScraperCredentials) {
   return [
@@ -67,7 +69,7 @@ function createLoginFields(credentials: ScraperCredentials) {
 
 function getPossibleLoginResults(page: Page): PossibleLoginResults {
   return {
-    [LoginResults.Success]: [AFTER_LOGIN_BASE_URL, async () => !!(await page.$x(`//title[contains(., "${emailUpdatePageTitle}")`))],
+    [LoginResults.Success]: [AFTER_LOGIN_BASE_URL, async () => !!(await page.$x(`//title[contains(., "${emailUpdatePageHebrewTitle}") or contains(., "${emailUpdatePageEnglishTitle}")]`))],
     [LoginResults.InvalidPassword]: [async () => !!(await page.$(invalidPasswordSelector))],
     [LoginResults.ChangePassword]: [CHANGE_PASSWORD_URL],
   };
