@@ -66,7 +66,7 @@ function createLoginFields(credentials: ScraperCredentials) {
 
 function getPossibleLoginResults(page: Page): PossibleLoginResults {
   return {
-    [LoginResults.Success]: [AFTER_LOGIN_BASE_URL],
+    [LoginResults.Success]: [AFTER_LOGIN_BASE_URL, async () => !!(await page.$x('//title[contains(., "עדכון כתובת דוא\'\'ל")]'))],
     [LoginResults.InvalidPassword]: [async () => !!(await page.$(invalidPasswordSelector))],
     [LoginResults.ChangePassword]: [CHANGE_PASSWORD_URL],
   };
