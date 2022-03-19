@@ -18,6 +18,7 @@ interface ScrapedTransaction {
   MC02SchumEZ: number;
   MC02AsmahtaMekoritEZ: string;
   MC02TnuaTeurEZ: string;
+  kodMatbea: string;
 }
 
 interface ScrapedTransactionsResult {
@@ -107,7 +108,7 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
       date: txnDate,
       processedDate: txnDate,
       originalAmount: row.MC02SchumEZ,
-      originalCurrency: SHEKEL_CURRENCY,
+      originalCurrency: row.kodMatbea ?? SHEKEL_CURRENCY,
       chargedAmount: row.MC02SchumEZ,
       description: row.MC02TnuaTeurEZ,
       status: TransactionStatuses.Completed,
