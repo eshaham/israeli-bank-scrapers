@@ -39,10 +39,11 @@ interface ScrapedTransactionsResult {
 const BASE_WEBSITE_URL = 'https://www.mizrahi-tefahot.co.il';
 const LOGIN_URL = `${BASE_WEBSITE_URL}/login/index.html#/auth-page-he`;
 const BASE_APP_URL = 'https://mto.mizrahi-tefahot.co.il';
-const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/ngOnline\/index\.html#\/main\/uis/;
-const OSH_PAGE = `${BASE_APP_URL}/ngOnline/index.html#/main/uis/osh/p428/`;
-const TRANSACTIONS_REQUEST_URL = `${BASE_APP_URL}/Online/api/SkyOSH/get428Index`;
-const PENDING_TRANSACTIONS_PAGE = `${BASE_APP_URL}/ngOnline/index.html#/main/uis/legacy/Osh/p420//legacy.Osh.p420`;
+const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/OnlineAppPilot\/.*/;
+const OSH_PAGE = '/OnlineAppPilot/osh/legacy/legacy-Osh-Main';
+const TRANSACTIONS_PAGE = '/OnlineAppPilot/osh/legacy/root-main-osh-p428New';
+const TRANSACTIONS_REQUEST_URL = `${BASE_APP_URL}/OnlinePilot/api/SkyOSH/get428Index`;
+const PENDING_TRANSACTIONS_PAGE = '/OnlineAppPilot/osh/legacy/legacy-Osh-p420';
 const PENDING_TRANSACTIONS_IFRAME = 'p420.aspx';
 const CHANGE_PASSWORD_URL = /https:\/\/www\.mizrahi-tefahot\.co\.il\/login\/\w+\/index\.html#\/change-pass/;
 const DATE_FORMAT = 'DD/MM/YYYY';
@@ -52,9 +53,9 @@ const usernameSelector = '#emailDesktopHeb';
 const passwordSelector = '#passwordIDDesktopHEB';
 const submitButtonSelector = '.form-desktop button';
 const invalidPasswordSelector = 'a[href*="https://sc.mizrahi-tefahot.co.il/SCServices/SC/P010.aspx"]';
-const afterLoginSelector = '#stickyHeaderScrollRegion';
+const afterLoginSelector = '#dropdownBasic';
 const loginSpinnerSelector = 'div.ngx-overlay.loading-foreground';
-const accountDropDownItemSelector = '#sky-account-combo-list ul li .sky-acc-value';
+const accountDropDownItemSelector = '#AccountPicker .item';
 const pendingTrxIdentifierId = '#ctl00_ContentPlaceHolder2_panel1';
 
 function createLoginFields(credentials: ScraperCredentials) {
@@ -157,6 +158,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
   }
 
   async fetchData() {
+    await this.page.$eval('#dropdownBasic, .item', (el) => (el as HTMLElement).click());
     const numOfAccounts = (await this.page.$$(accountDropDownItemSelector)).length;
     try {
       const results: TransactionsAccount[] = [];
@@ -179,7 +181,9 @@ class MizrahiScraper extends BaseScraperWithBrowser {
   }
 
   private async fetchAccount() {
-    await this.navigateTo(OSH_PAGE, this.page);
+    await this.page.$eval(`a[href="${OSH_PAGE}"]`, (el) => (el as HTMLElement).click());
+    await waitUntilElementFound(this.page, `a[href="${TRANSACTIONS_PAGE}"]`);
+    await this.page.$eval(`a[href="${TRANSACTIONS_PAGE}"]`, (el) => (el as HTMLElement).click());
 
     const request = await this.page.waitForRequest(TRANSACTIONS_REQUEST_URL);
     const data = createDataFromRequest(request, this.options.startDate);
@@ -199,7 +203,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
     const startMoment = getStartMoment(this.options.startDate);
     const oshTxnAfterStartDate = oshTxn.filter((txn) => moment(txn.date).isSameOrAfter(startMoment));
 
-    await this.navigateTo(PENDING_TRANSACTIONS_PAGE, this.page);
+    await this.page.$eval(`a[href="${PENDING_TRANSACTIONS_PAGE}"]`, (el) => (el as HTMLElement).click());
     const frame = await waitUntilIframeFound(this.page, (f) => f.url().includes(PENDING_TRANSACTIONS_IFRAME));
     await waitUntilElementFound(frame, pendingTrxIdentifierId);
     const pendingTxn = await extractPendingTransactions(frame);
