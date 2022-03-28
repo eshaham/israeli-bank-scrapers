@@ -39,11 +39,11 @@ interface ScrapedTransactionsResult {
 const BASE_WEBSITE_URL = 'https://www.mizrahi-tefahot.co.il';
 const LOGIN_URL = `${BASE_WEBSITE_URL}/login/index.html#/auth-page-he`;
 const BASE_APP_URL = 'https://mto.mizrahi-tefahot.co.il';
-const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/OnlineAppPilot\/.*/;
-const OSH_PAGE = '/OnlineAppPilot/osh/legacy/legacy-Osh-Main';
-const TRANSACTIONS_PAGE = '/OnlineAppPilot/osh/legacy/root-main-osh-p428New';
-const TRANSACTIONS_REQUEST_URL = `${BASE_APP_URL}/OnlinePilot/api/SkyOSH/get428Index`;
-const PENDING_TRANSACTIONS_PAGE = '/OnlineAppPilot/osh/legacy/legacy-Osh-p420';
+const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/OnlineApp\/.*/;
+const OSH_PAGE = '/OnlineApp/osh/legacy/legacy-Osh-Main';
+const TRANSACTIONS_PAGE = '/OnlineApp/osh/legacy/root-main-osh-p428New';
+const TRANSACTIONS_REQUEST_URL = `${BASE_APP_URL}/Online/api/SkyOSH/get428Index`;
+const PENDING_TRANSACTIONS_PAGE = '/OnlineApp/osh/legacy/legacy-Osh-p420';
 const PENDING_TRANSACTIONS_IFRAME = 'p420.aspx';
 const CHANGE_PASSWORD_URL = /https:\/\/www\.mizrahi-tefahot\.co\.il\/login\/\w+\/index\.html#\/change-pass/;
 const DATE_FORMAT = 'DD/MM/YYYY';
