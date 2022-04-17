@@ -7,7 +7,7 @@ import {
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { waitForUrl } from '../helpers/navigation';
 import {
-  Transaction, TransactionStatuses, TransactionTypes,
+  Transaction, TransactionsAccount, TransactionStatuses, TransactionTypes,
 } from '../transactions';
 import { ScraperCredentials, ScraperErrorTypes } from './base-scraper';
 import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
@@ -165,7 +165,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
     const numOfAccounts = (await this.page.$$(accountDropDownItemSelector)).length;
 
     try {
-      const results = [];
+      const results: TransactionsAccount[] = [];
       for (let i = 0; i < numOfAccounts; i += 1) {
         if (i > 0) {
           await this.page.$eval('#dropdownBasic, .item', (el) => (el as HTMLElement).click());
