@@ -162,6 +162,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
 
   async fetchData() {
     await this.page.$eval('#dropdownBasic, .item', (el) => (el as HTMLElement).click());
+
     const numOfAccounts = (await this.page.$$(accountDropDownItemSelector)).length;
 
     try {
