@@ -167,6 +167,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
 
     try {
       const results: TransactionsAccount[] = [];
+
       for (let i = 0; i < numOfAccounts; i += 1) {
         if (i > 0) {
           await this.page.$eval('#dropdownBasic, .item', (el) => (el as HTMLElement).click());
