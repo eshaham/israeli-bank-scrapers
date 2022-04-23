@@ -57,8 +57,8 @@ const afterLoginSelector = '#dropdownBasic';
 const loginSpinnerSelector = 'div.ngx-overlay.loading-foreground';
 const accountDropDownItemSelector = '#AccountPicker .item';
 const pendingTrxIdentifierId = '#ctl00_ContentPlaceHolder2_panel1';
-const emailUpdatePageHebrewTitle = "עדכון כתובת דוא''ל";
-const emailUpdatePageEnglishTitle = 'Update email address';
+const checkingAccountTabHebrewName = 'עובר ושב';
+const checkingAccountTabEnglishName = 'Checking Account';
 
 
 function createLoginFields(credentials: ScraperCredentials) {
@@ -70,7 +70,7 @@ function createLoginFields(credentials: ScraperCredentials) {
 
 function getPossibleLoginResults(page: Page): PossibleLoginResults {
   return {
-    [LoginResults.Success]: [AFTER_LOGIN_BASE_URL, async () => !!(await page.$x(`//title[contains(., "${emailUpdatePageHebrewTitle}") or contains(., "${emailUpdatePageEnglishTitle}")]`))],
+    [LoginResults.Success]: [AFTER_LOGIN_BASE_URL, async () => !!(await page.$x(`//a//span[contains(., "${checkingAccountTabHebrewName}") or contains(., "${checkingAccountTabEnglishName}")]`))],
     [LoginResults.InvalidPassword]: [async () => !!(await page.$(invalidPasswordSelector))],
     [LoginResults.ChangePassword]: [CHANGE_PASSWORD_URL],
   };
