@@ -86,7 +86,7 @@
     "json2csv": "^4.5.4",
     "lodash": "^4.17.10",
     "moment": "^2.22.2",
-    "node-fetch": "^2.2.0",
+    "node-fetch": "^2.6.7",
     "puppeteer": "^5.1.0",
     "uuid": "^3.3.2"
   },
