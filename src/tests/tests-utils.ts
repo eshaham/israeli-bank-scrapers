@@ -7,7 +7,7 @@ import { TransactionsAccount } from '../transactions';
 let testsConfig: Record<string, any>;
 let configurationLoaded = false;
 
-const MISSING_ERROR_MESSAGE = 'Missing environment test configuration. To troubleshot this issue open CONTRIBUTING.md file and read section "F.A.Q regarding the tests".';
+const MISSING_ERROR_MESSAGE = 'Missing test environment configuration. To troubleshoot this issue open CONTRIBUTING.md file and read the "F.A.Q regarding the tests" section.';
 
 export function getTestsConfig() {
   if (configurationLoaded) {
