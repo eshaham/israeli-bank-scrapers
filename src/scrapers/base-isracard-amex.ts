@@ -287,7 +287,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
 
     this.page.on('request', (request) => {
       // This request is blocking the page load intentionally.
-      if (request.url().endsWith('detector-dom.min.js')) {
+      if (request.url().includes('detector-dom.min.js')) {
         request.abort();
       } else {
         request.continue();
