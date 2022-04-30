@@ -11,7 +11,7 @@ import {
   TransactionStatuses,
   TransactionTypes,
 } from '../transactions';
-import { ScaperOptions, ScaperScrapingResult, ScraperCredentials } from './base-scraper';
+import { ScraperOptions, ScaperScrapingResult, ScraperCredentials } from './base-scraper';
 import {
   DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, EURO_CURRENCY, EURO_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,
 } from '../constants';
@@ -166,7 +166,7 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   });
 }
 
-async function fetchTransactionsForAccount(page: Page, startDate: Moment, accountNumber: string, scraperOptions: ScaperOptions): Promise<TransactionsAccount> {
+async function fetchTransactionsForAccount(page: Page, startDate: Moment, accountNumber: string, scraperOptions: ScraperOptions): Promise<TransactionsAccount> {
   const startDateValue = startDate.format('MM/YYYY');
   const dateSelector = '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_TextBox"]';
   const dateHiddenFieldSelector = '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_HiddenField"]';
@@ -190,7 +190,7 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
     debug(`set hidden value of the date selector to be the index ${currentDateIndex}`);
     await setValue(page, dateHiddenFieldSelector, `${currentDateIndex}`);
     debug('wait a second to workaround navigation issue in headless browser mode');
-    await page.waitFor(1000);
+    await page.waitForTimeout(1000);
     debug('click on the filter submit button and wait for navigation');
     await Promise.all([
       page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
@@ -301,14 +301,14 @@ async function setAccount(page: Page, account: string) {
   );
 }
 
-async function fetchTransactions(page: Page, startDate: Moment, scraperOptions: ScaperOptions): Promise<TransactionsAccount[]> {
+async function fetchTransactions(page: Page, startDate: Moment, scraperOptions: ScraperOptions): Promise<TransactionsAccount[]> {
   const accountNumbers: string[] = await getAccountNumbers(page);
   const accounts: TransactionsAccount[] = [];
 
   for (const account of accountNumbers) {
     debug(`setting account: ${account}`);
     await setAccount(page, account);
-    await page.waitFor(1000);
+    await page.waitForTimeout(1000);
     accounts.push(
       await fetchTransactionsForAccount(
         page,

@@ -18,7 +18,7 @@ import {
 } from '../transactions';
 import {
   ScraperErrorTypes,
-  ScaperOptions, ScaperScrapingResult, ScaperProgressTypes,
+  ScraperOptions, ScaperScrapingResult, ScaperProgressTypes,
   ScraperCredentials,
 } from './base-scraper';
 
@@ -28,7 +28,7 @@ const INSTALLMENTS_KEYWORD = 'תשלום';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 
-interface ExtendedScraperOptions extends ScaperOptions {
+interface ExtendedScraperOptions extends ScraperOptions {
   servicesUrl: string;
   companyCode: string;
 }
@@ -274,7 +274,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
 
   private servicesUrl: string;
 
-  constructor(options: ScaperOptions, baseUrl: string, companyCode: string) {
+  constructor(options: ScraperOptions, baseUrl: string, companyCode: string) {
     super(options);
 
     this.baseUrl = baseUrl;
@@ -283,6 +283,17 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
   }
 
   async login(credentials: ScraperCredentials): Promise<ScaperScrapingResult> {
+    await this.page.setRequestInterception(true);
+
+    this.page.on('request', (request) => {
+      // This request is blocking the page load intentionally.
+      if (request.url().endsWith('detector-dom.min.js')) {
+        request.abort();
+      } else {
+        request.continue();
+      }
+    });
+
     await this.navigateTo(`${this.baseUrl}/personalarea/Login`);
 
     this.emitProgress(ScaperProgressTypes.LoggingIn);

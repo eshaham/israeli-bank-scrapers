@@ -9,7 +9,7 @@ import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import {
   TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
-import { ScaperOptions, ScraperCredentials } from './base-scraper';
+import { ScraperOptions, ScraperCredentials } from './base-scraper';
 import { getDebug } from '../helpers/debug';
 
 const debug = getDebug('hapoalim');
@@ -151,7 +151,7 @@ async function getAccountBalance(apiSiteUrl: string, page: Page, accountNumber: 
   return balanceAndCreditLimit?.currentBalance;
 }
 
-async function fetchAccountData(page: Page, baseUrl: string, options: ScaperOptions) {
+async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOptions) {
   const restContext = await getRestContext(page);
   const apiSiteUrl = `${baseUrl}/${restContext}`;
   const accountDataUrl = `${baseUrl}/ServerServices/general/accounts`;

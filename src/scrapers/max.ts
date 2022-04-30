@@ -8,7 +8,7 @@ import { waitUntilElementFound, elementPresentOnPage, clickButton } from '../hel
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
 import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
-import { ScaperOptions, ScraperCredentials } from './base-scraper';
+import { ScraperOptions, ScraperCredentials } from './base-scraper';
 import { getDebug } from '../helpers/debug';
 
 const debug = getDebug('max');
@@ -207,7 +207,7 @@ function prepareTransactions(txns: Transaction[], startMoment: moment.Moment, co
   return clonedTxns;
 }
 
-async function fetchTransactions(page: Page, options: ScaperOptions) {
+async function fetchTransactions(page: Page, options: ScraperOptions) {
   const futureMonthsToScrape = options.futureMonthsToScrape ?? 1;
   const defaultStartMoment = moment().subtract(1, 'years');
   const startDate = options.startDate || defaultStartMoment.toDate();

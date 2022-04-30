@@ -1,7 +1,7 @@
 import { Page } from 'puppeteer';
 import moment from 'moment';
 import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
-import { ScaperOptions, ScraperCredentials } from './base-scraper';
+import { ScraperOptions, ScraperCredentials } from './base-scraper';
 import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
 import { pageEval, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
 import { getDebug } from '../helpers/debug';
@@ -79,7 +79,7 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
 }
 
 
-async function fetchTransactions(page: Page, options: ScaperOptions) {
+async function fetchTransactions(page: Page, options: ScraperOptions) {
   await page.goto(CARD_URL);
   await waitUntilElementFound(page, '.react-loading.hide', false);
   const defaultStartMoment = moment().subtract(1, 'years');

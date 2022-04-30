@@ -9,7 +9,7 @@ import {
   Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
 import {
-  ScaperOptions,
+  ScraperOptions,
   ScraperErrorTypes, ScaperScrapingResult, ScraperCredentials,
 } from './base-scraper';
 
@@ -62,7 +62,7 @@ function convertTransactions(txns: ScrapedTransaction[], txnStatus: TransactionS
 }
 
 
-async function fetchAccountData(page: Page, options: ScaperOptions): Promise<ScaperScrapingResult> {
+async function fetchAccountData(page: Page, options: ScraperOptions): Promise<ScaperScrapingResult> {
   const apiSiteUrl = `${BASE_URL}/Titan/gatewayAPI`;
 
   const accountDataUrl = `${apiSiteUrl}/userAccountsData`;
