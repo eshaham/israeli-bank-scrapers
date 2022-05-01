@@ -286,18 +286,17 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
   }
 
   async login(credentials: ScraperCredentials): Promise<ScaperScrapingResult> {
-
     await this.page.setRequestInterception(true);
-    this.page.on("request", (request) => {
-      if (request.url().includes("detector-dom.min.js")) {
-        debug('force abort for request do download detector-dom.min.js resource')
+    this.page.on('request', (request) => {
+      if (request.url().includes('detector-dom.min.js')) {
+        debug('force abort for request do download detector-dom.min.js resource');
         request.abort();
       } else {
         request.continue();
       }
     });
 
-    debug('navigate to login page')
+    debug('navigate to login page');
     await this.navigateTo(`${this.baseUrl}/personalarea/Login`);
 
     this.emitProgress(ScaperProgressTypes.LoggingIn);
@@ -317,7 +316,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
     }
 
     const validateReturnCode = validateResult.ValidateIdDataBean.returnCode;
-    debug(`user validate with return code '${validateReturnCode}'`)
+    debug(`user validate with return code '${validateReturnCode}'`);
     if (validateReturnCode === '1') {
       const { userName } = validateResult.ValidateIdDataBean;
 
@@ -331,7 +330,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
         idType: ID_TYPE,
       };
       const loginResult = await fetchPostWithinPage<{status: string}>(this.page, loginUrl, request);
-      debug(`user login with status '${loginResult?.status}'`)
+      debug(`user login with status '${loginResult?.status}'`);
 
       if (loginResult && loginResult.status === '1') {
         this.emitProgress(ScaperProgressTypes.LoginSuccess);
