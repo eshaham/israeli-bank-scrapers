@@ -21,12 +21,15 @@ import {
   ScaperOptions, ScaperScrapingResult, ScaperProgressTypes,
   ScraperCredentials,
 } from './base-scraper';
+import { getDebug } from '../helpers/debug';
 
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';
 const INSTALLMENTS_KEYWORD = 'תשלום';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
+
+const debug = getDebug('base-isracard-amex');
 
 interface ExtendedScraperOptions extends ScaperOptions {
   servicesUrl: string;
@@ -283,6 +286,18 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
   }
 
   async login(credentials: ScraperCredentials): Promise<ScaperScrapingResult> {
+
+    await this.page.setRequestInterception(true);
+    this.page.on("request", (request) => {
+      if (request.url().includes("detector-dom.min.js")) {
+        debug('force abort for request do download detector-dom.min.js resource')
+        request.abort();
+      } else {
+        request.continue();
+      }
+    });
+
+    debug('navigate to login page')
     await this.navigateTo(`${this.baseUrl}/personalarea/Login`);
 
     this.emitProgress(ScaperProgressTypes.LoggingIn);
@@ -302,6 +317,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
     }
 
     const validateReturnCode = validateResult.ValidateIdDataBean.returnCode;
+    debug(`user validate with return code '${validateReturnCode}'`)
     if (validateReturnCode === '1') {
       const { userName } = validateResult.ValidateIdDataBean;
 
@@ -315,6 +331,8 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
         idType: ID_TYPE,
       };
       const loginResult = await fetchPostWithinPage<{status: string}>(this.page, loginUrl, request);
+      debug(`user login with status '${loginResult?.status}'`)
+
       if (loginResult && loginResult.status === '1') {
         this.emitProgress(ScaperProgressTypes.LoginSuccess);
         return { success: true };
