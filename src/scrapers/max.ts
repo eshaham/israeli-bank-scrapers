@@ -76,7 +76,7 @@ function getTransactionsUrl(monthMoment: Moment) {
      * all other query params are static, beside the date which changes for request per month
      */
   return buildUrl(BASE_API_ACTIONS_URL, {
-    path: `/api/registered/transactionDetails/getTransactionsAndGraphs?filterData={"userIndex":-1,"cardIndex":-1,"monthView":true,"date":"${date}","dates":{"startDate":"0","endDate":"0"},"bankAccount":{"bankAccountIndex":-1,"cards":null}}&firstCallCardIndex=-1&v=V3.69-HF-CarLoanLeviModel.2.57`,
+    path: `/api/registered/transactionDetails/getTransactionsAndGraphs?filterData={"userIndex":-1,"cardIndex":-1,"monthView":true,"date":"${date}","dates":{"startDate":"0","endDate":"0"},"bankAccount":{"bankAccountIndex":-1,"cards":null}}&firstCallCardIndex=-1`,
   });
 }
 
