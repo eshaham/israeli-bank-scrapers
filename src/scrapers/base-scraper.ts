@@ -38,7 +38,7 @@ export interface ScaperScrapingResult {
 
 export type ScraperCredentials = Record<string, string>;
 
-export interface ScaperOptions {
+export interface ScraperOptions {
   /**
    * The company you want to scrape
    */
@@ -141,7 +141,7 @@ function createGenericError(errorMessage: string) {
 export class BaseScraper {
   private eventEmitter = new EventEmitter();
 
-  constructor(public options: ScaperOptions) {
+  constructor(public options: ScraperOptions) {
   }
 
   // eslint-disable-next-line  @typescript-eslint/require-await

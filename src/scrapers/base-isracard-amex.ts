@@ -18,7 +18,7 @@ import {
 } from '../transactions';
 import {
   ScraperErrorTypes,
-  ScaperOptions, ScaperScrapingResult, ScaperProgressTypes,
+  ScraperOptions, ScaperScrapingResult, ScaperProgressTypes,
   ScraperCredentials,
 } from './base-scraper';
 import { getDebug } from '../helpers/debug';
@@ -31,7 +31,7 @@ const DATE_FORMAT = 'DD/MM/YYYY';
 
 const debug = getDebug('base-isracard-amex');
 
-interface ExtendedScraperOptions extends ScaperOptions {
+interface ExtendedScraperOptions extends ScraperOptions {
   servicesUrl: string;
   companyCode: string;
 }
@@ -277,7 +277,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
 
   private servicesUrl: string;
 
-  constructor(options: ScaperOptions, baseUrl: string, companyCode: string) {
+  constructor(options: ScraperOptions, baseUrl: string, companyCode: string) {
     super(options);
 
     this.baseUrl = baseUrl;
