@@ -20,7 +20,7 @@ import {
 const LOGIN_URL = 'https://login.yahav.co.il/login/';
 const BASE_URL = 'https://digital.yahav.co.il/BaNCSDigitalUI/app/index.html#/';
 const INVALID_DETAILS_SELECTOR = '.ui-dialog-buttons';
-const CHANGE_PASSWORD_OLD_PASS = 'input#ef_req_parameter_old_passwd';
+const CHANGE_PASSWORD_OLD_PASS = 'input#ef_req_parameter_old_credential';
 const BASE_WELCOME_URL = `${BASE_URL}main/home`;
 
 const ACCOUNT_ID_SELECTOR = '.dropdown-dir .selected-item-top';
