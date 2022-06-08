@@ -189,17 +189,17 @@ async function navigateToLogin(page: Page): Promise<void> {
   const loginButtonSelector = '#enter_your_account a';
   await waitUntilElementFound(page, loginButtonSelector);
   await clickButton(page, loginButtonSelector);
-  await waitUntilElementFound(page, '#enter');
+  await waitUntilElementFound(page, '#wtr_uid', true);
 }
 
 async function waitForPostLogin(page: Page): Promise<void> {
   // TODO check for condition to provide new password
   await Promise.race([
-    waitUntilElementFound(page, 'a[title="דלג לחשבון"]', true),
-    waitUntilElementFound(page, 'div.leumi-container', true),
-    waitUntilElementFound(page, '#BodyContent_ctl00_loginErrMsg', true),
-    waitUntilElementFound(page, '.ErrMsg', true),
-    waitUntilElementFound(page, 'form[action="/changepassword"]', true),
+    waitUntilElementFound(page, 'a[title="דלג לחשבון"]', true, 60000),
+    waitUntilElementFound(page, 'div.leumi-container', true, 60000),
+    waitUntilElementFound(page, '#BodyContent_ctl00_loginErrMsg', true, 60000),
+    waitUntilElementFound(page, '.ErrMsg', true, 60000),
+    waitUntilElementFound(page, 'form[action="/changepassword"]', true, 60000),
   ]);
 }
 
