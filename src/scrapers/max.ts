@@ -24,6 +24,9 @@ interface ScrapedTransaction {
   comments: string;
   merchantName: string;
   categoryId: number;
+  dealData?: {
+    arn: string;
+  };
 }
 
 const BASE_ACTIONS_URL = 'https://online.max.co.il';
@@ -124,11 +127,11 @@ function getTransactionType(txnTypeStr: string) {
 
 function getInstallmentsInfo(comments: string) {
   if (!comments) {
-    return null;
+    return undefined;
   }
   const matches = comments.match(/\d+/g);
   if (!matches || matches.length < 2) {
-    return null;
+    return undefined;
   }
 
   return {
@@ -143,6 +146,11 @@ function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
     rawTransaction.paymentDate).toISOString();
   const status = isPending ? TransactionStatuses.Pending : TransactionStatuses.Completed;
 
+  const installments = getInstallmentsInfo(rawTransaction.comments);
+  const identifier = installments ?
+    `${rawTransaction.dealData?.arn}_${installments.number}` :
+    rawTransaction.dealData?.arn;
+
   return {
     type: getTransactionType(rawTransaction.planName),
     date: moment(rawTransaction.purchaseDate).toISOString(),
@@ -153,7 +161,8 @@ function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
     description: rawTransaction.merchantName.trim(),
     memo: rawTransaction.comments,
     category: categories.get(rawTransaction?.categoryId),
-    installments: getInstallmentsInfo(rawTransaction.comments) || undefined,
+    installments,
+    identifier,
     status,
   };
 }
