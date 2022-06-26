@@ -304,6 +304,11 @@ class BeinleumiGroupBaseScraper extends BaseScraperWithBrowser {
       submitButtonSelector: '#continueBtn',
       postAction: async () => waitForPostLogin(this.page),
       possibleResults: getPossibleLoginResults(),
+      // HACK: For some reason, though the login button (#continueBtn) is present and visible, the click action does not perform.
+      // Adding this delay fixes the issue.
+      preAction: async () => {
+        await this.page.waitForTimeout(1000);
+      },
     };
   }
 
