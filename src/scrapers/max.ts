@@ -53,6 +53,8 @@ const MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME = 'חודשי + ריבית';
 const CREDIT_TYPE_NAME = 'קרדיט';
 const ACCUMULATING_BASKET = 'סל מצטבר';
 const POSTPONED_TRANSACTION_INSTALLMENTS = 'פריסת העסקה הדחויה';
+const REPLACEMENT_CARD = 'כרטיס חליפי';
+const EARLY_REPAYMENT = 'פרעון מוקדם';
 
 const INVALID_DETAILS_SELECTOR = '#popupWrongDetails';
 const LOGIN_ERROR_SELECTOR = '#popupCardHoldersLoginError';
@@ -116,6 +118,8 @@ function getTransactionType(txnTypeStr: string) {
     case INTERNET_SHOPPING_TYPE_NAME:
     case MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME:
     case POSTPONED_TRANSACTION_INSTALLMENTS:
+    case REPLACEMENT_CARD:
+    case EARLY_REPAYMENT:
       return TransactionTypes.Normal;
     case INSTALLMENTS_TYPE_NAME:
     case CREDIT_TYPE_NAME:
