@@ -27,9 +27,10 @@ const ACCOUNT_ID_SELECTOR = '.dropdown-dir .selected-item-top';
 const ACCOUNT_DETAILS_SELECTOR = '.account-details';
 const DATE_FORMAT = 'DD/MM/YYYY';
 
-const USER_ELEM = '#USER';
-const PASSWD_ELEM = '#PASSWORD';
-const NATIONALID_ELEM = '#NATIONAL_ID';
+const USER_ELEM = '#username';
+const PASSWD_ELEM = '#password';
+const NATIONALID_ELEM = '#pinno';
+const SUBMIT_LOGIN_SELECTOR = '.btn';
 
 interface ScrapedTransaction {
   credit: string;
@@ -226,6 +227,7 @@ async function waitReadinessForAll(page: Page) {
   await waitUntilElementFound(page, `${USER_ELEM}`, true);
   await waitUntilElementFound(page, `${PASSWD_ELEM}`, true);
   await waitUntilElementFound(page, `${NATIONALID_ELEM}`, true);
+  await waitUntilElementFound(page, `${SUBMIT_LOGIN_SELECTOR}`, true);
 }
 
 async function redirectOrDialog(page: Page) {
@@ -254,7 +256,7 @@ class YahavScraper extends BaseScraperWithBrowser {
         { selector: `${PASSWD_ELEM}`, value: credentials.password },
         { selector: `${NATIONALID_ELEM}`, value: credentials.nationalID },
       ],
-      submitButtonSelector: '.submit',
+      submitButtonSelector: `${SUBMIT_LOGIN_SELECTOR}`,
       checkReadiness: async () => waitReadinessForAll(this.page),
       postAction: async () => redirectOrDialog(this.page),
       possibleResults: getPossibleLoginResults(this.page),
