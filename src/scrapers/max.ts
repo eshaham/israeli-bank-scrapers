@@ -55,6 +55,7 @@ const ACCUMULATING_BASKET = 'סל מצטבר';
 const POSTPONED_TRANSACTION_INSTALLMENTS = 'פריסת העסקה הדחויה';
 const REPLACEMENT_CARD = 'כרטיס חליפי';
 const EARLY_REPAYMENT = 'פרעון מוקדם';
+const MONTHLY_CARD_FEE = 'דמי כרטיס';
 
 const INVALID_DETAILS_SELECTOR = '#popupWrongDetails';
 const LOGIN_ERROR_SELECTOR = '#popupCardHoldersLoginError';
@@ -120,6 +121,7 @@ function getTransactionType(txnTypeStr: string) {
     case POSTPONED_TRANSACTION_INSTALLMENTS:
     case REPLACEMENT_CARD:
     case EARLY_REPAYMENT:
+    case MONTHLY_CARD_FEE:
       return TransactionTypes.Normal;
     case INSTALLMENTS_TYPE_NAME:
     case CREDIT_TYPE_NAME:
