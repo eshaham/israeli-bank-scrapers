@@ -32,7 +32,7 @@ export interface Transaction {
   /**
    * sometimes called Asmachta
    */
-  identifier?: number;
+  identifier?: string | number;
   /**
    * ISO date string
    */
@@ -44,8 +44,10 @@ export interface Transaction {
   originalAmount: number;
   originalCurrency: string;
   chargedAmount: number;
+  chargedCurrency?: string;
   description: string;
   memo?: string;
   status: TransactionStatuses;
   installments?: TransactionInstallments;
+  category?: string;
 }

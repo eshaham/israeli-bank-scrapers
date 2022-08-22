@@ -14,23 +14,36 @@ import {
 import { ScaperScrapingResult, ScraperCredentials } from './base-scraper';
 
 const BASE_URL = 'https://hb2.bankleumi.co.il';
+const LOGIN_URL = 'https://www.leumi.co.il/';
 const TRANSACTIONS_URL = `${BASE_URL}/eBanking/SO/SPA.aspx#/ts/BusinessAccountTrx?WidgetPar=1`;
 const FILTERED_TRANSACTIONS_URL = `${BASE_URL}/ChannelWCF/Broker.svc/ProcessRequest?moduleName=UC_SO_27_GetBusinessAccountTrx`;
 
 const DATE_FORMAT = 'DD.MM.YY';
 const ACCOUNT_BLOCKED_MSG = 'המנוי חסום';
+const INVALID_PASSWORD_MSG = 'אחד או יותר מפרטי ההזדהות שמסרת שגויים';
 
 
 function getPossibleLoginResults() {
   const urls: LoginOptions['possibleResults'] = {
     [LoginResults.Success]: [/ebanking\/SO\/SPA.aspx/i],
-    [LoginResults.InvalidPassword]: [/InternalSite\/CustomUpdate\/leumi\/LoginPage.ASP/],
+    [LoginResults.InvalidPassword]: [
+      async (options) => {
+        if (!options || !options.page) {
+          throw new Error('missing page options argument');
+        }
+        const errorMessage = await pageEvalAll(options.page, '.errHeader', '', (label) => {
+          return (label[0] as HTMLElement)?.innerText;
+        });
+
+        return errorMessage?.startsWith(INVALID_PASSWORD_MSG);
+      },
+    ],
     [LoginResults.AccountBlocked]: [
       async (options) => {
         if (!options || !options.page) {
           throw new Error('missing page options argument');
         }
-        const errorMessage = await pageEvalAll(options.page, '.errHeader', [], (label) => {
+        const errorMessage = await pageEvalAll(options.page, '.errHeader', '', (label) => {
           return (label[0] as HTMLElement)?.innerText;
         });
 
@@ -171,22 +184,32 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
   return accounts;
 }
 
+
+async function navigateToLogin(page: Page): Promise<void> {
+  const loginButtonSelector = '#enter_your_account a';
+  await waitUntilElementFound(page, loginButtonSelector);
+  await clickButton(page, loginButtonSelector);
+  await waitUntilElementFound(page, '#wtr_uid', true);
+}
+
 async function waitForPostLogin(page: Page): Promise<void> {
   // TODO check for condition to provide new password
   await Promise.race([
-    waitUntilElementFound(page, 'div.leumi-container', true),
-    waitUntilElementFound(page, '#BodyContent_ctl00_loginErrMsg', true),
-    waitUntilElementFound(page, '.ErrMsg', true),
-    waitUntilElementFound(page, 'form[action="/changepassword"]', true),
+    waitUntilElementFound(page, 'a[title="דלג לחשבון"]', true, 60000),
+    waitUntilElementFound(page, 'div.leumi-container', true, 60000),
+    waitUntilElementFound(page, '#BodyContent_ctl00_loginErrMsg', true, 60000),
+    waitUntilElementFound(page, '.ErrMsg', true, 60000),
+    waitUntilElementFound(page, 'form[action="/changepassword"]', true, 60000),
   ]);
 }
 
 class LeumiScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials: Record<string, string>) {
     return {
-      loginUrl: `${BASE_URL}`,
+      loginUrl: LOGIN_URL,
       fields: createLoginFields(credentials),
       submitButtonSelector: '#enter',
+      checkReadiness: async () => navigateToLogin(this.page),
       postAction: async () => waitForPostLogin(this.page),
       possibleResults: getPossibleLoginResults(),
     };

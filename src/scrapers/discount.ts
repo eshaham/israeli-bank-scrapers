@@ -9,7 +9,7 @@ import {
   Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
 import {
-  ScaperOptions,
+  ScraperOptions,
   ScraperErrorTypes, ScaperScrapingResult, ScraperCredentials,
 } from './base-scraper';
 
@@ -62,7 +62,7 @@ function convertTransactions(txns: ScrapedTransaction[], txnStatus: TransactionS
 }
 
 
-async function fetchAccountData(page: Page, options: ScaperOptions): Promise<ScaperScrapingResult> {
+async function fetchAccountData(page: Page, options: ScraperOptions): Promise<ScaperScrapingResult> {
   const apiSiteUrl = `${BASE_URL}/Titan/gatewayAPI`;
 
   const accountDataUrl = `${apiSiteUrl}/userAccountsData`;
@@ -122,7 +122,7 @@ async function navigateOrErrorLabel(page: Page) {
 
 function getPossibleLoginResults(): PossibleLoginResults {
   const urls: PossibleLoginResults = {};
-  urls[LoginResults.Success] = [`${BASE_URL}/apollo/core/templates/RETAIL/masterPage.html#/MY_ACCOUNT_HOMEPAGE`];
+  urls[LoginResults.Success] = [`${BASE_URL}/apollo/retail/#/MY_ACCOUNT_HOMEPAGE`];
   urls[LoginResults.InvalidPassword] = [`${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/LOGIN_PAGE`];
   urls[LoginResults.ChangePassword] = [`${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/PWD_RENEW`];
   return urls;

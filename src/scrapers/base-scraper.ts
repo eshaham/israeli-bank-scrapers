@@ -21,16 +21,24 @@ export interface ScaperLoginResult {
   errorMessage?: string; // only on success=false
 }
 
+export interface FutureDebit {
+  amount: number;
+  amountCurrency: string;
+  chargeDate?: string;
+  bankAccountNumber?: string;
+}
+
 export interface ScaperScrapingResult {
   success: boolean;
   accounts?: TransactionsAccount[];
+  futureDebits?: FutureDebit[];
   errorType?: ScraperErrorTypes;
   errorMessage?: string; // only on success=false
 }
 
 export type ScraperCredentials = Record<string, string>;
 
-export interface ScaperOptions {
+export interface ScraperOptions {
   /**
    * The company you want to scrape
    */
@@ -50,6 +58,12 @@ export interface ScaperOptions {
    * shows the browser while scraping, good for debugging (default false)
    */
   showBrowser?: boolean;
+
+
+  /**
+   * scrape transactions to be processed X months in the future
+   */
+  futureMonthsToScrape?: number;
 
   /**
    * option from init puppeteer browser instance outside the libary scope. you can get
@@ -89,6 +103,12 @@ export interface ScaperOptions {
    * @param page
    */
   preparePage?: (page: Page) => Promise<void>;
+
+  /**
+   * if set, store a screenshot if failed to scrape. Used for debug purposes
+   */
+  storeFailureScreenShotPath?: string;
+
 }
 
 export enum ScaperProgressTypes {
@@ -121,7 +141,7 @@ function createGenericError(errorMessage: string) {
 export class BaseScraper {
   private eventEmitter = new EventEmitter();
 
-  constructor(public options: ScaperOptions) {
+  constructor(public options: ScraperOptions) {
   }
 
   // eslint-disable-next-line  @typescript-eslint/require-await
@@ -157,7 +177,8 @@ export class BaseScraper {
     }
 
     try {
-      await this.terminate();
+      const success = scrapeResult && scrapeResult.success === true;
+      await this.terminate(success);
     } catch (e) {
       scrapeResult = createGenericError(e.message);
     }
@@ -176,8 +197,8 @@ export class BaseScraper {
     throw new Error(`fetchData() is not created in ${this.options.companyId}`);
   }
 
-  // eslint-disable-next-line  @typescript-eslint/require-await
-  async terminate() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
+  async terminate(_success: boolean) {
     this.emitProgress(ScaperProgressTypes.Terminating);
   }
 

@@ -8,8 +8,10 @@ import { waitUntilElementFound, elementPresentOnPage, clickButton } from '../hel
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
 import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
-import { ScaperOptions, ScraperCredentials } from './base-scraper';
+import { ScraperOptions, ScraperCredentials } from './base-scraper';
+import { getDebug } from '../helpers/debug';
 
+const debug = getDebug('max');
 
 interface ScrapedTransaction {
   shortCardNumber: string;
@@ -21,6 +23,10 @@ interface ScrapedTransaction {
   planName: string;
   comments: string;
   merchantName: string;
+  categoryId: number;
+  dealData?: {
+    arn: string;
+  };
 }
 
 const BASE_ACTIONS_URL = 'https://online.max.co.il';
@@ -47,9 +53,14 @@ const MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME = 'חודשי + ריבית';
 const CREDIT_TYPE_NAME = 'קרדיט';
 const ACCUMULATING_BASKET = 'סל מצטבר';
 const POSTPONED_TRANSACTION_INSTALLMENTS = 'פריסת העסקה הדחויה';
+const REPLACEMENT_CARD = 'כרטיס חליפי';
+const EARLY_REPAYMENT = 'פרעון מוקדם';
+const MONTHLY_CARD_FEE = 'דמי כרטיס';
 
 const INVALID_DETAILS_SELECTOR = '#popupWrongDetails';
 const LOGIN_ERROR_SELECTOR = '#popupCardHoldersLoginError';
+
+const categories = new Map<number, string>();
 
 function redirectOrDialog(page: Page) {
   return Promise.race([
@@ -71,8 +82,24 @@ function getTransactionsUrl(monthMoment: Moment) {
      * all other query params are static, beside the date which changes for request per month
      */
   return buildUrl(BASE_API_ACTIONS_URL, {
-    path: `/api/registered/transactionDetails/getTransactionsAndGraphs?filterData={"userIndex":-1,"cardIndex":-1,"monthView":true,"date":"${date}","dates":{"startDate":"0","endDate":"0"}}&v=V3.13-HF.6.26`,
+    path: `/api/registered/transactionDetails/getTransactionsAndGraphs?filterData={"userIndex":-1,"cardIndex":-1,"monthView":true,"date":"${date}","dates":{"startDate":"0","endDate":"0"},"bankAccount":{"bankAccountIndex":-1,"cards":null}}&firstCallCardIndex=-1`,
   });
+}
+
+interface FetchCategoryResult {
+  result? : Array<{
+    id: number;
+    name: string;
+  }>;
+}
+
+async function loadCategories(page: Page) {
+  debug('Loading categories');
+  const res = await fetchGetWithinPage<FetchCategoryResult>(page, `${BASE_API_ACTIONS_URL}/api/contents/getCategories`);
+  if (res && Array.isArray(res.result)) {
+    debug(`${res.result.length} categories loaded`);
+      res.result?.forEach(({ id, name }) => categories.set(id, name));
+  }
 }
 
 function getTransactionType(txnTypeStr: string) {
@@ -92,6 +119,9 @@ function getTransactionType(txnTypeStr: string) {
     case INTERNET_SHOPPING_TYPE_NAME:
     case MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME:
     case POSTPONED_TRANSACTION_INSTALLMENTS:
+    case REPLACEMENT_CARD:
+    case EARLY_REPAYMENT:
+    case MONTHLY_CARD_FEE:
       return TransactionTypes.Normal;
     case INSTALLMENTS_TYPE_NAME:
     case CREDIT_TYPE_NAME:
@@ -103,11 +133,11 @@ function getTransactionType(txnTypeStr: string) {
 
 function getInstallmentsInfo(comments: string) {
   if (!comments) {
-    return null;
+    return undefined;
   }
   const matches = comments.match(/\d+/g);
   if (!matches || matches.length < 2) {
-    return null;
+    return undefined;
   }
 
   return {
@@ -122,6 +152,11 @@ function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
     rawTransaction.paymentDate).toISOString();
   const status = isPending ? TransactionStatuses.Pending : TransactionStatuses.Completed;
 
+  const installments = getInstallmentsInfo(rawTransaction.comments);
+  const identifier = installments ?
+    `${rawTransaction.dealData?.arn}_${installments.number}` :
+    rawTransaction.dealData?.arn;
+
   return {
     type: getTransactionType(rawTransaction.planName),
     date: moment(rawTransaction.purchaseDate).toISOString(),
@@ -131,7 +166,9 @@ function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
     chargedAmount: -rawTransaction.actualPaymentAmount,
     description: rawTransaction.merchantName.trim(),
     memo: rawTransaction.comments,
-    installments: getInstallmentsInfo(rawTransaction.comments) || undefined,
+    category: categories.get(rawTransaction?.categoryId),
+    installments,
+    identifier,
     status,
   };
 }
@@ -185,11 +222,14 @@ function prepareTransactions(txns: Transaction[], startMoment: moment.Moment, co
   return clonedTxns;
 }
 
-async function fetchTransactions(page: Page, options: ScaperOptions) {
+async function fetchTransactions(page: Page, options: ScraperOptions) {
+  const futureMonthsToScrape = options.futureMonthsToScrape ?? 1;
   const defaultStartMoment = moment().subtract(1, 'years');
   const startDate = options.startDate || defaultStartMoment.toDate();
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
-  const allMonths = getAllMonthMoments(startMoment, true);
+  const allMonths = getAllMonthMoments(startMoment, futureMonthsToScrape);
+
+  await loadCategories(page);
 
   let allResults: Record<string, Transaction[]> = {};
   for (let i = 0; i < allMonths.length; i += 1) {

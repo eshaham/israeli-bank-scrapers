@@ -16,13 +16,15 @@ Currently only the following banks are supported:
 - Discount Bank
 - Mizrahi Bank (thanks [@baruchiro](https://github.com/baruchiro))
 - Otsar Hahayal Bank (thanks [@matanelgabsi](https://github.com/matanelgabsi))
-- Visa Cal (thanks [@nirgin](https://github.com/nirgin))
+- Visa Cal (thanks [@erikash](https://github.com/erikash), [@esakal](https://github.com/esakal) and [@nirgin](https://github.com/nirgin))
 - Max (Formerly Leumi Card)
 - Isracard
 - Amex (thanks [@erezd](https://github.com/erezd))
 - Union Bank (Thanks to Intuit FDP OpenSource Team [@dratler](https://github.com/dratler),[@kalinoy](https://github.com/kalinoy),[@shanigad](https://github.com/shanigad),[@dudiventura](https://github.com/dudiventura) and [@NoamGoren](https://github.com/NoamGoren))
 - Beinleumi (Thanks to [@dudiventura](https://github.com/dudiventura) from the Intuit FDP OpenSource Team)
 - Massad
+- Yahav (Thanks to [@gczobel](https://github.com/gczobel))
+- Beyhad Bishvilha - [ביחד בשבילך](https://www.hist.org.il/) (thanks [@esakal](https://github.com/esakal))
 
 # Prerequisites
 To use this you will need to have [Node.js](https://nodejs.org) >= 10.x installed.
@@ -136,7 +138,7 @@ Israeli bank scrapers library is published  twice:
  
  ## Differences between default and core variations
   
- The default variation [israeli-bank-scrapers](https://www.npmjs.com/package/israeli-bank-scrapers) is using [puppeteer](https://www.npmjs.com/package/puppeteer) which handles the installation of local chroumium on its' own. This behavior is very handy since it takes care on all the hard work figuring which chromium to download and manage the actual download process.  As a side effect it increases node_modules by several hounded megabytes. 
+ The default variation [israeli-bank-scrapers](https://www.npmjs.com/package/israeli-bank-scrapers) is using [puppeteer](https://www.npmjs.com/package/puppeteer) which handles the installation of local chroumium on its' own. This behavior is very handy since it takes care on all the hard work figuring which chromium to download and manage the actual download process.  As a side effect it increases node_modules by several hundred megabytes. 
  
  The core variation [israeli-bank-scrapers-core](https://www.npmjs.com/package/israeli-bank-scrapers-core) is using [puppeteer-core](https://www.npmjs.com/package/puppeteer-core) which is exactly the same library as `puppeteer` except that it doesn't download chromium when installed by npm. It is up to you to make sure the specific version of chromium is installed locally and provide a path to that version. It is useful in Electron applications since it doesn't bloat the size of the application and you can provide a much friendlier experience like loading the application and download it later when needed. 
  
@@ -263,20 +265,40 @@ This scraper supports fetching transaction from up to one year.
 This scraper expects the following credentials object:
 ```node
 const credentials = {
-  id: <user identification number>,
+  username: <user identification number>,
   card6Digits: <6 last digits of card>
   password: <user password>
 };
 ```
 This scraper supports fetching transaction from up to one year.
 
+## Yahav
+This scraper expects the following credentials object:
+```node
+const credentials = {
+  username: <user name>,
+  password: <user password>,
+  nationalID: <user national ID>
+};
+```
+This scraper supports fetching transaction from up to six months.
+
+## Beyhad Bishvilha
+This scraper expects the following credentials object::
+```node
+const credentials = {
+  id: <user identification number>,
+  password: <user password>
+};
+```
+
 # Known projects
 These are the projects known to be using this module:
 - [Israeli YNAB updater](https://github.com/eshaham/israeli-ynab-updater) - A command line tool for exporting banks data to CSVs, formatted specifically for [YNAB](https://www.youneedabudget.com)
 - [Israel Finance Telegram Bot](https://github.com/GuyLewin/israel-finance-telegram-bot) - A simple telegram bot that sends notifications about new transactions and interacts with them
-- [Automated budget tracking app](https://github.com/brafdlog/budget-tracking) - An app for automatically sending transactions from Israeli banks and credit cards to budget tracking apps
-- [Oshi](https://github.com/baruchiro/israeli-bank-scrapers-desktop) - Secure desktop app for retriving your transactions from all israeli banks and credit cards
+- [Caspion](https://github.com/brafdlog/caspion) - An app for automatically sending transactions from Israeli banks and credit cards to budget tracking apps
 - [Finance Notifier](https://github.com/LiranBri/finance-notifier) - A simple script with the ability to send custom financial alerts to multiple contacts and platforms
+- [Moneyman](https://github.com/daniel-hauser/moneyman) - Automatically save transactions from all major Israeli banks and credit card companies, using GitHub actions (or a self hosted docker image)
 
 Built something interesting you want to share here? [Let me know](https://goo.gl/forms/5Fb9JAjvzMIpmzqo2).
 

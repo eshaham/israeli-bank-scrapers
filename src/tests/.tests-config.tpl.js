@@ -1,3 +1,5 @@
+const path = require('path');
+
 const startDate = new Date();
 startDate.setMonth(startDate.getMonth() - 1);
 
@@ -7,7 +9,8 @@ module.exports = {
     combineInstallments: false,
     showBrowser: true,
     verbose: false,
-    args: []
+    args: [],
+    storeFailureScreenShotPath: path.resolve(__dirname, 'snapshots/failure.jpg')
   },
   credentials: { // commented companies will be skipped automatically, uncomment those you wish to test
     // hapoalim: { userCode: '', password: '' },
@@ -22,6 +25,8 @@ module.exports = {
     // mizrahi: { username: '', password: ''},
     // union: {username:'',password:''}
     // beinleumi: { username: '', password: ''},
+    // yahav: {username: '', nationalID: '', password: ''}
+    // beyahadBishvilha: { id: '', password: ''},
   },
   companyAPI: { // enable companyAPI to execute tests against the real companies api
     enabled: true,

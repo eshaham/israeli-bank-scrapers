@@ -14,6 +14,7 @@ import { Transaction, TransactionStatuses, TransactionTypes } from '../transacti
 import { ScraperCredentials } from './base-scraper';
 
 const BASE_URL = 'https://online.bankotsar.co.il';
+const LONG_DATE_FORMAT = 'DD/MM/YYYY';
 const DATE_FORMAT = 'DD/MM/YY';
 
 interface ScrapedTransaction {
@@ -71,7 +72,16 @@ function getAmountData(amountStr: string, hasCurrency = false) {
 
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((txn) => {
-    const txnDate = moment(txn.date, DATE_FORMAT).toISOString();
+    const dateFormat =
+        txn.date.length === 8 ?
+          DATE_FORMAT :
+          txn.date.length === 10 ?
+            LONG_DATE_FORMAT :
+            null;
+    if (!dateFormat) {
+      throw new Error('invalid date format');
+    }
+    const txnDate = moment(txn.date, dateFormat).toISOString();
     const credit = getAmountData(txn.credit || '').amount;
     const debit = getAmountData(txn.debit || '').amount;
     const amount = (Number.isNaN(credit) ? 0 : credit) - (Number.isNaN(debit) ? 0 : debit);

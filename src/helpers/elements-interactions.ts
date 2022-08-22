@@ -1,6 +1,7 @@
-import { Page } from 'puppeteer';
+import { Frame, Page } from 'puppeteer';
+import { waitUntil } from './waiting';
 
-async function waitUntilElementFound(page: Page, elementSelector: string,
+async function waitUntilElementFound(page: Page | Frame, elementSelector: string,
   onlyVisible = false, timeout = 30000) {
   await page.waitForSelector(elementSelector, { visible: onlyVisible, timeout });
 }
@@ -9,16 +10,40 @@ async function waitUntilElementDisappear(page: Page, elementSelector: string, ti
   await page.waitForSelector(elementSelector, { hidden: true, timeout });
 }
 
-async function fillInput(page: Page, inputSelector: string, inputValue: string): Promise<void> {
-  await page.$eval(inputSelector, (input: Element) => {
+async function waitUntilIframeFound(page: Page, framePredicate: (frame: Frame) => boolean, description = '', timeout = 30000) {
+  let frame: Frame | undefined;
+  await waitUntil(() => {
+    frame = page
+      .frames()
+      .find(framePredicate);
+    return Promise.resolve(!!frame);
+  }, description, timeout, 1000);
+
+  if (!frame) {
+    throw new Error('failed to find iframe');
+  }
+
+  return frame;
+}
+
+async function fillInput(pageOrFrame: Page | Frame, inputSelector: string, inputValue: string): Promise<void> {
+  await pageOrFrame.$eval(inputSelector, (input: Element) => {
     const inputElement = input;
     // @ts-ignore
     inputElement.value = '';
   });
-  await page.type(inputSelector, inputValue);
+  await pageOrFrame.type(inputSelector, inputValue);
 }
 
-async function clickButton(page: Page, buttonSelector: string) {
+async function setValue(pageOrFrame: Page | Frame, inputSelector: string, inputValue: string): Promise<void> {
+  await pageOrFrame.$eval(inputSelector, (input: Element, inputValue) => {
+    const inputElement = input;
+    // @ts-ignore
+    inputElement.value = inputValue;
+  }, [inputValue]);
+}
+
+async function clickButton(page: Page | Frame, buttonSelector: string) {
   await page.$eval(buttonSelector, (el) => (el as HTMLElement).click());
 }
 
@@ -32,11 +57,11 @@ async function clickLink(page: Page, aSelector: string) {
   });
 }
 
-async function pageEvalAll<R>(page: Page, selector: string,
-  defaultResult: any, callback: (elements: Element[]) => R): Promise<R> {
+async function pageEvalAll<R>(page: Page | Frame, selector: string,
+  defaultResult: any, callback: (elements: Element[], ...args: any) => R, ...args: any[]): Promise<R> {
   let result = defaultResult;
   try {
-    result = await page.$$eval(selector, callback);
+    result = await page.$$eval(selector, callback, ...args);
   } catch (e) {
     // TODO temporary workaround to puppeteer@1.5.0 which breaks $$eval bevahvior until they will release a new version.
     if (e.message.indexOf('Error: failed to find elements matching selector') !== 0) {
@@ -47,8 +72,23 @@ async function pageEvalAll<R>(page: Page, selector: string,
   return result;
 }
 
-async function elementPresentOnPage(page: Page, selector: string) {
-  return await page.$(selector) !== null;
+async function pageEval<R>(pageOrFrame: Page | Frame, selector: string,
+  defaultResult: any, callback: (elements: Element, ...args: any) => R, ...args: any[]): Promise<R> {
+  let result = defaultResult;
+  try {
+    result = await pageOrFrame.$eval(selector, callback, ...args);
+  } catch (e) {
+    // TODO temporary workaround to puppeteer@1.5.0 which breaks $$eval bevahvior until they will release a new version.
+    if (e.message.indexOf('Error: failed to find element matching selector') !== 0) {
+      throw e;
+    }
+  }
+
+  return result;
+}
+
+async function elementPresentOnPage(pageOrFrame: Page | Frame, selector: string) {
+  return await pageOrFrame.$(selector) !== null;
 }
 
 async function dropdownSelect(page: Page, selectSelector: string, value: string) {
@@ -72,11 +112,14 @@ async function dropdownElements(page: Page, selector: string) {
 export {
   waitUntilElementFound,
   waitUntilElementDisappear,
+  waitUntilIframeFound,
   fillInput,
   clickButton,
   clickLink,
   dropdownSelect,
   dropdownElements,
+  pageEval,
   pageEvalAll,
   elementPresentOnPage,
+  setValue,
 };

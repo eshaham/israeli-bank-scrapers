@@ -4,8 +4,8 @@
   "private": true,
   "description": "Provide scrapers for all major Israeli banks and credit card companies",
   "engines": {
-    "node": ">= 10.22.0",
-    "npm": ">= 5.3.0"
+    "node": ">= 14.14.0",
+    "npm": ">= 6.14.8"
   },
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -52,11 +52,12 @@
     "@babel/plugin-proposal-class-properties": "^7.12.1",
     "@babel/preset-env": "^7.4.5",
     "@babel/preset-typescript": "^7.9.0",
+    "@types/debug": "^4.1.7",
     "@types/jest": "^25.1.5",
     "@types/json2csv": "^5.0.1",
     "@types/lodash": "^4.14.149",
     "@types/node-fetch": "^2.5.6",
-    "@types/puppeteer": "^2.0.1",
+    "@types/puppeteer": "^5.4.6",
     "@types/source-map-support": "^0.5.1",
     "@types/uuid": "^7.0.3",
     "@typescript-eslint/eslint-plugin": "^2.27.0",
@@ -80,12 +81,13 @@
   "dependencies": {
     "build-url": "^2.0.0",
     "core-js": "^3.1.4",
+    "debug": "^4.3.2",
     "husky": "^4.2.5",
     "json2csv": "^4.5.4",
     "lodash": "^4.17.10",
     "moment": "^2.22.2",
     "node-fetch": "^2.2.0",
-    "puppeteer": "^5.1.0",
+    "puppeteer": "^6.0.0",
     "uuid": "^3.3.2"
   },
   "files": [
