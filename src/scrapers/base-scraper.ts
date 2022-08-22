@@ -109,6 +109,10 @@ export interface ScraperOptions {
    */
   storeFailureScreenShotPath?: string;
 
+  /**
+   * if set, will set the timeout in milliseconds of puppeteer's `page.setDefaultTimeout`.
+   */
+  defaultTimeout?: number;
 }
 
 export enum ScaperProgressTypes {
