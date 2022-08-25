@@ -2,11 +2,11 @@ import { Frame, Page } from 'puppeteer';
 import { waitUntil } from './waiting';
 
 async function waitUntilElementFound(page: Page | Frame, elementSelector: string,
-  onlyVisible = false, timeout = 30000) {
+  onlyVisible = false, timeout?: number) {
   await page.waitForSelector(elementSelector, { visible: onlyVisible, timeout });
 }
 
-async function waitUntilElementDisappear(page: Page, elementSelector: string, timeout = 30000) {
+async function waitUntilElementDisappear(page: Page, elementSelector: string, timeout?: number) {
   await page.waitForSelector(elementSelector, { hidden: true, timeout });
 }
 
