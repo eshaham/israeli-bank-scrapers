@@ -168,6 +168,10 @@ class BaseScraperWithBrowser extends BaseScraper {
       this.page = await this.browser.newPage();
     }
 
+    if (this.options.defaultTimeout) {
+      this.page.setDefaultTimeout(this.options.defaultTimeout);
+    }
+
     if (this.options.preparePage) {
       debug('execute \'preparePage\' interceptor provided in options');
       await this.options.preparePage(this.page);
