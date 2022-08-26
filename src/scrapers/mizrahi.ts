@@ -192,7 +192,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
 
   private async fetchAccount() {
     // workaround for situations where Mizrahi pops up pages (e.g. email update page)
-    await this.page.waitForNavigation({ waitUntil: 'networkidle2' });
+    await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 120_000 });
     await this.page.$eval(`a[href="${OSH_PAGE}"]`, (el) => (el as HTMLElement).click());
     await waitUntilElementFound(this.page, `a[href="${TRANSACTIONS_PAGE}"]`);
     await this.page.$eval(`a[href="${TRANSACTIONS_PAGE}"]`, (el) => (el as HTMLElement).click());
