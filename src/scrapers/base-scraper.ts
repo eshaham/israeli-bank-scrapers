@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import { Browser, Page } from 'puppeteer';
+import moment from 'moment-timezone';
 import { TimeoutError } from '../helpers/waiting';
 import { TransactionsAccount } from '../transactions';
 import { CompanyTypes } from '../definitions';
@@ -151,6 +152,8 @@ export class BaseScraper {
   // eslint-disable-next-line  @typescript-eslint/require-await
   async initialize() {
     this.emitProgress(ScaperProgressTypes.Initializing);
+
+    moment.tz.setDefault('Asia/Jerusalem');
   }
 
   async scrape(credentials: ScraperCredentials): Promise<ScaperScrapingResult> {
