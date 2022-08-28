@@ -2,6 +2,9 @@
 export class TimeoutError extends Error {
 
 }
+
+export const SECOND = 1000;
+
 function timeoutPromise(ms: number, promise: Promise<any>, description: string) {
   const timeout = new Promise((_, reject) => {
     const id = setTimeout(() => {
@@ -33,4 +36,10 @@ export function waitUntil(asyncTest: () => Promise<any>, description = '', timeo
     wait();
   });
   return timeoutPromise(timeout, promise, description);
+}
+
+export function raceTimeout(ms: number, promise: Promise<any>) {
+  return timeoutPromise(ms, promise, 'timeout').catch((err) => {
+    if (!(err instanceof TimeoutError)) throw err;
+  });
 }
