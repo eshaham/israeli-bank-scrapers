@@ -1,5 +1,4 @@
 import puppeteer, { Browser, Frame, Page } from 'puppeteer';
-import moment from 'moment-timezone';
 
 import {
   ScraperErrorTypes,
@@ -125,10 +124,8 @@ class BaseScraperWithBrowser extends BaseScraper {
   }
 
   async initialize() {
+    await super.initialize();
     debug('initialize scraper');
-    this.emitProgress(ScaperProgressTypes.Initializing);
-
-    moment.tz.setDefault('Asia/Jerusalem');
 
     let env: Record<string, any> | undefined;
     if (this.options.verbose) {
