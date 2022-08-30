@@ -85,7 +85,7 @@
     "husky": "^4.2.5",
     "json2csv": "^4.5.4",
     "lodash": "^4.17.10",
-    "moment": "^2.22.2",
+    "moment": "^2.29.4",
     "moment-timezone": "^0.5.37",
     "node-fetch": "^2.2.0",
     "puppeteer": "^6.0.0",
