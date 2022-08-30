@@ -8,6 +8,10 @@ Israeli Bank Scrapers - Get closer to your own data
 [![dependencies Status](https://david-dm.org/eshaham/israeli-bank-scrapers/status.svg)](https://david-dm.org/eshaham/israeli-bank-scrapers)
 [![devDependencies Status](https://david-dm.org/eshaham/israeli-bank-scrapers/dev-status.svg)](https://david-dm.org/eshaham/israeli-bank-scrapers?type=dev)
 
+> Important!
+> 
+> The scrapers are set to use timezone `Asia/Jerusalem` to avoid conflicts in case you're running the scrapers outside Israel.
+ 
 # What's here?
 What you can find here is scrapers for all major Israeli banks and credit card companies. That's the plan at least.
 Currently only the following banks are supported:
