@@ -124,8 +124,8 @@ class BaseScraperWithBrowser extends BaseScraper {
   }
 
   async initialize() {
+    await super.initialize();
     debug('initialize scraper');
-    this.emitProgress(ScaperProgressTypes.Initializing);
 
     let env: Record<string, any> | undefined;
     if (this.options.verbose) {
