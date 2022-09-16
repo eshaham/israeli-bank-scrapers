@@ -12,6 +12,7 @@ import {
   TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
 import { ScaperScrapingResult, ScraperCredentials } from './base-scraper';
+import { waitForNavigation } from '../helpers/navigation';
 
 const BASE_URL = 'https://hb2.bankleumi.co.il';
 const LOGIN_URL = 'https://www.leumi.co.il/';
@@ -20,7 +21,7 @@ const FILTERED_TRANSACTIONS_URL = `${BASE_URL}/ChannelWCF/Broker.svc/ProcessRequ
 
 const DATE_FORMAT = 'DD.MM.YY';
 const ACCOUNT_BLOCKED_MSG = 'המנוי חסום';
-const INVALID_PASSWORD_MSG = 'אחד או יותר מפרטי ההזדהות שמסרת שגויים';
+const INVALID_PASSWORD_MSG = 'אחד או יותר מפרטי ההזדהות שמסרת שגויים. ניתן לנסות שוב';
 
 
 function getPossibleLoginResults() {
@@ -31,14 +32,14 @@ function getPossibleLoginResults() {
         if (!options || !options.page) {
           throw new Error('missing page options argument');
         }
-        const errorMessage = await pageEvalAll(options.page, '.errHeader', '', (label) => {
-          return (label[0] as HTMLElement)?.innerText;
+        const errorMessage = await pageEvalAll(options.page, 'svg#Capa_1', '', (element) => {
+          return (element[0]?.parentElement?.children[1] as HTMLDivElement)?.innerText;
         });
 
         return errorMessage?.startsWith(INVALID_PASSWORD_MSG);
       },
     ],
-    [LoginResults.AccountBlocked]: [
+    [LoginResults.AccountBlocked]: [ // NOTICE - might not be relevant starting the Leumi re-design during 2022 Sep
       async (options) => {
         if (!options || !options.page) {
           throw new Error('missing page options argument');
@@ -50,15 +51,15 @@ function getPossibleLoginResults() {
         return errorMessage?.startsWith(ACCOUNT_BLOCKED_MSG);
       },
     ],
-    [LoginResults.ChangePassword]: ['https://hb2.bankleumi.co.il/authenticate'],
+    [LoginResults.ChangePassword]: ['https://hb2.bankleumi.co.il/authenticate'], // NOTICE - might not be relevant starting the Leumi re-design during 2022 Sep
   };
   return urls;
 }
 
 function createLoginFields(credentials: ScraperCredentials) {
   return [
-    { selector: '#wtr_uid', value: credentials.username },
-    { selector: '#wtr_password', value: credentials.password },
+    { selector: 'input[placeholder="שם משתמש"]', value: credentials.username },
+    { selector: 'input[placeholder="סיסמה"]', value: credentials.password },
   ];
 }
 
@@ -189,17 +190,20 @@ async function navigateToLogin(page: Page): Promise<void> {
   const loginButtonSelector = '#enter_your_account a';
   await waitUntilElementFound(page, loginButtonSelector);
   await clickButton(page, loginButtonSelector);
-  await waitUntilElementFound(page, '#wtr_uid', true);
+  await waitForNavigation(page, { waitUntil: 'networkidle2' });
+  await Promise.all([
+    waitUntilElementFound(page, 'input[placeholder="שם משתמש"]', true),
+    waitUntilElementFound(page, 'input[placeholder="סיסמה"]', true),
+    waitUntilElementFound(page, 'button[type="submit"]', true),
+  ]);
 }
 
 async function waitForPostLogin(page: Page): Promise<void> {
-  // TODO check for condition to provide new password
   await Promise.race([
     waitUntilElementFound(page, 'a[title="דלג לחשבון"]', true, 60000),
     waitUntilElementFound(page, 'div.leumi-container', true, 60000),
-    waitUntilElementFound(page, '#BodyContent_ctl00_loginErrMsg', true, 60000),
-    waitUntilElementFound(page, '.ErrMsg', true, 60000),
-    waitUntilElementFound(page, 'form[action="/changepassword"]', true, 60000),
+    page.waitForXPath(`//div[contains(string(),"${INVALID_PASSWORD_MSG}")]`),
+    waitUntilElementFound(page, 'form[action="/changepassword"]', true, 60000), // not sure if they kept this one
   ]);
 }
 
@@ -208,7 +212,7 @@ class LeumiScraper extends BaseScraperWithBrowser {
     return {
       loginUrl: LOGIN_URL,
       fields: createLoginFields(credentials),
-      submitButtonSelector: '#enter',
+      submitButtonSelector: "button[type='submit']",
       checkReadiness: async () => navigateToLogin(this.page),
       postAction: async () => waitForPostLogin(this.page),
       possibleResults: getPossibleLoginResults(),
