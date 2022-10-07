@@ -69,11 +69,12 @@ function extractTransactionsFromPage(transactions: any[], status: TransactionSta
   }
 
   const result: Transaction[] = transactions.map((rawTransaction) => {
+    const date = moment(rawTransaction.DateUTC).milliseconds(0).toISOString();
     const newTransaction: Transaction = {
       status,
       type: TransactionTypes.Normal,
-      date: rawTransaction.DateUTC,
-      processedDate: rawTransaction.DateUTC,
+      date,
+      processedDate: date,
       description: rawTransaction.Description || '',
       identifier: rawTransaction.ReferenceNumberLong,
       memo: rawTransaction.AdditionalData || '',
