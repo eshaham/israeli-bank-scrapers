@@ -6,7 +6,6 @@ import {
 } from '../helpers/elements-interactions';
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { waitForUrl } from '../helpers/navigation';
-import { raceTimeout, SECOND } from '../helpers/waiting';
 import {
   Transaction, TransactionsAccount, TransactionStatuses, TransactionTypes,
 } from '../transactions';
