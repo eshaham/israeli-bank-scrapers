@@ -114,6 +114,18 @@ export interface ScraperOptions {
    * if set, will set the timeout in milliseconds of puppeteer's `page.setDefaultTimeout`.
    */
   defaultTimeout?: number;
+
+  /**
+   * Options for manipulation of output data
+   */
+  outputData?: OutputDataOptions;
+}
+
+export interface OutputDataOptions {
+  /**
+   * if true, the result wouldn't be filtered out by date, and you will return unfiltered scrapped data.
+   */
+  enableTransactionsFilterByDate?: boolean;
 }
 
 export enum ScaperProgressTypes {
