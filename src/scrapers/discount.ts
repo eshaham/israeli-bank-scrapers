@@ -139,7 +139,7 @@ function createLoginFields(credentials: ScraperCredentials) {
 class DiscountScraper extends BaseScraperWithBrowser {
   getLoginOptions(credentials: ScraperCredentials) {
     return {
-      loginUrl: `${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/LOGIN_PAGE`,
+      loginUrl: `${BASE_URL}/login/#/LOGIN_PAGE`,
       checkReadiness: async () => waitUntilElementFound(this.page, '#tzId'),
       fields: createLoginFields(credentials),
       submitButtonSelector: '.sendBtn',
