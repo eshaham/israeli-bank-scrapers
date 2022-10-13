@@ -46,6 +46,7 @@ interface ScrapedTransaction {
   dealSumOutbound: boolean;
   currencyId: string;
   dealSum: number;
+  fullPaymentDate?: string;
   fullPurchaseDate?: string;
   fullPurchaseDateOutbound?: string;
   fullSupplierNameHeb: string;
@@ -178,11 +179,14 @@ function convertTransactions(txns: ScrapedTransaction[], processedDate: string):
     const txnDateStr = isOutbound ? txn.fullPurchaseDateOutbound : txn.fullPurchaseDate;
     const txnMoment = moment(txnDateStr, DATE_FORMAT);
 
+    const currentProcessedDate = txn.fullPaymentDate ?
+      moment(txn.fullPaymentDate, DATE_FORMAT).toISOString() :
+      processedDate;
     const result: Transaction = {
       type: getTransactionType(txn),
       identifier: parseInt(isOutbound ? txn.voucherNumberRatzOutbound : txn.voucherNumberRatz, 10),
       date: txnMoment.toISOString(),
-      processedDate,
+      processedDate: currentProcessedDate,
       originalAmount: isOutbound ? -txn.dealSumOutbound : -txn.dealSum,
       originalCurrency: convertCurrency(txn.currencyId),
       chargedAmount: isOutbound ? -txn.paymentSumOutbound : -txn.paymentSum,
