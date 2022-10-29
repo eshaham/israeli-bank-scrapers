@@ -138,6 +138,7 @@ class BaseScraperWithBrowser extends BaseScraper {
     } else {
       const executablePath = this.options.executablePath || undefined;
       const args = this.options.args || [];
+      const { timeout } = this.options;
 
       const headless = !this.options.showBrowser;
       debug(`launch a browser with headless mode = ${headless}`);
@@ -146,6 +147,7 @@ class BaseScraperWithBrowser extends BaseScraper {
         headless,
         executablePath,
         args,
+        timeout,
       });
     }
 

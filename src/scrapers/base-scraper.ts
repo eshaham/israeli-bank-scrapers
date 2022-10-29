@@ -92,6 +92,12 @@ export interface ScraperOptions {
   args?: string[];
 
   /**
+   * Maximum navigation time in milliseconds, pass 0 to disable timeout.
+   * @default 30000
+   */
+  timeout?: number | undefined;
+
+  /**
    * adjust the browser instance before it is being used
    *
    * @param browser
