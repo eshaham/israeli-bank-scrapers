@@ -44,7 +44,7 @@ export async function fetchPost(url: string, data: Record<string, any>,
   return result.json();
 }
 
-export async function fetchGetWithinPage<TResult>(page: Page, url: string): Promise<TResult | null> {
+export function fetchGetWithinPage<TResult>(page: Page, url: string): Promise<TResult | null> {
   return page.evaluate((url) => {
     return new Promise<TResult | null>((resolve, reject) => {
       fetch(url, {
@@ -62,7 +62,7 @@ export async function fetchGetWithinPage<TResult>(page: Page, url: string): Prom
   }, url);
 }
 
-export async function fetchPostWithinPage<TResult>(page: Page, url: string,
+export function fetchPostWithinPage<TResult>(page: Page, url: string,
   data: Record<string, any>, extraHeaders: Record<string, any> = {}): Promise<TResult | null> {
   return page.evaluate<(...args: any[]) => Promise<TResult | null>>((url: string, data: Record<string, any>,
     extraHeaders: Record<string, any>) => {

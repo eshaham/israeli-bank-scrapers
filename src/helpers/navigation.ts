@@ -9,7 +9,7 @@ export async function waitForNavigationAndDomLoad(page: Page) {
   await waitForNavigation(page, { waitUntil: 'domcontentloaded' });
 }
 
-export async function getCurrentUrl(pageOrFrame: Page | Frame, clientSide = false) {
+export function getCurrentUrl(pageOrFrame: Page | Frame, clientSide = false) {
   if (clientSide) {
     return pageOrFrame.evaluate(() => window.location.href);
   }
