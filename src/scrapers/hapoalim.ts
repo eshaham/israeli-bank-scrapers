@@ -113,7 +113,7 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
 }
 
 async function getRestContext(page: Page) {
-  await waitUntil(async () => {
+  await waitUntil(() => {
     return page.evaluate(() => !!window.bnhpApp);
   }, 'waiting for app data load');
 
