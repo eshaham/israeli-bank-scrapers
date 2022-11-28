@@ -15,7 +15,6 @@ import { getDebug } from '../helpers/debug';
 const debug = getDebug('hapoalim');
 
 const DATE_FORMAT = 'YYYYMMDD';
-const MAX_JAVA_INT = 2147483647;
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 declare namespace window {
@@ -113,16 +112,6 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   });
 }
 
-function getStartDate(options: ScraperOptions) {
-  const maximumYearsBack = 2;
-  const defaultStartMoment = moment().subtract(maximumYearsBack, 'years').add(1, 'day');
-  const startDate = options.startDate || defaultStartMoment.toDate();
-  const startMoment = moment.max(defaultStartMoment, moment(startDate));
-
-  const startDateStr = startMoment.format(DATE_FORMAT);
-  return startDateStr;
-}
-
 async function getRestContext(page: Page) {
   await waitUntil(() => {
     return page.evaluate(() => !!window.bnhpApp);
@@ -149,7 +138,7 @@ async function fetchPoalimXSRFWithinPage(page: Page, url: string, pageUuid: stri
 }
 
 async function getAccountTransactions(apiSiteUrl: string, page: Page, accountNumber: string, startDate: string, endDate: string) {
-  const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=${MAX_JAVA_INT}&retrievalEndDate=${endDate}&retrievalStartDate=${startDate}&sortCode=1`;
+  const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=1000&retrievalEndDate=${endDate}&retrievalStartDate=${startDate}&sortCode=1`;
   const txnsResult = await fetchPoalimXSRFWithinPage(page, txnsUrl, '/current-account/transactions');
 
   return convertTransactions(txnsResult?.transactions ?? []);
@@ -162,7 +151,7 @@ async function getAccountBalance(apiSiteUrl: string, page: Page, accountNumber: 
   return balanceAndCreditLimit?.currentBalance;
 }
 
-async function fetchAccountData(page: Page, baseUrl: string, startDate: string, endDate: string) {
+async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOptions) {
   const restContext = await getRestContext(page);
   const apiSiteUrl = `${baseUrl}/${restContext}`;
   const accountDataUrl = `${baseUrl}/ServerServices/general/accounts`;
@@ -170,6 +159,13 @@ async function fetchAccountData(page: Page, baseUrl: string, startDate: string, 
   debug('fetching accounts data');
   const accountsInfo = await fetchGetWithinPage<FetchedAccountData>(page, accountDataUrl) || [];
   debug('got %d accounts, fetching txns and balance', accountsInfo.length);
+
+  const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
+  const startDate = options.startDate || defaultStartMoment.toDate();
+  const startMoment = moment.max(defaultStartMoment, moment(startDate));
+
+  const startDateStr = startMoment.format(DATE_FORMAT);
+  const endDateStr = moment().format(DATE_FORMAT);
 
   const accounts: TransactionsAccount[] = [];
 
@@ -184,7 +180,7 @@ async function fetchAccountData(page: Page, baseUrl: string, startDate: string, 
       debug('Skipping balance for a closed account, balance will be undefined');
     }
 
-    const txns = await getAccountTransactions(apiSiteUrl, page, accountNumber, startDate, endDate);
+    const txns = await getAccountTransactions(apiSiteUrl, page, accountNumber, startDateStr, endDateStr);
 
     accounts.push({
       accountNumber,
@@ -239,16 +235,8 @@ class HapoalimScraper extends BaseScraperWithBrowser {
   }
 
   async fetchData() {
-    const startDate = getStartDate(this.options);
-    const endDate = moment().format(DATE_FORMAT);
-
-    return fetchAccountData(
-        this.page,
-        this.baseUrl,
-        startDate,
-        endDate);
+    return fetchAccountData(this.page, this.baseUrl, this.options);
   }
 }
 
 export default HapoalimScraper;
-
