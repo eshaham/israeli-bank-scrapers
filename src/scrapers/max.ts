@@ -212,13 +212,15 @@ function addResult(allResults: Record<string, Transaction[]>, result: Record<str
   return clonedResults;
 }
 
-function prepareTransactions(txns: Transaction[], startMoment: moment.Moment, combineInstallments: boolean) {
+function prepareTransactions(txns: Transaction[], startMoment: moment.Moment, combineInstallments: boolean, enableTransactionsFilterByDate: boolean) {
   let clonedTxns = Array.from(txns);
   if (!combineInstallments) {
     clonedTxns = fixInstallments(clonedTxns);
   }
   clonedTxns = sortTransactionsByDate(clonedTxns);
-  clonedTxns = filterOldTransactions(clonedTxns, startMoment, combineInstallments || false);
+  clonedTxns = enableTransactionsFilterByDate ?
+    filterOldTransactions(clonedTxns, startMoment, combineInstallments || false) :
+    clonedTxns;
   return clonedTxns;
 }
 
@@ -239,7 +241,8 @@ async function fetchTransactions(page: Page, options: ScraperOptions) {
 
   Object.keys(allResults).forEach((accountNumber) => {
     let txns = allResults[accountNumber];
-    txns = prepareTransactions(txns, startMoment, options.combineInstallments || false);
+    txns = prepareTransactions(txns, startMoment, options.combineInstallments || false,
+      (options.outputData?.enableTransactionsFilterByDate ?? true));
     allResults[accountNumber] = txns;
   });
 

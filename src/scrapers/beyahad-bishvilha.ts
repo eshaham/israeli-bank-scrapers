@@ -116,7 +116,9 @@ async function fetchTransactions(page: Page, options: ScraperOptions) {
   const accountTransactions = convertTransactions(rawTransactions.filter((item) => !!item) as ScrapedTransaction[]);
 
   debug('filer out old transactions');
-  const txns = filterOldTransactions(accountTransactions, startMoment, false);
+  const txns = (options.outputData?.enableTransactionsFilterByDate ?? true) ?
+    filterOldTransactions(accountTransactions, startMoment, false) :
+    accountTransactions;
   debug(`found ${txns.length} valid transactions out of ${accountTransactions.length} transactions for account ending with ${accountNumber.substring(accountNumber.length - 2)}`);
 
   return {
