@@ -138,7 +138,7 @@ async function fetchPoalimXSRFWithinPage(page: Page, url: string, pageUuid: stri
 }
 
 async function getAccountTransactions(apiSiteUrl: string, page: Page, accountNumber: string, startDate: string, endDate: string) {
-  const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=150&retrievalEndDate=${endDate}&retrievalStartDate=${startDate}&sortCode=1`;
+  const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=1000&retrievalEndDate=${endDate}&retrievalStartDate=${startDate}&sortCode=1`;
   const txnsResult = await fetchPoalimXSRFWithinPage(page, txnsUrl, '/current-account/transactions');
 
   return convertTransactions(txnsResult?.transactions ?? []);
