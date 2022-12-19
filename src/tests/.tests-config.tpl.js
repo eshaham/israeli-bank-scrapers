@@ -10,7 +10,7 @@ module.exports = {
     showBrowser: true,
     verbose: false,
     args: [],
-    storeFailureScreenShotPath: path.resolve(__dirname, 'snapshots/failure.jpg')
+    storeFailureScreenShotPath: false // path.resolve(__dirname, 'snapshots/failure.jpg')
   },
   credentials: { // commented companies will be skipped automatically, uncomment those you wish to test
     // hapoalim: { userCode: '', password: '' },

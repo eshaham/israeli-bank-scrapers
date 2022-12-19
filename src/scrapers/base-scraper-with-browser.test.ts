@@ -16,7 +16,7 @@ describe('Base scraper with browser', () => {
     extendAsyncTimeout(); // The default timeout is 5 seconds per async test, this function extends the timeout value
   });
 
-  test('should pass custom args to scraper if provided', async () => {
+  xtest('should pass custom args to scraper if provided', async () => {
     const options = {
       ...testsConfig.options,
       companyId: 'test',
