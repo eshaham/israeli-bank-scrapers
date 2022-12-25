@@ -125,6 +125,12 @@ export interface ScraperOptions {
    * Options for manipulation of output data
    */
   outputData?: OutputDataOptions;
+
+  /**
+   * Perform additional operation for each transaction to get more information (Like category) about it.
+   * Please note: It will take more time to finish the process.
+   */
+  additionalTransactionInformation?: boolean;
 }
 
 export interface OutputDataOptions {

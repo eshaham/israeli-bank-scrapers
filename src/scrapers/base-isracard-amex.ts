@@ -22,6 +22,7 @@ import {
   ScraperCredentials,
 } from './base-scraper';
 import { getDebug } from '../helpers/debug';
+import { runSerial } from '../helpers/waiting';
 
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';
@@ -240,6 +241,48 @@ async function fetchTransactions(page: Page, options: ExtendedScraperOptions, st
   return {};
 }
 
+function getTransactionExtraDetails(servicesUrl: string, month: Moment, accountIndex: number, transaction: Transaction): string {
+  const moedChiuv = month.format('MMYYYY');
+  return buildUrl(servicesUrl, {
+    queryParams: {
+      reqName: 'PirteyIska_204',
+      CardIndex: accountIndex.toString(),
+      shovarRatz: transaction.identifier!.toString(),
+      moedChiuv,
+    },
+  });
+}
+async function getExtraScrapTransaction(page: Page, options: ExtendedScraperOptions, month: Moment, accountIndex: number, transaction: Transaction): Promise<Transaction> {
+  const dataUrl = getTransactionExtraDetails(options.servicesUrl, month, accountIndex, transaction);
+  const data = await fetchGetWithinPage<ScrapedTransactionData>(page, dataUrl);
+  const rawCategory = _.get(data, 'PirteyIska_204Bean.sector');
+  return {
+    ...transaction,
+    category: rawCategory.trim(),
+  };
+}
+
+function getExtraScrapTransactions(accountWithIndex: TransactionsAccount & { index: number }, page: Page, options: ExtendedScraperOptions, month: moment.Moment): Promise<Transaction[]> {
+  const promises = accountWithIndex.txns
+    .map((t) => getExtraScrapTransaction(page, options, month, accountWithIndex.index, t));
+  return Promise.all(promises);
+}
+
+async function getExtraScrapAccount(page: Page, options: ExtendedScraperOptions, accountMap: ScrapedAccountsWithIndex, month: moment.Moment): Promise<ScrapedAccountsWithIndex> {
+  const promises = Object.keys(accountMap)
+    .map(async (a) => ({
+      ...accountMap[a],
+      txns: await getExtraScrapTransactions(accountMap[a], page, options, month),
+    }));
+  const accounts = await Promise.all(promises);
+  return accounts.reduce((m, x) => ({ ...m, [x.accountNumber]: x }), {});
+}
+
+function getExtraScrap(accountsWithIndex: ScrapedAccountsWithIndex[], page: Page, options: ExtendedScraperOptions, allMonths: moment.Moment[]): Promise<ScrapedAccountsWithIndex[]> {
+  const actions = accountsWithIndex.map((a, i) => () => getExtraScrapAccount(page, options, a, allMonths[i]));
+  return runSerial(actions);
+}
+
 async function fetchAllTransactions(page: Page, options: ExtendedScraperOptions, startMoment: Moment) {
   const futureMonthsToScrape = options.futureMonthsToScrape ?? 1;
   const allMonths = getAllMonthMoments(startMoment, futureMonthsToScrape);
@@ -247,9 +290,12 @@ async function fetchAllTransactions(page: Page, options: ExtendedScraperOptions,
     return fetchTransactions(page, options, startMoment, monthMoment);
   }));
 
+  const finalResult = options.additionalTransactionInformation ?
+    await getExtraScrap(results, page, options, allMonths) : results;
+
   const combinedTxns: Record<string, Transaction[]> = {};
 
-  results.forEach((result) => {
+  finalResult.forEach((result) => {
     Object.keys(result).forEach((accountNumber) => {
       let txnsForAccount = combinedTxns[accountNumber];
       if (!txnsForAccount) {
