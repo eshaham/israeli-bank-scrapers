@@ -40,10 +40,10 @@ const BASE_WEBSITE_URL = 'https://www.mizrahi-tefahot.co.il';
 const LOGIN_URL = `${BASE_WEBSITE_URL}/login/index.html#/auth-page-he`;
 const BASE_APP_URL = 'https://mto.mizrahi-tefahot.co.il';
 const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/OnlineApp\/.*/;
-const OSH_PAGE = '/OnlineApp/osh/legacy/legacy-Osh-Main';
-const TRANSACTIONS_PAGE = '/OnlineApp/osh/legacy/root-main-osh-p428New';
-const TRANSACTIONS_REQUEST_URL = `${BASE_APP_URL}/Online/api/SkyOSH/get428Index`;
-const PENDING_TRANSACTIONS_PAGE = '/OnlineApp/osh/legacy/legacy-Osh-p420';
+const OSH_PAGE = '/osh/legacy/legacy-Osh-Main';
+const TRANSACTIONS_PAGE = '/osh/legacy/root-main-osh-p428New';
+const TRANSACTIONS_REQUEST_URL = `${BASE_APP_URL}/OnlinePilot/api/SkyOSH/get428Index`;
+const PENDING_TRANSACTIONS_PAGE = '/osh/legacy/legacy-Osh-p420';
 const PENDING_TRANSACTIONS_IFRAME = 'p420.aspx';
 const CHANGE_PASSWORD_URL = /https:\/\/www\.mizrahi-tefahot\.co\.il\/login\/\w+\/index\.html#\/change-pass/;
 const DATE_FORMAT = 'DD/MM/YYYY';
@@ -191,9 +191,9 @@ class MizrahiScraper extends BaseScraperWithBrowser {
   }
 
   private async fetchAccount() {
-    await this.page.$eval(`a[href="${OSH_PAGE}"]`, (el) => (el as HTMLElement).click());
-    await waitUntilElementFound(this.page, `a[href="${TRANSACTIONS_PAGE}"]`);
-    await this.page.$eval(`a[href="${TRANSACTIONS_PAGE}"]`, (el) => (el as HTMLElement).click());
+    await this.page.$eval(`a[href*="${OSH_PAGE}"]`, (el) => (el as HTMLElement).click());
+    await waitUntilElementFound(this.page, `a[href*="${TRANSACTIONS_PAGE}"]`);
+    await this.page.$eval(`a[href*="${TRANSACTIONS_PAGE}"]`, (el) => (el as HTMLElement).click());
 
     const request = await this.page.waitForRequest(TRANSACTIONS_REQUEST_URL);
     const data = createDataFromRequest(request, this.options.startDate);
@@ -213,7 +213,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
     const startMoment = getStartMoment(this.options.startDate);
     const oshTxnAfterStartDate = oshTxn.filter((txn) => moment(txn.date).isSameOrAfter(startMoment));
 
-    await this.page.$eval(`a[href="${PENDING_TRANSACTIONS_PAGE}"]`, (el) => (el as HTMLElement).click());
+    await this.page.$eval(`a[href*="${PENDING_TRANSACTIONS_PAGE}"]`, (el) => (el as HTMLElement).click());
     const frame = await waitUntilIframeFound(this.page, (f) => f.url().includes(PENDING_TRANSACTIONS_IFRAME));
     await waitUntilElementFound(frame, pendingTrxIdentifierId);
     const pendingTxn = await extractPendingTransactions(frame);
