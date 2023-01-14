@@ -18,9 +18,12 @@ import {
 import { waitUntil } from '../helpers/waiting';
 import { filterOldTransactions } from '../helpers/transactions';
 import { getDebug } from '../helpers/debug';
+import { fetchPostWithinPage } from '../helpers/fetch';
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_URL = 'https://services.cal-online.co.il/Card-Holders/Screens/Transactions/Transactions.aspx';
+const GET_TX_DETAILS_URL = 'https://services.cal-online.co.il/Card-Holders/SCREENS/Transactions/Transactions.aspx/GetTransDetails';
+const GET_TX_DETAILS_HEADER = { 'Content-Type': 'application/json;charset=UTF-8' };
 const LONG_DATE_FORMAT = 'DD/MM/YYYY';
 const DATE_FORMAT = 'DD/MM/YY';
 const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו שגויים';
@@ -28,13 +31,20 @@ const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו
 const debug = getDebug('visa-cal');
 
 interface ScrapedTransaction {
+  onclick: string | null;
   date: string;
   processedDate: string;
   description: string;
   originalAmount: string;
   chargedAmount: string;
   memo: string;
+  additionalInfo?: ScrapedAdditionalInfo;
 }
+
+interface ScrapedAdditionalInfo {
+  category?: string;
+}
+
 
 async function getLoginFrame(page: Page) {
   let frame: Frame | null = null;
@@ -126,6 +136,30 @@ function getTransactionInstallments(memo: string): TransactionInstallments | nul
     total: parseInt(parsedMemo[2], 10),
   };
 }
+
+function getIdentifierAndNumerator(onclickValue: string | null): { identifier?: string, numerator?: string } {
+  if (!onclickValue) {
+    debug('onclick attribute not found for transaction');
+    return {};
+  }
+  const expectedStartValue = 'OnMouseClickRow(this, event, "';
+  if (!onclickValue.startsWith(expectedStartValue)) {
+    debug('onclick attribute value doesnt start with expected value');
+    return {};
+  }
+
+  const thirdArgument = onclickValue.substring(expectedStartValue.length, onclickValue.length - 2);
+  const splits = thirdArgument.split('|');
+  if (splits.length !== 2) {
+    debug('Unexpected 3rd argument');
+    return {};
+  }
+  return {
+    identifier: splits[1],
+    numerator: splits[0],
+  };
+}
+
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   debug(`convert ${txns.length} raw transactions to official Transaction structure`);
   return txns.map((txn) => {
@@ -146,6 +180,7 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
     const txnProcessedDate = moment(txn.processedDate, processedDateFormat);
 
     const result: Transaction = {
+      identifier: getIdentifierAndNumerator(txn.onclick)?.identifier,
       type: installments ? TransactionTypes.Installments : TransactionTypes.Normal,
       status: TransactionStatuses.Completed,
       date: installments ? txnDate.add(installments.number - 1, 'month').toISOString() : txnDate.toISOString(),
@@ -156,6 +191,7 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
       chargedCurrency: chargedAmountTuple.currency,
       description: txn.description || '',
       memo: txn.memo || '',
+      category: txn.additionalInfo?.category,
     };
 
     if (installments) {
@@ -164,6 +200,32 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
 
     return result;
   });
+}
+
+async function getAdditionalTxInfo(tx: ScrapedTransaction, page: Page): Promise<ScrapedAdditionalInfo | null> {
+  const { identifier, numerator } = getIdentifierAndNumerator(tx.onclick);
+  if (identifier === undefined || numerator === undefined) {
+    return null;
+  }
+  const result = await fetchPostWithinPage<any>(page, GET_TX_DETAILS_URL, {
+    Identifier: identifier,
+    Numerator: numerator,
+  }, GET_TX_DETAILS_HEADER);
+
+  return {
+    category: result.d?.Data?.MerchantDetails?.SectorName || undefined,
+  };
+}
+
+async function getAdditionalTxsInfoIfNeeded(txs: ScrapedTransaction[], scraperOptions: ScraperOptions, page: Page): Promise<ScrapedTransaction[]> {
+  if (!scraperOptions.additionalTransactionInformation) {
+    return txs;
+  }
+  const promises = txs.map(async (x) => ({
+    ...x,
+    additionalInfo: await getAdditionalTxInfo(x, page),
+  }) as ScrapedTransaction);
+  return Promise.all(promises);
 }
 
 async function fetchTransactionsForAccount(page: Page, startDate: Moment, accountNumber: string, scraperOptions: ScraperOptions): Promise<TransactionsAccount> {
@@ -231,8 +293,10 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
         const rawTransactions = await pageEvalAll<(ScrapedTransaction | null)[]>(page, '#ctlMainGrid > tbody tr, #ctlSecondaryGrid > tbody tr', [], (items, billingDate) => {
           return (items).map((el) => {
             const columns = el.getElementsByTagName('td');
+            const onclick = el.getAttribute('onclick');
             if (columns.length === 6) {
               return {
+                onclick,
                 processedDate: columns[0].innerText,
                 date: columns[1].innerText,
                 description: columns[2].innerText,
@@ -243,6 +307,7 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
             }
             if (columns.length === 5) {
               return {
+                onclick,
                 processedDate: billingDate,
                 date: columns[0].innerText,
                 description: columns[1].innerText,
@@ -255,10 +320,13 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
           });
         }, billingDate);
         debug(`fetched ${rawTransactions.length} raw transactions from page`);
-        accountTransactions.push(...convertTransactions((rawTransactions as ScrapedTransaction[])
-          .filter((item) => !!item)));
+        const existsTxs = (rawTransactions as ScrapedTransaction[])
+          .filter((item) => !!item);
+        const fullScrappedTxs = await getAdditionalTxsInfoIfNeeded(existsTxs, scraperOptions, page);
 
-        debug('check for existance of another page');
+        accountTransactions.push(...convertTransactions(fullScrappedTxs));
+
+        debug('check for existence of another page');
         hasNextPage = await elementPresentOnPage(page, nextPageSelector);
         if (hasNextPage) {
           debug('has another page, click on button next and wait for page navigation');
