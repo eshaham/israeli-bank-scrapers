@@ -139,19 +139,19 @@ function getTransactionInstallments(memo: string): TransactionInstallments | nul
 
 function getIdentifierAndNumerator(onclickValue: string | null): { identifier?: string, numerator?: string } {
   if (!onclickValue) {
-    debug('onclick attribute not found for transaction');
+    debug('cannot extract the identifier of a transaction, onclick attribute not found for transaction');
     return {};
   }
   const expectedStartValue = 'OnMouseClickRow(this, event, "';
   if (!onclickValue.startsWith(expectedStartValue)) {
-    debug('onclick attribute value doesnt start with expected value');
+    debug(`cannot extract the identifier of a transaction, onclick attribute value doesnt start with expected value '${onclickValue}'`);
     return {};
   }
 
   const thirdArgument = onclickValue.substring(expectedStartValue.length, onclickValue.length - 2);
   const splits = thirdArgument.split('|');
   if (splits.length !== 2) {
-    debug('Unexpected 3rd argument');
+    debug(`cannot extract the identifier of a transaction, unexpected 3rd argument in onclick value '${onclickValue}'`);
     return {};
   }
   return {
