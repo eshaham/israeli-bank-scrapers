@@ -203,7 +203,10 @@ class OtsarHahayalScraper extends BaseScraperWithBrowser {
     return {
       loginUrl: `${BASE_URL}/MatafLoginService/MatafLoginServlet?bankId=OTSARPRTAL&site=Private&KODSAFA=HE`,
       fields: createLoginFields(credentials),
-      submitButtonSelector: '#continueBtn',
+      submitButtonSelector: async () => {
+        await this.page.waitForTimeout(1000);
+        await clickButton(this.page, '#continueBtn');
+      },
       postAction: async () => waitForPostLogin(this.page),
       possibleResults: getPossibleLoginResults(this.page),
     };
