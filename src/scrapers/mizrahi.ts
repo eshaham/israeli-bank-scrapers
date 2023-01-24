@@ -42,7 +42,10 @@ const BASE_APP_URL = 'https://mto.mizrahi-tefahot.co.il';
 const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/OnlineApp\/.*/;
 const OSH_PAGE = '/osh/legacy/legacy-Osh-Main';
 const TRANSACTIONS_PAGE = '/osh/legacy/root-main-osh-p428New';
-const TRANSACTIONS_REQUEST_URL = `${BASE_APP_URL}/OnlinePilot/api/SkyOSH/get428Index`;
+const TRANSACTIONS_REQUEST_URLS = [
+  `${BASE_APP_URL}/OnlinePilot/api/SkyOSH/get428Index`,
+  `${BASE_APP_URL}/Online/api/SkyOSH/get428Index`,
+];
 const PENDING_TRANSACTIONS_PAGE = '/osh/legacy/legacy-Osh-p420';
 const PENDING_TRANSACTIONS_IFRAME = 'p420.aspx';
 const CHANGE_PASSWORD_URL = /https:\/\/www\.mizrahi-tefahot\.co\.il\/login\/\w+\/index\.html#\/change-pass/;
@@ -195,12 +198,14 @@ class MizrahiScraper extends BaseScraperWithBrowser {
     await waitUntilElementFound(this.page, `a[href*="${TRANSACTIONS_PAGE}"]`);
     await this.page.$eval(`a[href*="${TRANSACTIONS_PAGE}"]`, (el) => (el as HTMLElement).click());
 
-    const request = await this.page.waitForRequest(TRANSACTIONS_REQUEST_URL);
-    const data = createDataFromRequest(request, this.options.startDate);
-    const headers = createHeadersFromRequest(request);
+    const response = await Promise.any(TRANSACTIONS_REQUEST_URLS.map(async (url) => {
+      const request = await this.page.waitForRequest(url);
+      const data = createDataFromRequest(request, this.options.startDate);
+      const headers = createHeadersFromRequest(request);
 
-    const response = await fetchPostWithinPage<ScrapedTransactionsResult>(this.page,
-      TRANSACTIONS_REQUEST_URL, data, headers);
+      return fetchPostWithinPage<ScrapedTransactionsResult>(this.page, url, data, headers);
+    }));
+
 
     if (!response || response.header.success === false) {
       throw new Error(`Error fetching transaction. Response message: ${response ? response.header.messages[0].text : ''}`);
