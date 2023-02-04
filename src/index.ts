@@ -9,6 +9,8 @@ export {
   TwoFactorAuthScraper, Scraper,
 } from './scrapers/interface';
 
+export { default as OneZeroScraper } from './scrapers/one-zero';
+
 export function getPuppeteerConfig() {
   return { ...puppeteerConfig };
 }

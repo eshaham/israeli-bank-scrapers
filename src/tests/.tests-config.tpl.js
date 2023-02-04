@@ -27,6 +27,7 @@ module.exports = {
     // beinleumi: { username: '', password: ''},
     // yahav: {username: '', nationalID: '', password: ''}
     // beyahadBishvilha: { id: '', password: ''},
+    // oneZero: { email: '', password: '', otpCode: '', otpToken: null }
   },
   companyAPI: { // enable companyAPI to execute tests against the real companies api
     enabled: true,

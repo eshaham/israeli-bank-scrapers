@@ -11,11 +11,12 @@ import UnionBankScraper from './union-bank';
 import BeinleumiScraper from './beinleumi';
 import MassadScraper from './massad';
 import YahavScraper from './yahav';
-import { ScraperOptions } from './interface';
+import { Scraper, TwoFactorAuthScraper, ScraperOptions } from './interface';
 import { CompanyTypes } from '../definitions';
 import BeyahadBishvilhaScraper from './beyahad-bishvilha';
+import OneZeroScraper from './one-zero';
 
-export default function createScraper(options: ScraperOptions) {
+export default function createScraper(options: ScraperOptions): Scraper | TwoFactorAuthScraper {
   switch (options.companyId) {
     case CompanyTypes.hapoalim:
       return new HapoalimScraper(options);
@@ -53,6 +54,8 @@ export default function createScraper(options: ScraperOptions) {
       return new MassadScraper(options);
     case CompanyTypes.yahav:
       return new YahavScraper(options);
+    case CompanyTypes.oneZero:
+      return new OneZeroScraper(options);
     default:
       throw new Error(`unknown company id ${options.companyId}`);
   }

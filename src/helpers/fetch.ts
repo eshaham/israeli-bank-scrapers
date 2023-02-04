@@ -30,21 +30,27 @@ export async function fetchGet<TResult>(url: string,
 }
 
 export async function fetchPost(url: string, data: Record<string, any>,
-  extraHeaders: Record<string, any>) {
-  let headers = getJsonHeaders();
-  if (extraHeaders) {
-    headers = Object.assign(headers, extraHeaders);
-  }
+  extraHeaders: Record<string, any> = {}) {
   const request = {
     method: 'POST',
-    headers,
+    headers: { ...getJsonHeaders(), ...extraHeaders },
     body: JSON.stringify(data),
   };
   const result = await nodeFetch(url, request);
   return result.json();
 }
 
-export function fetchGetWithinPage<TResult>(page: Page, url: string): Promise<TResult | null> {
+export async function fetchGraphql<TResult>(url: string, query: string,
+  variables: Record<string, unknown> = {},
+  extraHeaders: Record<string, any> = {}): Promise<TResult> {
+  const result = await fetchPost(url, { operationName: null, query, variables }, extraHeaders);
+  if (result.errors?.length) {
+    throw new Error(result.errors[0].message);
+  }
+  return result.data as Promise<TResult>;
+}
+
+export async function fetchGetWithinPage<TResult>(page: Page, url: string): Promise<TResult | null> {
   return page.evaluate((url) => {
     return new Promise<TResult | null>((resolve, reject) => {
       fetch(url, {
