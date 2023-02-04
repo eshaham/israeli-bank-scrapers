@@ -11,7 +11,7 @@ import UnionBankScraper from './union-bank';
 import BeinleumiScraper from './beinleumi';
 import MassadScraper from './massad';
 import YahavScraper from './yahav';
-import { ScraperOptions } from './base-scraper';
+import { ScraperOptions } from './interface';
 import { CompanyTypes } from '../definitions';
 import BeyahadBishvilhaScraper from './beyahad-bishvilha';
 

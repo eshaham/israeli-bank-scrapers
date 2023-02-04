@@ -8,10 +8,8 @@ import { fetchGetWithinPage } from '../helpers/fetch';
 import {
   Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
-import {
-  ScraperOptions,
-  ScraperErrorTypes, ScaperScrapingResult, ScraperCredentials,
-} from './base-scraper';
+import { ScraperErrorTypes } from './errors';
+import { ScraperScrapingResult, ScraperCredentials, ScraperOptions } from './interface';
 
 const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
@@ -62,7 +60,7 @@ function convertTransactions(txns: ScrapedTransaction[], txnStatus: TransactionS
 }
 
 
-async function fetchAccountData(page: Page, options: ScraperOptions): Promise<ScaperScrapingResult> {
+async function fetchAccountData(page: Page, options: ScraperOptions): Promise<ScraperScrapingResult> {
   const apiSiteUrl = `${BASE_URL}/Titan/gatewayAPI`;
 
   const accountDataUrl = `${apiSiteUrl}/userAccountsData`;

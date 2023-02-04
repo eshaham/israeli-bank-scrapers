@@ -9,8 +9,8 @@ import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import {
   TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
-import { ScraperOptions, ScraperCredentials } from './base-scraper';
 import { getDebug } from '../helpers/debug';
+import { ScraperCredentials, ScraperOptions } from './interface';
 
 const debug = getDebug('hapoalim');
 

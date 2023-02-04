@@ -11,7 +11,6 @@ import {
   TransactionStatuses,
   TransactionTypes,
 } from '../transactions';
-import { ScraperOptions, ScaperScrapingResult, ScraperCredentials } from './base-scraper';
 import {
   DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, EURO_CURRENCY, EURO_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,
 } from '../constants';
@@ -19,6 +18,7 @@ import { waitUntil } from '../helpers/waiting';
 import { filterOldTransactions } from '../helpers/transactions';
 import { getDebug } from '../helpers/debug';
 import { fetchPostWithinPage } from '../helpers/fetch';
+import { ScraperScrapingResult, ScraperCredentials, ScraperOptions } from './interface';
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_URL = 'https://services.cal-online.co.il/Card-Holders/Screens/Transactions/Transactions.aspx';
@@ -455,7 +455,7 @@ class VisaCalScraper extends BaseScraperWithBrowser {
     };
   }
 
-  async fetchData(): Promise<ScaperScrapingResult> {
+  async fetchData(): Promise<ScraperScrapingResult> {
     const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));

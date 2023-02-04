@@ -1,7 +1,6 @@
 import { Page } from 'puppeteer';
 import moment from 'moment';
 import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
-import { ScraperOptions, ScraperCredentials } from './base-scraper';
 import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
 import { pageEval, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
 import { getDebug } from '../helpers/debug';
@@ -13,6 +12,7 @@ import {
   SHEKEL_CURRENCY,
   SHEKEL_CURRENCY_SYMBOL,
 } from '../constants';
+import { ScraperCredentials, ScraperOptions } from './interface';
 
 const debug = getDebug('beyahadBishvilha');
 

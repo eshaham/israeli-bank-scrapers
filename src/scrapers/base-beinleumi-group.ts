@@ -13,7 +13,7 @@ import { SHEKEL_CURRENCY } from '../constants';
 import {
   TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
-import { ScraperCredentials } from './base-scraper';
+import { ScraperCredentials } from './interface';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא נמצאו נתונים בנושא המבוקש';

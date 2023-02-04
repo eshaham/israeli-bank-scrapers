@@ -11,7 +11,7 @@ import { SHEKEL_CURRENCY } from '../constants';
 import {
   TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
-import { ScaperScrapingResult, ScraperCredentials } from './base-scraper';
+import { ScraperScrapingResult, ScraperCredentials } from './interface';
 import { waitForNavigation } from '../helpers/navigation';
 
 const BASE_URL = 'https://hb2.bankleumi.co.il';
@@ -220,7 +220,7 @@ class LeumiScraper extends BaseScraperWithBrowser {
     };
   }
 
-  async fetchData(): Promise<ScaperScrapingResult> {
+  async fetchData(): Promise<ScraperScrapingResult> {
     const minimumStartMoment = moment().subtract(3, 'years').add(1, 'day');
     const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();

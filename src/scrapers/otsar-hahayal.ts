@@ -11,7 +11,7 @@ import {
 } from '../helpers/elements-interactions';
 import { SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL } from '../constants';
 import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
-import { ScraperCredentials } from './base-scraper';
+import { ScraperCredentials } from './interface';
 
 const BASE_URL = 'https://online.bankotsar.co.il';
 const LONG_DATE_FORMAT = 'DD/MM/YYYY';

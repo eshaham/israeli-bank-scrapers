@@ -10,12 +10,12 @@ import {
   Transaction, TransactionsAccount,
   TransactionStatuses, TransactionTypes,
 } from '../transactions';
-import { ScraperCredentials } from './base-scraper';
 import {
   BaseScraperWithBrowser,
   LoginResults,
   PossibleLoginResults,
 } from './base-scraper-with-browser';
+import { ScraperCredentials } from './interface';
 
 const LOGIN_URL = 'https://login.yahav.co.il/login/';
 const BASE_URL = 'https://digital.yahav.co.il/BaNCSDigitalUI/app/index.html#/';

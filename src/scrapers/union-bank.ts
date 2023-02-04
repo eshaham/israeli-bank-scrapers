@@ -16,7 +16,7 @@ import {
   TransactionsAccount, Transaction, TransactionStatuses,
   TransactionTypes,
 } from '../transactions';
-import { ScraperCredentials } from './base-scraper';
+import { ScraperCredentials } from './interface';
 
 const BASE_URL = 'https://hb.unionbank.co.il';
 const TRANSACTIONS_URL = `${BASE_URL}/eBanking/Accounts/ExtendedActivity.aspx#/`;

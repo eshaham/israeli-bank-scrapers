@@ -9,8 +9,9 @@ import { waitForUrl } from '../helpers/navigation';
 import {
   Transaction, TransactionsAccount, TransactionStatuses, TransactionTypes,
 } from '../transactions';
-import { ScraperCredentials, ScraperErrorTypes } from './base-scraper';
 import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
+import { ScraperErrorTypes } from './errors';
+import { ScraperCredentials } from './interface';
 
 interface ScrapedTransaction {
   RecTypeSpecified: boolean;
