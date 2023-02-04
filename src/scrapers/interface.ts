@@ -1,8 +1,7 @@
 import { Browser, Page } from 'puppeteer';
 import { CompanyTypes } from '../definitions';
 import { TransactionsAccount } from '../transactions';
-import { ScraperErrorTypes } from './errors';
-
+import { ErrorResult, ScraperErrorTypes } from './errors';
 
 export type ScraperCredentials = Record<string, string>;
 
@@ -124,4 +123,19 @@ export interface ScraperScrapingResult {
 
 export interface Scraper {
   scrape(credentials: ScraperCredentials): Promise<ScraperScrapingResult>;
+}
+
+export type ScraperTwoFactorAuthTriggerResult = ErrorResult | {
+  success: true;
+};
+
+export type ScraperGetLongTermTwoFactorTokenResult = ErrorResult | {
+  success: true;
+  longTermTwoFactorAuthToken: string;
+};
+
+
+export interface TwoFactorAuthScraper extends Scraper {
+  triggerTwoFactorAuth(phoneNumber: string): Promise<ScraperTwoFactorAuthTriggerResult>;
+  getLongTermTwoFactorToken(otpCode: string): Promise<ScraperGetLongTermTwoFactorTokenResult>;
 }
