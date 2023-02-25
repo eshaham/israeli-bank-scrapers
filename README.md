@@ -29,6 +29,7 @@ Currently only the following banks are supported:
 - Massad
 - Yahav (Thanks to [@gczobel](https://github.com/gczobel))
 - Beyhad Bishvilha - [ביחד בשבילך](https://www.hist.org.il/) (thanks [@esakal](https://github.com/esakal))
+- OneZero (Experimental) (thanks [@orzarchi](https://github.com/orzarchi))
 
 # Prerequisites
 To use this you will need to have [Node.js](https://nodejs.org) >= 10.x installed.
@@ -125,6 +126,47 @@ The return value is a list of scraper metadata:
     ]
   }
 }
+```
+
+## Two-Factor Authentication Scrapers
+Some companies require two-factor authentication, and as such the scraper cannot be fully automated. When using the relevant scrapers, you have two options:
+1. Provide an async callback that knows how to retrieve real time secrets like OTP codes.
+2. When supported by the scraper - provide a "long term token". These are usually available if the financial provider only requires Two-Factor authentication periodically, and not on every login. You can retrieve your long term token from the relevant credit/banking app using reverse engineering and a MITM proxy, or use helper functions that are provided by some Two-Factor Auth scrapers (e.g. OneZero).
+
+
+```node
+import { CompanyTypes, createScraper } from 'israeli-bank-scrapers';
+import { prompt } from 'enquirer';
+
+// Option 1 - Provide a callback
+
+const result = await scraper.login({
+ email: relevantAccount.credentials.email,
+ password: relevantAccount.credentials.password,
+ phoneNumber,
+ otpCodeRetriever: async () => {
+  let otpCode;
+  while (!otpCode) {
+   otpCode = await questions('OTP Code?');
+  }
+
+  return otpCode[0];
+ }
+});
+
+// Option 2 - Retrieve a long term otp token (OneZero)
+await scraper.triggerTwoFactorAuth(phoneNumber);
+
+// OTP is sent, retrieve it somehow
+const otpCode='...';
+
+const result = scraper.getLongTermTwoFactorToken(otpCode);
+/*
+result = {
+  success: true;
+  longTermTwoFactorAuthToken: 'eyJraWQiOiJiNzU3OGM5Yy0wM2YyLTRkMzktYjBm...';
+}
+ */
 ```
 
 # Getting deployed version of latest changes in master
