@@ -1,19 +1,23 @@
 import moment, { Moment } from 'moment';
 import { Page } from 'puppeteer';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
-import {
-  fillInput,
-  clickButton,
-  waitUntilElementFound,
-  pageEvalAll,
-  elementPresentOnPage,
-} from '../helpers/elements-interactions';
-import { waitForNavigation } from '../helpers/navigation';
+
 import { SHEKEL_CURRENCY } from '../constants';
 import {
-  TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
+  clickButton,
+  elementPresentOnPage,
+  fillInput,
+  pageEvalAll,
+  waitUntilElementFound,
+} from '../helpers/elements-interactions';
+import { waitForNavigation } from '../helpers/navigation';
+import {
+  Transaction,
+  TransactionsAccount,
+  TransactionStatuses,
+  TransactionTypes,
 } from '../transactions';
 import { ScraperCredentials } from './base-scraper';
+import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא נמצאו נתונים בנושא המבוקש';
@@ -46,7 +50,6 @@ interface ScrapedTransaction {
   description: string;
   status: TransactionStatuses;
 }
-
 
 export function getPossibleLoginResults(): PossibleLoginResults {
   const urls: PossibleLoginResults = {};

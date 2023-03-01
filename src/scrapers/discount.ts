@@ -1,17 +1,18 @@
 import _ from 'lodash';
 import moment from 'moment';
 import { Page } from 'puppeteer';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
+
 import { waitUntilElementFound } from '../helpers/elements-interactions';
-import { waitForNavigation } from '../helpers/navigation';
 import { fetchGetWithinPage } from '../helpers/fetch';
+import { waitForNavigation } from '../helpers/navigation';
+import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
 import {
-  Transaction, TransactionStatuses, TransactionTypes,
-} from '../transactions';
-import {
+  ScaperScrapingResult,
+  ScraperCredentials,
+  ScraperErrorTypes,
   ScraperOptions,
-  ScraperErrorTypes, ScaperScrapingResult, ScraperCredentials,
 } from './base-scraper';
+import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 
 const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
@@ -61,7 +62,6 @@ function convertTransactions(txns: ScrapedTransaction[], txnStatus: TransactionS
   });
 }
 
-
 async function fetchAccountData(page: Page, options: ScraperOptions): Promise<ScaperScrapingResult> {
   const apiSiteUrl = `${BASE_URL}/Titan/gatewayAPI`;
 
@@ -93,21 +93,26 @@ async function fetchAccountData(page: Page, options: ScraperOptions): Promise<Sc
     };
   }
 
+  let accountData: ScaperScrapingResult = {
+    success: false,
+  };
   const completedTxns = convertTransactions(
     txnsResult.CurrentAccountLastTransactions.OperationEntry,
     TransactionStatuses.Completed,
   );
   const rawFutureTxns = _.get(txnsResult, 'CurrentAccountLastTransactions.FutureTransactionsBlock.FutureTransactionEntry');
-  const pendingTxns = convertTransactions(rawFutureTxns, TransactionStatuses.Pending);
+  if (rawFutureTxns) {
+    const pendingTxns = convertTransactions(rawFutureTxns, TransactionStatuses.Pending);
 
-  const accountData = {
-    success: true,
-    accounts: [{
-      accountNumber,
-      balance: txnsResult.CurrentAccountLastTransactions.CurrentAccountInfo.AccountBalance,
-      txns: [...completedTxns, ...pendingTxns],
-    }],
-  };
+    accountData = {
+      success: true,
+      accounts: [{
+        accountNumber,
+        balance: txnsResult.CurrentAccountLastTransactions.CurrentAccountInfo.AccountBalance,
+        txns: [...completedTxns, ...pendingTxns],
+      }],
+    };
+  }
 
   return accountData;
 }

@@ -1,8 +1,7 @@
-import moment, { Moment } from 'moment';
 import _ from 'lodash';
-import {
-  Transaction, TransactionTypes,
-} from '../transactions';
+import moment, { Moment } from 'moment';
+
+import { Transaction, TransactionTypes } from '../transactions';
 
 function isNormalTransaction(txn: any): boolean {
   return txn && txn.type === TransactionTypes.Normal;

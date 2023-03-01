@@ -1,18 +1,22 @@
 import moment, { Moment } from 'moment';
 import { Page } from 'puppeteer';
-import { BaseScraperWithBrowser, LoginResults, LoginOptions } from './base-scraper-with-browser';
-import {
-  fillInput,
-  clickButton,
-  waitUntilElementFound,
-  pageEvalAll,
-} from '../helpers/elements-interactions';
+
 import { SHEKEL_CURRENCY } from '../constants';
 import {
-  TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
+  clickButton,
+  fillInput,
+  pageEvalAll,
+  waitUntilElementFound,
+} from '../helpers/elements-interactions';
+import { waitForNavigation } from '../helpers/navigation';
+import {
+  Transaction,
+  TransactionsAccount,
+  TransactionStatuses,
+  TransactionTypes,
 } from '../transactions';
 import { ScaperScrapingResult, ScraperCredentials } from './base-scraper';
-import { waitForNavigation } from '../helpers/navigation';
+import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
 
 const BASE_URL = 'https://hb2.bankleumi.co.il';
 const LOGIN_URL = 'https://www.leumi.co.il/';
@@ -22,7 +26,6 @@ const FILTERED_TRANSACTIONS_URL = `${BASE_URL}/ChannelWCF/Broker.svc/ProcessRequ
 const DATE_FORMAT = 'DD.MM.YY';
 const ACCOUNT_BLOCKED_MSG = 'המנוי חסום';
 const INVALID_PASSWORD_MSG = 'אחד או יותר מפרטי ההזדהות שמסרת שגויים. ניתן לנסות שוב';
-
 
 function getPossibleLoginResults() {
   const urls: LoginOptions['possibleResults'] = {
@@ -185,7 +188,6 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
 
   return accounts;
 }
-
 
 async function navigateToLogin(page: Page): Promise<void> {
   const loginButtonSelector = '#enter_your_account a';

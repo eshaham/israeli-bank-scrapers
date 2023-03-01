@@ -1,13 +1,20 @@
 import moment from 'moment';
 import { Frame, Page, Request } from 'puppeteer';
+
 import { SHEKEL_CURRENCY } from '../constants';
 import {
-  pageEvalAll, waitUntilElementDisappear, waitUntilElementFound, waitUntilIframeFound,
+  pageEvalAll,
+  waitUntilElementDisappear,
+  waitUntilElementFound,
+  waitUntilIframeFound,
 } from '../helpers/elements-interactions';
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { waitForUrl } from '../helpers/navigation';
 import {
-  Transaction, TransactionsAccount, TransactionStatuses, TransactionTypes,
+  Transaction,
+  TransactionsAccount,
+  TransactionStatuses,
+  TransactionTypes,
 } from '../transactions';
 import { ScraperCredentials, ScraperErrorTypes } from './base-scraper';
 import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
@@ -63,7 +70,6 @@ const pendingTrxIdentifierId = '#ctl00_ContentPlaceHolder2_panel1';
 const checkingAccountTabHebrewName = 'עובר ושב';
 const checkingAccountTabEnglishName = 'Checking Account';
 
-
 function createLoginFields(credentials: ScraperCredentials) {
   return [
     { selector: usernameSelector, value: credentials.username },
@@ -101,7 +107,6 @@ function createHeadersFromRequest(request: Request) {
     'Content-Type': request.headers()['content-type'],
   };
 }
-
 
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((row) => {
@@ -188,7 +193,7 @@ class MizrahiScraper extends BaseScraperWithBrowser {
       return {
         success: false,
         errorType: ScraperErrorTypes.Generic,
-        errorMessage: e.message,
+        errorMessage: (e as Error).message,
       };
     }
   }
@@ -205,7 +210,6 @@ class MizrahiScraper extends BaseScraperWithBrowser {
 
       return fetchPostWithinPage<ScrapedTransactionsResult>(this.page, url, data, headers);
     }));
-
 
     if (!response || response.header.success === false) {
       throw new Error(`Error fetching transaction. Response message: ${response ? response.header.messages[0].text : ''}`);

@@ -1,21 +1,23 @@
 import moment, { Moment } from 'moment';
 import { Page } from 'puppeteer';
+
 import { SHEKEL_CURRENCY } from '../constants';
 import {
-  clickButton, elementPresentOnPage,
-  pageEvalAll, waitUntilElementDisappear, waitUntilElementFound,
+  clickButton,
+  elementPresentOnPage,
+  pageEvalAll,
+  waitUntilElementDisappear,
+  waitUntilElementFound,
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import {
-  Transaction, TransactionsAccount,
-  TransactionStatuses, TransactionTypes,
+  Transaction,
+  TransactionsAccount,
+  TransactionStatuses,
+  TransactionTypes,
 } from '../transactions';
 import { ScraperCredentials } from './base-scraper';
-import {
-  BaseScraperWithBrowser,
-  LoginResults,
-  PossibleLoginResults,
-} from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 
 const LOGIN_URL = 'https://login.yahav.co.il/login/';
 const BASE_URL = 'https://digital.yahav.co.il/BaNCSDigitalUI/app/index.html#/';
@@ -198,7 +200,6 @@ async function searchByDates(page: Page, startDate: Moment) {
     }
   }
 }
-
 
 async function fetchAccountData(page: Page, startDate: Moment, accountID: string): Promise<TransactionsAccount> {
   await waitUntilElementDisappear(page, '.loading-bar-spinner');

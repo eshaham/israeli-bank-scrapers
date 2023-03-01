@@ -1,9 +1,26 @@
 import moment, { Moment } from 'moment';
 import { Frame, Page } from 'puppeteer';
-import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
+
 import {
-  clickButton, elementPresentOnPage, pageEval, pageEvalAll, setValue, waitUntilElementFound,
+  DOLLAR_CURRENCY,
+  DOLLAR_CURRENCY_SYMBOL,
+  EURO_CURRENCY,
+  EURO_CURRENCY_SYMBOL,
+  SHEKEL_CURRENCY,
+  SHEKEL_CURRENCY_SYMBOL,
+} from '../constants';
+import { getDebug } from '../helpers/debug';
+import {
+  clickButton,
+  elementPresentOnPage,
+  pageEval,
+  pageEvalAll,
+  setValue,
+  waitUntilElementFound,
 } from '../helpers/elements-interactions';
+import { fetchPostWithinPage } from '../helpers/fetch';
+import { filterOldTransactions } from '../helpers/transactions';
+import { waitUntil } from '../helpers/waiting';
 import {
   Transaction,
   TransactionInstallments,
@@ -11,14 +28,8 @@ import {
   TransactionStatuses,
   TransactionTypes,
 } from '../transactions';
-import { ScraperOptions, ScaperScrapingResult, ScraperCredentials } from './base-scraper';
-import {
-  DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, EURO_CURRENCY, EURO_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,
-} from '../constants';
-import { waitUntil } from '../helpers/waiting';
-import { filterOldTransactions } from '../helpers/transactions';
-import { getDebug } from '../helpers/debug';
-import { fetchPostWithinPage } from '../helpers/fetch';
+import { ScaperScrapingResult, ScraperCredentials, ScraperOptions } from './base-scraper';
+import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_URL = 'https://services.cal-online.co.il/Card-Holders/Screens/Transactions/Transactions.aspx';
@@ -44,7 +55,6 @@ interface ScrapedTransaction {
 interface ScrapedAdditionalInfo {
   category?: string;
 }
-
 
 async function getLoginFrame(page: Page) {
   let frame: Frame | null = null;
@@ -97,7 +107,6 @@ function createLoginFields(credentials: ScraperCredentials) {
     { selector: '[formcontrolname="password"]', value: credentials.password },
   ];
 }
-
 
 function getAmountData(amountStr: string) {
   const amountStrCln = amountStr.replace(',', '');

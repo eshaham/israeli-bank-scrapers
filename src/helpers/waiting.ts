@@ -1,4 +1,3 @@
-
 export class TimeoutError extends Error {
 
 }
@@ -21,7 +20,7 @@ function timeoutPromise(ms: number, promise: Promise<any>, description: string) 
 }
 
 export function waitUntil(asyncTest: () => Promise<any>, description = '', timeout = 10000, interval = 100) {
-  const promise = new Promise((resolve, reject) => {
+  const promise = new Promise<void>((resolve, reject) => {
     function wait() {
       asyncTest().then((value) => {
         if (value === true) {

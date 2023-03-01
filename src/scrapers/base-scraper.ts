@@ -1,9 +1,10 @@
 import { EventEmitter } from 'events';
-import { Browser, Page } from 'puppeteer';
 import moment from 'moment-timezone';
+import { Browser, Page } from 'puppeteer';
+
+import { CompanyTypes } from '../definitions';
 import { TimeoutError } from '../helpers/waiting';
 import { TransactionsAccount } from '../transactions';
-import { CompanyTypes } from '../definitions';
 
 const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';
 
@@ -59,7 +60,6 @@ export interface ScraperOptions {
    * shows the browser while scraping, good for debugging (default false)
    */
   showBrowser?: boolean;
-
 
   /**
    * scrape transactions to be processed X months in the future
@@ -189,7 +189,7 @@ export class BaseScraper {
     } catch (e) {
       loginResult = e instanceof TimeoutError ?
         createTimeoutError(e.message) :
-        createGenericError(e.message);
+        createGenericError((e as Error).message);
     }
 
     let scrapeResult;
@@ -200,7 +200,7 @@ export class BaseScraper {
         scrapeResult =
           e instanceof TimeoutError ?
             createTimeoutError(e.message) :
-            createGenericError(e.message);
+            createGenericError((e as Error).message);
       }
     } else {
       scrapeResult = loginResult;
@@ -210,7 +210,7 @@ export class BaseScraper {
       const success = scrapeResult && scrapeResult.success === true;
       await this.terminate(success);
     } catch (e) {
-      scrapeResult = createGenericError(e.message);
+      scrapeResult = createGenericError((e as Error).message);
     }
     this.emitProgress(ScaperProgressTypes.EndScraping);
 

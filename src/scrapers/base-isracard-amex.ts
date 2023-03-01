@@ -1,28 +1,29 @@
-import _ from 'lodash';
 import buildUrl from 'build-url';
+import _ from 'lodash';
 import moment, { Moment } from 'moment';
-
 import { Page } from 'puppeteer';
-import { BaseScraperWithBrowser } from './base-scraper-with-browser';
-import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
-import {
-  SHEKEL_CURRENCY_KEYWORD,
-  SHEKEL_CURRENCY,
-  ALT_SHEKEL_CURRENCY,
-} from '../constants';
+
+import { ALT_SHEKEL_CURRENCY, SHEKEL_CURRENCY, SHEKEL_CURRENCY_KEYWORD } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
-import { fixInstallments, filterOldTransactions } from '../helpers/transactions';
+import { getDebug } from '../helpers/debug';
+import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
+import { filterOldTransactions, fixInstallments } from '../helpers/transactions';
+import { runSerial } from '../helpers/waiting';
 import {
-  TransactionsAccount, Transaction, TransactionInstallments,
-  TransactionStatuses, TransactionTypes,
+  Transaction,
+  TransactionInstallments,
+  TransactionsAccount,
+  TransactionStatuses,
+  TransactionTypes,
 } from '../transactions';
 import {
-  ScraperErrorTypes,
-  ScraperOptions, ScaperScrapingResult, ScaperProgressTypes,
+  ScaperProgressTypes,
+  ScaperScrapingResult,
   ScraperCredentials,
+  ScraperErrorTypes,
+  ScraperOptions,
 } from './base-scraper';
-import { getDebug } from '../helpers/debug';
-import { runSerial } from '../helpers/waiting';
+import { BaseScraperWithBrowser } from './base-scraper-with-browser';
 
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';
@@ -55,7 +56,6 @@ interface ScrapedTransaction {
   paymentSum: number;
   paymentSumOutbound: number;
 }
-
 
 interface ScrapedAccount {
   index: number;
@@ -208,7 +208,7 @@ async function fetchTransactions(page: Page, options: ExtendedScraperOptions, st
   if (dataResult && _.get(dataResult, 'Header.Status') === '1' && dataResult.CardsTransactionsListBean) {
     const accountTxns: ScrapedAccountsWithIndex = {};
     accounts.forEach((account) => {
-      const txnGroups: ScrapedCurrentCardTransactions[] = _.get(dataResult, `CardsTransactionsListBean.Index${account.index}.CurrentCardTransactions`);
+      const txnGroups: ScrapedCurrentCardTransactions[] | undefined = _.get(dataResult, `CardsTransactionsListBean.Index${account.index}.CurrentCardTransactions`);
       if (txnGroups) {
         let allTxns: Transaction[] = [];
         txnGroups.forEach((txnGroup) => {
@@ -258,7 +258,7 @@ async function getExtraScrapTransaction(page: Page, options: ExtendedScraperOpti
   const rawCategory = _.get(data, 'PirteyIska_204Bean.sector');
   return {
     ...transaction,
-    category: rawCategory.trim(),
+    category: (rawCategory as unknown as string).trim(),
   };
 }
 
@@ -319,7 +319,6 @@ async function fetchAllTransactions(page: Page, options: ExtendedScraperOptions,
     accounts,
   };
 }
-
 
 class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
   private baseUrl: string;
