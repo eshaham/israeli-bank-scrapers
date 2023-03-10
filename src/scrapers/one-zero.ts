@@ -15,6 +15,8 @@ import {
   TransactionTypes,
 } from '../transactions';
 
+const HEBREW_WORDS_REGEX = /[\u0590-\u05FF][\u0590-\u05FF"'\-_ /\\]*[\u0590-\u05FF]/g;
+
 const debug = getDebug('one-zero');
 
 type Account = {
@@ -260,13 +262,42 @@ export default class OneZeroScraper extends BaseTwoFactorAuthScraper<Credentials
           chargedCurrency: movement.movementCurrency,
           originalAmount: (+movement.movementAmount) * modifier,
           originalCurrency: movement.movementCurrency,
-          description: movement.description,
+          description: this.sanitizeHebrew(movement.description),
           processedDate: movement.movementTimestamp,
           status: TransactionStatuses.Completed,
           type: hasInstallments ? TransactionTypes.Installments : TransactionTypes.Normal,
         });
       }),
     };
+  }
+
+  /**
+   * one zero hebrew strings are reversed with a unicode control character that forces display in LTR order
+   * We need to remove the unicode control character, and then reverse hebrew substrings inside the string
+   */
+  private sanitizeHebrew(text: string) {
+    if (!text.includes('\u202d')) {
+      return text.trim();
+    }
+
+    const plainString = text.replace(/\u202d/gi, '').trim();
+    const hebrewSubStringsRanges = [...plainString.matchAll(HEBREW_WORDS_REGEX)];
+    const rangesToReverse = hebrewSubStringsRanges.map((text) => (
+      { start: text.index!, end: text.index! + text[0].length }));
+    const out = [];
+    let index = 0;
+
+    for (const { start, end } of rangesToReverse) {
+      out.push(...plainString.substring(index, start));
+      index += (start - index);
+      const reversed = [...plainString.substring(start, end)].reverse();
+      out.push(...reversed);
+      index += (end - start);
+    }
+
+    out.push(...plainString.substring(index, plainString.length));
+
+    return out.join('');
   }
 
   async fetchData(): Promise<ScraperScrapingResult> {
