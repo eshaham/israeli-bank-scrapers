@@ -227,7 +227,7 @@ class BaseScraperWithBrowser extends BaseScraper {
     }
   }
 
-  async login(credentials: Record<string, string>): Promise<ScraperScrapingResult> {
+  async login(credentials: ScraperCredentials): Promise<ScraperScrapingResult> {
     if (!credentials || !this.page) {
       return createGeneralError();
     }

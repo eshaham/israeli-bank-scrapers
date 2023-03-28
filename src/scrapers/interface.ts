@@ -3,7 +3,12 @@ import { CompanyTypes } from '../definitions';
 import { TransactionsAccount } from '../transactions';
 import { ErrorResult, ScraperErrorTypes } from './errors';
 
-export type ScraperCredentials = Record<string, string>;
+export type ScraperCredentials = {
+  [key: string]: string;
+} & {
+  otpCodeRetriever?: () => Promise<string>;
+  otpLongTermToken?: string;
+};
 
 export interface FutureDebit {
   amount: number;

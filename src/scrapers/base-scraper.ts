@@ -4,15 +4,22 @@ import { TimeoutError } from '../helpers/waiting';
 import type { ScraperErrorTypes } from './errors';
 import { createGenericError, createTimeoutError } from './errors';
 import {
-  ScraperScrapingResult, ScraperCredentials, ScraperOptions, Scraper,
+  ScraperScrapingResult,
+  ScraperCredentials,
+  ScraperOptions,
+  Scraper,
+  ScraperTwoFactorAuthTriggerResult,
+  ScraperGetLongTermTwoFactorTokenResult,
 } from './interface';
 
 const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';
+
 
 export interface ScaperLoginResult {
   success: boolean;
   errorType?: ScraperErrorTypes;
   errorMessage?: string; // only on success=false
+  persistentOtpToken?: string;
 }
 
 export enum ScraperProgressTypes {
@@ -77,7 +84,17 @@ export class BaseScraper implements Scraper {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
-  async login(_credentials: Record<string, string>): Promise<ScaperLoginResult> {
+  triggerTwoFactorAuth(_phoneNumber: string): Promise<ScraperTwoFactorAuthTriggerResult> {
+    throw new Error(`triggerOtp() is not created in ${this.options.companyId}`);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
+  getLongTermTwoFactorToken(_otpCode: string): Promise<ScraperGetLongTermTwoFactorTokenResult> {
+    throw new Error(`getPermanentOtpToken() is not created in ${this.options.companyId}`);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
+  async login(_credentials: ScraperCredentials): Promise<ScaperLoginResult> {
     throw new Error(`login() is not created in ${this.options.companyId}`);
   }
 

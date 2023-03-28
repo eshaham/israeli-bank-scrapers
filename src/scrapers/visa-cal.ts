@@ -443,7 +443,7 @@ class VisaCalScraper extends BaseScraperWithBrowser {
     return frame;
   };
 
-  getLoginOptions(credentials: Record<string, string>) {
+  getLoginOptions(credentials: ScraperCredentials) {
     return {
       loginUrl: `${LOGIN_URL}`,
       fields: createLoginFields(credentials),

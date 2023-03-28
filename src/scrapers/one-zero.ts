@@ -1,6 +1,6 @@
 import moment from 'moment/moment';
-import { BaseTwoFactorAuthScraper, ScraperLoginResult } from './base-two-factor-auth-scraper';
 import {
+  ScraperCredentials,
   ScraperGetLongTermTwoFactorTokenResult,
   ScraperScrapingResult, ScraperTwoFactorAuthTriggerResult,
 } from './interface';
@@ -14,6 +14,7 @@ import {
   TransactionStatuses,
   TransactionTypes,
 } from '../transactions';
+import { BaseScraper, ScaperLoginResult } from './base-scraper';
 
 const HEBREW_WORDS_REGEX = /[\u0590-\u05FF][\u0590-\u05FF"'\-_ /\\]*[\u0590-\u05FF]/g;
 
@@ -82,17 +83,8 @@ const IDENTITY_SERVER_URL = 'https://identity.tfd-bank.com/v1/';
 
 const GRAPHQL_API_URL = 'https://mobile.tfd-bank.com/mobile-graph/graphql';
 
-type Credentials = {
-  email: string;
-  password: string;
-} & ({
-  otpCodeRetriever: () => Promise<string>;
-  phoneNumber: string;
-} | {
-  otpLongTermToken: string;
-});
 
-export default class OneZeroScraper extends BaseTwoFactorAuthScraper<Credentials> {
+export default class OneZeroScraper extends BaseScraper {
   private otpContext?: string;
 
   private accessToken?: string;
@@ -143,7 +135,7 @@ export default class OneZeroScraper extends BaseTwoFactorAuthScraper<Credentials
     return otpToken;
   }
 
-  private async resolveOtpToken(credentials: Credentials): Promise<ScraperGetLongTermTwoFactorTokenResult> {
+  private async resolveOtpToken(credentials: ScraperCredentials): Promise<ScraperGetLongTermTwoFactorTokenResult> {
     if ('otpLongTermToken' in credentials) {
       if (!credentials.otpLongTermToken) {
         return createGenericError('Invalid otpLongTermToken');
@@ -180,8 +172,8 @@ export default class OneZeroScraper extends BaseTwoFactorAuthScraper<Credentials
     return { success: true, longTermTwoFactorAuthToken: otpTokenResult.longTermTwoFactorAuthToken };
   }
 
-  async login(credentials: Credentials):
-  Promise<ScraperLoginResult> {
+  async login(credentials: ScraperCredentials):
+  Promise<ScaperLoginResult> {
     const otpTokenResult = await this.resolveOtpToken(credentials);
     if (!otpTokenResult.success) {
       return otpTokenResult;
