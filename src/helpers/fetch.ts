@@ -50,7 +50,7 @@ export async function fetchGraphql<TResult>(url: string, query: string,
   return result.data as Promise<TResult>;
 }
 
-export async function fetchGetWithinPage<TResult>(page: Page, url: string): Promise<TResult | null> {
+export function fetchGetWithinPage<TResult>(page: Page, url: string): Promise<TResult | null> {
   return page.evaluate((url) => {
     return new Promise<TResult | null>((resolve, reject) => {
       fetch(url, {

@@ -5,10 +5,12 @@ import { ErrorResult, ScraperErrorTypes } from './errors';
 
 export type ScraperCredentials = {
   [key: string]: string;
-} & {
+} & ({
   otpCodeRetriever?: () => Promise<string>;
+  phoneNumber?: string;
+} | {
   otpLongTermToken?: string;
-};
+});
 
 export interface FutureDebit {
   amount: number;
@@ -139,8 +141,9 @@ export type ScraperGetLongTermTwoFactorTokenResult = ErrorResult | {
   longTermTwoFactorAuthToken: string;
 };
 
-
-export interface TwoFactorAuthScraper extends Scraper {
-  triggerTwoFactorAuth(phoneNumber: string): Promise<ScraperTwoFactorAuthTriggerResult>;
-  getLongTermTwoFactorToken(otpCode: string): Promise<ScraperGetLongTermTwoFactorTokenResult>;
+export interface ScraperLoginResult {
+  success: boolean;
+  errorType?: ScraperErrorTypes;
+  errorMessage?: string; // only on success=false
+  persistentOtpToken?: string;
 }

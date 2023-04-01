@@ -1,26 +1,19 @@
 import { EventEmitter } from 'events';
 import moment from 'moment-timezone';
 import { TimeoutError } from '../helpers/waiting';
-import type { ScraperErrorTypes } from './errors';
 import { createGenericError, createTimeoutError } from './errors';
 import {
-  ScraperScrapingResult,
-  ScraperCredentials,
-  ScraperOptions,
   Scraper,
-  ScraperTwoFactorAuthTriggerResult,
+  ScraperCredentials,
   ScraperGetLongTermTwoFactorTokenResult,
+  ScraperLoginResult,
+  ScraperOptions,
+  ScraperScrapingResult,
+  ScraperTwoFactorAuthTriggerResult,
 } from './interface';
 
 const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';
 
-
-export interface ScaperLoginResult {
-  success: boolean;
-  errorType?: ScraperErrorTypes;
-  errorMessage?: string; // only on success=false
-  persistentOtpToken?: string;
-}
 
 export enum ScraperProgressTypes {
   Initializing = 'INITIALIZING',
@@ -94,7 +87,7 @@ export class BaseScraper implements Scraper {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
-  async login(_credentials: ScraperCredentials): Promise<ScaperLoginResult> {
+  async login(_credentials: ScraperCredentials): Promise<ScraperLoginResult> {
     throw new Error(`login() is not created in ${this.options.companyId}`);
   }
 

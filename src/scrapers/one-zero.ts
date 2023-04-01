@@ -1,7 +1,7 @@
 import moment from 'moment/moment';
 import {
   ScraperCredentials,
-  ScraperGetLongTermTwoFactorTokenResult,
+  ScraperGetLongTermTwoFactorTokenResult, ScraperLoginResult,
   ScraperScrapingResult, ScraperTwoFactorAuthTriggerResult,
 } from './interface';
 import { getDebug } from '../helpers/debug';
@@ -14,7 +14,7 @@ import {
   TransactionStatuses,
   TransactionTypes,
 } from '../transactions';
-import { BaseScraper, ScaperLoginResult } from './base-scraper';
+import { BaseScraper } from './base-scraper';
 
 const HEBREW_WORDS_REGEX = /[\u0590-\u05FF][\u0590-\u05FF"'\-_ /\\]*[\u0590-\u05FF]/g;
 
@@ -173,7 +173,7 @@ export default class OneZeroScraper extends BaseScraper {
   }
 
   async login(credentials: ScraperCredentials):
-  Promise<ScaperLoginResult> {
+  Promise<ScraperLoginResult> {
     const otpTokenResult = await this.resolveOtpToken(credentials);
     if (!otpTokenResult.success) {
       return otpTokenResult;
@@ -209,6 +209,7 @@ export default class OneZeroScraper extends BaseScraper {
   }
 
   private async fetchPortfolioMovements(portfolio: Portfolio, startDate: Date): Promise<TransactionsAccount> {
+    // TODO: Find out if we need the other accounts, there seems to always be one
     const account = portfolio.accounts[0];
     let cursor = null;
     const movements = [];
