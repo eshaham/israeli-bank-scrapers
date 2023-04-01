@@ -26,7 +26,7 @@ export enum ScraperProgressTypes {
   Terminating = 'TERMINATING',
 }
 
-export class BaseScraper implements Scraper {
+export class BaseScraper<TCredentials extends ScraperCredentials> implements Scraper<TCredentials> {
   private eventEmitter = new EventEmitter();
 
   constructor(public options: ScraperOptions) {
@@ -38,7 +38,7 @@ export class BaseScraper implements Scraper {
     moment.tz.setDefault('Asia/Jerusalem');
   }
 
-  async scrape(credentials: ScraperCredentials): Promise<ScraperScrapingResult> {
+  async scrape(credentials: TCredentials): Promise<ScraperScrapingResult> {
     this.emitProgress(ScraperProgressTypes.StartScraping);
     await this.initialize();
 
@@ -87,7 +87,7 @@ export class BaseScraper implements Scraper {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
-  async login(_credentials: ScraperCredentials): Promise<ScraperLoginResult> {
+  async login(_credentials: TCredentials): Promise<ScraperLoginResult> {
     throw new Error(`login() is not created in ${this.options.companyId}`);
   }
 

@@ -76,7 +76,7 @@ async function getKeyByValue(object: PossibleLoginResults, value: string, page: 
   return Promise.resolve(LoginResults.UnknownError);
 }
 
-function handleLoginResult(scraper: BaseScraperWithBrowser, loginResult: LoginResults) {
+function handleLoginResult(scraper: BaseScraperWithBrowser<ScraperCredentials>, loginResult: LoginResults) {
   switch (loginResult) {
     case LoginResults.Success:
       scraper.emitProgress(ScraperProgressTypes.LoginSuccess);
@@ -108,7 +108,7 @@ function createGeneralError(): ScraperScrapingResult {
   };
 }
 
-class BaseScraperWithBrowser extends BaseScraper {
+class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends BaseScraper<TCredentials> {
   // NOTICE - it is discourage to use bang (!) in general. It is used here because
   // all the classes that inherit from this base assume is it mandatory.
   protected browser!: Browser;

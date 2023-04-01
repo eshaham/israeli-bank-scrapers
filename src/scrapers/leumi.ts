@@ -11,7 +11,7 @@ import { SHEKEL_CURRENCY } from '../constants';
 import {
   TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
-import { ScraperScrapingResult, ScraperCredentials } from './interface';
+import { ScraperScrapingResult } from './interface';
 import { waitForNavigation } from '../helpers/navigation';
 
 const BASE_URL = 'https://hb2.bankleumi.co.il';
@@ -56,7 +56,7 @@ function getPossibleLoginResults() {
   return urls;
 }
 
-function createLoginFields(credentials: ScraperCredentials) {
+function createLoginFields(credentials: ScraperSpecificCredentials) {
   return [
     { selector: 'input[placeholder="שם משתמש"]', value: credentials.username },
     { selector: 'input[placeholder="סיסמה"]', value: credentials.password },
@@ -208,8 +208,10 @@ async function waitForPostLogin(page: Page): Promise<void> {
   ]);
 }
 
-class LeumiScraper extends BaseScraperWithBrowser {
-  getLoginOptions(credentials: ScraperCredentials) {
+type ScraperSpecificCredentials = { username: string, password: string};
+
+class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
+  getLoginOptions(credentials: ScraperSpecificCredentials) {
     return {
       loginUrl: LOGIN_URL,
       fields: createLoginFields(credentials),

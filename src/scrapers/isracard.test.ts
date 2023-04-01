@@ -28,7 +28,7 @@ describe('Isracard legacy scraper', () => {
 
     const scraper = new IsracardScraper(options);
 
-    const result = await scraper.scrape({ username: 'e10s12', password: '3f3ss3d' });
+    const result = await scraper.scrape({ id: 'e10s12', password: '3f3ss3d', card6Digits: '123456' });
 
     expect(result).toBeDefined();
     expect(result.success).toBeFalsy();

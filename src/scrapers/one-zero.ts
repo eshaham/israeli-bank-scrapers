@@ -1,6 +1,5 @@
 import moment from 'moment/moment';
 import {
-  ScraperCredentials,
   ScraperGetLongTermTwoFactorTokenResult, ScraperLoginResult,
   ScraperScrapingResult, ScraperTwoFactorAuthTriggerResult,
 } from './interface';
@@ -84,7 +83,14 @@ const IDENTITY_SERVER_URL = 'https://identity.tfd-bank.com/v1/';
 const GRAPHQL_API_URL = 'https://mobile.tfd-bank.com/mobile-graph/graphql';
 
 
-export default class OneZeroScraper extends BaseScraper {
+type ScraperSpecificCredentials = {email: string, password: string} & ({
+  otpCodeRetriever: () => Promise<string>;
+  phoneNumber: string;
+} | {
+  otpLongTermToken: string;
+});
+
+export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentials> {
   private otpContext?: string;
 
   private accessToken?: string;
@@ -135,7 +141,9 @@ export default class OneZeroScraper extends BaseScraper {
     return otpToken;
   }
 
-  private async resolveOtpToken(credentials: ScraperCredentials): Promise<ScraperGetLongTermTwoFactorTokenResult> {
+  private async resolveOtpToken(
+    credentials: ScraperSpecificCredentials,
+  ): Promise<ScraperGetLongTermTwoFactorTokenResult> {
     if ('otpLongTermToken' in credentials) {
       if (!credentials.otpLongTermToken) {
         return createGenericError('Invalid otpLongTermToken');
@@ -172,7 +180,7 @@ export default class OneZeroScraper extends BaseScraper {
     return { success: true, longTermTwoFactorAuthToken: otpTokenResult.longTermTwoFactorAuthToken };
   }
 
-  async login(credentials: ScraperCredentials):
+  async login(credentials: ScraperSpecificCredentials):
   Promise<ScraperLoginResult> {
     const otpTokenResult = await this.resolveOtpToken(credentials);
     if (!otpTokenResult.success) {

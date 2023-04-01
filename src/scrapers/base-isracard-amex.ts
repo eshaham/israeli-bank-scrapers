@@ -23,7 +23,7 @@ import {
 import { getDebug } from '../helpers/debug';
 import { runSerial } from '../helpers/waiting';
 import { ScraperErrorTypes } from './errors';
-import { ScraperScrapingResult, ScraperCredentials, ScraperOptions } from './interface';
+import { ScraperScrapingResult, ScraperOptions } from './interface';
 
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';
@@ -321,8 +321,8 @@ async function fetchAllTransactions(page: Page, options: ExtendedScraperOptions,
   };
 }
 
-
-class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
+type ScraperSpecificCredentials = {id: string, password: string, card6Digits: string};
+class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   private baseUrl: string;
 
   private companyCode: string;
@@ -337,7 +337,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
     this.servicesUrl = `${baseUrl}/services/ProxyRequestHandler.ashx`;
   }
 
-  async login(credentials: ScraperCredentials): Promise<ScraperScrapingResult> {
+  async login(credentials: ScraperSpecificCredentials): Promise<ScraperScrapingResult> {
     await this.page.setRequestInterception(true);
     this.page.on('request', (request) => {
       if (request.url().includes('detector-dom.min.js')) {

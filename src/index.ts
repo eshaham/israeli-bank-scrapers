@@ -11,6 +11,7 @@ export {
   ScraperLoginResult as ScaperLoginResult,
   ScraperLoginResult,
   Scraper,
+  ScraperCredentials,
 } from './scrapers/interface';
 
 export { default as OneZeroScraper } from './scrapers/one-zero';

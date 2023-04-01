@@ -11,7 +11,6 @@ import {
 } from '../helpers/elements-interactions';
 import { SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL } from '../constants';
 import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
-import { ScraperCredentials } from './interface';
 
 const BASE_URL = 'https://online.bankotsar.co.il';
 const LONG_DATE_FORMAT = 'DD/MM/YYYY';
@@ -41,7 +40,7 @@ function getTransactionsUrl() {
   return `${BASE_URL}/wps/myportal/FibiMenu/Online/OnAccountMngment/OnBalanceTrans/PrivateAccountFlow`;
 }
 
-function createLoginFields(credentials: ScraperCredentials) {
+function createLoginFields(credentials: ScraperSpecificCredentials) {
   return [
     { selector: '#username', value: credentials.username },
     { selector: '#password', value: credentials.password },
@@ -198,8 +197,10 @@ async function waitForPostLogin(page: Page) {
   ]);
 }
 
-class OtsarHahayalScraper extends BaseScraperWithBrowser {
-  getLoginOptions(credentials: ScraperCredentials) {
+type ScraperSpecificCredentials = { username: string, password: string };
+
+class OtsarHahayalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
+  getLoginOptions(credentials: ScraperSpecificCredentials) {
     return {
       loginUrl: `${BASE_URL}/MatafLoginService/MatafLoginServlet?bankId=OTSARPRTAL&site=Private&KODSAFA=HE`,
       fields: createLoginFields(credentials),

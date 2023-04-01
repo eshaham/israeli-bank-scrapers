@@ -9,7 +9,7 @@ import {
   Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
 import { ScraperErrorTypes } from './errors';
-import { ScraperScrapingResult, ScraperCredentials, ScraperOptions } from './interface';
+import { ScraperScrapingResult, ScraperOptions } from './interface';
 
 const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
@@ -126,7 +126,7 @@ function getPossibleLoginResults(): PossibleLoginResults {
   return urls;
 }
 
-function createLoginFields(credentials: ScraperCredentials) {
+function createLoginFields(credentials: ScraperSpecificCredentials) {
   return [
     { selector: '#tzId', value: credentials.id },
     { selector: '#tzPassword', value: credentials.password },
@@ -134,8 +134,10 @@ function createLoginFields(credentials: ScraperCredentials) {
   ];
 }
 
-class DiscountScraper extends BaseScraperWithBrowser {
-  getLoginOptions(credentials: ScraperCredentials) {
+type ScraperSpecificCredentials = { id: string, password: string, num: string };
+
+class DiscountScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
+  getLoginOptions(credentials: ScraperSpecificCredentials) {
     return {
       loginUrl: `${BASE_URL}/login/#/LOGIN_PAGE`,
       checkReadiness: async () => waitUntilElementFound(this.page, '#tzId'),

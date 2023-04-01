@@ -28,7 +28,7 @@ describe('Discount legacy scraper', () => {
 
     const scraper = new DiscountScraper(options);
 
-    const result = await scraper.scrape({ username: 'e10s12', password: '3f3ss3d' });
+    const result = await scraper.scrape({ id: 'e10s12', password: '3f3ss3d', num: '1234' });
 
     expect(result).toBeDefined();
     expect(result.success).toBeFalsy();

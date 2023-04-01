@@ -11,7 +11,6 @@ import {
 } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
-import { ScraperCredentials } from './interface';
 
 interface ScrapedTransaction {
   RecTypeSpecified: boolean;
@@ -65,7 +64,7 @@ const checkingAccountTabHebrewName = 'עובר ושב';
 const checkingAccountTabEnglishName = 'Checking Account';
 
 
-function createLoginFields(credentials: ScraperCredentials) {
+function createLoginFields(credentials: ScraperSpecificCredentials) {
   return [
     { selector: usernameSelector, value: credentials.username },
     { selector: passwordSelector, value: credentials.password },
@@ -152,8 +151,10 @@ async function postLogin(page: Page) {
   ]);
 }
 
-class MizrahiScraper extends BaseScraperWithBrowser {
-  getLoginOptions(credentials: ScraperCredentials) {
+type ScraperSpecificCredentials = { username: string, password: string };
+
+class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
+  getLoginOptions(credentials: ScraperSpecificCredentials) {
     return {
       loginUrl: LOGIN_URL,
       fields: createLoginFields(credentials),

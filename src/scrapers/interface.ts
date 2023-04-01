@@ -3,14 +3,21 @@ import { CompanyTypes } from '../definitions';
 import { TransactionsAccount } from '../transactions';
 import { ErrorResult, ScraperErrorTypes } from './errors';
 
-export type ScraperCredentials = {
-  [key: string]: string;
-} & ({
-  otpCodeRetriever?: () => Promise<string>;
-  phoneNumber?: string;
-} | {
-  otpLongTermToken?: string;
-});
+// TODO: Remove this type when the scraper 'factory' will return concrete scraper types
+// Instead of a generic interface (which in turn uses this type)
+export type ScraperCredentials =
+    {userCode: string, password: string} |
+    {username: string, password: string} |
+    {id: string, password: string} |
+    {id: string, password: string, num: string} |
+    {id: string, password: string, card6Digits: string} |
+    {username: string, nationalID: string, password: string} |
+    ({email: string, password: string} & ({
+      otpCodeRetriever: () => Promise<string>;
+      phoneNumber: string;
+    } | {
+      otpLongTermToken: string;
+    }));
 
 export interface FutureDebit {
   amount: number;
@@ -128,8 +135,8 @@ export interface ScraperScrapingResult {
   errorMessage?: string; // only on success=false
 }
 
-export interface Scraper {
-  scrape(credentials: ScraperCredentials): Promise<ScraperScrapingResult>;
+export interface Scraper<TCredentials extends ScraperCredentials> {
+  scrape(credentials: TCredentials): Promise<ScraperScrapingResult>;
 }
 
 export type ScraperTwoFactorAuthTriggerResult = ErrorResult | {

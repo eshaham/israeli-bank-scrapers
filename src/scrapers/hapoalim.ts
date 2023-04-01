@@ -10,7 +10,7 @@ import {
   TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
 import { getDebug } from '../helpers/debug';
-import { ScraperCredentials, ScraperOptions } from './interface';
+import { ScraperOptions } from './interface';
 
 const debug = getDebug('hapoalim');
 
@@ -211,20 +211,22 @@ function getPossibleLoginResults(baseUrl: string) {
   return urls;
 }
 
-function createLoginFields(credentials: ScraperCredentials) {
+function createLoginFields(credentials: ScraperSpecificCredentials) {
   return [
     { selector: '#userCode', value: credentials.userCode },
     { selector: '#password', value: credentials.password },
   ];
 }
 
-class HapoalimScraper extends BaseScraperWithBrowser {
+type ScraperSpecificCredentials = { userCode: string, password: string };
+
+class HapoalimScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   // eslint-disable-next-line class-methods-use-this
   get baseUrl() {
     return 'https://login.bankhapoalim.co.il';
   }
 
-  getLoginOptions(credentials: ScraperCredentials) {
+  getLoginOptions(credentials: ScraperSpecificCredentials) {
     return {
       loginUrl: `${this.baseUrl}/cgi-bin/poalwwwc?reqName=getLogonPage`,
       fields: createLoginFields(credentials),

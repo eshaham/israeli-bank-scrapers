@@ -15,7 +15,6 @@ import {
   LoginResults,
   PossibleLoginResults,
 } from './base-scraper-with-browser';
-import { ScraperCredentials } from './interface';
 
 const LOGIN_URL = 'https://login.yahav.co.il/login/';
 const BASE_URL = 'https://digital.yahav.co.il/BaNCSDigitalUI/app/index.html#/';
@@ -247,8 +246,10 @@ async function redirectOrDialog(page: Page) {
   await waitUntilElementDisappear(page, '.loading-bar-spinner');
 }
 
-class YahavScraper extends BaseScraperWithBrowser {
-  getLoginOptions(credentials: ScraperCredentials) {
+type ScraperSpecificCredentials = {username: string, password: string, nationalID: string};
+
+class YahavScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
+  getLoginOptions(credentials: ScraperSpecificCredentials) {
     return {
       loginUrl: `${LOGIN_URL}`,
       fields: [
