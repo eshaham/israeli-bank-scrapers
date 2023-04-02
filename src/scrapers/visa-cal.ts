@@ -1,24 +1,25 @@
 import moment, { Moment } from 'moment';
 import { Frame, Page } from 'puppeteer';
-import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
-import {
-  clickButton, elementPresentOnPage, pageEval, pageEvalAll, setValue, waitUntilElementFound,
-} from '../helpers/elements-interactions';
-import {
-  Transaction,
-  TransactionInstallments,
-  TransactionsAccount,
-  TransactionStatuses,
-  TransactionTypes,
-} from '../transactions';
-import { ScraperOptions, ScaperScrapingResult, ScraperCredentials } from './base-scraper';
 import {
   DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, EURO_CURRENCY, EURO_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,
 } from '../constants';
-import { waitUntil } from '../helpers/waiting';
-import { filterOldTransactions } from '../helpers/transactions';
 import { getDebug } from '../helpers/debug';
+import {
+  clickButton, elementPresentOnPage, pageEval, pageEvalAll, setValue, waitUntilElementFound,
+} from '../helpers/elements-interactions';
 import { fetchPostWithinPage } from '../helpers/fetch';
+import { getCurrentUrl } from '../helpers/navigation';
+import { filterOldTransactions } from '../helpers/transactions';
+import { waitUntil } from '../helpers/waiting';
+import {
+  Transaction,
+  TransactionInstallments,
+  TransactionStatuses,
+  TransactionTypes,
+  TransactionsAccount,
+} from '../transactions';
+import { ScaperScrapingResult, ScraperCredentials, ScraperOptions } from './base-scraper';
+import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_URL = 'https://services.cal-online.co.il/Card-Holders/Screens/Transactions/Transactions.aspx';
@@ -76,8 +77,8 @@ async function hasInvalidPasswordError(page: Page) {
 function getPossibleLoginResults() {
   debug('return possible login results');
   const urls: LoginOptions['possibleResults'] = {
-    [LoginResults.Success]: [/AccountManagement/i],
-    [LoginResults.InvalidPassword]: [async (options?: { page?: Page}) => {
+    [LoginResults.Success]: [/dashboard/i],
+    [LoginResults.InvalidPassword]: [async (options?: { page?: Page }) => {
       const page = options?.page;
       if (!page) {
         return false;
@@ -443,7 +444,7 @@ class VisaCalScraper extends BaseScraperWithBrowser {
     return frame;
   };
 
-  getLoginOptions(credentials: Record<string, string>) {
+  getLoginOptions(credentials: Record<string, string>): LoginOptions {
     return {
       loginUrl: `${LOGIN_URL}`,
       fields: createLoginFields(credentials),
@@ -451,6 +452,13 @@ class VisaCalScraper extends BaseScraperWithBrowser {
       possibleResults: getPossibleLoginResults(),
       checkReadiness: async () => waitUntilElementFound(this.page, '#ccLoginDesktopBtn'),
       preAction: this.openLoginPopup,
+      postAction: async () => {
+        await this.page.waitForNavigation();
+        const currentUrl = await getCurrentUrl(this.page);
+        if (currentUrl.endsWith('site-tutorial')) {
+          await clickButton(this.page, 'button.btn-close');
+        }
+      },
       userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36',
     };
   }
