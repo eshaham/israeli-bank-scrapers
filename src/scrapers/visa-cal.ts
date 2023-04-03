@@ -9,6 +9,7 @@ import {
 } from '../helpers/elements-interactions';
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { getCurrentUrl } from '../helpers/navigation';
+import { getFromSessionStorage } from '../helpers/storage';
 import { filterOldTransactions } from '../helpers/transactions';
 import { waitUntil } from '../helpers/waiting';
 import {
@@ -44,6 +45,16 @@ interface ScrapedTransaction {
 
 interface ScrapedAdditionalInfo {
   category?: string;
+}
+
+interface InitResponse {
+  result: {
+    cards: {
+      cardUniqueId: string;
+      last4Digits: string;
+      [key: string]: unknown;
+    }[];
+  };
 }
 
 
@@ -444,6 +455,22 @@ class VisaCalScraper extends BaseScraperWithBrowser {
     return frame;
   };
 
+  async getCards() {
+    const initData = await getFromSessionStorage<InitResponse>(this.page, 'init');
+    if (!initData) {
+      throw new Error('could not find \'init\' data in session storage');
+    }
+    return initData?.result.cards.map(({ cardUniqueId, last4Digits }) => ({ cardUniqueId, last4Digits }));
+  }
+
+  async getAuthorizationHeader() {
+    const authModule = await getFromSessionStorage<{ auth: { calConnectToken: string } }>(this.page, 'auth-module');
+    if (!authModule) {
+      throw new Error('could not find \'auth-module\' in session storage');
+    }
+    return `CALAuthScheme ${authModule.auth.calConnectToken}`;
+  }
+
   getLoginOptions(credentials: Record<string, string>): LoginOptions {
     return {
       loginUrl: `${LOGIN_URL}`,
@@ -468,6 +495,15 @@ class VisaCalScraper extends BaseScraperWithBrowser {
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
     debug(`fetch transactions starting ${startMoment.format()}`);
+
+    const Authorization = await this.getAuthorizationHeader();
+    const cards = await this.getCards();
+
+    /* TODO: fetch each month with:
+    curl 'https://api.cal-online.co.il/Transactions/api/transactionsDetails/getCardTransactionsDetails' -H 'Authorization: ${Authorization}
+    */
+
+    debug(Authorization, cards);
 
     debug('fetch future debits');
     const futureDebits = await fetchFutureDebits(this.page);
