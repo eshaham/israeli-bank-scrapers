@@ -138,7 +138,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
     });
 
     const { resultData: { otpToken } } = otpVerifyResponse;
-    return otpToken;
+    return { success: true, longTermTwoFactorAuthToken: otpToken };
   }
 
   private async resolveOtpToken(

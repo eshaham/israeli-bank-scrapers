@@ -62,7 +62,7 @@ fragment Portfolio on Portfolio {
   status
   subType
   onboardingCompleted
-
+}
 `;
 
 export const GET_MOVEMENTS = `query GetMovements(
