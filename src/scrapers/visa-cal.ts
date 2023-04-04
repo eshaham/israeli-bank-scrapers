@@ -56,6 +56,84 @@ interface InitResponse {
     }[];
   };
 }
+type CurrencySymbol = '₪' | string;
+interface CardTransactionDetailsError {
+  title: string;
+  statusCode: number;
+}
+interface CardTransactionDetails extends CardTransactionDetailsError {
+  result: {
+    bankAccounts: {
+      bankAccountNum: string;
+      bankName: string;
+      choiceExternalTransactions: any;
+      currentBankAccountInd: boolean;
+      debitDates: {
+        basketAmountComment: unknown;
+        choiceHHKDebit: number;
+        date: string;
+        debitReason: unknown;
+        fixDebitAmount: number;
+        fromPurchaseDate: string;
+        isChoiceRepaiment: boolean;
+        toPurchaseDate: string;
+        totalBasketAmount: number;
+        totalDebits: {
+          currencySymbol: CurrencySymbol;
+          amount: number;
+        }[];
+        transactions: {
+          amtBeforeConvAndIndex: number;
+          branchCodeDesc: string;
+          cashAccManagerName: null;
+          cashAccountManager: null;
+          cashAccountTrnAmt: number;
+          chargeExternalToCardComment: string;
+          comments: [];
+          curPaymentNum: number;
+          debCrdCurrencySymbol: CurrencySymbol;
+          debCrdDate: string;
+          debitSpreadInd: boolean;
+          discountAmount: unknown;
+          discountReason: unknown;
+          immediateComments: [];
+          isImmediateCommentInd: boolean;
+          isImmediateHHKInd: boolean;
+          isMargarita: boolean;
+          isSpreadPaymenstAbroad: boolean;
+          linkedComments: [];
+          merchantAddress: string;
+          merchantName: string;
+          merchantPhoneNo: string;
+          numOfPayments: number;
+          onGoingTransactionsComment: string;
+          refundInd: boolean;
+          roundingAmount: unknown;
+          roundingReason: unknown;
+          tokenInd: 0;
+          tokenNumberPart4: '';
+          transCardPresentInd: boolean;
+          transTypeCommentDetails: [];
+          trnAmt: number;
+          trnCurrencySymbol: CurrencySymbol;
+          trnExacWay: number;
+          trnIntId: string;
+          trnNumaretor: number;
+          trnPurchaseDate: string;
+          trnType: string;
+          trnTypeCode: string;
+          walletProviderCode: 0;
+          walletProviderDesc: '';
+        }[];
+      }[];
+      immidiateDebits: { totalDebits: [], debitDays: [] };
+    }[];
+    blockedCardInd: boolean;
+  };
+  statusCode: 1;
+  statusDescription: string;
+  statusTitle: string;
+}
 
 
 async function getLoginFrame(page: Page) {
@@ -471,6 +549,20 @@ class VisaCalScraper extends BaseScraperWithBrowser {
     return `CALAuthScheme ${authModule.auth.calConnectToken}`;
   }
 
+  async getXSiteId() {
+    /*
+      To get the classname search for 'xSiteId' in the page source
+      class Ut {
+        constructor(_e, on, yn) {
+            this.store = _e,
+            this.config = on,
+            this.eventBusService = yn,
+            this.xSiteId = "09031987-273E-2311-906C-8AF85B17C8D9",
+    */
+    return Promise.resolve('09031987-273E-2311-906C-8AF85B17C8D9');
+    // return this.page.evaluate(() => new Ut().xSiteId);
+  }
+
   getLoginOptions(credentials: Record<string, string>): LoginOptions {
     return {
       loginUrl: `${LOGIN_URL}`,
@@ -480,10 +572,16 @@ class VisaCalScraper extends BaseScraperWithBrowser {
       checkReadiness: async () => waitUntilElementFound(this.page, '#ccLoginDesktopBtn'),
       preAction: this.openLoginPopup,
       postAction: async () => {
-        await this.page.waitForNavigation();
-        const currentUrl = await getCurrentUrl(this.page);
-        if (currentUrl.endsWith('site-tutorial')) {
-          await clickButton(this.page, 'button.btn-close');
+        try {
+          await waitUntilElementFound(this.page, 'button.btn-close');
+          const currentUrl = await getCurrentUrl(this.page);
+          if (currentUrl.endsWith('site-tutorial')) {
+            await clickButton(this.page, 'button.btn-close');
+          }
+        } catch (e) {
+          const currentUrl = await getCurrentUrl(this.page);
+          if (currentUrl.endsWith('dashboard')) return;
+          throw e;
         }
       },
       userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36',
@@ -491,17 +589,38 @@ class VisaCalScraper extends BaseScraperWithBrowser {
   }
 
   async fetchData(): Promise<ScaperScrapingResult> {
-    const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
+    const defaultStartMoment = moment().subtract(1, 'years').subtract(6, 'months').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
     debug(`fetch transactions starting ${startMoment.format()}`);
 
     const Authorization = await this.getAuthorizationHeader();
     const cards = await this.getCards();
+    const xSiteId = await this.getXSiteId();
 
-    /* TODO: fetch each month with:
-    curl 'https://api.cal-online.co.il/Transactions/api/transactionsDetails/getCardTransactionsDetails' -H 'Authorization: ${Authorization}
-    */
+    for (const card of cards) {
+      debug(`fetch transactions for card ${card.cardUniqueId}`);
+
+      const nextBillingMonth = moment().add(1, 'month');
+      const months = nextBillingMonth.diff(startMoment, 'months');
+
+      for (let i = 0; i <= months; i += 1) {
+        const month = nextBillingMonth.clone().subtract(i, 'months');
+        const monthData = await fetchPostWithinPage<CardTransactionDetails | CardTransactionDetailsError>(
+          this.page, 'https://api.cal-online.co.il/Transactions/api/transactionsDetails/getCardTransactionsDetails',
+          { cardUniqueId: card.cardUniqueId, month: month.format('M'), year: month.format('YYYY') },
+          {
+            Authorization,
+            'X-Site-Id': xSiteId,
+            'Content-Type': 'application/json',
+          },
+        );
+        if (!monthData || monthData.statusCode !== 1) throw new Error(`failed to fetch transactions for card ${card.last4Digits}. Message: ${monthData?.title || ''}`);
+        debug(monthData);
+
+        // TODO: convert monthData into transactions
+      }
+    }
 
     debug(Authorization, cards);
 
