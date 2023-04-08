@@ -16,7 +16,6 @@ import {
   TransactionsAccount, Transaction, TransactionStatuses,
   TransactionTypes,
 } from '../transactions';
-import { ScraperCredentials } from './base-scraper';
 
 const BASE_URL = 'https://hb.unionbank.co.il';
 const TRANSACTIONS_URL = `${BASE_URL}/eBanking/Accounts/ExtendedActivity.aspx#/`;
@@ -39,7 +38,7 @@ function getPossibleLoginResults() {
   return urls;
 }
 
-function createLoginFields(credentials: ScraperCredentials) {
+function createLoginFields(credentials: ScraperSpecificCredentials) {
   return [
     { selector: '#uid', value: credentials.username },
     { selector: '#password', value: credentials.password },
@@ -280,8 +279,10 @@ async function waitForPostLogin(page: Page) {
   ]);
 }
 
-class UnionBankScraper extends BaseScraperWithBrowser {
-  getLoginOptions(credentials: ScraperCredentials) {
+type ScraperSpecificCredentials = { username: string, password: string };
+
+class UnionBankScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
+  getLoginOptions(credentials: ScraperSpecificCredentials) {
     return {
       loginUrl: `${BASE_URL}`,
       fields: createLoginFields(credentials),

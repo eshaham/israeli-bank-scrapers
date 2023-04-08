@@ -1,7 +1,6 @@
 import { Page } from 'puppeteer';
 import moment from 'moment';
 import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
-import { ScraperOptions, ScraperCredentials } from './base-scraper';
 import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
 import { pageEval, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
 import { getDebug } from '../helpers/debug';
@@ -13,6 +12,7 @@ import {
   SHEKEL_CURRENCY,
   SHEKEL_CURRENCY_SYMBOL,
 } from '../constants';
+import { ScraperOptions } from './interface';
 
 const debug = getDebug('beyahadBishvilha');
 
@@ -137,14 +137,16 @@ function getPossibleLoginResults(): PossibleLoginResults {
   return urls;
 }
 
-function createLoginFields(credentials: ScraperCredentials) {
+function createLoginFields(credentials: ScraperSpecificCredentials) {
   return [
     { selector: '#loginId', value: credentials.id },
     { selector: '#loginPassword', value: credentials.password },
   ];
 }
 
-class BeyahadBishvilhaScraper extends BaseScraperWithBrowser {
+type ScraperSpecificCredentials = { id: string, password: string };
+
+class BeyahadBishvilhaScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   protected getViewPort(): { width: number, height: number } {
     return {
       width: 1500,
@@ -152,7 +154,7 @@ class BeyahadBishvilhaScraper extends BaseScraperWithBrowser {
     };
   }
 
-  getLoginOptions(credentials: ScraperCredentials) {
+  getLoginOptions(credentials: ScraperSpecificCredentials) {
     return {
       loginUrl: LOGIN_URL,
       fields: createLoginFields(credentials),

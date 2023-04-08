@@ -13,7 +13,6 @@ import { SHEKEL_CURRENCY } from '../constants';
 import {
   TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
-import { ScraperCredentials } from './base-scraper';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא נמצאו נתונים בנושא המבוקש';
@@ -55,7 +54,7 @@ export function getPossibleLoginResults(): PossibleLoginResults {
   return urls;
 }
 
-export function createLoginFields(credentials: ScraperCredentials) {
+export function createLoginFields(credentials: ScraperSpecificCredentials) {
   return [
     { selector: '#username', value: credentials.username },
     { selector: '#password', value: credentials.password },
@@ -290,14 +289,16 @@ async function fetchAccounts(page: Page, startDate: Moment) {
   return accounts;
 }
 
-class BeinleumiGroupBaseScraper extends BaseScraperWithBrowser {
+type ScraperSpecificCredentials = {username: string, password: string};
+
+class BeinleumiGroupBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   BASE_URL = '';
 
   LOGIN_URL = '';
 
   TRANSACTIONS_URL = '';
 
-  getLoginOptions(credentials: ScraperCredentials) {
+  getLoginOptions(credentials: ScraperSpecificCredentials) {
     return {
       loginUrl: `${this.LOGIN_URL}`,
       fields: createLoginFields(credentials),

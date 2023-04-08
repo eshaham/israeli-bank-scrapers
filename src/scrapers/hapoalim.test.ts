@@ -27,7 +27,7 @@ describe('Hapoalim legacy scraper', () => {
 
     const scraper = new HapoalimScraper(options);
 
-    const result = await scraper.scrape({ username: 'e10s12', password: '3f3ss3d' });
+    const result = await scraper.scrape({ userCode: 'e10s12', password: '3f3ss3d' });
 
     expect(result).toBeDefined();
     expect(result.success).toBeFalsy();

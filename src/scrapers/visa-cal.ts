@@ -11,7 +11,6 @@ import {
   TransactionStatuses,
   TransactionTypes,
 } from '../transactions';
-import { ScraperOptions, ScaperScrapingResult, ScraperCredentials } from './base-scraper';
 import {
   DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, EURO_CURRENCY, EURO_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,
 } from '../constants';
@@ -19,6 +18,7 @@ import { waitUntil } from '../helpers/waiting';
 import { filterOldTransactions } from '../helpers/transactions';
 import { getDebug } from '../helpers/debug';
 import { fetchPostWithinPage } from '../helpers/fetch';
+import { ScraperScrapingResult, ScraperOptions } from './interface';
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_URL = 'https://services.cal-online.co.il/Card-Holders/Screens/Transactions/Transactions.aspx';
@@ -90,7 +90,7 @@ function getPossibleLoginResults() {
   return urls;
 }
 
-function createLoginFields(credentials: ScraperCredentials) {
+function createLoginFields(credentials: ScraperSpecificCredentials) {
   debug('create login fields for username and password');
   return [
     { selector: '[formcontrolname="userName"]', value: credentials.username },
@@ -425,7 +425,9 @@ async function fetchFutureDebits(page: Page) {
   return futureDebits;
 }
 
-class VisaCalScraper extends BaseScraperWithBrowser {
+type ScraperSpecificCredentials = {username: string, password: string};
+
+class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   openLoginPopup = async () => {
     debug('open login popup, wait until login button available');
     await waitUntilElementFound(this.page, '#ccLoginDesktopBtn', true);
@@ -443,7 +445,7 @@ class VisaCalScraper extends BaseScraperWithBrowser {
     return frame;
   };
 
-  getLoginOptions(credentials: Record<string, string>) {
+  getLoginOptions(credentials: ScraperSpecificCredentials) {
     return {
       loginUrl: `${LOGIN_URL}`,
       fields: createLoginFields(credentials),
@@ -455,7 +457,7 @@ class VisaCalScraper extends BaseScraperWithBrowser {
     };
   }
 
-  async fetchData(): Promise<ScaperScrapingResult> {
+  async fetchData(): Promise<ScraperScrapingResult> {
     const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));

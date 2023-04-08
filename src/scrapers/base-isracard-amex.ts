@@ -17,12 +17,13 @@ import {
   TransactionStatuses, TransactionTypes,
 } from '../transactions';
 import {
-  ScraperErrorTypes,
-  ScraperOptions, ScaperScrapingResult, ScaperProgressTypes,
-  ScraperCredentials,
+  ScraperProgressTypes,
+
 } from './base-scraper';
 import { getDebug } from '../helpers/debug';
 import { runSerial } from '../helpers/waiting';
+import { ScraperErrorTypes } from './errors';
+import { ScraperScrapingResult, ScraperOptions } from './interface';
 
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';
@@ -320,8 +321,8 @@ async function fetchAllTransactions(page: Page, options: ExtendedScraperOptions,
   };
 }
 
-
-class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
+type ScraperSpecificCredentials = {id: string, password: string, card6Digits: string};
+class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   private baseUrl: string;
 
   private companyCode: string;
@@ -336,7 +337,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
     this.servicesUrl = `${baseUrl}/services/ProxyRequestHandler.ashx`;
   }
 
-  async login(credentials: ScraperCredentials): Promise<ScaperScrapingResult> {
+  async login(credentials: ScraperSpecificCredentials): Promise<ScraperScrapingResult> {
     await this.page.setRequestInterception(true);
     this.page.on('request', (request) => {
       if (request.url().includes('detector-dom.min.js')) {
@@ -350,7 +351,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
     debug('navigate to login page');
     await this.navigateTo(`${this.baseUrl}/personalarea/Login`);
 
-    this.emitProgress(ScaperProgressTypes.LoggingIn);
+    this.emitProgress(ScraperProgressTypes.LoggingIn);
 
     const validateUrl = `${this.servicesUrl}?reqName=ValidateIdData`;
     const validateRequest = {
@@ -384,19 +385,19 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
       debug(`user login with status '${loginResult?.status}'`);
 
       if (loginResult && loginResult.status === '1') {
-        this.emitProgress(ScaperProgressTypes.LoginSuccess);
+        this.emitProgress(ScraperProgressTypes.LoginSuccess);
         return { success: true };
       }
 
       if (loginResult && loginResult.status === '3') {
-        this.emitProgress(ScaperProgressTypes.ChangePassword);
+        this.emitProgress(ScraperProgressTypes.ChangePassword);
         return {
           success: false,
           errorType: ScraperErrorTypes.ChangePassword,
         };
       }
 
-      this.emitProgress(ScaperProgressTypes.LoginFailed);
+      this.emitProgress(ScraperProgressTypes.LoginFailed);
       return {
         success: false,
         errorType: ScraperErrorTypes.InvalidPassword,
@@ -404,14 +405,14 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser {
     }
 
     if (validateReturnCode === '4') {
-      this.emitProgress(ScaperProgressTypes.ChangePassword);
+      this.emitProgress(ScraperProgressTypes.ChangePassword);
       return {
         success: false,
         errorType: ScraperErrorTypes.ChangePassword,
       };
     }
 
-    this.emitProgress(ScaperProgressTypes.LoginFailed);
+    this.emitProgress(ScraperProgressTypes.LoginFailed);
     return {
       success: false,
       errorType: ScraperErrorTypes.InvalidPassword,
