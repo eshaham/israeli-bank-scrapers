@@ -1,52 +1,79 @@
-import moment, { Moment } from 'moment';
+import moment from 'moment';
 import { Frame, Page } from 'puppeteer';
-import {
-  DOLLAR_CURRENCY, DOLLAR_CURRENCY_SYMBOL, EURO_CURRENCY, EURO_CURRENCY_SYMBOL, SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL,
-} from '../constants';
+
 import { getDebug } from '../helpers/debug';
 import {
-  clickButton, elementPresentOnPage, pageEval, pageEvalAll, setValue, waitUntilElementFound,
+  clickButton, elementPresentOnPage, pageEval, waitUntilElementFound,
 } from '../helpers/elements-interactions';
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { getCurrentUrl } from '../helpers/navigation';
 import { getFromSessionStorage } from '../helpers/storage';
-import { filterOldTransactions } from '../helpers/transactions';
 import { waitUntil } from '../helpers/waiting';
 import {
   Transaction,
   TransactionInstallments,
+  TransactionsAccount,
   TransactionStatuses,
   TransactionTypes,
-  TransactionsAccount,
 } from '../transactions';
-import { ScaperScrapingResult, ScraperCredentials, ScraperOptions } from './base-scraper';
+import { ScaperScrapingResult, ScraperCredentials } from './base-scraper';
 import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
+import { filterOldTransactions } from '../helpers/transactions';
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
-const TRANSACTIONS_URL = 'https://services.cal-online.co.il/Card-Holders/Screens/Transactions/Transactions.aspx';
-const GET_TX_DETAILS_URL = 'https://services.cal-online.co.il/Card-Holders/SCREENS/Transactions/Transactions.aspx/GetTransDetails';
-const GET_TX_DETAILS_HEADER = { 'Content-Type': 'application/json;charset=UTF-8' };
-const LONG_DATE_FORMAT = 'DD/MM/YYYY';
-const DATE_FORMAT = 'DD/MM/YY';
 const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו שגויים';
 
 const debug = getDebug('visa-cal');
 
+enum trnTypeCode {
+  regular = '5',
+  installments = '8',
+  standingOrder = '9'
+}
+
 interface ScrapedTransaction {
-  onclick: string | null;
-  date: string;
-  processedDate: string;
-  description: string;
-  originalAmount: string;
-  chargedAmount: string;
-  memo: string;
-  additionalInfo?: ScrapedAdditionalInfo;
+  amtBeforeConvAndIndex: number;
+  branchCodeDesc: string;
+  cashAccManagerName: null;
+  cashAccountManager: null;
+  cashAccountTrnAmt: number;
+  chargeExternalToCardComment: string;
+  comments: [];
+  curPaymentNum: number;
+  debCrdCurrencySymbol: CurrencySymbol;
+  debCrdDate: string;
+  debitSpreadInd: boolean;
+  discountAmount: unknown;
+  discountReason: unknown;
+  immediateComments: [];
+  isImmediateCommentInd: boolean;
+  isImmediateHHKInd: boolean;
+  isMargarita: boolean;
+  isSpreadPaymenstAbroad: boolean;
+  linkedComments: [];
+  merchantAddress: string;
+  merchantName: string;
+  merchantPhoneNo: string;
+  numOfPayments: number;
+  onGoingTransactionsComment: string;
+  refundInd: boolean;
+  roundingAmount: unknown;
+  roundingReason: unknown;
+  tokenInd: 0;
+  tokenNumberPart4: '';
+  transCardPresentInd: boolean;
+  transTypeCommentDetails: [];
+  trnAmt: number;
+  trnCurrencySymbol: CurrencySymbol;
+  trnExacWay: number;
+  trnIntId: string;
+  trnNumaretor: number;
+  trnPurchaseDate: string;
+  trnType: string;
+  trnTypeCode: trnTypeCode;
+  walletProviderCode: 0;
+  walletProviderDesc: '';
 }
-
-interface ScrapedAdditionalInfo {
-  category?: string;
-}
-
 interface InitResponse {
   result: {
     cards: {
@@ -82,49 +109,7 @@ interface CardTransactionDetails extends CardTransactionDetailsError {
           currencySymbol: CurrencySymbol;
           amount: number;
         }[];
-        transactions: {
-          amtBeforeConvAndIndex: number;
-          branchCodeDesc: string;
-          cashAccManagerName: null;
-          cashAccountManager: null;
-          cashAccountTrnAmt: number;
-          chargeExternalToCardComment: string;
-          comments: [];
-          curPaymentNum: number;
-          debCrdCurrencySymbol: CurrencySymbol;
-          debCrdDate: string;
-          debitSpreadInd: boolean;
-          discountAmount: unknown;
-          discountReason: unknown;
-          immediateComments: [];
-          isImmediateCommentInd: boolean;
-          isImmediateHHKInd: boolean;
-          isMargarita: boolean;
-          isSpreadPaymenstAbroad: boolean;
-          linkedComments: [];
-          merchantAddress: string;
-          merchantName: string;
-          merchantPhoneNo: string;
-          numOfPayments: number;
-          onGoingTransactionsComment: string;
-          refundInd: boolean;
-          roundingAmount: unknown;
-          roundingReason: unknown;
-          tokenInd: 0;
-          tokenNumberPart4: '';
-          transCardPresentInd: boolean;
-          transTypeCommentDetails: [];
-          trnAmt: number;
-          trnCurrencySymbol: CurrencySymbol;
-          trnExacWay: number;
-          trnIntId: string;
-          trnNumaretor: number;
-          trnPurchaseDate: string;
-          trnType: string;
-          trnTypeCode: string;
-          walletProviderCode: 0;
-          walletProviderDesc: '';
-        }[];
+        transactions: ScrapedTransaction[];
       }[];
       immidiateDebits: { totalDebits: [], debitDays: [] };
     }[];
@@ -189,33 +174,8 @@ function createLoginFields(credentials: ScraperCredentials) {
 }
 
 
-function getAmountData(amountStr: string) {
-  const amountStrCln = amountStr.replace(',', '');
-  let currency: string | null = null;
-  let amount: number | null = null;
-  if (amountStrCln.includes(SHEKEL_CURRENCY_SYMBOL)) {
-    amount = -parseFloat(amountStrCln.replace(SHEKEL_CURRENCY_SYMBOL, ''));
-    currency = SHEKEL_CURRENCY;
-  } else if (amountStrCln.includes(DOLLAR_CURRENCY_SYMBOL)) {
-    amount = -parseFloat(amountStrCln.replace(DOLLAR_CURRENCY_SYMBOL, ''));
-    currency = DOLLAR_CURRENCY;
-  } else if (amountStrCln.includes(EURO_CURRENCY_SYMBOL)) {
-    amount = -parseFloat(amountStrCln.replace(EURO_CURRENCY_SYMBOL, ''));
-    currency = EURO_CURRENCY;
-  } else {
-    const parts = amountStrCln.split(' ');
-    [currency] = parts;
-    amount = -parseFloat(parts[1]);
-  }
-
-  return {
-    amount,
-    currency,
-  };
-}
-
 function getTransactionInstallments(memo: string): TransactionInstallments | null {
-  const parsedMemo = (/תשלום (\d+) מתוך (\d+)/).exec(memo || '');
+  const parsedMemo = (/(\d+) מתוך (\d+)/).exec(memo || '');
 
   if (!parsedMemo || parsedMemo.length === 0) {
     return null;
@@ -227,293 +187,6 @@ function getTransactionInstallments(memo: string): TransactionInstallments | nul
   };
 }
 
-function getIdentifierAndNumerator(onclickValue: string | null): { identifier?: string, numerator?: string } {
-  if (!onclickValue) {
-    debug('cannot extract the identifier of a transaction, onclick attribute not found for transaction');
-    return {};
-  }
-  const expectedStartValue = 'OnMouseClickRow(this, event, "';
-  if (!onclickValue.startsWith(expectedStartValue)) {
-    debug(`cannot extract the identifier of a transaction, onclick attribute value doesnt start with expected value '${onclickValue}'`);
-    return {};
-  }
-
-  const thirdArgument = onclickValue.substring(expectedStartValue.length, onclickValue.length - 2);
-  const splits = thirdArgument.split('|');
-  if (splits.length !== 2) {
-    debug(`cannot extract the identifier of a transaction, unexpected 3rd argument in onclick value '${onclickValue}'`);
-    return {};
-  }
-  return {
-    identifier: splits[1],
-    numerator: splits[0],
-  };
-}
-
-function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
-  debug(`convert ${txns.length} raw transactions to official Transaction structure`);
-  return txns.map((txn) => {
-    const originalAmountTuple = getAmountData(txn.originalAmount || '');
-    const chargedAmountTuple = getAmountData(txn.chargedAmount || '');
-
-    const installments = getTransactionInstallments(txn.memo);
-    const txnDate = moment(txn.date, DATE_FORMAT);
-    const processedDateFormat =
-      txn.processedDate.length === 8 ?
-        DATE_FORMAT :
-        txn.processedDate.length === 9 || txn.processedDate.length === 10 ?
-          LONG_DATE_FORMAT :
-          null;
-    if (!processedDateFormat) {
-      throw new Error('invalid processed date');
-    }
-    const txnProcessedDate = moment(txn.processedDate, processedDateFormat);
-
-    const result: Transaction = {
-      identifier: getIdentifierAndNumerator(txn.onclick)?.identifier,
-      type: installments ? TransactionTypes.Installments : TransactionTypes.Normal,
-      status: TransactionStatuses.Completed,
-      date: installments ? txnDate.add(installments.number - 1, 'month').toISOString() : txnDate.toISOString(),
-      processedDate: txnProcessedDate.toISOString(),
-      originalAmount: originalAmountTuple.amount,
-      originalCurrency: originalAmountTuple.currency,
-      chargedAmount: chargedAmountTuple.amount,
-      chargedCurrency: chargedAmountTuple.currency,
-      description: txn.description || '',
-      memo: txn.memo || '',
-      category: txn.additionalInfo?.category,
-    };
-
-    if (installments) {
-      result.installments = installments;
-    }
-
-    return result;
-  });
-}
-
-async function getAdditionalTxInfo(tx: ScrapedTransaction, page: Page): Promise<ScrapedAdditionalInfo | null> {
-  const { identifier, numerator } = getIdentifierAndNumerator(tx.onclick);
-  if (identifier === undefined || numerator === undefined) {
-    return null;
-  }
-  const result = await fetchPostWithinPage<any>(page, GET_TX_DETAILS_URL, {
-    Identifier: identifier,
-    Numerator: numerator,
-  }, GET_TX_DETAILS_HEADER);
-
-  return {
-    category: result.d?.Data?.MerchantDetails?.SectorName || undefined,
-  };
-}
-
-async function getAdditionalTxsInfoIfNeeded(txs: ScrapedTransaction[], scraperOptions: ScraperOptions, page: Page): Promise<ScrapedTransaction[]> {
-  if (!scraperOptions.additionalTransactionInformation) {
-    return txs;
-  }
-  const promises = txs.map(async (x) => ({
-    ...x,
-    additionalInfo: await getAdditionalTxInfo(x, page),
-  }) as ScrapedTransaction);
-  return Promise.all(promises);
-}
-
-async function fetchTransactionsForAccount(page: Page, startDate: Moment, accountNumber: string, scraperOptions: ScraperOptions): Promise<TransactionsAccount> {
-  const startDateValue = startDate.format('MM/YYYY');
-  const dateSelector = '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_TextBox"]';
-  const dateHiddenFieldSelector = '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_HiddenField"]';
-  const buttonSelector = '[id$="FormAreaNoBorder_FormArea_ctlSubmitRequest"]';
-  const nextPageSelector = '[id$="FormAreaNoBorder_FormArea_ctlGridPager_btnNext"]';
-  const billingLabelSelector = '[id$=FormAreaNoBorder_FormArea_ctlMainToolBar_lblCaption]';
-  const secondaryBillingLabelSelector = '[id$=FormAreaNoBorder_FormArea_ctlSecondaryToolBar_lblCaption]';
-  const noDataSelector = '[id$=FormAreaNoBorder_FormArea_msgboxErrorMessages]';
-
-  debug('find the start date index in the dropbox');
-  const options = await pageEvalAll(page, '[id$="FormAreaNoBorder_FormArea_clndrDebitDateScope_OptionList"] li', [], (items) => {
-    return items.map((el: any) => el.innerText);
-  });
-  const startDateIndex = options.findIndex((option) => option === startDateValue);
-
-  debug(`scrape ${options.length - startDateIndex} billing cycles`);
-  const accountTransactions: Transaction[] = [];
-  for (let currentDateIndex = startDateIndex; currentDateIndex < options.length; currentDateIndex += 1) {
-    debug('wait for date selector to be found');
-    await waitUntilElementFound(page, dateSelector, true);
-    debug(`set hidden value of the date selector to be the index ${currentDateIndex}`);
-    await setValue(page, dateHiddenFieldSelector, `${currentDateIndex}`);
-    debug('wait a second to workaround navigation issue in headless browser mode');
-    await page.waitForTimeout(1000);
-    debug('click on the filter submit button and wait for navigation');
-    await Promise.all([
-      page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-      clickButton(page, buttonSelector),
-    ]);
-    debug('check if month has no transactions');
-    const pageHasNoTransactions = await pageEval(page, noDataSelector, false, ((element) => {
-      const siteValue = ((element as HTMLSpanElement).innerText || '').replace(/[^ א-ת]/g, '');
-      return siteValue === 'לא נמצאו נתונים';
-    }));
-
-    if (pageHasNoTransactions) {
-      debug('page has no transactions');
-    } else {
-      debug('find the billing date');
-      let billingDateLabel = await pageEval(page, billingLabelSelector, '', ((element) => {
-        return (element as HTMLSpanElement).innerText;
-      }));
-      let settlementDateRegex = /\d{1,2}[/]\d{2}[/]\d{2,4}/;
-
-      if (billingDateLabel === '') {
-        billingDateLabel = await pageEval(page, secondaryBillingLabelSelector, '', ((element) => {
-          return (element as HTMLSpanElement).innerText;
-        }));
-        settlementDateRegex = /\d{1,2}[/]\d{2,4}/;
-      }
-
-      const billingDate = settlementDateRegex.exec(billingDateLabel)?.[0];
-
-      if (!billingDate) {
-        throw new Error('failed to fetch process date');
-      }
-
-      debug(`found the billing date for that month ${billingDate}`);
-      let hasNextPage = false;
-      do {
-        debug('fetch raw transactions from page');
-        const rawTransactions = await pageEvalAll<(ScrapedTransaction | null)[]>(page, '#ctlMainGrid > tbody tr, #ctlSecondaryGrid > tbody tr', [], (items, billingDate) => {
-          return (items).map((el) => {
-            const columns = el.getElementsByTagName('td');
-            const onclick = el.getAttribute('onclick');
-            if (columns.length === 6) {
-              return {
-                onclick,
-                processedDate: columns[0].innerText,
-                date: columns[1].innerText,
-                description: columns[2].innerText,
-                originalAmount: columns[3].innerText,
-                chargedAmount: columns[4].innerText,
-                memo: columns[5].innerText,
-              };
-            }
-            if (columns.length === 5) {
-              return {
-                onclick,
-                processedDate: billingDate,
-                date: columns[0].innerText,
-                description: columns[1].innerText,
-                originalAmount: columns[2].innerText,
-                chargedAmount: columns[3].innerText,
-                memo: columns[4].innerText,
-              };
-            }
-            return null;
-          });
-        }, billingDate);
-        debug(`fetched ${rawTransactions.length} raw transactions from page`);
-        const existsTxs = (rawTransactions as ScrapedTransaction[])
-          .filter((item) => !!item);
-        const fullScrappedTxs = await getAdditionalTxsInfoIfNeeded(existsTxs, scraperOptions, page);
-
-        accountTransactions.push(...convertTransactions(fullScrappedTxs));
-
-        debug('check for existence of another page');
-        hasNextPage = await elementPresentOnPage(page, nextPageSelector);
-        if (hasNextPage) {
-          debug('has another page, click on button next and wait for page navigation');
-          await Promise.all([
-            page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-            await clickButton(page, '[id$=FormAreaNoBorder_FormArea_ctlGridPager_btnNext]'),
-          ]);
-        }
-      } while (hasNextPage);
-    }
-  }
-
-  debug('filer out old transactions');
-  const txns = (scraperOptions.outputData?.enableTransactionsFilterByDate ?? true) ?
-    filterOldTransactions(accountTransactions, startDate, scraperOptions.combineInstallments || false) :
-    accountTransactions;
-  debug(`found ${txns.length} valid transactions out of ${accountTransactions.length} transactions for account ending with ${accountNumber.substring(accountNumber.length - 2)}`);
-  return {
-    accountNumber,
-    txns,
-  };
-}
-
-async function getAccountNumbers(page: Page): Promise<string[]> {
-  return pageEvalAll(page, '[id$=lnkItem]', [], (elements) => elements.map((e) => (e as HTMLAnchorElement).text)).then((res) => res.map((text) => /\d+$/.exec(text.trim())?.[0] ?? ''));
-}
-
-async function setAccount(page: Page, account: string) {
-  await pageEvalAll(
-    page,
-    '[id$=lnkItem]',
-    null,
-    (elements, account) => {
-      for (const elem of elements) {
-        const a = elem as HTMLAnchorElement;
-        if (a.text.includes(account)) {
-          a.click();
-        }
-      }
-    },
-    account,
-  );
-}
-
-async function fetchTransactions(page: Page, startDate: Moment, scraperOptions: ScraperOptions): Promise<TransactionsAccount[]> {
-  const accountNumbers: string[] = await getAccountNumbers(page);
-  const accounts: TransactionsAccount[] = [];
-
-  for (const account of accountNumbers) {
-    debug(`setting account: ${account}`);
-    await setAccount(page, account);
-    await page.waitForTimeout(1000);
-    accounts.push(
-      await fetchTransactionsForAccount(
-        page,
-        startDate,
-        account,
-        scraperOptions,
-      ),
-    );
-  }
-
-  return accounts;
-}
-
-async function fetchFutureDebits(page: Page) {
-  const futureDebitsSelector = '.homepage-banks-top';
-
-  const result = await pageEvalAll(page, futureDebitsSelector, [], (items) => {
-    const debitMountClass = 'amount';
-    const debitWhenChargeClass = 'when-charge';
-    const debitBankNumberClass = 'bankDesc';
-
-    return items.map((currBankEl: any) => {
-      const amount = currBankEl.getElementsByClassName(debitMountClass)[0].innerText;
-      const whenCharge = currBankEl.getElementsByClassName(debitWhenChargeClass)[0].innerText;
-      const bankNumber = currBankEl.getElementsByClassName(debitBankNumberClass)[0].innerText;
-      return {
-        amount,
-        whenCharge,
-        bankNumber,
-      };
-    });
-  });
-  const futureDebits = result.map((item) => {
-    const amountData = getAmountData(item.amount);
-    const chargeDate = /\d{1,2}[/]\d{2}[/]\d{2,4}/.exec(item.whenCharge)?.[0];
-    const bankAccountNumber = /\d+-\d+/.exec(item.bankNumber)?.[0];
-    return {
-      amount: amountData.amount,
-      amountCurrency: amountData.currency,
-      chargeDate,
-      bankAccountNumber,
-    };
-  });
-  return futureDebits;
-}
 
 class VisaCalScraper extends BaseScraperWithBrowser {
   openLoginPopup = async () => {
@@ -588,6 +261,11 @@ class VisaCalScraper extends BaseScraperWithBrowser {
     };
   }
 
+  isCardTransactionDetails(result: CardTransactionDetails | CardTransactionDetailsError):
+    result is CardTransactionDetails {
+    return (result as CardTransactionDetails).result !== undefined;
+  }
+
   async fetchData(): Promise<ScaperScrapingResult> {
     const defaultStartMoment = moment().subtract(1, 'years').subtract(6, 'months').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
@@ -598,46 +276,90 @@ class VisaCalScraper extends BaseScraperWithBrowser {
     const cards = await this.getCards();
     const xSiteId = await this.getXSiteId();
 
-    for (const card of cards) {
-      debug(`fetch transactions for card ${card.cardUniqueId}`);
 
-      const nextBillingMonth = moment().add(1, 'month');
-      const months = nextBillingMonth.diff(startMoment, 'months');
+    const accounts = await Promise.all(
+      cards.map(async (card) => {
+        debug(`fetch transactions for card ${card.cardUniqueId}`);
 
-      for (let i = 0; i <= months; i += 1) {
-        const month = nextBillingMonth.clone().subtract(i, 'months');
-        const monthData = await fetchPostWithinPage<CardTransactionDetails | CardTransactionDetailsError>(
-          this.page, 'https://api.cal-online.co.il/Transactions/api/transactionsDetails/getCardTransactionsDetails',
-          { cardUniqueId: card.cardUniqueId, month: month.format('M'), year: month.format('YYYY') },
-          {
-            Authorization,
-            'X-Site-Id': xSiteId,
-            'Content-Type': 'application/json',
-          },
-        );
-        if (!monthData || monthData.statusCode !== 1) throw new Error(`failed to fetch transactions for card ${card.last4Digits}. Message: ${monthData?.title || ''}`);
-        debug(monthData);
+        const nextBillingMonth = moment().add(1, 'month');
+        const months = nextBillingMonth.diff(startMoment, 'months');
 
-        // TODO: convert monthData into transactions
-      }
-    }
+        const allMonthsData: (CardTransactionDetails)[] = [];
+        for (let i = 0; i <= months; i += 1) {
+          const month = nextBillingMonth.clone().subtract(i, 'months');
+          const monthData = await fetchPostWithinPage<CardTransactionDetails | CardTransactionDetailsError>(
+            this.page, 'https://api.cal-online.co.il/Transactions/api/transactionsDetails/getCardTransactionsDetails',
+            { cardUniqueId: card.cardUniqueId, month: month.format('M'), year: month.format('YYYY') },
+            {
+              Authorization,
+              'X-Site-Id': xSiteId,
+              'Content-Type': 'application/json',
+            },
+          );
 
-    debug(Authorization, cards);
+          if (monthData?.statusCode !== 1) throw new Error(`failed to fetch transactions for card ${card.last4Digits}. Message: ${monthData?.title || ''}`);
 
-    debug('fetch future debits');
-    const futureDebits = await fetchFutureDebits(this.page);
+          if (!this.isCardTransactionDetails(monthData)) {
+            throw new Error('monthData is not of type CardTransactionDetails');
+          }
 
-    debug('navigate to transactions page');
-    await this.navigateTo(TRANSACTIONS_URL, undefined, 60000);
+          allMonthsData.push(monthData);
+        }
 
-    debug('fetch accounts transactions');
-    const accounts = await fetchTransactions(this.page, startMoment, this.options);
+
+        const transactions: Transaction[] = allMonthsData
+          .flatMap((monthData) => monthData.result.bankAccounts)
+          .flatMap((accounts) => accounts.debitDates)
+          .flatMap((debitDate) => debitDate.transactions)
+          .map((transaction) => {
+            const installments = transaction.transTypeCommentDetails
+              .map((details) => getTransactionInstallments(details))
+              .filter((details) => {
+                return details !== null;
+              })[0];
+
+            const date = moment(transaction.trnPurchaseDate);
+
+            const result: Transaction = {
+              chargedAmount: transaction.trnAmt,
+              description: transaction.merchantName,
+              originalAmount: transaction.amtBeforeConvAndIndex,
+              originalCurrency: transaction.trnCurrencySymbol,
+              processedDate: transaction.debCrdDate,
+              status: TransactionStatuses.Completed,
+              date: installments ?
+                date.add(installments.number - 1, 'month').toISOString() :
+                date.toISOString(),
+              type: [trnTypeCode.regular, trnTypeCode.standingOrder].includes(transaction.trnTypeCode) ?
+                TransactionTypes.Normal :
+                TransactionTypes.Installments,
+            };
+
+            if (installments) {
+              result.installments = installments;
+            }
+
+            return result;
+          });
+
+        debug('filer out old transactions');
+        const txns = (this.options.outputData?.enableTransactionsFilterByDate ?? true) ?
+          filterOldTransactions(transactions, moment(startDate), this.options.combineInstallments || false) :
+          transactions;
+
+        return {
+          txns,
+          accountNumber: card.last4Digits,
+        } as TransactionsAccount;
+      }),
+    );
 
     debug('return the scraped accounts');
+
+    debug(JSON.stringify(accounts, null, 2));
     return {
       success: true,
       accounts,
-      futureDebits,
     };
   }
 }
