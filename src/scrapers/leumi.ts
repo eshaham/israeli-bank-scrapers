@@ -11,7 +11,7 @@ import { SHEKEL_CURRENCY } from '../constants';
 import {
   TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
-import { ScaperScrapingResult, ScraperCredentials } from './base-scraper';
+import { ScraperScrapingResult } from './interface';
 import { waitForNavigation } from '../helpers/navigation';
 
 const BASE_URL = 'https://hb2.bankleumi.co.il';
@@ -56,7 +56,7 @@ function getPossibleLoginResults() {
   return urls;
 }
 
-function createLoginFields(credentials: ScraperCredentials) {
+function createLoginFields(credentials: ScraperSpecificCredentials) {
   return [
     { selector: 'input[placeholder="שם משתמש"]', value: credentials.username },
     { selector: 'input[placeholder="סיסמה"]', value: credentials.password },
@@ -208,8 +208,10 @@ async function waitForPostLogin(page: Page): Promise<void> {
   ]);
 }
 
-class LeumiScraper extends BaseScraperWithBrowser {
-  getLoginOptions(credentials: Record<string, string>) {
+type ScraperSpecificCredentials = { username: string, password: string};
+
+class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
+  getLoginOptions(credentials: ScraperSpecificCredentials) {
     return {
       loginUrl: LOGIN_URL,
       fields: createLoginFields(credentials),
@@ -220,7 +222,7 @@ class LeumiScraper extends BaseScraperWithBrowser {
     };
   }
 
-  async fetchData(): Promise<ScaperScrapingResult> {
+  async fetchData(): Promise<ScraperScrapingResult> {
     const minimumStartMoment = moment().subtract(3, 'years').add(1, 'day');
     const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();

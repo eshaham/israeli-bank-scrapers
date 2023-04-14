@@ -10,7 +10,6 @@ import {
   Transaction, TransactionsAccount,
   TransactionStatuses, TransactionTypes,
 } from '../transactions';
-import { ScraperCredentials } from './base-scraper';
 import {
   BaseScraperWithBrowser,
   LoginResults,
@@ -247,8 +246,10 @@ async function redirectOrDialog(page: Page) {
   await waitUntilElementDisappear(page, '.loading-bar-spinner');
 }
 
-class YahavScraper extends BaseScraperWithBrowser {
-  getLoginOptions(credentials: ScraperCredentials) {
+type ScraperSpecificCredentials = {username: string, password: string, nationalID: string};
+
+class YahavScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
+  getLoginOptions(credentials: ScraperSpecificCredentials) {
     return {
       loginUrl: `${LOGIN_URL}`,
       fields: [

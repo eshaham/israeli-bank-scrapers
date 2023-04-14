@@ -8,8 +8,8 @@ import { waitUntilElementFound, elementPresentOnPage, clickButton } from '../hel
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
 import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
-import { ScraperOptions, ScraperCredentials } from './base-scraper';
 import { getDebug } from '../helpers/debug';
+import { ScraperOptions } from './interface';
 
 const debug = getDebug('max');
 
@@ -262,15 +262,17 @@ function getPossibleLoginResults(page: Page): PossibleLoginResults {
   return urls;
 }
 
-function createLoginFields(credentials: ScraperCredentials) {
+function createLoginFields(credentials: ScraperSpecificCredentials) {
   return [
     { selector: '#user-name', value: credentials.username },
     { selector: '#password', value: credentials.password },
   ];
 }
 
-class MaxScraper extends BaseScraperWithBrowser {
-  getLoginOptions(credentials: ScraperCredentials) {
+type ScraperSpecificCredentials = {username: string, password: string};
+
+class MaxScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
+  getLoginOptions(credentials: ScraperSpecificCredentials) {
     return {
       loginUrl: LOGIN_URL,
       fields: createLoginFields(credentials),

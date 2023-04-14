@@ -8,10 +8,8 @@ import { fetchGetWithinPage } from '../helpers/fetch';
 import {
   Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
-import {
-  ScraperOptions,
-  ScraperErrorTypes, ScaperScrapingResult, ScraperCredentials,
-} from './base-scraper';
+import { ScraperErrorTypes } from './errors';
+import { ScraperScrapingResult, ScraperOptions } from './interface';
 
 const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
@@ -62,7 +60,7 @@ function convertTransactions(txns: ScrapedTransaction[], txnStatus: TransactionS
 }
 
 
-async function fetchAccountData(page: Page, options: ScraperOptions): Promise<ScaperScrapingResult> {
+async function fetchAccountData(page: Page, options: ScraperOptions): Promise<ScraperScrapingResult> {
   const apiSiteUrl = `${BASE_URL}/Titan/gatewayAPI`;
 
   const accountDataUrl = `${apiSiteUrl}/userAccountsData`;
@@ -128,7 +126,7 @@ function getPossibleLoginResults(): PossibleLoginResults {
   return urls;
 }
 
-function createLoginFields(credentials: ScraperCredentials) {
+function createLoginFields(credentials: ScraperSpecificCredentials) {
   return [
     { selector: '#tzId', value: credentials.id },
     { selector: '#tzPassword', value: credentials.password },
@@ -136,8 +134,10 @@ function createLoginFields(credentials: ScraperCredentials) {
   ];
 }
 
-class DiscountScraper extends BaseScraperWithBrowser {
-  getLoginOptions(credentials: ScraperCredentials) {
+type ScraperSpecificCredentials = { id: string, password: string, num: string };
+
+class DiscountScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
+  getLoginOptions(credentials: ScraperSpecificCredentials) {
     return {
       loginUrl: `${BASE_URL}/login/#/LOGIN_PAGE`,
       checkReadiness: async () => waitUntilElementFound(this.page, '#tzId'),

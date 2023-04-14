@@ -8,17 +8,17 @@ import {
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { getCurrentUrl } from '../helpers/navigation';
 import { getFromSessionStorage } from '../helpers/storage';
+import { filterOldTransactions } from '../helpers/transactions';
 import { waitUntil } from '../helpers/waiting';
 import {
   Transaction,
   TransactionInstallments,
-  TransactionsAccount,
   TransactionStatuses,
   TransactionTypes,
+  TransactionsAccount,
 } from '../transactions';
-import { ScaperScrapingResult, ScraperCredentials } from './base-scraper';
 import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
-import { filterOldTransactions } from '../helpers/transactions';
+import { ScraperScrapingResult } from './interface';
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו שגויים';
@@ -165,7 +165,7 @@ function getPossibleLoginResults() {
   return urls;
 }
 
-function createLoginFields(credentials: ScraperCredentials) {
+function createLoginFields(credentials: ScraperSpecificCredentials) {
   debug('create login fields for username and password');
   return [
     { selector: '[formcontrolname="userName"]', value: credentials.username },
@@ -188,7 +188,9 @@ function getTransactionInstallments(memo: string): TransactionInstallments | nul
 }
 
 
-class VisaCalScraper extends BaseScraperWithBrowser {
+type ScraperSpecificCredentials = { username: string, password: string };
+
+class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   openLoginPopup = async () => {
     debug('open login popup, wait until login button available');
     await waitUntilElementFound(this.page, '#ccLoginDesktopBtn', true);
@@ -236,7 +238,7 @@ class VisaCalScraper extends BaseScraperWithBrowser {
     // return this.page.evaluate(() => new Ut().xSiteId);
   }
 
-  getLoginOptions(credentials: Record<string, string>): LoginOptions {
+  getLoginOptions(credentials: ScraperSpecificCredentials): LoginOptions {
     return {
       loginUrl: `${LOGIN_URL}`,
       fields: createLoginFields(credentials),
@@ -266,7 +268,7 @@ class VisaCalScraper extends BaseScraperWithBrowser {
     return (result as CardTransactionDetails).result !== undefined;
   }
 
-  async fetchData(): Promise<ScaperScrapingResult> {
+  async fetchData(): Promise<ScraperScrapingResult> {
     const defaultStartMoment = moment().subtract(1, 'years').subtract(6, 'months').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
