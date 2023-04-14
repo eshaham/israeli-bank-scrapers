@@ -11,7 +11,6 @@ import { getFromSessionStorage } from '../helpers/storage';
 import { waitUntil } from '../helpers/waiting';
 import {
   Transaction,
-  TransactionInstallments,
   TransactionsAccount,
   TransactionStatuses,
   TransactionTypes,
@@ -19,6 +18,7 @@ import {
 import { ScaperScrapingResult, ScraperCredentials } from './base-scraper';
 import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
 import { filterOldTransactions } from '../helpers/transactions';
+import { SHEKEL_CURRENCY_SYMBOL } from '../constants';
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו שגויים';
@@ -27,8 +27,9 @@ const debug = getDebug('visa-cal');
 
 enum trnTypeCode {
   regular = '5',
+  credit = '6',
   installments = '8',
-  standingOrder = '9'
+  standingOrder = '9',
 }
 
 interface ScrapedTransaction {
@@ -172,22 +173,6 @@ function createLoginFields(credentials: ScraperCredentials) {
     { selector: '[formcontrolname="password"]', value: credentials.password },
   ];
 }
-
-
-function getTransactionInstallments(memo: string): TransactionInstallments | null {
-  const parsedMemo = (/(\d+) מתוך (\d+)/).exec(memo || '');
-
-  if (!parsedMemo || parsedMemo.length === 0) {
-    return null;
-  }
-
-  return {
-    number: parseInt(parsedMemo[1], 10),
-    total: parseInt(parsedMemo[2], 10),
-  };
-}
-
-
 class VisaCalScraper extends BaseScraperWithBrowser {
   openLoginPopup = async () => {
     debug('open login popup, wait until login button available');
@@ -273,6 +258,8 @@ class VisaCalScraper extends BaseScraperWithBrowser {
     debug(`fetch transactions starting ${startMoment.format()}`);
 
     const Authorization = await this.getAuthorizationHeader();
+    // Wait a little before `this.getCards` so that it would exist
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     const cards = await this.getCards();
     const xSiteId = await this.getXSiteId();
 
@@ -312,16 +299,30 @@ class VisaCalScraper extends BaseScraperWithBrowser {
           .flatMap((accounts) => accounts.debitDates)
           .flatMap((debitDate) => debitDate.transactions)
           .map((transaction) => {
-            const installments = transaction.transTypeCommentDetails
-              .map((details) => getTransactionInstallments(details))
-              .filter((details) => {
-                return details !== null;
-              })[0];
+            const installments = (transaction.curPaymentNum && transaction.numOfPayments &&
+              {
+                number: transaction.curPaymentNum,
+                total: transaction.numOfPayments,
+              }) ||
+              undefined;
 
             const date = moment(transaction.trnPurchaseDate);
 
+
+            // I didn't test `amtBeforeConvAndIndex` with a foreign currency as I don't have such transactions
+            let chargedAmount: number;
+            if (this.cardAndTransactionCurrencySymbolIsShekel(transaction)) {
+              chargedAmount = transaction.amtBeforeConvAndIndex * (-1);
+            } else {
+              chargedAmount = transaction.trnAmt * (-1);
+
+              if (transaction.trnTypeCode === trnTypeCode.credit) {
+                chargedAmount = transaction.trnAmt;
+              }
+            }
+
             const result: Transaction = {
-              chargedAmount: transaction.trnAmt,
+              chargedAmount,
               description: transaction.merchantName,
               originalAmount: transaction.amtBeforeConvAndIndex,
               originalCurrency: transaction.trnCurrencySymbol,
@@ -361,6 +362,11 @@ class VisaCalScraper extends BaseScraperWithBrowser {
       success: true,
       accounts,
     };
+  }
+
+  private cardAndTransactionCurrencySymbolIsShekel(transaction: ScrapedTransaction) {
+    return transaction.debCrdCurrencySymbol === SHEKEL_CURRENCY_SYMBOL &&
+      transaction.trnCurrencySymbol === SHEKEL_CURRENCY_SYMBOL;
   }
 }
 
