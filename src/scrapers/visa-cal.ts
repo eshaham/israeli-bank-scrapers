@@ -187,7 +187,6 @@ function getTransactionInstallments(memo: string): TransactionInstallments | nul
   };
 }
 
-
 type ScraperSpecificCredentials = { username: string, password: string };
 
 class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
@@ -226,6 +225,11 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
   async getXSiteId() {
     /*
+      I don't know if the constant below will change in the feature.
+      If so, use the next code:
+
+      return this.page.evaluate(() => new Ut().xSiteId);
+
       To get the classname search for 'xSiteId' in the page source
       class Ut {
         constructor(_e, on, yn) {
@@ -235,7 +239,6 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
             this.xSiteId = "09031987-273E-2311-906C-8AF85B17C8D9",
     */
     return Promise.resolve('09031987-273E-2311-906C-8AF85B17C8D9');
-    // return this.page.evaluate(() => new Ut().xSiteId);
   }
 
   getLoginOptions(credentials: ScraperSpecificCredentials): LoginOptions {
