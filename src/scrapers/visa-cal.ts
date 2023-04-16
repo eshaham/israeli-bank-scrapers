@@ -1,6 +1,7 @@
 import moment from 'moment';
 import { Frame, Page } from 'puppeteer';
 
+import { SHEKEL_CURRENCY_SYMBOL } from '../constants';
 import { getDebug } from '../helpers/debug';
 import {
   clickButton, elementPresentOnPage, pageEval, waitUntilElementFound,
@@ -12,7 +13,6 @@ import { filterOldTransactions } from '../helpers/transactions';
 import { waitUntil } from '../helpers/waiting';
 import {
   Transaction,
-  TransactionInstallments,
   TransactionStatuses,
   TransactionTypes,
   TransactionsAccount,
@@ -29,8 +29,9 @@ const debug = getDebug('visa-cal');
 
 enum trnTypeCode {
   regular = '5',
+  credit = '6',
   installments = '8',
-  standingOrder = '9'
+  standingOrder = '9',
 }
 
 interface ScrapedTransaction {
@@ -175,36 +176,39 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
   ];
 }
 
-
-function getTransactionInstallments(memo: string): TransactionInstallments | null {
-  const parsedMemo = (/(\d+) מתוך (\d+)/).exec(memo || '');
-
-  if (!parsedMemo || parsedMemo.length === 0) {
-    return null;
-  }
-
-  return {
-    number: parseInt(parsedMemo[1], 10),
-    total: parseInt(parsedMemo[2], 10),
-  };
+function cardAndTransactionCurrencySymbolIsShekel(transaction: ScrapedTransaction) {
+  return transaction.debCrdCurrencySymbol === SHEKEL_CURRENCY_SYMBOL &&
+    transaction.trnCurrencySymbol === SHEKEL_CURRENCY_SYMBOL;
 }
-
 function convertParsedDataToTransactions(parsedData: CardTransactionDetails[]): Transaction[] {
   return parsedData
     .flatMap((monthData) => monthData.result.bankAccounts)
     .flatMap((accounts) => accounts.debitDates)
     .flatMap((debitDate) => debitDate.transactions)
     .map((transaction) => {
-      const installments = transaction.transTypeCommentDetails
-        .map((details) => getTransactionInstallments(details))
-        .filter((details) => {
-          return details !== null;
-        })[0];
+      const installments = (transaction.curPaymentNum && transaction.numOfPayments &&
+      {
+        number: transaction.curPaymentNum,
+        total: transaction.numOfPayments,
+      }) ||
+        undefined;
 
       const date = moment(transaction.trnPurchaseDate);
 
+      // I didn't test `amtBeforeConvAndIndex` with a foreign currency as I don't have such transactions
+      let chargedAmount: number;
+      if (cardAndTransactionCurrencySymbolIsShekel(transaction)) {
+        chargedAmount = transaction.amtBeforeConvAndIndex * (-1);
+      } else {
+        chargedAmount = transaction.trnAmt * (-1);
+
+        if (transaction.trnTypeCode === trnTypeCode.credit) {
+          chargedAmount = transaction.trnAmt;
+        }
+      }
+
       const result: Transaction = {
-        chargedAmount: transaction.trnAmt,
+        chargedAmount,
         description: transaction.merchantName,
         originalAmount: transaction.amtBeforeConvAndIndex,
         originalCurrency: transaction.trnCurrencySymbol,
@@ -317,6 +321,8 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     debug(`fetch transactions starting ${startMoment.format()}`);
 
     const Authorization = await this.getAuthorizationHeader();
+    // Wait a little before `this.getCards` so that it would exist
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     const cards = await this.getCards();
     const xSiteId = await this.getXSiteId();
 
