@@ -21,6 +21,8 @@ import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scrap
 import { ScraperScrapingResult } from './interface';
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
+const TRANSACTIONS_REQUEST_ENDPOINT = 'https://api.cal-online.co.il/Transactions/api/transactionsDetails/getCardTransactionsDetails';
+
 const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו שגויים';
 
 const debug = getDebug('visa-cal');
@@ -187,6 +189,43 @@ function getTransactionInstallments(memo: string): TransactionInstallments | nul
   };
 }
 
+function convertParsedDataToTransactions(parsedData: CardTransactionDetails[]): Transaction[] {
+  return parsedData
+    .flatMap((monthData) => monthData.result.bankAccounts)
+    .flatMap((accounts) => accounts.debitDates)
+    .flatMap((debitDate) => debitDate.transactions)
+    .map((transaction) => {
+      const installments = transaction.transTypeCommentDetails
+        .map((details) => getTransactionInstallments(details))
+        .filter((details) => {
+          return details !== null;
+        })[0];
+
+      const date = moment(transaction.trnPurchaseDate);
+
+      const result: Transaction = {
+        chargedAmount: transaction.trnAmt,
+        description: transaction.merchantName,
+        originalAmount: transaction.amtBeforeConvAndIndex,
+        originalCurrency: transaction.trnCurrencySymbol,
+        processedDate: transaction.debCrdDate,
+        status: TransactionStatuses.Completed,
+        date: installments ?
+          date.add(installments.number - 1, 'month').toISOString() :
+          date.toISOString(),
+        type: [trnTypeCode.regular, trnTypeCode.standingOrder].includes(transaction.trnTypeCode) ?
+          TransactionTypes.Normal :
+          TransactionTypes.Installments,
+      };
+
+      if (installments) {
+        result.installments = installments;
+      }
+
+      return result;
+    });
+}
+
 type ScraperSpecificCredentials = { username: string, password: string };
 
 class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
@@ -293,7 +332,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         for (let i = 0; i <= months; i += 1) {
           const month = nextBillingMonth.clone().subtract(i, 'months');
           const monthData = await fetchPostWithinPage<CardTransactionDetails | CardTransactionDetailsError>(
-            this.page, 'https://api.cal-online.co.il/Transactions/api/transactionsDetails/getCardTransactionsDetails',
+            this.page, TRANSACTIONS_REQUEST_ENDPOINT,
             { cardUniqueId: card.cardUniqueId, month: month.format('M'), year: month.format('YYYY') },
             {
               Authorization,
@@ -311,41 +350,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
           allMonthsData.push(monthData);
         }
 
-
-        const transactions: Transaction[] = allMonthsData
-          .flatMap((monthData) => monthData.result.bankAccounts)
-          .flatMap((accounts) => accounts.debitDates)
-          .flatMap((debitDate) => debitDate.transactions)
-          .map((transaction) => {
-            const installments = transaction.transTypeCommentDetails
-              .map((details) => getTransactionInstallments(details))
-              .filter((details) => {
-                return details !== null;
-              })[0];
-
-            const date = moment(transaction.trnPurchaseDate);
-
-            const result: Transaction = {
-              chargedAmount: transaction.trnAmt,
-              description: transaction.merchantName,
-              originalAmount: transaction.amtBeforeConvAndIndex,
-              originalCurrency: transaction.trnCurrencySymbol,
-              processedDate: transaction.debCrdDate,
-              status: TransactionStatuses.Completed,
-              date: installments ?
-                date.add(installments.number - 1, 'month').toISOString() :
-                date.toISOString(),
-              type: [trnTypeCode.regular, trnTypeCode.standingOrder].includes(transaction.trnTypeCode) ?
-                TransactionTypes.Normal :
-                TransactionTypes.Installments,
-            };
-
-            if (installments) {
-              result.installments = installments;
-            }
-
-            return result;
-          });
+        const transactions = convertParsedDataToTransactions(allMonthsData);
 
         debug('filer out old transactions');
         const txns = (this.options.outputData?.enableTransactionsFilterByDate ?? true) ?
