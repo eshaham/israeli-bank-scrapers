@@ -251,7 +251,12 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
   };
 
   async getCards() {
-    const initData = await getFromSessionStorage<InitResponse>(this.page, 'init');
+    const initData = await waitUntil(
+      () => getFromSessionStorage<InitResponse>(this.page, 'init'),
+      'get init data in session storage',
+      10_000,
+      1000,
+    );
     if (!initData) {
       throw new Error('could not find \'init\' data in session storage');
     }
@@ -321,8 +326,6 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     debug(`fetch transactions starting ${startMoment.format()}`);
 
     const Authorization = await this.getAuthorizationHeader();
-    // Wait a little before `this.getCards` so that it would exist
-    await new Promise((resolve) => setTimeout(resolve, 1000));
     const cards = await this.getCards();
     const xSiteId = await this.getXSiteId();
 
