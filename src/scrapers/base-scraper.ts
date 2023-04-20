@@ -77,17 +77,17 @@ export class BaseScraper<TCredentials extends ScraperCredentials> implements Scr
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
-  async login(_credentials: TCredentials): Promise<ScraperLoginResult> {
+  protected async login(_credentials: TCredentials): Promise<ScraperLoginResult> {
     throw new Error(`login() is not created in ${this.options.companyId}`);
   }
 
   // eslint-disable-next-line  @typescript-eslint/require-await
-  async fetchData(): Promise<ScraperScrapingResult> {
+  protected async fetchData(): Promise<ScraperScrapingResult> {
     throw new Error(`fetchData() is not created in ${this.options.companyId}`);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
-  async terminate(_success: boolean) {
+  protected async terminate(_success: boolean) {
     this.emitProgress(ScraperProgressTypes.Terminating);
   }
 
