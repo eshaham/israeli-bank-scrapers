@@ -10,9 +10,10 @@ export {
   ScraperScrapingResult,
   ScraperLoginResult as ScaperLoginResult,
   ScraperLoginResult,
-  Scraper,
   ScraperCredentials,
 } from './scrapers/interface';
+
+export type { BaseScraper as Scraper } from './scrapers/base-scraper';
 
 export { default as OneZeroScraper } from './scrapers/one-zero';
 

@@ -135,10 +135,6 @@ export interface ScraperScrapingResult {
   errorMessage?: string; // only on success=false
 }
 
-export interface Scraper<TCredentials extends ScraperCredentials> {
-  scrape(credentials: TCredentials): Promise<ScraperScrapingResult>;
-}
-
 export type ScraperTwoFactorAuthTriggerResult = ErrorResult | {
   success: true;
 };

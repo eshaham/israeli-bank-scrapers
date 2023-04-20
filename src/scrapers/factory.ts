@@ -11,12 +11,13 @@ import UnionBankScraper from './union-bank';
 import BeinleumiScraper from './beinleumi';
 import MassadScraper from './massad';
 import YahavScraper from './yahav';
-import { Scraper, ScraperCredentials, ScraperOptions } from './interface';
+import { BaseScraper } from './base-scraper';
+import { ScraperCredentials, ScraperOptions } from './interface';
 import { CompanyTypes } from '../definitions';
 import BeyahadBishvilhaScraper from './beyahad-bishvilha';
 import OneZeroScraper from './one-zero';
 
-export default function createScraper(options: ScraperOptions): Scraper<ScraperCredentials> {
+export default function createScraper(options: ScraperOptions): BaseScraper<ScraperCredentials> {
   switch (options.companyId) {
     case CompanyTypes.hapoalim:
       return new HapoalimScraper(options);

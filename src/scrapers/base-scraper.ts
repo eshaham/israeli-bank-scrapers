@@ -3,7 +3,6 @@ import moment from 'moment-timezone';
 import { TimeoutError } from '../helpers/waiting';
 import { createGenericError, createTimeoutError } from './errors';
 import {
-  Scraper,
   ScraperCredentials,
   ScraperGetLongTermTwoFactorTokenResult,
   ScraperLoginResult,
@@ -26,7 +25,7 @@ export enum ScraperProgressTypes {
   Terminating = 'TERMINATING',
 }
 
-export class BaseScraper<TCredentials extends ScraperCredentials> implements Scraper<TCredentials> {
+export class BaseScraper<TCredentials extends ScraperCredentials> {
   private eventEmitter = new EventEmitter();
 
   constructor(public options: ScraperOptions) {
