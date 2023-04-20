@@ -77,31 +77,6 @@ async function getKeyByValue(object: PossibleLoginResults, value: string, page: 
   return Promise.resolve(LoginResults.UnknownError);
 }
 
-function handleLoginResult(scraper: BaseScraperWithBrowser<ScraperCredentials>, loginResult: LoginResults) {
-  switch (loginResult) {
-    case LoginResults.Success:
-      scraper.emitProgress(ScraperProgressTypes.LoginSuccess);
-      return { success: true };
-    case LoginResults.InvalidPassword:
-    case LoginResults.UnknownError:
-      scraper.emitProgress(ScraperProgressTypes.LoginFailed);
-      return {
-        success: false,
-        errorType: loginResult === LoginResults.InvalidPassword ? ScraperErrorTypes.InvalidPassword :
-          ScraperErrorTypes.General,
-        errorMessage: `Login failed with ${loginResult} error`,
-      };
-    case LoginResults.ChangePassword:
-      scraper.emitProgress(ScraperProgressTypes.ChangePassword);
-      return {
-        success: false,
-        errorType: ScraperErrorTypes.ChangePassword,
-      };
-    default:
-      throw new Error(`unexpected login result "${loginResult}"`);
-  }
-}
-
 function createGeneralError(): ScraperScrapingResult {
   return {
     success: false,
@@ -110,11 +85,11 @@ function createGeneralError(): ScraperScrapingResult {
 }
 
 class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends BaseScraper<TCredentials> {
-  // NOTICE - it is discourage to use bang (!) in general. It is used here because
+  // NOTICE - it is discouraged to use bang (!) in general. It is used here because
   // all the classes that inherit from this base assume is it mandatory.
   protected browser!: Browser;
 
-  // NOTICE - it is discourage to use bang (!) in general. It is used here because
+  // NOTICE - it is discouraged to use bang (!) in general. It is used here because
   // all the classes that inherit from this base assume is it mandatory.
   protected page!: Page;
 
@@ -279,7 +254,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     const current = await getCurrentUrl(this.page, true);
     const loginResult = await getKeyByValue(loginOptions.possibleResults, current, this.page);
     debug(`handle login results ${loginResult}`);
-    return handleLoginResult(this, loginResult);
+    return this.handleLoginResult(loginResult);
   }
 
   async terminate(_success: boolean) {
@@ -299,6 +274,31 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     }
 
     await this.browser.close();
+  }
+
+  private handleLoginResult(loginResult: LoginResults) {
+    switch (loginResult) {
+      case LoginResults.Success:
+        this.emitProgress(ScraperProgressTypes.LoginSuccess);
+        return { success: true };
+      case LoginResults.InvalidPassword:
+      case LoginResults.UnknownError:
+        this.emitProgress(ScraperProgressTypes.LoginFailed);
+        return {
+          success: false,
+          errorType: loginResult === LoginResults.InvalidPassword ? ScraperErrorTypes.InvalidPassword :
+            ScraperErrorTypes.General,
+          errorMessage: `Login failed with ${loginResult} error`,
+        };
+      case LoginResults.ChangePassword:
+        this.emitProgress(ScraperProgressTypes.ChangePassword);
+        return {
+          success: false,
+          errorType: ScraperErrorTypes.ChangePassword,
+        };
+      default:
+        throw new Error(`unexpected login result "${loginResult}"`);
+    }
   }
 }
 

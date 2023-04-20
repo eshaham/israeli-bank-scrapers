@@ -91,11 +91,11 @@ export class BaseScraper<TCredentials extends ScraperCredentials> implements Scr
     this.emitProgress(ScraperProgressTypes.Terminating);
   }
 
-  emitProgress(type: ScraperProgressTypes) {
+  protected emitProgress(type: ScraperProgressTypes) {
     this.emit(SCRAPE_PROGRESS, { type });
   }
 
-  emit(eventName: string, payload: Record<string, any>) {
+  protected emit(eventName: string, payload: Record<string, any>) {
     this.eventEmitter.emit(eventName, this.options.companyId, payload);
   }
 
