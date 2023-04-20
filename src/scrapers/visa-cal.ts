@@ -325,18 +325,18 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     await new Promise((resolve) => setTimeout(resolve, 1000));
     const cards = await this.getCards();
     const xSiteId = await this.getXSiteId();
-
+    const futureMonthsToScrape = this.options.futureMonthsToScrape ?? 1;
 
     const accounts = await Promise.all(
       cards.map(async (card) => {
         debug(`fetch transactions for card ${card.cardUniqueId}`);
 
-        const nextBillingMonth = moment().add(1, 'month');
-        const months = nextBillingMonth.diff(startMoment, 'months');
+        const finalMonthToFetchMoment = moment().add(futureMonthsToScrape, 'month');
+        const months = finalMonthToFetchMoment.diff(startMoment, 'months');
 
         const allMonthsData: (CardTransactionDetails)[] = [];
         for (let i = 0; i <= months; i += 1) {
-          const month = nextBillingMonth.clone().subtract(i, 'months');
+          const month = finalMonthToFetchMoment.clone().subtract(i, 'months');
           const monthData = await fetchPostWithinPage<CardTransactionDetails | CardTransactionDetailsError>(
             this.page, TRANSACTIONS_REQUEST_ENDPOINT,
             { cardUniqueId: card.cardUniqueId, month: month.format('M'), year: month.format('YYYY') },
