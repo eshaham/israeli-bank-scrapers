@@ -1,7 +1,7 @@
 import puppeteer, { Browser, Frame, Page } from 'puppeteer';
 
 import {
-  BaseScraper, ScraperProgressTypes,
+  BaseScraper,
 
 } from './base-scraper';
 import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
@@ -9,6 +9,7 @@ import { clickButton, fillInput, waitUntilElementFound } from '../helpers/elemen
 import { getDebug } from '../helpers/debug';
 import { ScraperErrorTypes } from './errors';
 import { ScraperScrapingResult, ScraperCredentials } from './interface';
+import { ScraperProgressTypes } from '../definitions';
 
 const VIEWPORT_WIDTH = 1024;
 const VIEWPORT_HEIGHT = 768;

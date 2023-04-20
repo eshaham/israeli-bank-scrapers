@@ -1,5 +1,5 @@
 import { Browser, Page } from 'puppeteer';
-import { CompanyTypes } from '../definitions';
+import { CompanyTypes, ScraperProgressTypes } from '../definitions';
 import { TransactionsAccount } from '../transactions';
 import { ErrorResult, ScraperErrorTypes } from './errors';
 
@@ -137,6 +137,7 @@ export interface ScraperScrapingResult {
 
 export interface Scraper<TCredentials extends ScraperCredentials> {
   scrape(credentials: TCredentials): Promise<ScraperScrapingResult>;
+  onProgress(func: (companyId: CompanyTypes, payload: {type: ScraperProgressTypes}) => void): void;
 }
 
 export type ScraperTwoFactorAuthTriggerResult = ErrorResult | {

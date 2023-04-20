@@ -11,20 +11,10 @@ import {
   ScraperScrapingResult,
   ScraperTwoFactorAuthTriggerResult,
 } from './interface';
+import { CompanyTypes, ScraperProgressTypes } from '../definitions';
 
 const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';
 
-
-export enum ScraperProgressTypes {
-  Initializing = 'INITIALIZING',
-  StartScraping = 'START_SCRAPING',
-  LoggingIn = 'LOGGING_IN',
-  LoginSuccess = 'LOGIN_SUCCESS',
-  LoginFailed = 'LOGIN_FAILED',
-  ChangePassword = 'CHANGE_PASSWORD',
-  EndScraping = 'END_SCRAPING',
-  Terminating = 'TERMINATING',
-}
 
 export class BaseScraper<TCredentials extends ScraperCredentials> implements Scraper<TCredentials> {
   private eventEmitter = new EventEmitter();
@@ -109,7 +99,7 @@ export class BaseScraper<TCredentials extends ScraperCredentials> implements Scr
     this.eventEmitter.emit(eventName, this.options.companyId, payload);
   }
 
-  onProgress(func: (...args: any[]) => void) {
+  onProgress(func: (companyId: CompanyTypes, payload: {type: ScraperProgressTypes}) => void) {
     this.eventEmitter.on(SCRAPE_PROGRESS, func);
   }
 }
