@@ -197,7 +197,7 @@ function convertParsedDataToTransactions(parsedData: CardTransactionDetails[]): 
 
       // I didn't test `amtBeforeConvAndIndex` with a foreign currency as I don't have such transactions
       let chargedAmount: number;
-      if (cardAndTransactionCurrencySymbolIsShekel(transaction)) {
+      if (!cardAndTransactionCurrencySymbolIsShekel(transaction)) {
         chargedAmount = transaction.amtBeforeConvAndIndex * (-1);
       } else {
         chargedAmount = transaction.trnAmt * (-1);
