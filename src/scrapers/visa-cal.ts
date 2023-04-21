@@ -246,7 +246,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     const initData = await waitUntil(
       () => getFromSessionStorage<InitResponse>(this.page, 'init'),
       'get init data in session storage',
-      10_000,
+      10000,
       1000,
     );
     if (!initData) {
