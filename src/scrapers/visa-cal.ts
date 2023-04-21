@@ -1,7 +1,6 @@
 import moment from 'moment';
 import { Frame, Page } from 'puppeteer';
 
-import { SHEKEL_CURRENCY_SYMBOL } from '../constants';
 import { getDebug } from '../helpers/debug';
 import {
   clickButton, elementPresentOnPage, pageEval, waitUntilElementFound,
@@ -176,10 +175,6 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
   ];
 }
 
-function cardAndTransactionCurrencySymbolIsShekel(transaction: ScrapedTransaction) {
-  return transaction.debCrdCurrencySymbol === SHEKEL_CURRENCY_SYMBOL &&
-    transaction.trnCurrencySymbol === SHEKEL_CURRENCY_SYMBOL;
-}
 function convertParsedDataToTransactions(parsedData: CardTransactionDetails[]): Transaction[] {
   return parsedData
     .flatMap((monthData) => monthData.result.bankAccounts)
@@ -195,22 +190,18 @@ function convertParsedDataToTransactions(parsedData: CardTransactionDetails[]): 
 
       const date = moment(transaction.trnPurchaseDate);
 
-      // I didn't test `amtBeforeConvAndIndex` with a foreign currency as I don't have such transactions
-      let chargedAmount: number;
-      if (cardAndTransactionCurrencySymbolIsShekel(transaction)) {
-        chargedAmount = transaction.amtBeforeConvAndIndex * (-1);
-      } else {
-        chargedAmount = transaction.trnAmt * (-1);
+      let chargedAmount = transaction.amtBeforeConvAndIndex * (-1);
+      let originalAmount = transaction.trnAmt * (-1);
 
-        if (transaction.trnTypeCode === trnTypeCode.credit) {
-          chargedAmount = transaction.trnAmt;
-        }
+      if (transaction.trnTypeCode === trnTypeCode.credit) {
+        chargedAmount = transaction.amtBeforeConvAndIndex;
+        originalAmount = transaction.trnAmt;
       }
 
       const result: Transaction = {
         chargedAmount,
         description: transaction.merchantName,
-        originalAmount: transaction.amtBeforeConvAndIndex,
+        originalAmount,
         originalCurrency: transaction.trnCurrencySymbol,
         processedDate: transaction.debCrdDate,
         status: TransactionStatuses.Completed,
