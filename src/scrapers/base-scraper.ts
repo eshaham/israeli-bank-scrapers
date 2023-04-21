@@ -11,20 +11,10 @@ import {
   ScraperScrapingResult,
   ScraperTwoFactorAuthTriggerResult,
 } from './interface';
+import { CompanyTypes, ScraperProgressTypes } from '../definitions';
 
 const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';
 
-
-export enum ScraperProgressTypes {
-  Initializing = 'INITIALIZING',
-  StartScraping = 'START_SCRAPING',
-  LoggingIn = 'LOGGING_IN',
-  LoginSuccess = 'LOGIN_SUCCESS',
-  LoginFailed = 'LOGIN_FAILED',
-  ChangePassword = 'CHANGE_PASSWORD',
-  EndScraping = 'END_SCRAPING',
-  Terminating = 'TERMINATING',
-}
 
 export class BaseScraper<TCredentials extends ScraperCredentials> implements Scraper<TCredentials> {
   private eventEmitter = new EventEmitter();
@@ -87,29 +77,29 @@ export class BaseScraper<TCredentials extends ScraperCredentials> implements Scr
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
-  async login(_credentials: TCredentials): Promise<ScraperLoginResult> {
+  protected async login(_credentials: TCredentials): Promise<ScraperLoginResult> {
     throw new Error(`login() is not created in ${this.options.companyId}`);
   }
 
   // eslint-disable-next-line  @typescript-eslint/require-await
-  async fetchData(): Promise<ScraperScrapingResult> {
+  protected async fetchData(): Promise<ScraperScrapingResult> {
     throw new Error(`fetchData() is not created in ${this.options.companyId}`);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
-  async terminate(_success: boolean) {
+  protected async terminate(_success: boolean) {
     this.emitProgress(ScraperProgressTypes.Terminating);
   }
 
-  emitProgress(type: ScraperProgressTypes) {
+  protected emitProgress(type: ScraperProgressTypes) {
     this.emit(SCRAPE_PROGRESS, { type });
   }
 
-  emit(eventName: string, payload: Record<string, any>) {
+  protected emit(eventName: string, payload: Record<string, any>) {
     this.eventEmitter.emit(eventName, this.options.companyId, payload);
   }
 
-  onProgress(func: (...args: any[]) => void) {
+  onProgress(func: (companyId: CompanyTypes, payload: {type: ScraperProgressTypes}) => void) {
     this.eventEmitter.on(SCRAPE_PROGRESS, func);
   }
 }

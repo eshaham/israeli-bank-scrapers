@@ -16,14 +16,11 @@ import {
   TransactionsAccount, Transaction, TransactionInstallments,
   TransactionStatuses, TransactionTypes,
 } from '../transactions';
-import {
-  ScraperProgressTypes,
-
-} from './base-scraper';
 import { getDebug } from '../helpers/debug';
 import { runSerial } from '../helpers/waiting';
 import { ScraperErrorTypes } from './errors';
 import { ScraperScrapingResult, ScraperOptions } from './interface';
+import { ScraperProgressTypes } from '../definitions';
 
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';

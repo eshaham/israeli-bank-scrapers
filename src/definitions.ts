@@ -92,3 +92,14 @@ export const SCRAPERS = {
     loginFields: ['email', PASSWORD_FIELD, 'otpCodeRetriever', 'phoneNumber', 'otpLongTermToken'],
   },
 };
+
+export enum ScraperProgressTypes {
+  Initializing = 'INITIALIZING',
+  StartScraping = 'START_SCRAPING',
+  LoggingIn = 'LOGGING_IN',
+  LoginSuccess = 'LOGIN_SUCCESS',
+  LoginFailed = 'LOGIN_FAILED',
+  ChangePassword = 'CHANGE_PASSWORD',
+  EndScraping = 'END_SCRAPING',
+  Terminating = 'TERMINATING',
+}
