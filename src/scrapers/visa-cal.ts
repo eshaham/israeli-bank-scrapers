@@ -211,6 +211,7 @@ function convertParsedDataToTransactions(parsedData: CardTransactionDetails[]): 
         type: [trnTypeCode.regular, trnTypeCode.standingOrder].includes(transaction.trnTypeCode) ?
           TransactionTypes.Normal :
           TransactionTypes.Installments,
+        memo: transaction.transTypeCommentDetails.toString() || undefined,
       };
 
       if (installments) {
