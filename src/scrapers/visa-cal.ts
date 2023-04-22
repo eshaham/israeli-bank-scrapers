@@ -200,6 +200,7 @@ function convertParsedDataToTransactions(parsedData: CardTransactionDetails[]): 
 
       const result: Transaction = {
         chargedAmount,
+        identifier: transaction.trnIntId,
         description: transaction.merchantName,
         originalAmount,
         originalCurrency: transaction.trnCurrencySymbol,
@@ -212,6 +213,7 @@ function convertParsedDataToTransactions(parsedData: CardTransactionDetails[]): 
           TransactionTypes.Normal :
           TransactionTypes.Installments,
         memo: transaction.transTypeCommentDetails.toString() || undefined,
+        category: transaction.branchCodeDesc,
       };
 
       if (installments) {
