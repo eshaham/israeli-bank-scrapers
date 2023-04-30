@@ -204,7 +204,7 @@ function convertParsedDataToTransactions(parsedData: CardTransactionDetails[]): 
         description: transaction.merchantName,
         originalAmount,
         originalCurrency: transaction.trnCurrencySymbol,
-        processedDate: transaction.debCrdDate,
+        processedDate: new Date(transaction.debCrdDate).toISOString(),
         status: TransactionStatuses.Completed,
         date: installments ?
           date.add(installments.number - 1, 'month').toISOString() :
