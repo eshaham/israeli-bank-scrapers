@@ -199,20 +199,21 @@ function convertParsedDataToTransactions(parsedData: CardTransactionDetails[]): 
       }
 
       const result: Transaction = {
-        chargedAmount,
         identifier: transaction.trnIntId,
-        description: transaction.merchantName,
-        originalAmount,
-        originalCurrency: transaction.trnCurrencySymbol,
-        processedDate: transaction.debCrdDate,
+        type: [trnTypeCode.regular, trnTypeCode.standingOrder].includes(transaction.trnTypeCode) ?
+          TransactionTypes.Normal :
+          TransactionTypes.Installments,
         status: TransactionStatuses.Completed,
         date: installments ?
           date.add(installments.number - 1, 'month').toISOString() :
           date.toISOString(),
-        type: [trnTypeCode.regular, trnTypeCode.standingOrder].includes(transaction.trnTypeCode) ?
-          TransactionTypes.Normal :
-          TransactionTypes.Installments,
-        memo: transaction.transTypeCommentDetails.toString() || undefined,
+        processedDate: new Date(transaction.debCrdDate).toISOString(),
+        originalAmount,
+        originalCurrency: transaction.trnCurrencySymbol,
+        chargedAmount,
+        chargedCurrency: transaction.debCrdCurrencySymbol,
+        description: transaction.merchantName,
+        memo: transaction.transTypeCommentDetails.toString(),
         category: transaction.branchCodeDesc,
       };
 
