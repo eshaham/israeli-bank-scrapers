@@ -31,12 +31,17 @@ interface ScrapedTransaction {
   ScrapedTransaction?: string;
   eventActivityTypeCode: number;
   currentBalance: number;
+  pfmDetails: string;
   beneficiaryDetailsData?: {
     partyHeadline?: string;
     partyName?: string;
     messageHeadline?: string;
     messageDetail?: string;
   };
+}
+
+interface ScrapedPfmTransaction {
+  transactionNumber: number;
 }
 
 type FetchedAccountData = {
@@ -137,11 +142,35 @@ async function fetchPoalimXSRFWithinPage(page: Page, url: string, pageUuid: stri
   return fetchPostWithinPage<FetchedAccountTransactionsData>(page, url, [], headers);
 }
 
-async function getAccountTransactions(apiSiteUrl: string, page: Page, accountNumber: string, startDate: string, endDate: string) {
+async function getExtraScrap(txnsResult: FetchedAccountTransactionsData, baseUrl: string, page: Page, accountNumber: string): Promise<FetchedAccountTransactionsData> {
+  const promises = txnsResult.transactions.map(async (transaction: ScrapedTransaction): Promise<ScrapedTransaction> => {
+    const { pfmDetails, serialNumber } = transaction;
+    if (serialNumber !== 0) {
+      const url = `${baseUrl}${pfmDetails}&accountId=${accountNumber}&lang=he`;
+      const extraTransactionDetails = await fetchGetWithinPage<ScrapedPfmTransaction[]>(page, url) || [];
+      if (extraTransactionDetails && extraTransactionDetails.length) {
+        const { transactionNumber } = extraTransactionDetails[0];
+        if (transactionNumber) {
+          return { ...transaction, referenceNumber: transactionNumber };
+        }
+      }
+    }
+    return transaction;
+  });
+  const res = await Promise.all(promises);
+  return { transactions: res };
+}
+
+async function getAccountTransactions(baseUrl: string, apiSiteUrl: string, page: Page, accountNumber: string, startDate: string, endDate: string, additionalTransactionInformation = false) {
   const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=1000&retrievalEndDate=${endDate}&retrievalStartDate=${startDate}&sortCode=1`;
   const txnsResult = await fetchPoalimXSRFWithinPage(page, txnsUrl, '/current-account/transactions');
 
-  return convertTransactions(txnsResult?.transactions ?? []);
+  const finalResult =
+    additionalTransactionInformation && txnsResult?.transactions.length ?
+      await getExtraScrap(txnsResult, baseUrl, page, accountNumber) :
+      txnsResult;
+
+  return convertTransactions(finalResult?.transactions ?? []);
 }
 
 async function getAccountBalance(apiSiteUrl: string, page: Page, accountNumber: string) {
@@ -163,6 +192,7 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOpt
   const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
   const startDate = options.startDate || defaultStartMoment.toDate();
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
+  const { additionalTransactionInformation } = options;
 
   const startDateStr = startMoment.format(DATE_FORMAT);
   const endDateStr = moment().format(DATE_FORMAT);
@@ -180,7 +210,15 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOpt
       debug('Skipping balance for a closed account, balance will be undefined');
     }
 
-    const txns = await getAccountTransactions(apiSiteUrl, page, accountNumber, startDateStr, endDateStr);
+    const txns = await getAccountTransactions(
+      baseUrl,
+      apiSiteUrl,
+      page,
+      accountNumber,
+      startDateStr,
+      endDateStr,
+      additionalTransactionInformation,
+    );
 
     accounts.push({
       accountNumber,
