@@ -61,6 +61,11 @@ interface ScrapedAccount {
   processedDate: string;
 }
 
+interface AccountCredit {
+  creditUtilization: number;
+  creditTotal: number;
+}
+
 interface ScrapedLoginValidation {
   Header: {
     Status: string;
@@ -96,6 +101,20 @@ interface ScrapedTransactionData {
   CardsTransactionsListBean?: Record<string, {
     CurrentCardTransactions: ScrapedCurrentCardTransactions[];
   }>;
+}
+
+async function fetchCreditUtilization(page: Page, servicesUrl: string): Promise<_.Dictionary<AccountCredit>> {
+  const dataUrl = getCreditUtilizationUrl(servicesUrl);
+  const dataResult = await fetchGetWithinPage<ScrapedAccountsWithinPageResponse>(page, dataUrl);
+  return _.fromPairs(
+    dataResult.RikuzNetuneyCreditDigiBean.cardsTotal.map((item) => [
+      item.cardNumberTail,
+      {
+        creditUtilization: parseFloat(item.nitzulLoCredit),
+        creditTotal: parseFloat(item.misgeretKolelet.replace(/,/g, "")),
+      },
+    ])
+  );
 }
 
 function getAccountsUrl(servicesUrl: string, monthMoment: Moment) {
@@ -284,6 +303,7 @@ function getExtraScrap(accountsWithIndex: ScrapedAccountsWithIndex[], page: Page
 async function fetchAllTransactions(page: Page, options: ExtendedScraperOptions, startMoment: Moment) {
   const futureMonthsToScrape = options.futureMonthsToScrape ?? 1;
   const allMonths = getAllMonthMoments(startMoment, futureMonthsToScrape);
+  const creditUtilization = await fetchCreditUtilization(page, options.servicesUrl)
   const results: ScrapedAccountsWithIndex[] = await Promise.all(allMonths.map(async (monthMoment) => {
     return fetchTransactions(page, options, startMoment, monthMoment);
   }));
@@ -308,6 +328,8 @@ async function fetchAllTransactions(page: Page, options: ExtendedScraperOptions,
   const accounts = Object.keys(combinedTxns).map((accountNumber) => {
     return {
       accountNumber,
+      creditUtilization: creditUtilization[accountNumber].creditUtilization,
+      creditTotal: creditUtilization[accountNumber].creditTotal,
       txns: combinedTxns[accountNumber],
     };
   });
