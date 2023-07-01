@@ -102,6 +102,14 @@ interface ScrapedTransactionData {
   }>;
 }
 
+function getCreditUtilizationUrl(servicesUrl: string) {
+  return buildUrl(servicesUrl, {
+    queryParams: {
+      reqName: 'RikuzNetuneyCreditDigi',
+    },
+  });
+}
+
 async function fetchCreditUtilization(page: Page, servicesUrl: string): Promise<_.Dictionary<AccountCredit>> {
   const dataUrl = getCreditUtilizationUrl(servicesUrl);
   const dataResult = await fetchGetWithinPage<ScrapedAccountsWithinPageResponse>(page, dataUrl);
