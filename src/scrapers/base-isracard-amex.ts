@@ -54,7 +54,6 @@ interface ScrapedTransaction {
   paymentSumOutbound: number;
 }
 
-
 interface ScrapedAccount {
   index: number;
   accountNumber: string;
@@ -111,7 +110,7 @@ async function fetchCreditUtilization(page: Page, servicesUrl: string): Promise<
       item.cardNumberTail,
       {
         creditUtilization: parseFloat(item.nitzulLoCredit),
-        creditTotal: parseFloat(item.misgeretKolelet.replace(/,/g, "")),
+        creditTotal: parseFloat(item.misgeretKolelet.replace(/,/g, '')),
       },
     ])
   );
@@ -303,7 +302,7 @@ function getExtraScrap(accountsWithIndex: ScrapedAccountsWithIndex[], page: Page
 async function fetchAllTransactions(page: Page, options: ExtendedScraperOptions, startMoment: Moment) {
   const futureMonthsToScrape = options.futureMonthsToScrape ?? 1;
   const allMonths = getAllMonthMoments(startMoment, futureMonthsToScrape);
-  const creditUtilization = await fetchCreditUtilization(page, options.servicesUrl)
+  const creditUtilization = await fetchCreditUtilization(page, options.servicesUrl);
   const results: ScrapedAccountsWithIndex[] = await Promise.all(allMonths.map(async (monthMoment) => {
     return fetchTransactions(page, options, startMoment, monthMoment);
   }));
