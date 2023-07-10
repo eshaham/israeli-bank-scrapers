@@ -195,6 +195,18 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     }
   }
 
+  private async getPendingTransactions(): Promise<Transaction[]> {
+    await this.page.$eval(`a[href*="${PENDING_TRANSACTIONS_PAGE}"]`, (el) => (el as HTMLElement).click());
+    const frame = await waitUntilIframeFound(this.page, (f) => f.url().includes(PENDING_TRANSACTIONS_IFRAME));
+    const isPending = await waitUntilElementFound(frame, pendingTrxIdentifierId).then(() => true).catch(() => false);
+    if (!isPending) {
+      return [];
+    }
+
+    const pendingTxn = await extractPendingTransactions(frame);
+    return pendingTxn;
+  }
+
   private async fetchAccount() {
     await this.page.$eval(`a[href*="${OSH_PAGE}"]`, (el) => (el as HTMLElement).click());
     await waitUntilElementFound(this.page, `a[href*="${TRANSACTIONS_PAGE}"]`);
@@ -220,11 +232,7 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     const startMoment = getStartMoment(this.options.startDate);
     const oshTxnAfterStartDate = oshTxn.filter((txn) => moment(txn.date).isSameOrAfter(startMoment));
 
-    await this.page.$eval(`a[href*="${PENDING_TRANSACTIONS_PAGE}"]`, (el) => (el as HTMLElement).click());
-    const frame = await waitUntilIframeFound(this.page, (f) => f.url().includes(PENDING_TRANSACTIONS_IFRAME));
-    await waitUntilElementFound(frame, pendingTrxIdentifierId);
-    const pendingTxn = await extractPendingTransactions(frame);
-
+    const pendingTxn = await this.getPendingTransactions();
     const allTxn = oshTxnAfterStartDate.concat(pendingTxn);
 
     return {
