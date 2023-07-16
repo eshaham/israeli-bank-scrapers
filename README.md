@@ -32,7 +32,7 @@ Currently only the following banks are supported:
 - OneZero (Experimental) (thanks [@orzarchi](https://github.com/orzarchi))
 
 # Prerequisites
-To use this you will need to have [Node.js](https://nodejs.org) >= 10.x installed.
+To use this you will need to have [Node.js](https://nodejs.org) >= 16.x installed.
 
 # Getting started
 To use these scrapers you'll need to install the package from npm:
