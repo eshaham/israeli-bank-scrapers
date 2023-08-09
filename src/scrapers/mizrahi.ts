@@ -27,8 +27,7 @@ interface ScrapedTransactionsResult {
   };
   body: {
     fields: {
-      AccountNumber: string;
-      YitraLeloChekim: string;
+      Yitra: string;
     };
     table: {
       rows: ScrapedTransaction[];
@@ -212,6 +211,10 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     await waitUntilElementFound(this.page, `a[href*="${TRANSACTIONS_PAGE}"]`);
     await this.page.$eval(`a[href*="${TRANSACTIONS_PAGE}"]`, (el) => (el as HTMLElement).click());
 
+    const accountNumberElement = (await this.page.$$('#AccountPicker b'))[0];
+    const accountNumberHandle = await accountNumberElement.getProperty('title');
+    const accountNumber = ((await accountNumberHandle.jsonValue()) as string);
+
     const response = await Promise.any(TRANSACTIONS_REQUEST_URLS.map(async (url) => {
       const request = await this.page.waitForRequest(url);
       const data = createDataFromRequest(request, this.options.startDate);
@@ -236,9 +239,9 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     const allTxn = oshTxnAfterStartDate.concat(pendingTxn);
 
     return {
-      accountNumber: response.body.fields.AccountNumber,
+      accountNumber,
       txns: allTxn,
-      balance: +response.body.fields.YitraLeloChekim,
+      balance: +response.body.fields.Yitra,
     };
   }
 }
