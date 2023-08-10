@@ -241,7 +241,7 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     return {
       accountNumber,
       txns: allTxn,
-      balance: +response.body.fields.Yitra,
+      balance: +response.body.fields?.Yitra,
     };
   }
 }
