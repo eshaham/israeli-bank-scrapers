@@ -49,6 +49,7 @@ const FUTURE_PURCHASE_FINANCING = 'מימון לרכישה עתידית';
 const MONTHLY_POSTPONED_INSTALLMENTS_TYPE_NAME = 'דחוי חודש תשלומים';
 const THIRTY_DAYS_PLUS_TYPE_NAME = 'עסקת 30 פלוס';
 const TWO_MONTHS_POSTPONED_TYPE_NAME = 'דחוי חודשיים';
+const TWO_MONTHS_POSTPONED_TYPE_NAME2 = 'דחוי 2 ח\' תשלומים';
 const MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME = 'חודשי + ריבית';
 const CREDIT_TYPE_NAME = 'קרדיט';
 const ACCUMULATING_BASKET = 'סל מצטבר';
@@ -115,6 +116,7 @@ function getTransactionType(txnTypeStr: string) {
     case MONTHLY_POSTPONED_INSTALLMENTS_TYPE_NAME:
     case THIRTY_DAYS_PLUS_TYPE_NAME:
     case TWO_MONTHS_POSTPONED_TYPE_NAME:
+    case TWO_MONTHS_POSTPONED_TYPE_NAME2:
     case ACCUMULATING_BASKET:
     case INTERNET_SHOPPING_TYPE_NAME:
     case MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME:
