@@ -10,6 +10,7 @@ import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '
 import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
 import { getDebug } from '../helpers/debug';
 import { ScraperOptions } from './interface';
+import { SHEKEL_CURRENCY, DOLLAR_CURRENCY, EURO_CURRENCY } from '../constants';
 
 const debug = getDebug('max');
 
@@ -18,6 +19,7 @@ interface ScrapedTransaction {
   paymentDate?: string;
   purchaseDate: string;
   actualPaymentAmount: string;
+  paymentCurrency: number | null;
   originalCurrency: string;
   originalAmount: number;
   planName: string;
@@ -145,6 +147,20 @@ function getInstallmentsInfo(comments: string) {
     total: parseInt(matches[1], 10),
   };
 }
+
+function getChargedCurrency(currencyId: number | null) {
+  switch (currencyId) {
+    case 376:
+      return SHEKEL_CURRENCY;
+    case 840:
+      return DOLLAR_CURRENCY;
+    case 978:
+      return EURO_CURRENCY;
+    default:
+      return undefined;
+  }
+}
+
 function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
   const isPending = rawTransaction.paymentDate === null;
   const processedDate = moment(isPending ?
@@ -164,6 +180,7 @@ function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
     originalAmount: -rawTransaction.originalAmount,
     originalCurrency: rawTransaction.originalCurrency,
     chargedAmount: -rawTransaction.actualPaymentAmount,
+    chargedCurrency: getChargedCurrency(rawTransaction.paymentCurrency),
     description: rawTransaction.merchantName.trim(),
     memo: rawTransaction.comments,
     category: categories.get(rawTransaction?.categoryId),
