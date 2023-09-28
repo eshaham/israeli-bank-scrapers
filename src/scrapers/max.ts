@@ -40,6 +40,7 @@ const SUCCESS_URL = `${BASE_WELCOME_URL}/homepage/personal`;
 const NORMAL_TYPE_NAME = 'רגילה';
 const ATM_TYPE_NAME = 'חיוב עסקות מיידי';
 const INTERNET_SHOPPING_TYPE_NAME = 'אינטרנט/חו"ל';
+const CURRENY_WALLET_TYPE_NAME = 'חיוב ארנק מטח';
 const INSTALLMENTS_TYPE_NAME = 'תשלומים';
 const MONTHLY_CHARGE_TYPE_NAME = 'חיוב חודשי';
 const ONE_MONTH_POSTPONED_TYPE_NAME = 'דחוי חודש';
@@ -117,6 +118,7 @@ function getTransactionType(txnTypeStr: string) {
     case TWO_MONTHS_POSTPONED_TYPE_NAME:
     case ACCUMULATING_BASKET:
     case INTERNET_SHOPPING_TYPE_NAME:
+    case CURRENY_WALLET_TYPE_NAME:
     case MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME:
     case POSTPONED_TRANSACTION_INSTALLMENTS:
     case REPLACEMENT_CARD:
