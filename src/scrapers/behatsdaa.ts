@@ -55,7 +55,12 @@ class BehatsdaaScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials
         { selector: '#loginId', value: credentials.id },
         { selector: '#loginPassword', value: credentials.password },
       ],
-      checkReadiness: async () => waitUntilElementFound(this.page, '#loginPassword'),
+      checkReadiness: async () => {
+        await Promise.all([
+          waitUntilElementFound(this.page, '#loginPassword'),
+          waitUntilElementFound(this.page, '#loginId'),
+        ]);
+      },
       possibleResults: {
         [LoginResults.Success]: [`${BASE_URL}/`],
         [LoginResults.InvalidPassword]: ['.custom-input-error-label'],
