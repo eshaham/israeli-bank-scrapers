@@ -15,6 +15,8 @@ import { Scraper, ScraperCredentials, ScraperOptions } from './interface';
 import { CompanyTypes } from '../definitions';
 import BeyahadBishvilhaScraper from './beyahad-bishvilha';
 import OneZeroScraper from './one-zero';
+import BehatsdaaScraper from './behatsdaa';
+import { assertNever } from '../assertNever';
 
 export default function createScraper(options: ScraperOptions): Scraper<ScraperCredentials> {
   switch (options.companyId) {
@@ -56,7 +58,9 @@ export default function createScraper(options: ScraperOptions): Scraper<ScraperC
       return new YahavScraper(options);
     case CompanyTypes.oneZero:
       return new OneZeroScraper(options);
+    case CompanyTypes.behatsdaa:
+      return new BehatsdaaScraper(options);
     default:
-      throw new Error(`unknown company id ${options.companyId}`);
+      return assertNever(options.companyId, `unknown company id ${options.companyId}`);
   }
 }
