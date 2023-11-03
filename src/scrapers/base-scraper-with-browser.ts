@@ -48,6 +48,7 @@ export interface LoginOptions {
   postAction?: () => Promise<void>;
   possibleResults: PossibleLoginResults;
   userAgent?: string;
+  waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2';
 }
 
 async function getKeyByValue(object: PossibleLoginResults, value: string, page: Page): Promise<LoginResults> {
@@ -169,14 +170,14 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     });
   }
 
-  async navigateTo(url: string, page?: Page, timeout?: number): Promise<void> {
+  async navigateTo(url: string, page?: Page, timeout?: number,waitUntil: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2' | undefined = 'load' ): Promise<void> {
     const pageToUse = page || this.page;
 
     if (!pageToUse) {
       return;
     }
 
-    const options = { ...(timeout === null ? null : { timeout }) };
+    const options = { ...(timeout === null ? null : { timeout }) , waitUntil};
     const response = await pageToUse.goto(url, options);
 
     // note: response will be null when navigating to same url while changing the hash part. the condition below will always accept null as valid result.
@@ -217,7 +218,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     }
 
     debug('navigate to login url');
-    await this.navigateTo(loginOptions.loginUrl);
+    await this.navigateTo(loginOptions.loginUrl,undefined,undefined,loginOptions.waitUntil);
     if (loginOptions.checkReadiness) {
       debug('execute \'checkReadiness\' interceptor provided in login options');
       await loginOptions.checkReadiness();
