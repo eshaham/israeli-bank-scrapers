@@ -1,4 +1,6 @@
-import puppeteer, { Browser, Frame, Page } from 'puppeteer';
+import puppeteer, {
+  Browser, Frame, Page, LoadEvent,
+} from 'puppeteer';
 
 import {
   BaseScraper,
@@ -170,14 +172,14 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     });
   }
 
-  async navigateTo(url: string, page?: Page, timeout?: number,waitUntil: LoadEvent | undefined = 'load'): Promise<void> {
+  async navigateTo(url: string, page?: Page, timeout?: number, waitUntil: LoadEvent | undefined = 'load'): Promise<void> {
     const pageToUse = page || this.page;
 
     if (!pageToUse) {
       return;
     }
 
-    const options = { ...(timeout === null ? null : { timeout }) , waitUntil};
+    const options = { ...(timeout === null ? null : { timeout }), waitUntil };
     const response = await pageToUse.goto(url, options);
 
     // note: response will be null when navigating to same url while changing the hash part. the condition below will always accept null as valid result.
