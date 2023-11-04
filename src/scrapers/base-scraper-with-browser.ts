@@ -170,7 +170,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     });
   }
 
-  async navigateTo(url: string, page?: Page, timeout?: number,waitUntil: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2' | undefined = 'load' ): Promise<void> {
+  async navigateTo(url: string, page?: Page, timeout?: number,waitUntil: LoadEvent | undefined = 'load'): Promise<void> {
     const pageToUse = page || this.page;
 
     if (!pageToUse) {
