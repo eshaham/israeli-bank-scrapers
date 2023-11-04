@@ -291,7 +291,7 @@ class MaxScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
       },
       postAction: async () => redirectOrDialog(this.page),
       possibleResults: getPossibleLoginResults(this.page),
-      waitUntil: 'domcontentloaded' as 'domcontentloaded',
+      waitUntil: 'domcontentloaded',
     };
   }
 
