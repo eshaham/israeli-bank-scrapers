@@ -48,7 +48,7 @@ export interface LoginOptions {
   postAction?: () => Promise<void>;
   possibleResults: PossibleLoginResults;
   userAgent?: string;
-  waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2';
+  waitUntil?: LoadEvent;
 }
 
 async function getKeyByValue(object: PossibleLoginResults, value: string, page: Page): Promise<LoginResults> {
