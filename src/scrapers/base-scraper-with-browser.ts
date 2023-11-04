@@ -218,7 +218,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     }
 
     debug('navigate to login url');
-    await this.navigateTo(loginOptions.loginUrl,undefined,undefined,loginOptions.waitUntil);
+    await this.navigateTo(loginOptions.loginUrl, undefined, undefined, loginOptions.waitUntil);
     if (loginOptions.checkReadiness) {
       debug('execute \'checkReadiness\' interceptor provided in login options');
       await loginOptions.checkReadiness();
