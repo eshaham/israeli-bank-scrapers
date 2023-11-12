@@ -51,6 +51,7 @@ const THIRTY_DAYS_PLUS_TYPE_NAME = 'עסקת 30 פלוס';
 const TWO_MONTHS_POSTPONED_TYPE_NAME = 'דחוי חודשיים';
 const MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME = 'חודשי + ריבית';
 const CREDIT_TYPE_NAME = 'קרדיט';
+const CREDIT_OUTSIDE_THE_LIMIT = 'קרדיט-מחוץ למסגרת';
 const ACCUMULATING_BASKET = 'סל מצטבר';
 const POSTPONED_TRANSACTION_INSTALLMENTS = 'פריסת העסקה הדחויה';
 const REPLACEMENT_CARD = 'כרטיס חליפי';
@@ -125,6 +126,7 @@ function getTransactionType(txnTypeStr: string) {
       return TransactionTypes.Normal;
     case INSTALLMENTS_TYPE_NAME:
     case CREDIT_TYPE_NAME:
+    case CREDIT_OUTSIDE_THE_LIMIT:
       return TransactionTypes.Installments;
     default:
       throw new Error(`Unknown transaction type ${cleanedUpTxnTypeStr}`);
