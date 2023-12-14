@@ -30,6 +30,7 @@ Currently only the following banks are supported:
 - Yahav (Thanks to [@gczobel](https://github.com/gczobel))
 - Beyhad Bishvilha - [ביחד בשבילך](https://www.hist.org.il/) (thanks [@esakal](https://github.com/esakal))
 - OneZero (Experimental) (thanks [@orzarchi](https://github.com/orzarchi))
+- Behatsdaa - [בהצדעה](behatsdaa.org.il) (thanks [@daniel-hauser](https://github.com/daniel-hauser))
 
 # Prerequisites
 To use this you will need to have [Node.js](https://nodejs.org) >= 16.x installed.
