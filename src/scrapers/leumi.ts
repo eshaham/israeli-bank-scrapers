@@ -190,18 +190,18 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
 
 
 async function navigateToLogin(page: Page): Promise<void> {
-  const loginButtonSelector = `.enter-account a[aria-label*="כניסה לחשבונך"]`
-  debug('wait for homepage to click on login button')
+  const loginButtonSelector = '.enter-account a[aria-label*="כניסה לחשבונך"]';
+  debug('wait for homepage to click on login button');
   await waitUntilElementFound(page, loginButtonSelector);
-  debug('navigate to login page')
+  debug('navigate to login page');
   const loginUrl = await pageEval(page, loginButtonSelector, null, (element) => {
     return (element as any).href;
   });
-  debug(`navigating to page (${loginUrl})`)
+  debug(`navigating to page (${loginUrl})`);
   page.goto(loginUrl);
-  debug('waiting for page to be loaded (networkidle2)')
+  debug('waiting for page to be loaded (networkidle2)');
   await waitForNavigation(page, { waitUntil: 'networkidle2' });
-  debug('waiting for components of login to enter credentials')
+  debug('waiting for components of login to enter credentials');
   await Promise.all([
     waitUntilElementFound(page, 'input[placeholder="שם משתמש"]', true),
     waitUntilElementFound(page, 'input[placeholder="סיסמה"]', true),
