@@ -5,7 +5,7 @@ import {
   fillInput,
   clickButton,
   waitUntilElementFound,
-  pageEvalAll,
+  pageEvalAll, pageEval,
 } from '../helpers/elements-interactions';
 import { SHEKEL_CURRENCY } from '../constants';
 import {
@@ -13,7 +13,9 @@ import {
 } from '../transactions';
 import { ScraperScrapingResult } from './interface';
 import { waitForNavigation } from '../helpers/navigation';
+import { getDebug } from '../helpers/debug';
 
+const debug = getDebug('leumi');
 const BASE_URL = 'https://hb2.bankleumi.co.il';
 const LOGIN_URL = 'https://www.leumi.co.il/';
 const TRANSACTIONS_URL = `${BASE_URL}/eBanking/SO/SPA.aspx#/ts/BusinessAccountTrx?WidgetPar=1`;
@@ -188,10 +190,18 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
 
 
 async function navigateToLogin(page: Page): Promise<void> {
-  const loginButtonSelector = '#enter_your_account a';
+  const loginButtonSelector = `.enter-account a[aria-label*="כניסה לחשבונך"]`
+  debug('wait for homepage to click on login button')
   await waitUntilElementFound(page, loginButtonSelector);
-  await clickButton(page, loginButtonSelector);
+  debug('navigate to login page')
+  const loginUrl = await pageEval(page, loginButtonSelector, null, (element) => {
+    return (element as any).href;
+  });
+  debug(`navigating to page (${loginUrl})`)
+  page.goto(loginUrl);
+  debug('waiting for page to be loaded (networkidle2)')
   await waitForNavigation(page, { waitUntil: 'networkidle2' });
+  debug('waiting for components of login to enter credentials')
   await Promise.all([
     waitUntilElementFound(page, 'input[placeholder="שם משתמש"]', true),
     waitUntilElementFound(page, 'input[placeholder="סיסמה"]', true),
