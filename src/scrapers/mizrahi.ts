@@ -47,7 +47,7 @@ const TRANSACTIONS_REQUEST_URLS = [
 ];
 const PENDING_TRANSACTIONS_PAGE = '/osh/legacy/legacy-Osh-p420';
 const PENDING_TRANSACTIONS_IFRAME = 'p420.aspx';
-const CHANGE_PASSWORD_URL = /https:\/\/www\.mizrahi-tefahot\.co\.il\/login\/\w+\/index\.html#\/change-pass/;
+const CHANGE_PASSWORD_URL = /https:\/\/www\.mizrahi-tefahot\.co\.il\/login\/index\.html#\/change-pass/;
 const DATE_FORMAT = 'DD/MM/YYYY';
 const MAX_ROWS_PER_REQUEST = 10000000000;
 
@@ -70,9 +70,18 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
   ];
 }
 
+async function isLoggedIn(options: { page?: Page | undefined } | undefined) {
+  if (!options?.page) {
+    return false;
+  }
+  const oshXPath = `//a//span[contains(., "${checkingAccountTabHebrewName}") or contains(., "${checkingAccountTabEnglishName}")]`;
+  const oshTab = await options.page.$x(oshXPath);
+  return oshTab.length > 0;
+}
+
 function getPossibleLoginResults(page: Page): PossibleLoginResults {
   return {
-    [LoginResults.Success]: [AFTER_LOGIN_BASE_URL, async () => !!(await page.$x(`//a//span[contains(., "${checkingAccountTabHebrewName}") or contains(., "${checkingAccountTabEnglishName}")]`))],
+    [LoginResults.Success]: [AFTER_LOGIN_BASE_URL, isLoggedIn],
     [LoginResults.InvalidPassword]: [async () => !!(await page.$(invalidPasswordSelector))],
     [LoginResults.ChangePassword]: [CHANGE_PASSWORD_URL],
   };
