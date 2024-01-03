@@ -32,6 +32,7 @@ type PurchaseHistoryResponse = {
 };
 
 function variantToTransaction(variant: Variant): Transaction {
+  // The price is positive, make it negative as it's an expense
   const originalAmount = -variant.customerPrice;
   return {
     type: TransactionTypes.Normal,
