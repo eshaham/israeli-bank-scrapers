@@ -190,7 +190,7 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
 
 
 async function navigateToLogin(page: Page): Promise<void> {
-  const loginButtonSelector = '.enter-account a[aria-label*="כניסה לחשבונך"]';
+  const loginButtonSelector = '.enter-account a[originaltitle="כניסה לחשבונך"]';
   debug('wait for homepage to click on login button');
   await waitUntilElementFound(page, loginButtonSelector);
   debug('navigate to login page');
