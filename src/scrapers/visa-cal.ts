@@ -214,9 +214,13 @@ function convertParsedDataToTransactions(pendingData: CardPendingTransactionDeta
   const pendingTransactions = pendingData.result === null ? [] :
     pendingData.result.cardsList.flatMap((card) => card.authDetalisList);
 
-  const completedTransactions = data
-    .flatMap((monthData) => monthData.result.bankAccounts)
-    .flatMap((accounts) => accounts.debitDates)
+  const bankAccounts = data
+    .flatMap((monthData) => monthData.result.bankAccounts);
+  const regularDebitDays = bankAccounts
+    .flatMap((accounts) => accounts.debitDates);
+  const immediateDebitDays = bankAccounts
+    .flatMap((accounts) => accounts.immidiateDebits.debitDays);
+  const completedTransactions = [...regularDebitDays, ...immediateDebitDays]
     .flatMap((debitDate) => debitDate.transactions);
 
   const all: (ScrapedTransaction | ScrapedPendingTransaction)[] = [...pendingTransactions, ...completedTransactions];

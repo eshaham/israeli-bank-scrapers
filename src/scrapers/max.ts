@@ -1,6 +1,6 @@
 import buildUrl from 'build-url';
 import moment, { Moment } from 'moment';
-import { Page } from 'puppeteer';
+import { Page, LoadEvent } from 'puppeteer';
 import { fetchGetWithinPage } from '../helpers/fetch';
 import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 import { waitForRedirect } from '../helpers/navigation';
@@ -10,6 +10,7 @@ import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '
 import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
 import { getDebug } from '../helpers/debug';
 import { ScraperOptions } from './interface';
+import { SHEKEL_CURRENCY, DOLLAR_CURRENCY, EURO_CURRENCY } from '../constants';
 
 const debug = getDebug('max');
 
@@ -18,6 +19,7 @@ interface ScrapedTransaction {
   paymentDate?: string;
   purchaseDate: string;
   actualPaymentAmount: string;
+  paymentCurrency: number | null;
   originalCurrency: string;
   originalAmount: number;
   planName: string;
@@ -49,8 +51,10 @@ const FUTURE_PURCHASE_FINANCING = 'מימון לרכישה עתידית';
 const MONTHLY_POSTPONED_INSTALLMENTS_TYPE_NAME = 'דחוי חודש תשלומים';
 const THIRTY_DAYS_PLUS_TYPE_NAME = 'עסקת 30 פלוס';
 const TWO_MONTHS_POSTPONED_TYPE_NAME = 'דחוי חודשיים';
+const TWO_MONTHS_POSTPONED_TYPE_NAME2 = 'דחוי 2 ח\' תשלומים';
 const MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME = 'חודשי + ריבית';
 const CREDIT_TYPE_NAME = 'קרדיט';
+const CREDIT_OUTSIDE_THE_LIMIT = 'קרדיט-מחוץ למסגרת';
 const ACCUMULATING_BASKET = 'סל מצטבר';
 const POSTPONED_TRANSACTION_INSTALLMENTS = 'פריסת העסקה הדחויה';
 const REPLACEMENT_CARD = 'כרטיס חליפי';
@@ -115,6 +119,7 @@ function getTransactionType(txnTypeStr: string) {
     case MONTHLY_POSTPONED_INSTALLMENTS_TYPE_NAME:
     case THIRTY_DAYS_PLUS_TYPE_NAME:
     case TWO_MONTHS_POSTPONED_TYPE_NAME:
+    case TWO_MONTHS_POSTPONED_TYPE_NAME2:
     case ACCUMULATING_BASKET:
     case INTERNET_SHOPPING_TYPE_NAME:
     case MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME:
@@ -125,6 +130,7 @@ function getTransactionType(txnTypeStr: string) {
       return TransactionTypes.Normal;
     case INSTALLMENTS_TYPE_NAME:
     case CREDIT_TYPE_NAME:
+    case CREDIT_OUTSIDE_THE_LIMIT:
       return TransactionTypes.Installments;
     default:
       throw new Error(`Unknown transaction type ${cleanedUpTxnTypeStr}`);
@@ -145,6 +151,20 @@ function getInstallmentsInfo(comments: string) {
     total: parseInt(matches[1], 10),
   };
 }
+
+function getChargedCurrency(currencyId: number | null) {
+  switch (currencyId) {
+    case 376:
+      return SHEKEL_CURRENCY;
+    case 840:
+      return DOLLAR_CURRENCY;
+    case 978:
+      return EURO_CURRENCY;
+    default:
+      return undefined;
+  }
+}
+
 function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
   const isPending = rawTransaction.paymentDate === null;
   const processedDate = moment(isPending ?
@@ -164,6 +184,7 @@ function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
     originalAmount: -rawTransaction.originalAmount,
     originalCurrency: rawTransaction.originalCurrency,
     chargedAmount: -rawTransaction.actualPaymentAmount,
+    chargedCurrency: getChargedCurrency(rawTransaction.paymentCurrency),
     description: rawTransaction.merchantName.trim(),
     memo: rawTransaction.comments,
     category: categories.get(rawTransaction?.categoryId),
@@ -291,6 +312,7 @@ class MaxScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
       },
       postAction: async () => redirectOrDialog(this.page),
       possibleResults: getPossibleLoginResults(this.page),
+      waitUntil: 'domcontentloaded' as LoadEvent,
     };
   }
 

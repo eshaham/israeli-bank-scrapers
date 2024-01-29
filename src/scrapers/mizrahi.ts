@@ -27,8 +27,7 @@ interface ScrapedTransactionsResult {
   };
   body: {
     fields: {
-      AccountNumber: string;
-      YitraLeloChekim: string;
+      Yitra: string;
     };
     table: {
       rows: ScrapedTransaction[];
@@ -195,10 +194,26 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     }
   }
 
+  private async getPendingTransactions(): Promise<Transaction[]> {
+    await this.page.$eval(`a[href*="${PENDING_TRANSACTIONS_PAGE}"]`, (el) => (el as HTMLElement).click());
+    const frame = await waitUntilIframeFound(this.page, (f) => f.url().includes(PENDING_TRANSACTIONS_IFRAME));
+    const isPending = await waitUntilElementFound(frame, pendingTrxIdentifierId).then(() => true).catch(() => false);
+    if (!isPending) {
+      return [];
+    }
+
+    const pendingTxn = await extractPendingTransactions(frame);
+    return pendingTxn;
+  }
+
   private async fetchAccount() {
     await this.page.$eval(`a[href*="${OSH_PAGE}"]`, (el) => (el as HTMLElement).click());
     await waitUntilElementFound(this.page, `a[href*="${TRANSACTIONS_PAGE}"]`);
     await this.page.$eval(`a[href*="${TRANSACTIONS_PAGE}"]`, (el) => (el as HTMLElement).click());
+
+    const accountNumberElement = (await this.page.$$('#AccountPicker b'))[0];
+    const accountNumberHandle = await accountNumberElement.getProperty('title');
+    const accountNumber = ((await accountNumberHandle.jsonValue()) as string);
 
     const response = await Promise.any(TRANSACTIONS_REQUEST_URLS.map(async (url) => {
       const request = await this.page.waitForRequest(url);
@@ -220,17 +235,13 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     const startMoment = getStartMoment(this.options.startDate);
     const oshTxnAfterStartDate = oshTxn.filter((txn) => moment(txn.date).isSameOrAfter(startMoment));
 
-    await this.page.$eval(`a[href*="${PENDING_TRANSACTIONS_PAGE}"]`, (el) => (el as HTMLElement).click());
-    const frame = await waitUntilIframeFound(this.page, (f) => f.url().includes(PENDING_TRANSACTIONS_IFRAME));
-    await waitUntilElementFound(frame, pendingTrxIdentifierId);
-    const pendingTxn = await extractPendingTransactions(frame);
-
+    const pendingTxn = await this.getPendingTransactions();
     const allTxn = oshTxnAfterStartDate.concat(pendingTxn);
 
     return {
-      accountNumber: response.body.fields.AccountNumber,
+      accountNumber,
       txns: allTxn,
-      balance: +response.body.fields.YitraLeloChekim,
+      balance: +response.body.fields?.Yitra,
     };
   }
 }
