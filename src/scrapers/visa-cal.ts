@@ -210,24 +210,19 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
   ];
 }
 
-function convertParsedDataToTransactions(pendingData: CardPendingTransactionDetails, data: CardTransactionDetails[]): Transaction[] {
-  const pendingTransactions = pendingData.result === null ? [] :
-    pendingData.result.cardsList.flatMap((card) => card.authDetalisList);
+function convertParsedDataToTransactions(parsedData: CardTransactionDetails[]): Transaction[] {
+  const bankAccounts = parsedData
+    .flatMap((monthData) => monthData.result.bankAccounts)
 
-  const bankAccounts = data
-    .flatMap((monthData) => monthData.result.bankAccounts);
   const regularDebitDays = bankAccounts
     .flatMap((accounts) => accounts.debitDates);
   const immediateDebitDays = bankAccounts
-    .flatMap((accounts) => accounts.immidiateDebits.debitDays);
-  const completedTransactions = [...regularDebitDays, ...immediateDebitDays]
-    .flatMap((debitDate) => debitDate.transactions);
+    .flatMap((accounts) =>  accounts.immidiateDebits.debitDays)
 
-  const all: (ScrapedTransaction | ScrapedPendingTransaction)[] = [...pendingTransactions, ...completedTransactions];
-
-  return all.map((transaction) => {
-    const numOfPayments = isPending(transaction) ? transaction.numberOfPayments : transaction.numOfPayments;
-    const installments = numOfPayments ?
+  return [...regularDebitDays, ...immediateDebitDays]
+    .flatMap((debitDate) => debitDate.transactions)
+    .map((transaction) => {
+      const installments = (transaction.curPaymentNum && transaction.numOfPayments &&
       {
         number: isPending(transaction) ? 1 : transaction.curPaymentNum,
         total: numOfPayments,
@@ -236,13 +231,8 @@ function convertParsedDataToTransactions(pendingData: CardPendingTransactionDeta
 
     const date = moment(transaction.trnPurchaseDate);
 
-    let chargedAmount = isPending(transaction) ? transaction.trnAmt * (-1) : transaction.amtBeforeConvAndIndex * (-1);
-    let originalAmount = transaction.trnAmt * (-1);
-
-    if (transaction.trnTypeCode === trnTypeCode.credit) {
-      chargedAmount = isPending(transaction) ? transaction.trnAmt : transaction.amtBeforeConvAndIndex;
-      originalAmount = transaction.trnAmt;
-    }
+      let chargedAmount = transaction.amtBeforeConvAndIndex * (-1);
+      let originalAmount = transaction.trnAmt * (-1);
 
     const result: Transaction = {
       identifier: !isPending(transaction) ? transaction.trnIntId : undefined,
