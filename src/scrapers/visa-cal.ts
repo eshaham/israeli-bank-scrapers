@@ -158,6 +158,16 @@ function isPending(transaction: ScrapedTransaction | ScrapedPendingTransaction):
   return (transaction as ScrapedTransaction).debCrdDate === undefined; // an arbitrary field that only appears in a completed transaction
 }
 
+function isCardTransactionDetails(result: CardTransactionDetails | CardTransactionDetailsError):
+result is CardTransactionDetails {
+  return (result as CardTransactionDetails).result !== undefined;
+}
+
+function isCardPendingTransactionDetails(result: CardPendingTransactionDetails | CardTransactionDetailsError):
+result is CardPendingTransactionDetails {
+  return (result as CardPendingTransactionDetails).result !== undefined;
+}
+
 async function getLoginFrame(page: Page) {
   let frame: Frame | null = null;
   debug('wait until login frame found');
@@ -355,16 +365,6 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     };
   }
 
-  isCardTransactionDetails(result: CardTransactionDetails | CardTransactionDetailsError):
-    result is CardTransactionDetails {
-    return (result as CardTransactionDetails).result !== undefined;
-  }
-
-  isCardPendingTransactionDetails(result: CardPendingTransactionDetails | CardTransactionDetailsError):
-    result is CardPendingTransactionDetails {
-    return (result as CardPendingTransactionDetails).result !== undefined;
-  }
-
   async fetchData(): Promise<ScraperScrapingResult> {
     const defaultStartMoment = moment().subtract(1, 'years').subtract(6, 'months').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
@@ -395,7 +395,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         );
 
         if (pendingData?.statusCode !== 1 && pendingData?.statusCode !== 96) throw new Error(`failed to fetch pending transactions for card ${card.last4Digits}. Message: ${pendingData?.title || ''}`);
-        if (!this.isCardPendingTransactionDetails(pendingData)) {
+        if (!isCardPendingTransactionDetails(pendingData)) {
           throw new Error('pendingData is not of type CardTransactionDetails');
         }
 
@@ -414,7 +414,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
           if (monthData?.statusCode !== 1) throw new Error(`failed to fetch transactions for card ${card.last4Digits}. Message: ${monthData?.title || ''}`);
 
-          if (!this.isCardTransactionDetails(monthData)) {
+          if (!isCardTransactionDetails(monthData)) {
             throw new Error('monthData is not of type CardTransactionDetails');
           }
 
