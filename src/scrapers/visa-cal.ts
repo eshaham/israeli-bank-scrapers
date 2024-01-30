@@ -212,54 +212,53 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
 
 function convertParsedDataToTransactions(parsedData: CardTransactionDetails[]): Transaction[] {
   const bankAccounts = parsedData
-    .flatMap((monthData) => monthData.result.bankAccounts);
+    .flatMap((monthData) => monthData.result.bankAccounts)
 
   const regularDebitDays = bankAccounts
     .flatMap((accounts) => accounts.debitDates);
   const immediateDebitDays = bankAccounts
-    .flatMap((accounts) => accounts.immidiateDebits.debitDays);
+    .flatMap((accounts) =>  accounts.immidiateDebits.debitDays)
 
   return [...regularDebitDays, ...immediateDebitDays]
     .flatMap((debitDate) => debitDate.transactions)
     .map((transaction) => {
-      const numOfPayments = isPending(transaction) ? transaction.numberOfPayments : transaction.numOfPayments;
-      const installments = numOfPayments ?
-        {
-          number: isPending(transaction) ? 1 : transaction.curPaymentNum,
-          total: numOfPayments,
-        } :
-        undefined;
+      const installments = (transaction.curPaymentNum && transaction.numOfPayments &&
+      {
+        number: isPending(transaction) ? 1 : transaction.curPaymentNum,
+        total: numOfPayments,
+      } :
+      undefined;
 
-      const date = moment(transaction.trnPurchaseDate);
+    const date = moment(transaction.trnPurchaseDate);
 
-      const chargedAmount = transaction.amtBeforeConvAndIndex * (-1);
-      const originalAmount = transaction.trnAmt * (-1);
+      let chargedAmount = transaction.amtBeforeConvAndIndex * (-1);
+      let originalAmount = transaction.trnAmt * (-1);
 
-      const result: Transaction = {
-        identifier: !isPending(transaction) ? transaction.trnIntId : undefined,
-        type: [trnTypeCode.regular, trnTypeCode.standingOrder].includes(transaction.trnTypeCode) ?
-          TransactionTypes.Normal :
-          TransactionTypes.Installments,
-        status: isPending(transaction) ? TransactionStatuses.Pending : TransactionStatuses.Completed,
-        date: installments ?
-          date.add(installments.number - 1, 'month').toISOString() :
-          date.toISOString(),
-        processedDate: isPending(transaction) ? date.toISOString() : new Date(transaction.debCrdDate).toISOString(),
-        originalAmount,
-        originalCurrency: transaction.trnCurrencySymbol,
-        chargedAmount,
-        chargedCurrency: !isPending(transaction) ? transaction.debCrdCurrencySymbol : undefined,
-        description: transaction.merchantName,
-        memo: transaction.transTypeCommentDetails.toString(),
-        category: transaction.branchCodeDesc,
-      };
+    const result: Transaction = {
+      identifier: !isPending(transaction) ? transaction.trnIntId : undefined,
+      type: [trnTypeCode.regular, trnTypeCode.standingOrder].includes(transaction.trnTypeCode) ?
+        TransactionTypes.Normal :
+        TransactionTypes.Installments,
+      status: isPending(transaction) ? TransactionStatuses.Pending : TransactionStatuses.Completed,
+      date: installments ?
+        date.add(installments.number - 1, 'month').toISOString() :
+        date.toISOString(),
+      processedDate: isPending(transaction) ? date.toISOString() : new Date(transaction.debCrdDate).toISOString(),
+      originalAmount,
+      originalCurrency: transaction.trnCurrencySymbol,
+      chargedAmount,
+      chargedCurrency: !isPending(transaction) ? transaction.debCrdCurrencySymbol : undefined,
+      description: transaction.merchantName,
+      memo: transaction.transTypeCommentDetails.toString(),
+      category: transaction.branchCodeDesc,
+    };
 
-      if (installments) {
-        result.installments = installments;
-      }
+    if (installments) {
+      result.installments = installments;
+    }
 
-      return result;
-    });
+    return result;
+  });
 }
 
 type ScraperSpecificCredentials = { username: string, password: string };
