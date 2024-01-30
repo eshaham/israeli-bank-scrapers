@@ -176,9 +176,15 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
 }
 
 function convertParsedDataToTransactions(parsedData: CardTransactionDetails[]): Transaction[] {
-  return parsedData
+  const bankAccounts = parsedData
     .flatMap((monthData) => monthData.result.bankAccounts)
+
+  const regularDebitDays = bankAccounts
     .flatMap((accounts) => accounts.debitDates)
+  const immediateDebitDays = bankAccounts
+    .flatMap((accounts) =>  accounts.immidiateDebits.debitDays)
+
+  return [...regularDebitDays, ...immediateDebitDays]
     .flatMap((debitDate) => debitDate.transactions)
     .map((transaction) => {
       const installments = (transaction.curPaymentNum && transaction.numOfPayments &&
@@ -192,11 +198,6 @@ function convertParsedDataToTransactions(parsedData: CardTransactionDetails[]): 
 
       let chargedAmount = transaction.amtBeforeConvAndIndex * (-1);
       let originalAmount = transaction.trnAmt * (-1);
-
-      if (transaction.trnTypeCode === trnTypeCode.credit) {
-        chargedAmount = transaction.amtBeforeConvAndIndex;
-        originalAmount = transaction.trnAmt;
-      }
 
       const result: Transaction = {
         identifier: transaction.trnIntId,
