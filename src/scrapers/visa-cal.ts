@@ -394,9 +394,10 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
           },
         );
 
-        if (pendingData?.statusCode !== 1 && pendingData?.statusCode !== 96) throw new Error(`failed to fetch pending transactions for card ${card.last4Digits}. Message: ${pendingData?.title || ''}`);
-        if (!isCardPendingTransactionDetails(pendingData)) {
-          throw new Error('pendingData is not of type CardTransactionDetails');
+        if (pendingData?.statusCode !== 1 && pendingData?.statusCode !== 96) {
+          debug(`failed to fetch pending transactions for card ${card.last4Digits}. Message: ${pendingData?.title || ''}`);
+        } else if (!isCardPendingTransactionDetails(pendingData)) {
+          debug('pendingData is not of type CardTransactionDetails');
         }
 
         debug(`fetch completed transactions for card ${card.cardUniqueId}`);
