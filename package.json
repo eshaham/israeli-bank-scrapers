@@ -26,11 +26,6 @@
     "prepare:default": "git reset --hard && npm ci && npm run build",
     "reset": "git reset --hard && npm ci"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "npm run lint"
-    }
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/eshaham/israeli-bank-scrapers.git"
@@ -69,6 +64,7 @@
     "eslint-config-airbnb-typescript": "^7.2.1",
     "eslint-plugin-import": "^2.20.2",
     "fs-extra": "^10.0.0",
+    "husky": "^8.0.3",
     "jest": "^25.3.0",
     "jscodeshift": "^0.11.0",
     "minimist": "^1.2.5",
@@ -82,7 +78,6 @@
     "build-url": "^2.0.0",
     "core-js": "^3.1.4",
     "debug": "^4.3.2",
-    "husky": "^4.2.5",
     "json2csv": "^4.5.4",
     "lodash": "^4.17.10",
     "moment": "^2.22.2",
