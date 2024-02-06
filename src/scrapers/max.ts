@@ -42,7 +42,7 @@ const SUCCESS_URL = `${BASE_WELCOME_URL}/homepage/personal`;
 
 enum MaxPlanName {
   Normal = 'רגילה',
-  Atm = 'חיוב עסקות מיידי',
+  ImmediateCharge = 'חיוב עסקות מיידי',
   InternetShopping = 'אינטרנט/חו"ל',
   Installments = 'תשלומים',
   MonthlyCharge = 'חיוב חודשי',
@@ -61,7 +61,8 @@ enum MaxPlanName {
   PostponedTransactionInstallments = 'פריסת העסקה הדחויה',
   ReplacementCard = 'כרטיס חליפי',
   EarlyRepayment = 'פרעון מוקדם',
-  MonthlyCardFee = 'דמי כרטיס'
+  MonthlyCardFee = 'דמי כרטיס',
+  CurrencyPocket = 'חיוב ארנק מטח'
 }
 
 const INVALID_DETAILS_SELECTOR = '#popupWrongDetails';
@@ -112,7 +113,7 @@ async function loadCategories(page: Page) {
 function getTransactionType(planName: string, planTypeId: number) {
   const cleanedUpTxnTypeStr = planName.replace('\t', ' ').trim();
   switch (cleanedUpTxnTypeStr) {
-    case MaxPlanName.Atm:
+    case MaxPlanName.ImmediateCharge:
     case MaxPlanName.Normal:
     case MaxPlanName.MonthlyCharge:
     case MaxPlanName.OneMonthPostponed:
@@ -130,6 +131,7 @@ function getTransactionType(planName: string, planTypeId: number) {
     case MaxPlanName.ReplacementCard:
     case MaxPlanName.EarlyRepayment:
     case MaxPlanName.MonthlyCardFee:
+    case MaxPlanName.CurrencyPocket:
       return TransactionTypes.Normal;
     case MaxPlanName.Installments:
     case MaxPlanName.Credit:
