@@ -39,27 +39,29 @@ const LOGIN_URL = `${BASE_WELCOME_URL}/homepage/welcome`;
 const PASSWORD_EXPIRED_URL = `${BASE_ACTIONS_URL}/Anonymous/Login/PasswordExpired.aspx`;
 const SUCCESS_URL = `${BASE_WELCOME_URL}/homepage/personal`;
 
-const NORMAL_TYPE_NAME = 'רגילה';
-const ATM_TYPE_NAME = 'חיוב עסקות מיידי';
-const INTERNET_SHOPPING_TYPE_NAME = 'אינטרנט/חו"ל';
-const INSTALLMENTS_TYPE_NAME = 'תשלומים';
-const MONTHLY_CHARGE_TYPE_NAME = 'חיוב חודשי';
-const ONE_MONTH_POSTPONED_TYPE_NAME = 'דחוי חודש';
-const MONTHLY_POSTPONED_TYPE_NAME = 'דחוי לחיוב החודשי';
-const MONTHLY_PAYMENT_TYPE_NAME = 'תשלום חודשי';
-const FUTURE_PURCHASE_FINANCING = 'מימון לרכישה עתידית';
-const MONTHLY_POSTPONED_INSTALLMENTS_TYPE_NAME = 'דחוי חודש תשלומים';
-const THIRTY_DAYS_PLUS_TYPE_NAME = 'עסקת 30 פלוס';
-const TWO_MONTHS_POSTPONED_TYPE_NAME = 'דחוי חודשיים';
-const TWO_MONTHS_POSTPONED_TYPE_NAME2 = 'דחוי 2 ח\' תשלומים';
-const MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME = 'חודשי + ריבית';
-const CREDIT_TYPE_NAME = 'קרדיט';
-const CREDIT_OUTSIDE_THE_LIMIT = 'קרדיט-מחוץ למסגרת';
-const ACCUMULATING_BASKET = 'סל מצטבר';
-const POSTPONED_TRANSACTION_INSTALLMENTS = 'פריסת העסקה הדחויה';
-const REPLACEMENT_CARD = 'כרטיס חליפי';
-const EARLY_REPAYMENT = 'פרעון מוקדם';
-const MONTHLY_CARD_FEE = 'דמי כרטיס';
+enum MaxTransactionType {
+  Normal = 'רגילה',
+  Atm = 'חיוב עסקות מיידי',
+  InternetShopping = 'אינטרנט/חו"ל',
+  Installments = 'תשלומים',
+  MonthlyCharge = 'חיוב חודשי',
+  OneMonthPostponed = 'דחוי חודש',
+  MonthlyPostponed = 'דחוי לחיוב החודשי',
+  MonthlyPayment = 'תשלום חודשי',
+  FuturePurchaseFinancing = 'מימון לרכישה עתידית',
+  MonthlyPostponedInstallments = 'דחוי חודש תשלומים',
+  ThirtyDaysPlus = 'עסקת 30 פלוס',
+  TwoMonthsPostponed = 'דחוי חודשיים',
+  TwoMonthsPostponed2 = 'דחוי 2 ח\' תשלומים',
+  MonthlyChargePlusInterest = 'חודשי + ריבית',
+  Credit = 'קרדיט',
+  CreditOutsideTheLimit = 'קרדיט-מחוץ למסגרת',
+  AccumulatingBasket = 'סל מצטבר',
+  PostponedTransactionInstallments = 'פריסת העסקה הדחויה',
+  ReplacementCard = 'כרטיס חליפי',
+  EarlyRepayment = 'פרעון מוקדם',
+  MonthlyCardFee = 'דמי כרטיס'
+}
 
 const INVALID_DETAILS_SELECTOR = '#popupWrongDetails';
 const LOGIN_ERROR_SELECTOR = '#popupCardHoldersLoginError';
@@ -109,28 +111,28 @@ async function loadCategories(page: Page) {
 function getTransactionType(txnTypeStr: string) {
   const cleanedUpTxnTypeStr = txnTypeStr.replace('\t', ' ').trim();
   switch (cleanedUpTxnTypeStr) {
-    case ATM_TYPE_NAME:
-    case NORMAL_TYPE_NAME:
-    case MONTHLY_CHARGE_TYPE_NAME:
-    case ONE_MONTH_POSTPONED_TYPE_NAME:
-    case MONTHLY_POSTPONED_TYPE_NAME:
-    case FUTURE_PURCHASE_FINANCING:
-    case MONTHLY_PAYMENT_TYPE_NAME:
-    case MONTHLY_POSTPONED_INSTALLMENTS_TYPE_NAME:
-    case THIRTY_DAYS_PLUS_TYPE_NAME:
-    case TWO_MONTHS_POSTPONED_TYPE_NAME:
-    case TWO_MONTHS_POSTPONED_TYPE_NAME2:
-    case ACCUMULATING_BASKET:
-    case INTERNET_SHOPPING_TYPE_NAME:
-    case MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME:
-    case POSTPONED_TRANSACTION_INSTALLMENTS:
-    case REPLACEMENT_CARD:
-    case EARLY_REPAYMENT:
-    case MONTHLY_CARD_FEE:
+    case MaxTransactionType.Atm:
+    case MaxTransactionType.Normal:
+    case MaxTransactionType.MonthlyCharge:
+    case MaxTransactionType.OneMonthPostponed:
+    case MaxTransactionType.MonthlyPostponed:
+    case MaxTransactionType.FuturePurchaseFinancing:
+    case MaxTransactionType.MonthlyPayment:
+    case MaxTransactionType.MonthlyPostponedInstallments:
+    case MaxTransactionType.ThirtyDaysPlus:
+    case MaxTransactionType.TwoMonthsPostponed:
+    case MaxTransactionType.TwoMonthsPostponed2:
+    case MaxTransactionType.AccumulatingBasket:
+    case MaxTransactionType.InternetShopping:
+    case MaxTransactionType.MonthlyChargePlusInterest:
+    case MaxTransactionType.PostponedTransactionInstallments:
+    case MaxTransactionType.ReplacementCard:
+    case MaxTransactionType.EarlyRepayment:
+    case MaxTransactionType.MonthlyCardFee:
       return TransactionTypes.Normal;
-    case INSTALLMENTS_TYPE_NAME:
-    case CREDIT_TYPE_NAME:
-    case CREDIT_OUTSIDE_THE_LIMIT:
+    case MaxTransactionType.Installments:
+    case MaxTransactionType.Credit:
+    case MaxTransactionType.CreditOutsideTheLimit:
       return TransactionTypes.Installments;
     default:
       throw new Error(`Unknown transaction type ${cleanedUpTxnTypeStr}`);
