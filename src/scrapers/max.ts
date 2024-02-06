@@ -23,6 +23,7 @@ interface ScrapedTransaction {
   originalCurrency: string;
   originalAmount: number;
   planName: string;
+  planTypeId: number;
   comments: string;
   merchantName: string;
   categoryId: number;
@@ -39,7 +40,7 @@ const LOGIN_URL = `${BASE_WELCOME_URL}/homepage/welcome`;
 const PASSWORD_EXPIRED_URL = `${BASE_ACTIONS_URL}/Anonymous/Login/PasswordExpired.aspx`;
 const SUCCESS_URL = `${BASE_WELCOME_URL}/homepage/personal`;
 
-enum MaxTransactionType {
+enum MaxPlanName {
   Normal = 'רגילה',
   Atm = 'חיוב עסקות מיידי',
   InternetShopping = 'אינטרנט/חו"ל',
@@ -108,34 +109,42 @@ async function loadCategories(page: Page) {
   }
 }
 
-function getTransactionType(txnTypeStr: string) {
-  const cleanedUpTxnTypeStr = txnTypeStr.replace('\t', ' ').trim();
+function getTransactionType(planName: string, planTypeId: number) {
+  const cleanedUpTxnTypeStr = planName.replace('\t', ' ').trim();
   switch (cleanedUpTxnTypeStr) {
-    case MaxTransactionType.Atm:
-    case MaxTransactionType.Normal:
-    case MaxTransactionType.MonthlyCharge:
-    case MaxTransactionType.OneMonthPostponed:
-    case MaxTransactionType.MonthlyPostponed:
-    case MaxTransactionType.FuturePurchaseFinancing:
-    case MaxTransactionType.MonthlyPayment:
-    case MaxTransactionType.MonthlyPostponedInstallments:
-    case MaxTransactionType.ThirtyDaysPlus:
-    case MaxTransactionType.TwoMonthsPostponed:
-    case MaxTransactionType.TwoMonthsPostponed2:
-    case MaxTransactionType.AccumulatingBasket:
-    case MaxTransactionType.InternetShopping:
-    case MaxTransactionType.MonthlyChargePlusInterest:
-    case MaxTransactionType.PostponedTransactionInstallments:
-    case MaxTransactionType.ReplacementCard:
-    case MaxTransactionType.EarlyRepayment:
-    case MaxTransactionType.MonthlyCardFee:
+    case MaxPlanName.Atm:
+    case MaxPlanName.Normal:
+    case MaxPlanName.MonthlyCharge:
+    case MaxPlanName.OneMonthPostponed:
+    case MaxPlanName.MonthlyPostponed:
+    case MaxPlanName.FuturePurchaseFinancing:
+    case MaxPlanName.MonthlyPayment:
+    case MaxPlanName.MonthlyPostponedInstallments:
+    case MaxPlanName.ThirtyDaysPlus:
+    case MaxPlanName.TwoMonthsPostponed:
+    case MaxPlanName.TwoMonthsPostponed2:
+    case MaxPlanName.AccumulatingBasket:
+    case MaxPlanName.InternetShopping:
+    case MaxPlanName.MonthlyChargePlusInterest:
+    case MaxPlanName.PostponedTransactionInstallments:
+    case MaxPlanName.ReplacementCard:
+    case MaxPlanName.EarlyRepayment:
+    case MaxPlanName.MonthlyCardFee:
       return TransactionTypes.Normal;
-    case MaxTransactionType.Installments:
-    case MaxTransactionType.Credit:
-    case MaxTransactionType.CreditOutsideTheLimit:
+    case MaxPlanName.Installments:
+    case MaxPlanName.Credit:
+    case MaxPlanName.CreditOutsideTheLimit:
       return TransactionTypes.Installments;
     default:
-      throw new Error(`Unknown transaction type ${cleanedUpTxnTypeStr}`);
+      switch (planTypeId) {
+        case 2:
+        case 3:
+          return TransactionTypes.Installments;
+        case 5:
+          return TransactionTypes.Normal;
+        default:
+          throw new Error(`Unknown transaction type ${cleanedUpTxnTypeStr}`);
+      }
   }
 }
 
@@ -180,7 +189,7 @@ function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
     rawTransaction.dealData?.arn;
 
   return {
-    type: getTransactionType(rawTransaction.planName),
+    type: getTransactionType(rawTransaction.planName, rawTransaction.planTypeId),
     date: moment(rawTransaction.purchaseDate).toISOString(),
     processedDate,
     originalAmount: -rawTransaction.originalAmount,
