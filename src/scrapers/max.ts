@@ -27,6 +27,8 @@ interface ScrapedTransaction {
   comments: string;
   merchantName: string;
   categoryId: number;
+  fundsTransferComment?: string;
+  fundsTransferReceiverOrTransfer?: string;
   dealData?: {
     arn: string;
   };
@@ -178,6 +180,18 @@ function getChargedCurrency(currencyId: number | null) {
   }
 }
 
+function getMemo(rawTransaction: ScrapedTransaction) {
+  let memo = rawTransaction.comments;
+  if (rawTransaction.fundsTransferReceiverOrTransfer) {
+    memo += ` ${rawTransaction.fundsTransferReceiverOrTransfer}`;
+    if (rawTransaction.fundsTransferComment) {
+      memo += `: ${rawTransaction.fundsTransferComment}`;
+    }
+  }
+
+  return memo;
+}
+
 function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
   const isPending = rawTransaction.paymentDate === null;
   const processedDate = moment(isPending ?
@@ -199,7 +213,7 @@ function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
     chargedAmount: -rawTransaction.actualPaymentAmount,
     chargedCurrency: getChargedCurrency(rawTransaction.paymentCurrency),
     description: rawTransaction.merchantName.trim(),
-    memo: rawTransaction.comments,
+    memo: getMemo(rawTransaction),
     category: categories.get(rawTransaction?.categoryId),
     installments,
     identifier,
