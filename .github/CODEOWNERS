@@ -1,0 +1,15 @@
+/src/scrapers/amex*.ts                  @daniel-hauser
+/src/scrapers/behatsdaa*.ts             @daniel-hauser
+# /src/scrapers/beinleumi*.ts
+# /src/scrapers/beyahad-bishvilha*.ts
+/src/scrapers/discount*.ts              @galbarm
+/src/scrapers/hapoalim*.ts              @galbarm @daniel-hauser
+/src/scrapers/isracard*.ts              @baruchiro @galbarm @daniel-hauser
+# /src/scrapers/leumi*.ts
+/src/scrapers/max*.ts                   @baruchiro @galbarm @daniel-hauser
+/src/scrapers/mizrahi*.ts               @baruchiro
+# /src/scrapers/one-zero*.ts
+# /src/scrapers/otzar-hahayal*.ts
+# /src/scrapers/union-bank*.ts
+/src/scrapers/visa-cal*.ts              @baruchiro @galbarm @daniel-hauser
+/src/scrapers/yahav*.ts                 @gczobel
