@@ -180,9 +180,11 @@ function getChargedCurrency(currencyId: number | null) {
   }
 }
 
-export function getMemo({ comments, fundsTransferReceiverOrTransfer, fundsTransferComment }: Pick<ScrapedTransaction, 'comments'| 'fundsTransferReceiverOrTransfer' | 'fundsTransferComment'>) {
+export function getMemo({
+  comments, fundsTransferReceiverOrTransfer, fundsTransferComment,
+}: Pick<ScrapedTransaction, 'comments'| 'fundsTransferReceiverOrTransfer' | 'fundsTransferComment'>) {
   if (fundsTransferReceiverOrTransfer) {
-    const memo = `${comments} ${fundsTransferReceiverOrTransfer}`.trim();
+    const memo = comments ? `${comments} ${fundsTransferReceiverOrTransfer}` : fundsTransferReceiverOrTransfer;
     return fundsTransferComment ? `${memo}: ${fundsTransferComment}` : memo;
   }
 
