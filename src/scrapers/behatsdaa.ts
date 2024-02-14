@@ -32,14 +32,16 @@ type PurchaseHistoryResponse = {
 };
 
 function variantToTransaction(variant: Variant): Transaction {
+  // The price is positive, make it negative as it's an expense
+  const originalAmount = -variant.customerPrice;
   return {
     type: TransactionTypes.Normal,
     identifier: variant.tTransactionID,
     date: moment(variant.orderDate).format('YYYY-MM-DD'),
     processedDate: moment(variant.orderDate).format('YYYY-MM-DD'),
-    originalAmount: variant.customerPrice,
+    originalAmount,
     originalCurrency: 'ILS',
-    chargedAmount: variant.customerPrice,
+    chargedAmount: originalAmount,
     chargedCurrency: 'ILS',
     description: variant.name,
     status: TransactionStatuses.Completed,
