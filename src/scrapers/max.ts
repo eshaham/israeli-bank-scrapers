@@ -14,7 +14,7 @@ import { SHEKEL_CURRENCY, DOLLAR_CURRENCY, EURO_CURRENCY } from '../constants';
 
 const debug = getDebug('max');
 
-interface ScrapedTransaction {
+export interface ScrapedTransaction {
   shortCardNumber: string;
   paymentDate?: string;
   purchaseDate: string;
@@ -180,16 +180,13 @@ function getChargedCurrency(currencyId: number | null) {
   }
 }
 
-function getMemo(rawTransaction: ScrapedTransaction) {
-  let memo = rawTransaction.comments;
-  if (rawTransaction.fundsTransferReceiverOrTransfer) {
-    memo += ` ${rawTransaction.fundsTransferReceiverOrTransfer}`;
-    if (rawTransaction.fundsTransferComment) {
-      memo += `: ${rawTransaction.fundsTransferComment}`;
-    }
+export function getMemo({ comments, fundsTransferReceiverOrTransfer, fundsTransferComment }: Pick<ScrapedTransaction, 'comments'| 'fundsTransferReceiverOrTransfer' | 'fundsTransferComment'>) {
+  if (fundsTransferReceiverOrTransfer) {
+    const memo = `${comments} ${fundsTransferReceiverOrTransfer}`.trim();
+    return fundsTransferComment ? `${memo}: ${fundsTransferComment}` : memo;
   }
 
-  return memo;
+  return comments;
 }
 
 function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {

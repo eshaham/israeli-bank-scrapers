@@ -1,4 +1,4 @@
-import MaxScraper from './max';
+import MaxScraper, { getMemo } from './max';
 import {
   maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
 } from '../tests/tests-utils';
@@ -48,5 +48,18 @@ describe('Max scraper', () => {
     expect(result.success).toBeTruthy();
 
     exportTransactions(COMPANY_ID, result.accounts || []);
+  });
+});
+
+describe('getMemo', () => {
+  type TransactionForMemoTest = Parameters<typeof getMemo>[0];
+  test.each<[TransactionForMemoTest, string]>([
+    [{ comments: '' }, ''],
+    [{ comments: 'comment without funds' }, 'comment without funds'],
+    [{ comments: '', fundsTransferReceiverOrTransfer: 'Daniel H' }, 'Daniel H'],
+    [{ comments: '', fundsTransferReceiverOrTransfer: 'Daniel', fundsTransferComment: 'Foo bar' }, 'Daniel: Foo bar'],
+  ])('%o should create memo: %s', (transaction, expected) => {
+    const memo = getMemo(transaction);
+    expect(memo).toBe(expected);
   });
 });
