@@ -14,6 +14,7 @@ export enum CompanyTypes {
   leumiCard = 'leumiCard',
   otsarHahayal = 'otsarHahayal',
   discount = 'discount',
+  mercantile = 'mercantile',
   mizrahi = 'mizrahi',
   leumi = 'leumi',
   massad = 'massad',
@@ -42,6 +43,10 @@ export const SCRAPERS = {
   },
   [CompanyTypes.discount]: {
     name: 'Discount Bank',
+    loginFields: ['id', PASSWORD_FIELD, 'num'],
+  },
+  [CompanyTypes.mercantile]: {
+    name: 'Mercantile Bank',
     loginFields: ['id', PASSWORD_FIELD, 'num'],
   },
   [CompanyTypes.otsarHahayal]: {

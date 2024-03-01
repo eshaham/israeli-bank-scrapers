@@ -2,6 +2,7 @@ import HapoalimScraper from './hapoalim';
 import OtsarHahayalScraper from './otsar-hahayal';
 import LeumiScraper from './leumi';
 import DiscountScraper from './discount';
+import MercantileScraper from './mercantile';
 import MaxScraper from './max';
 import VisaCalScraper from './visa-cal';
 import IsracardScraper from './isracard';
@@ -34,6 +35,8 @@ export default function createScraper(options: ScraperOptions): Scraper<ScraperC
       return new MizrahiScraper(options);
     case CompanyTypes.discount:
       return new DiscountScraper(options);
+    case CompanyTypes.mercantile:
+      return new MercantileScraper(options);
     case CompanyTypes.otsarHahayal:
       return new OtsarHahayalScraper(options);
     case CompanyTypes.visaCal:
