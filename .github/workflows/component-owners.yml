@@ -1,4 +1,4 @@
-name: 'Component Owners'
+name: "Component Owners"
 on:
   # pull_request_target is suggested for projects where pull requests will be
   # made from forked repositories. If pull_request is used in these cases,
@@ -6,9 +6,9 @@ on:
   pull_request_target:
 
 permissions:
-  contents: read          # to read changed files
-  issues: write           # to read/write issue assignees
-  pull-requests: write    # to read/write PR reviewers
+  contents: read # to read changed files
+  issues: write # to read/write issue assignees
+  pull-requests: write # to read/write PR reviewers
 
 jobs:
   run_self:
