@@ -16,11 +16,13 @@ components:
     - baruchiro
     - galbarm
     - daniel-hauser
-  # src/scrapers/leumi.ts:
+  src/scrapers/leumi.ts:
+    - dimdimi4
   src/scrapers/max.ts:
     - baruchiro
     - galbarm
     - daniel-hauser
+    - dimdimi4
   src/scrapers/mizrahi.ts:
     - baruchiro
   # src/scrapers/one-zero.ts:
