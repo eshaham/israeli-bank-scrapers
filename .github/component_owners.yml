@@ -18,6 +18,9 @@ components:
     - daniel-hauser
   src/scrapers/leumi.ts:
     - dimdimi4
+  src/scrapers/marcentile.ts:
+    - kfirarad
+    - EzzatQ
   src/scrapers/max.ts:
     - baruchiro
     - galbarm
