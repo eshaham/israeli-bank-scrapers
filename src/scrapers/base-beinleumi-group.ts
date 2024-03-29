@@ -297,14 +297,14 @@ async function fetchAccounts(page: Page, startDate: Moment) {
   if (accountsIds.length <= 1) {
     const accountData = await fetchAccountData(page, startDate);
     accounts.push(accountData);
-} else {
+  } else {
     for (const accountId of accountsIds) {
-        await page.select('#account_num_select', accountId);
-        await waitUntilElementFound(page, '#account_num_select', true);
-        const accountData = await fetchAccountData(page, startDate);
-        accounts.push(accountData);
+      await page.select('#account_num_select', accountId);
+      await waitUntilElementFound(page, '#account_num_select', true);
+      const accountData = await fetchAccountData(page, startDate);
+      accounts.push(accountData);
     }
-}
+  }
   return accounts;
 }
 
