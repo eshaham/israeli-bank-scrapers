@@ -294,20 +294,17 @@ async function getAccountIdsBySelector(page: Page): Promise<string[]> {
 async function fetchAccounts(page: Page, startDate: Moment) {
   const accounts: TransactionsAccount[] = [];
   const accountsIds = await getAccountIdsBySelector(page);
-  if (!accountsIds.length) {
+  if (accountsIds.length <= 1) {
     const accountData = await fetchAccountData(page, startDate);
     accounts.push(accountData);
-  } else {
-
+} else {
     for (const accountId of accountsIds) {
-      if (accountsIds.length > 1) {
         await page.select('#account_num_select', accountId);
         await waitUntilElementFound(page, '#account_num_select', true);
-      }
-      const accountData = await fetchAccountData(page, startDate);
-      accounts.push(accountData);
+        const accountData = await fetchAccountData(page, startDate);
+        accounts.push(accountData);
     }
-  }
+}
   return accounts;
 }
 
