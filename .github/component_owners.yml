@@ -1,6 +1,15 @@
 # https://github.com/dyladan/component-owners
 
 components:
+  src/scrapers/base-beinleumi-group.ts:
+  # Beinleumi and Massad are using this base scraper
+    - nissant
+  src/scrapers/base-isracard-amex.ts:
+  # Isracard and Amex are using this base scraper
+    - baruchiro
+    - galbarm
+    - daniel-hauser
+
   src/scrapers/amex.ts:
     - daniel-hauser
   src/scrapers/behatsdaa.ts:
@@ -19,14 +28,15 @@ components:
     - daniel-hauser
   src/scrapers/leumi.ts:
     - dimdimi4
-  src/scrapers/marcentile.ts:
-    - kfirarad
-    - EzzatQ
+  # src/scrapers/massad.ts:
   src/scrapers/max.ts:
     - baruchiro
     - galbarm
     - daniel-hauser
     - dimdimi4
+  src/scrapers/marcentile.ts:
+    - kfirarad
+    - EzzatQ
   src/scrapers/mizrahi.ts:
     - baruchiro
   # src/scrapers/one-zero.ts:
