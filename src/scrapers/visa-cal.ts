@@ -150,6 +150,12 @@ async function hasInvalidPasswordError(page: Page) {
   return errorMessage === InvalidPasswordMessage;
 }
 
+async function hasChangePasswordForm(page: Page) {
+  const frame = await getLoginFrame(page);
+  const errorFound = await elementPresentOnPage(frame, '.change-password-subtitle');
+  return errorFound;
+}
+
 function getPossibleLoginResults() {
   debug('return possible login results');
   const urls: LoginOptions['possibleResults'] = {
@@ -162,7 +168,13 @@ function getPossibleLoginResults() {
       return hasInvalidPasswordError(page);
     }],
     // [LoginResults.AccountBlocked]: [], // TODO add when reaching this scenario
-    // [LoginResults.ChangePassword]: [], // TODO add when reaching this scenario
+    [LoginResults.ChangePassword]: [async (options?: { page?: Page }) => {
+      const page = options?.page;
+      if (!page) {
+        return false;
+      }
+      return hasChangePasswordForm(page);
+    }],
   };
   return urls;
 }
@@ -303,6 +315,8 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         } catch (e) {
           const currentUrl = await getCurrentUrl(this.page);
           if (currentUrl.endsWith('dashboard')) return;
+          const requiresChangePassword = await hasChangePasswordForm(this.page);
+          if (requiresChangePassword) return;
           throw e;
         }
       },
