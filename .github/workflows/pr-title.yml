@@ -15,4 +15,4 @@ jobs:
           echo "module.exports = {extends: ['@commitlint/config-angular']}" > commitlint.config.js
       - name: validate PR title
         run: |
-          echo ${{ github.event.pull_request.title }} | commitlint
+          echo "${{ github.event.pull_request.title }}" | commitlint
