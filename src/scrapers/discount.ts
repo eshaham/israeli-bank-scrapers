@@ -75,7 +75,7 @@ async function fetchAccountData(page: Page, options: ScraperOptions): Promise<Sc
   }
   const accountNumber = accountInfo.UserAccountsData.DefaultAccountNumber;
 
-  const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
+  const defaultStartMoment = moment().subtract(1, 'years').add(2, 'day');
   const startDate = options.startDate || defaultStartMoment.toDate();
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
