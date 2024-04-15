@@ -200,7 +200,7 @@ async function getAccountNumber(page: Page) {
     return (option as HTMLElement).innerText;
   });
 
-  return selectedSnifAccount.replace('/', '_');
+  return selectedSnifAccount.replace('/', '_').trim();
 }
 
 async function checkIfHasNextPage(page: Page) {
@@ -281,15 +281,34 @@ async function fetchAccountData(page: Page, startDate: Moment) {
   };
 }
 
-// TODO: Add support of multiple accounts
+async function getAccountIdsBySelector(page: Page): Promise<string[]> {
+  const accountsIds = await page.evaluate(() => {
+    const selectElement = document.getElementById('account_num_select');
+    const options = selectElement ? selectElement.querySelectorAll('option') : [];
+    if (!options) return [];
+    return Array.from(options, (option) => option.value);
+  });
+  return accountsIds;
+}
+
 async function fetchAccounts(page: Page, startDate: Moment) {
   const accounts: TransactionsAccount[] = [];
-  const accountData = await fetchAccountData(page, startDate);
-  accounts.push(accountData);
+  const accountsIds = await getAccountIdsBySelector(page);
+  if (accountsIds.length <= 1) {
+    const accountData = await fetchAccountData(page, startDate);
+    accounts.push(accountData);
+  } else {
+    for (const accountId of accountsIds) {
+      await page.select('#account_num_select', accountId);
+      await waitUntilElementFound(page, '#account_num_select', true);
+      const accountData = await fetchAccountData(page, startDate);
+      accounts.push(accountData);
+    }
+  }
   return accounts;
 }
 
-type ScraperSpecificCredentials = {username: string, password: string};
+type ScraperSpecificCredentials = { username: string, password: string };
 
 class BeinleumiGroupBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   BASE_URL = '';
