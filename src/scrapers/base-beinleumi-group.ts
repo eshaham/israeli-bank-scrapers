@@ -9,7 +9,7 @@ import {
   elementPresentOnPage,
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
-import { SHEKEL_CURRENCY } from '../constants';
+import { SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL } from "../constants";
 import {
   TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
@@ -22,7 +22,7 @@ const DESCRIPTION_COLUMN_CLASS_COMPLETED = 'reference wrap_normal';
 const DESCRIPTION_COLUMN_CLASS_PENDING = 'details wrap_normal';
 const REFERENCE_COLUMN_CLASS = 'details';
 const DEBIT_COLUMN_CLASS = 'debit';
-const CREDIT_COLUMN_CLASS = 'credit';
+const CREDIT_COLUMN_CLASS = 'credit'; 
 const ERROR_MESSAGE_CLASS = 'NO_DATA';
 const ACCOUNTS_NUMBER = 'div.fibi_account span.acc_num';
 const CLOSE_SEARCH_BY_DATES_BUTTON_CLASS = 'ui-datepicker-close';
@@ -62,7 +62,8 @@ export function createLoginFields(credentials: ScraperSpecificCredentials) {
 }
 
 function getAmountData(amountStr: string) {
-  const amountStrCopy = amountStr.replace(',', '');
+  let amountStrCopy = amountStr.replace(SHEKEL_CURRENCY_SYMBOL, '');
+  amountStrCopy = amountStrCopy.replaceAll(',', '');
   return parseFloat(amountStrCopy);
 }
 
