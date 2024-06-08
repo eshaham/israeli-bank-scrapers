@@ -71,6 +71,11 @@ export interface ScraperOptions {
   combineInstallments?: boolean;
 
   /**
+   * if set to true, will fetch the credit utilization of the account (credit card only)
+   */
+  includeCreditUtilization?: boolean;
+
+  /**
    * additional arguments to pass to the browser instance. The list of flags can be found in
    *
    * https://developer.mozilla.org/en-US/docs/Mozilla/Command_Line_Options

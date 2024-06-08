@@ -61,6 +61,11 @@ interface ScrapedAccount {
   processedDate: string;
 }
 
+interface AccountCredit {
+  creditUtilization: number;
+  creditLimit: number;
+}
+
 interface ScrapedLoginValidation {
   Header: {
     Status: string;
@@ -84,6 +89,19 @@ interface ScrapedAccountsWithinPageResponse {
   };
 }
 
+interface ScrapedCreditDataWithinPageResponse {
+  Header: {
+    Status: string;
+  };
+  RikuzNetuneyCreditDigiBean: {
+    cardsTotal: {
+      cardNumberTail: string;
+      nitzulLoCredit: string;
+      misgeretKolelet: string;
+    }[];
+  };
+}
+
 interface ScrapedCurrentCardTransactions {
   txnIsrael?: ScrapedTransaction[];
   txnAbroad?: ScrapedTransaction[];
@@ -96,6 +114,39 @@ interface ScrapedTransactionData {
   CardsTransactionsListBean?: Record<string, {
     CurrentCardTransactions: ScrapedCurrentCardTransactions[];
   }>;
+}
+
+function getCreditUtilizationUrl(servicesUrl: string) {
+  return buildUrl(servicesUrl, {
+    queryParams: {
+      reqName: 'RikuzNetuneyCreditDigi',
+    },
+  });
+}
+
+async function fetchCreditUtilization(
+  page: Page,
+  servicesUrl: string,
+): Promise<_.Dictionary<AccountCredit> | null> {
+  const dataUrl = getCreditUtilizationUrl(servicesUrl);
+  const dataResult = await fetchGetWithinPage<ScrapedCreditDataWithinPageResponse>(
+    page,
+    dataUrl,
+  );
+
+  if (!dataResult) {
+    throw new Error('Failed to fetch credit utilization data, empty response');
+  }
+
+  return _.fromPairs(
+    dataResult.RikuzNetuneyCreditDigiBean.cardsTotal.map((item) => [
+      item.cardNumberTail,
+      {
+        creditUtilization: parseFloat(item.nitzulLoCredit),
+        creditLimit: parseFloat(item.misgeretKolelet.replace(/,/g, '')),
+      },
+    ]),
+  );
 }
 
 function getAccountsUrl(servicesUrl: string, monthMoment: Moment) {
@@ -284,6 +335,12 @@ function getExtraScrap(accountsWithIndex: ScrapedAccountsWithIndex[], page: Page
 async function fetchAllTransactions(page: Page, options: ExtendedScraperOptions, startMoment: Moment) {
   const futureMonthsToScrape = options.futureMonthsToScrape ?? 1;
   const allMonths = getAllMonthMoments(startMoment, futureMonthsToScrape);
+  let creditUtilization: _.Dictionary<AccountCredit> | null = null;
+  if (options.includeCreditUtilization) {
+    debug('Getting credit utilization data');
+    creditUtilization = await fetchCreditUtilization(page, options.servicesUrl);
+  }
+
   const results: ScrapedAccountsWithIndex[] = await Promise.all(allMonths.map(async (monthMoment) => {
     return fetchTransactions(page, options, startMoment, monthMoment);
   }));
@@ -306,10 +363,17 @@ async function fetchAllTransactions(page: Page, options: ExtendedScraperOptions,
   });
 
   const accounts = Object.keys(combinedTxns).map((accountNumber) => {
-    return {
+    const account: TransactionsAccount = {
       accountNumber,
       txns: combinedTxns[accountNumber],
     };
+    if (creditUtilization && creditUtilization[accountNumber]) {
+      account.credit = {
+        creditUtilization: creditUtilization[accountNumber].creditUtilization,
+        creditLimit: creditUtilization[accountNumber].creditLimit,
+      };
+    }
+    return account;
   });
 
   return {

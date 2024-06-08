@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import buildUrl from 'build-url';
 import moment, { Moment } from 'moment';
 import { Page, LoadEvent } from 'puppeteer';
@@ -7,7 +8,10 @@ import { waitForRedirect } from '../helpers/navigation';
 import { waitUntilElementFound, elementPresentOnPage, clickButton } from '../helpers/elements-interactions';
 import getAllMonthMoments from '../helpers/dates';
 import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
-import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
+import {
+  Transaction, TransactionStatuses,
+  TransactionTypes, TransactionsAccount,
+} from '../transactions';
 import { getDebug } from '../helpers/debug';
 import { ScraperOptions } from './interface';
 import { SHEKEL_CURRENCY, DOLLAR_CURRENCY, EURO_CURRENCY } from '../constants';
@@ -93,6 +97,51 @@ function getTransactionsUrl(monthMoment: Moment) {
   return buildUrl(BASE_API_ACTIONS_URL, {
     path: `/api/registered/transactionDetails/getTransactionsAndGraphs?filterData={"userIndex":-1,"cardIndex":-1,"monthView":true,"date":"${date}","dates":{"startDate":"0","endDate":"0"},"bankAccount":{"bankAccountIndex":-1,"cards":null}}&firstCallCardIndex=-1`,
   });
+}
+
+function getCreditUtilizationUrl() {
+  return buildUrl(BASE_API_ACTIONS_URL, {
+    path: '/api/registered/getHomePageData',
+  });
+}
+
+interface ScrapedCreditDataWithinPageResponse {
+  Result: {
+    UserCards: {
+      Cards: {
+        Last4Digits: string;
+        CreditLimit: number;
+        OpenToBuy: number;
+      }[];
+    };
+  };
+}
+
+interface AccountCredit {
+  creditUtilization: number;
+  creditLimit: number;
+}
+
+async function fetchCreditUtilization(
+  page: Page,
+): Promise<_.Dictionary<AccountCredit>> {
+  const dataUrl = getCreditUtilizationUrl();
+  const dataResult = await fetchGetWithinPage<ScrapedCreditDataWithinPageResponse>(
+    page,
+    dataUrl,
+  );
+  if (!dataResult) {
+    throw new Error('Failed to fetch credit utilization data, empty response');
+  }
+  return _.fromPairs(
+    dataResult.Result.UserCards.Cards.map((item) => [
+      item.Last4Digits,
+      {
+        creditUtilization: item.CreditLimit - item.OpenToBuy,
+        creditLimit: item.CreditLimit,
+      },
+    ]),
+  );
 }
 
 interface FetchCategoryResult {
@@ -343,11 +392,23 @@ class MaxScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
 
   async fetchData() {
     const results = await fetchTransactions(this.page, this.options);
+    let creditUtilization: _.Dictionary<AccountCredit> | null = null;
+    if (this.options.includeCreditUtilization) {
+      debug('Getting credit utilization data');
+      creditUtilization = await fetchCreditUtilization(this.page);
+    }
     const accounts = Object.keys(results).map((accountNumber) => {
-      return {
+      const account: TransactionsAccount = {
         accountNumber,
         txns: results[accountNumber],
       };
+      if (creditUtilization && creditUtilization[accountNumber]) {
+        account.credit = {
+          creditUtilization: creditUtilization[accountNumber].creditUtilization,
+          creditLimit: creditUtilization[accountNumber].creditLimit,
+        };
+      }
+      return account;
     });
 
     return {
