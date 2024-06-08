@@ -29,7 +29,7 @@ interface ScrapedTransaction {
 
 function getPossibleLoginResults(page: Page) {
   const urls: PossibleLoginResults = {};
-  urls[LoginResults.Success] = [new RegExp(`^${BASE_URL.replace(".", "\\.")}/wps/myportal/FibiMenu/Online`)];
+  urls[LoginResults.Success] = [new RegExp(`^${BASE_URL.replace('.', '\\.')}/wps/myportal/FibiMenu/Online`)];
   urls[LoginResults.InvalidPassword] = [() => elementPresentOnPage(page, '#validationMsg')];
   // TODO: support change password
   /* urls[LOGIN_RESULT.CHANGE_PASSWORD] = [``]; */
