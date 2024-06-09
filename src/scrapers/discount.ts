@@ -1,15 +1,15 @@
 import _ from 'lodash';
 import moment from 'moment';
 import { Page } from 'puppeteer';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
-import { waitForNavigation } from '../helpers/navigation';
 import { fetchGetWithinPage } from '../helpers/fetch';
+import { waitForNavigation } from '../helpers/navigation';
 import {
   Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
+import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
-import { ScraperScrapingResult, ScraperOptions } from './interface';
+import { ScraperOptions, ScraperScrapingResult } from './interface';
 
 const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
@@ -37,6 +37,9 @@ interface ScrapedTransactionData {
   CurrentAccountLastTransactions?: {
     OperationEntry: ScrapedTransaction[];
     CurrentAccountInfo: CurrentAccountInfo;
+    FutureTransactionsBlock:{
+      FutureTransactionEntry: ScrapedTransaction[];
+    };
   };
 }
 
@@ -58,7 +61,6 @@ function convertTransactions(txns: ScrapedTransaction[], txnStatus: TransactionS
     };
   });
 }
-
 
 async function fetchAccountData(page: Page, options: ScraperOptions): Promise<ScraperScrapingResult> {
   const apiSiteUrl = `${BASE_URL}/Titan/gatewayAPI`;
@@ -95,7 +97,7 @@ async function fetchAccountData(page: Page, options: ScraperOptions): Promise<Sc
     txnsResult.CurrentAccountLastTransactions.OperationEntry,
     TransactionStatuses.Completed,
   );
-  const rawFutureTxns = _.get(txnsResult, 'CurrentAccountLastTransactions.FutureTransactionsBlock.FutureTransactionEntry');
+  const rawFutureTxns = _.get(txnsResult, 'CurrentAccountLastTransactions.FutureTransactionsBlock.FutureTransactionEntry') as ScrapedTransaction[];
   const pendingTxns = convertTransactions(rawFutureTxns, TransactionStatuses.Pending);
 
   const accountData = {

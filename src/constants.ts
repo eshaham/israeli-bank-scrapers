@@ -1,4 +1,3 @@
-
 export const SHEKEL_CURRENCY_SYMBOL = '₪';
 export const SHEKEL_CURRENCY_KEYWORD = 'ש"ח';
 export const ALT_SHEKEL_CURRENCY = 'NIS';

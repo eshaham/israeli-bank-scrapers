@@ -1,18 +1,21 @@
+// eslint-disable-next-line import/named
 import moment, { Moment } from 'moment';
 import { Page } from 'puppeteer';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
-import {
-  fillInput,
-  clickButton,
-  waitUntilElementFound,
-  pageEvalAll,
-  elementPresentOnPage,
-} from '../helpers/elements-interactions';
-import { waitForNavigation } from '../helpers/navigation';
 import { SHEKEL_CURRENCY } from '../constants';
 import {
-  TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
+  clickButton,
+  elementPresentOnPage,
+  fillInput,
+  pageEvalAll,
+  waitUntilElementFound,
+} from '../helpers/elements-interactions';
+import { waitForNavigation } from '../helpers/navigation';
+import { sleep } from '../helpers/waiting';
+import {
+  Transaction, TransactionStatuses, TransactionTypes,
+  TransactionsAccount,
 } from '../transactions';
+import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא נמצאו נתונים בנושא המבוקש';
@@ -45,7 +48,6 @@ interface ScrapedTransaction {
   description: string;
   status: TransactionStatuses;
 }
-
 
 export function getPossibleLoginResults(): PossibleLoginResults {
   const urls: PossibleLoginResults = {};
@@ -327,7 +329,7 @@ class BeinleumiGroupBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCr
       // HACK: For some reason, though the login button (#continueBtn) is present and visible, the click action does not perform.
       // Adding this delay fixes the issue.
       preAction: async () => {
-        await this.page.waitForTimeout(1000);
+        await sleep(1000);
       },
     };
   }

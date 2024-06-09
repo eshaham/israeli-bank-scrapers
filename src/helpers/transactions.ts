@@ -1,5 +1,6 @@
-import moment, { Moment } from 'moment';
 import _ from 'lodash';
+// eslint-disable-next-line import/named
+import moment, { Moment } from 'moment';
 import {
   Transaction, TransactionTypes,
 } from '../transactions';

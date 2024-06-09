@@ -1,19 +1,19 @@
 import moment from 'moment/moment';
+import { getDebug } from '../helpers/debug';
+import { fetchGraphql, fetchPost } from '../helpers/fetch';
+import {
+  Transaction as ScrapingTransaction,
+  TransactionStatuses,
+  TransactionTypes,
+  TransactionsAccount,
+} from '../transactions';
+import { BaseScraper } from './base-scraper';
+import { ScraperErrorTypes, createGenericError } from './errors';
 import {
   ScraperGetLongTermTwoFactorTokenResult, ScraperLoginResult,
   ScraperScrapingResult, ScraperTwoFactorAuthTriggerResult,
 } from './interface';
-import { getDebug } from '../helpers/debug';
-import { fetchGraphql, fetchPost } from '../helpers/fetch';
-import { createGenericError, ScraperErrorTypes } from './errors';
 import { GET_CUSTOMER, GET_MOVEMENTS } from './one-zero-queries';
-import {
-  Transaction as ScrapingTransaction,
-  TransactionsAccount,
-  TransactionStatuses,
-  TransactionTypes,
-} from '../transactions';
-import { BaseScraper } from './base-scraper';
 
 const HEBREW_WORDS_REGEX = /[\u0590-\u05FF][\u0590-\u05FF"'\-_ /\\]*[\u0590-\u05FF]/g;
 
@@ -67,7 +67,7 @@ type Movement = {
   movementAmount: string;
   movementCurrency: string;
   movementId: string;
-  movementReversedId?: string|null;
+  movementReversedId?: string | null;
   movementTimestamp: string;
   movementType: string;
   portfolioId: string;
@@ -82,8 +82,7 @@ const IDENTITY_SERVER_URL = 'https://identity.tfd-bank.com/v1/';
 
 const GRAPHQL_API_URL = 'https://mobile.tfd-bank.com/mobile-graph/graphql';
 
-
-type ScraperSpecificCredentials = {email: string, password: string} & ({
+type ScraperSpecificCredentials = { email: string, password: string } & ({
   otpCodeRetriever: () => Promise<string>;
   phoneNumber: string;
 } | {
@@ -94,7 +93,6 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
   private otpContext?: string;
 
   private accessToken?: string;
-
 
   async triggerTwoFactorAuth(phoneNumber: string): Promise<ScraperTwoFactorAuthTriggerResult> {
     if (!phoneNumber.startsWith('+')) {
@@ -187,7 +185,6 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
       return otpTokenResult;
     }
 
-
     debug('Requesting id token');
     const getIdTokenResponse = await fetchPost(`${IDENTITY_SERVER_URL}/getIdToken`, {
       otpSmsToken: otpTokenResult.longTermTwoFactorAuthToken,
@@ -197,7 +194,6 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
     });
 
     const { resultData: { idToken } } = getIdTokenResponse;
-
 
     debug('Requesting session token');
 
@@ -222,11 +218,10 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
     let cursor = null;
     const movements = [];
 
-
     while (!movements.length || new Date(movements[0].movementTimestamp) >= startDate) {
       debug(`Fetching transactions for account ${portfolio.portfolioNum}...`);
       const { movements: { movements: newMovements, pagination } }:
-      {movements: { movements: Movement[], pagination: QueryPagination }} =
+      { movements: { movements: Movement[], pagination: QueryPagination } } =
           await fetchGraphql(
             GRAPHQL_API_URL,
             GET_MOVEMENTS, {
@@ -283,8 +278,8 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
 
     const plainString = text.replace(/\u202d/gi, '').trim();
     const hebrewSubStringsRanges = [...plainString.matchAll(HEBREW_WORDS_REGEX)];
-    const rangesToReverse = hebrewSubStringsRanges.map((text) => (
-      { start: text.index!, end: text.index! + text[0].length }));
+    const rangesToReverse = hebrewSubStringsRanges.map((str) => (
+      { start: str.index!, end: str.index! + str[0].length }));
     const out = [];
     let index = 0;
 

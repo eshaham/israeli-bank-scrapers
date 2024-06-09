@@ -1,7 +1,7 @@
 // For a detailed explanation regarding each configuration property, visit:
 // https://jestjs.io/docs/en/configuration.html
-
-module.exports = {
+/** @type {import('jest').Config} */
+const config= {
   preset: 'ts-jest/presets/js-with-babel',
   clearMocks: true,
   coverageDirectory: 'coverage',
@@ -9,7 +9,7 @@ module.exports = {
   transform: {
     '^.+\\.ts$': 'ts-jest'
   },
-  setupFiles: [
+  setupFilesAfterEnv: [
     './tests/jest-setup.ts',
   ],
   testEnvironment: 'node',
@@ -19,3 +19,5 @@ module.exports = {
     }
   },
 };
+
+module.exports = config;

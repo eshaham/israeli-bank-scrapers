@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { Frame, Page, Request } from 'puppeteer';
+import { Frame, HTTPRequest, Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import {
   pageEvalAll, waitUntilElementDisappear, waitUntilElementFound, waitUntilIframeFound,
@@ -7,7 +7,9 @@ import {
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { waitForUrl } from '../helpers/navigation';
 import {
-  Transaction, TransactionsAccount, TransactionStatuses, TransactionTypes,
+  Transaction,
+  TransactionStatuses, TransactionTypes,
+  TransactionsAccount,
 } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
@@ -62,7 +64,6 @@ const pendingTrxIdentifierId = '#ctl00_ContentPlaceHolder2_panel1';
 const checkingAccountTabHebrewName = 'עובר ושב';
 const checkingAccountTabEnglishName = 'Checking Account';
 
-
 function createLoginFields(credentials: ScraperSpecificCredentials) {
   return [
     { selector: usernameSelector, value: credentials.username },
@@ -75,7 +76,7 @@ async function isLoggedIn(options: { page?: Page | undefined } | undefined) {
     return false;
   }
   const oshXPath = `//a//span[contains(., "${checkingAccountTabHebrewName}") or contains(., "${checkingAccountTabEnglishName}")]`;
-  const oshTab = await options.page.$x(oshXPath);
+  const oshTab = await options.page.$$(`xpath${oshXPath}`);
   return oshTab.length > 0;
 }
 
@@ -93,7 +94,7 @@ function getStartMoment(optionsStartDate: Date) {
   return moment.max(defaultStartMoment, moment(startDate));
 }
 
-function createDataFromRequest(request: Request, optionsStartDate: Date) {
+function createDataFromRequest(request: HTTPRequest, optionsStartDate: Date) {
   const data = JSON.parse(request.postData() || '{}');
 
   data.inFromDate = getStartMoment(optionsStartDate).format(DATE_FORMAT);
@@ -103,13 +104,12 @@ function createDataFromRequest(request: Request, optionsStartDate: Date) {
   return data;
 }
 
-function createHeadersFromRequest(request: Request) {
+function createHeadersFromRequest(request: HTTPRequest) {
   return {
     mizrahixsrftoken: request.headers().mizrahixsrftoken,
     'Content-Type': request.headers()['content-type'],
   };
 }
-
 
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((row) => {
@@ -198,7 +198,7 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
       return {
         success: false,
         errorType: ScraperErrorTypes.Generic,
-        errorMessage: e.message,
+        errorMessage: (e as Error).message,
       };
     }
   }
@@ -231,7 +231,6 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
       return fetchPostWithinPage<ScrapedTransactionsResult>(this.page, url, data, headers);
     }));
-
 
     if (!response || response.header.success === false) {
       throw new Error(`Error fetching transaction. Response message: ${response ? response.header.messages[0].text : ''}`);

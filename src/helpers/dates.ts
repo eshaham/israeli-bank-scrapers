@@ -1,3 +1,4 @@
+// eslint-disable-next-line import/named
 import moment, { Moment } from 'moment';
 
 export default function getAllMonthMoments(startMoment: Moment | string, futureMonths?: number) {

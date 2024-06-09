@@ -36,10 +36,10 @@ async function fillInput(pageOrFrame: Page | Frame, inputSelector: string, input
 }
 
 async function setValue(pageOrFrame: Page | Frame, inputSelector: string, inputValue: string): Promise<void> {
-  await pageOrFrame.$eval(inputSelector, (input: Element, inputValue) => {
+  await pageOrFrame.$eval(inputSelector, (input: Element, value) => {
     const inputElement = input;
     // @ts-ignore
-    inputElement.value = inputValue;
+    inputElement.value = value;
   }, [inputValue]);
 }
 
@@ -64,7 +64,7 @@ async function pageEvalAll<R>(page: Page | Frame, selector: string,
     result = await page.$$eval(selector, callback, ...args);
   } catch (e) {
     // TODO temporary workaround to puppeteer@1.5.0 which breaks $$eval bevahvior until they will release a new version.
-    if (e.message.indexOf('Error: failed to find elements matching selector') !== 0) {
+    if (!(e as Error).message.startsWith('Error: failed to find elements matching selector')) {
       throw e;
     }
   }
@@ -79,7 +79,7 @@ async function pageEval<R>(pageOrFrame: Page | Frame, selector: string,
     result = await pageOrFrame.$eval(selector, callback, ...args);
   } catch (e) {
     // TODO temporary workaround to puppeteer@1.5.0 which breaks $$eval bevahvior until they will release a new version.
-    if (e.message.indexOf('Error: failed to find element matching selector') !== 0) {
+    if (!(e as Error).message.startsWith('Error: failed to find element matching selector')) {
       throw e;
     }
   }
@@ -97,7 +97,7 @@ async function dropdownSelect(page: Page, selectSelector: string, value: string)
 
 async function dropdownElements(page: Page, selector: string) {
   const options = await page.evaluate((optionSelector) => {
-    return Array.from(document.querySelectorAll(optionSelector))
+    return Array.from(document.querySelectorAll<HTMLOptionElement>(optionSelector))
       .filter((o) => o.value)
       .map((o) => {
         return {
@@ -110,16 +110,8 @@ async function dropdownElements(page: Page, selector: string) {
 }
 
 export {
-  waitUntilElementFound,
-  waitUntilElementDisappear,
-  waitUntilIframeFound,
-  fillInput,
   clickButton,
-  clickLink,
-  dropdownSelect,
-  dropdownElements,
-  pageEval,
-  pageEvalAll,
-  elementPresentOnPage,
-  setValue,
+  clickLink, dropdownElements, dropdownSelect, elementPresentOnPage, fillInput, pageEval,
+  pageEvalAll, setValue, waitUntilElementDisappear, waitUntilElementFound, waitUntilIframeFound,
 };
+

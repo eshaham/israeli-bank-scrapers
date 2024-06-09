@@ -1,16 +1,19 @@
 import buildUrl from 'build-url';
+// eslint-disable-next-line import/named
 import moment, { Moment } from 'moment';
-import { Page, LoadEvent } from 'puppeteer';
-import { fetchGetWithinPage } from '../helpers/fetch';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
-import { waitForRedirect } from '../helpers/navigation';
-import { waitUntilElementFound, elementPresentOnPage, clickButton } from '../helpers/elements-interactions';
+import { Page } from 'puppeteer';
+import { DOLLAR_CURRENCY, EURO_CURRENCY, SHEKEL_CURRENCY } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
-import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
-import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
 import { getDebug } from '../helpers/debug';
+import { clickButton, elementPresentOnPage, waitUntilElementFound } from '../helpers/elements-interactions';
+import { fetchGetWithinPage } from '../helpers/fetch';
+import { waitForRedirect } from '../helpers/navigation';
+import { filterOldTransactions, fixInstallments, sortTransactionsByDate } from '../helpers/transactions';
+import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
+import {
+  BaseScraperWithBrowser, LoginOptions, LoginResults, PossibleLoginResults,
+} from './base-scraper-with-browser';
 import { ScraperOptions } from './interface';
-import { SHEKEL_CURRENCY, DOLLAR_CURRENCY, EURO_CURRENCY } from '../constants';
 
 const debug = getDebug('max');
 
@@ -63,7 +66,7 @@ enum MaxPlanName {
   ReplacementCard = 'כרטיס חליפי',
   EarlyRepayment = 'פרעון מוקדם',
   MonthlyCardFee = 'דמי כרטיס',
-  CurrencyPocket = 'חיוב ארנק מטח'
+  CurrencyPocket = 'חיוב ארנק מטח',
 }
 
 const INVALID_DETAILS_SELECTOR = '#popupWrongDetails';
@@ -107,12 +110,12 @@ async function loadCategories(page: Page) {
   const res = await fetchGetWithinPage<FetchCategoryResult>(page, `${BASE_API_ACTIONS_URL}/api/contents/getCategories`);
   if (res && Array.isArray(res.result)) {
     debug(`${res.result.length} categories loaded`);
-      res.result?.forEach(({ id, name }) => categories.set(id, name));
+    res.result?.forEach(({ id, name }) => categories.set(id, name));
   }
 }
 
 function getTransactionType(planName: string, planTypeId: number) {
-  const cleanedUpTxnTypeStr = planName.replace('\t', ' ').trim();
+  const cleanedUpTxnTypeStr = planName.replace('\t', ' ').trim() as MaxPlanName;
   switch (cleanedUpTxnTypeStr) {
     case MaxPlanName.ImmediateCharge:
     case MaxPlanName.Normal:
@@ -146,7 +149,7 @@ function getTransactionType(planName: string, planTypeId: number) {
         case 5:
           return TransactionTypes.Normal;
         default:
-          throw new Error(`Unknown transaction type ${cleanedUpTxnTypeStr}`);
+          throw new Error(`Unknown transaction type ${cleanedUpTxnTypeStr as string}`);
       }
   }
 }
@@ -181,7 +184,7 @@ function getChargedCurrency(currencyId: number | null) {
 
 export function getMemo({
   comments, fundsTransferReceiverOrTransfer, fundsTransferComment,
-}: Pick<ScrapedTransaction, 'comments'| 'fundsTransferReceiverOrTransfer' | 'fundsTransferComment'>) {
+}: Pick<ScrapedTransaction, 'comments' | 'fundsTransferReceiverOrTransfer' | 'fundsTransferComment'>) {
   if (fundsTransferReceiverOrTransfer) {
     const memo = comments ? `${comments} ${fundsTransferReceiverOrTransfer}` : fundsTransferReceiverOrTransfer;
     return fundsTransferComment ? `${memo}: ${fundsTransferComment}` : memo;
@@ -218,7 +221,7 @@ function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
     status,
   };
 }
-interface ScrapedTransactionsResult{
+interface ScrapedTransactionsResult {
   result?: {
     transactions: ScrapedTransaction[];
   };
@@ -315,10 +318,10 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
   ];
 }
 
-type ScraperSpecificCredentials = {username: string, password: string};
+type ScraperSpecificCredentials = { username: string, password: string };
 
 class MaxScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
-  getLoginOptions(credentials: ScraperSpecificCredentials) {
+  getLoginOptions(credentials: ScraperSpecificCredentials): LoginOptions {
     return {
       loginUrl: LOGIN_URL,
       fields: createLoginFields(credentials),
@@ -337,7 +340,7 @@ class MaxScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
       },
       postAction: async () => redirectOrDialog(this.page),
       possibleResults: getPossibleLoginResults(this.page),
-      waitUntil: 'domcontentloaded' as LoadEvent,
+      waitUntil: 'domcontentloaded',
     };
   }
 

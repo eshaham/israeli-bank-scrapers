@@ -1,26 +1,27 @@
-import _ from 'lodash';
 import buildUrl from 'build-url';
+import _ from 'lodash';
+// eslint-disable-next-line import/named
 import moment, { Moment } from 'moment';
-
 import { Page } from 'puppeteer';
-import { BaseScraperWithBrowser } from './base-scraper-with-browser';
-import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import {
-  SHEKEL_CURRENCY_KEYWORD,
-  SHEKEL_CURRENCY,
   ALT_SHEKEL_CURRENCY,
+  SHEKEL_CURRENCY,
+  SHEKEL_CURRENCY_KEYWORD,
 } from '../constants';
-import getAllMonthMoments from '../helpers/dates';
-import { fixInstallments, filterOldTransactions } from '../helpers/transactions';
-import {
-  TransactionsAccount, Transaction, TransactionInstallments,
-  TransactionStatuses, TransactionTypes,
-} from '../transactions';
-import { getDebug } from '../helpers/debug';
-import { runSerial } from '../helpers/waiting';
-import { ScraperErrorTypes } from './errors';
-import { ScraperScrapingResult, ScraperOptions } from './interface';
 import { ScraperProgressTypes } from '../definitions';
+import getAllMonthMoments from '../helpers/dates';
+import { getDebug } from '../helpers/debug';
+import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
+import { filterOldTransactions, fixInstallments } from '../helpers/transactions';
+import { runSerial } from '../helpers/waiting';
+import {
+  Transaction, TransactionInstallments,
+  TransactionStatuses, TransactionTypes,
+  TransactionsAccount,
+} from '../transactions';
+import { BaseScraperWithBrowser } from './base-scraper-with-browser';
+import { ScraperErrorTypes } from './errors';
+import { ScraperOptions, ScraperScrapingResult } from './interface';
 
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';
@@ -53,7 +54,6 @@ interface ScrapedTransaction {
   paymentSum: number;
   paymentSumOutbound: number;
 }
-
 
 interface ScrapedAccount {
   index: number;
@@ -206,7 +206,7 @@ async function fetchTransactions(page: Page, options: ExtendedScraperOptions, st
   if (dataResult && _.get(dataResult, 'Header.Status') === '1' && dataResult.CardsTransactionsListBean) {
     const accountTxns: ScrapedAccountsWithIndex = {};
     accounts.forEach((account) => {
-      const txnGroups: ScrapedCurrentCardTransactions[] = _.get(dataResult, `CardsTransactionsListBean.Index${account.index}.CurrentCardTransactions`);
+      const txnGroups: ScrapedCurrentCardTransactions[] | undefined = _.get(dataResult, `CardsTransactionsListBean.Index${account.index}.CurrentCardTransactions`);
       if (txnGroups) {
         let allTxns: Transaction[] = [];
         txnGroups.forEach((txnGroup) => {
@@ -253,7 +253,7 @@ function getTransactionExtraDetails(servicesUrl: string, month: Moment, accountI
 async function getExtraScrapTransaction(page: Page, options: ExtendedScraperOptions, month: Moment, accountIndex: number, transaction: Transaction): Promise<Transaction> {
   const dataUrl = getTransactionExtraDetails(options.servicesUrl, month, accountIndex, transaction);
   const data = await fetchGetWithinPage<ScrapedTransactionData>(page, dataUrl);
-  const rawCategory = _.get(data, 'PirteyIska_204Bean.sector');
+  const rawCategory:any = _.get(data, 'PirteyIska_204Bean.sector');
   return {
     ...transaction,
     category: rawCategory.trim(),
@@ -318,7 +318,7 @@ async function fetchAllTransactions(page: Page, options: ExtendedScraperOptions,
   };
 }
 
-type ScraperSpecificCredentials = {id: string, password: string, card6Digits: string};
+type ScraperSpecificCredentials = { id: string, password: string, card6Digits: string };
 class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   private baseUrl: string;
 
@@ -339,9 +339,9 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
     this.page.on('request', (request) => {
       if (request.url().includes('detector-dom.min.js')) {
         debug('force abort for request do download detector-dom.min.js resource');
-        request.abort();
+        request.abort().then(() => {}).catch(() => {});
       } else {
-        request.continue();
+        request.continue().then(() => {}).catch(() => {});
       }
     });
 
@@ -378,7 +378,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
         countryCode: COUNTRY_CODE,
         idType: ID_TYPE,
       };
-      const loginResult = await fetchPostWithinPage<{status: string}>(this.page, loginUrl, request);
+      const loginResult = await fetchPostWithinPage<{ status: string }>(this.page, loginUrl, request);
       debug(`user login with status '${loginResult?.status}'`);
 
       if (loginResult && loginResult.status === '1') {

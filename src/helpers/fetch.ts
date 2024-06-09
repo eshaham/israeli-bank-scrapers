@@ -51,9 +51,9 @@ export async function fetchGraphql<TResult>(url: string, query: string,
 }
 
 export function fetchGetWithinPage<TResult>(page: Page, url: string): Promise<TResult | null> {
-  return page.evaluate((url) => {
+  return page.evaluate((innerUrl) => {
     return new Promise<TResult | null>((resolve, reject) => {
-      fetch(url, {
+      fetch(innerUrl, {
         credentials: 'include',
       }).then((result) => {
         if (result.status === 204) {
@@ -70,15 +70,15 @@ export function fetchGetWithinPage<TResult>(page: Page, url: string): Promise<TR
 
 export function fetchPostWithinPage<TResult>(page: Page, url: string,
   data: Record<string, any>, extraHeaders: Record<string, any> = {}): Promise<TResult | null> {
-  return page.evaluate<(...args: any[]) => Promise<TResult | null>>((url: string, data: Record<string, any>,
-    extraHeaders: Record<string, any>) => {
-    return new Promise((resolve, reject) => {
-      fetch(url, {
+  return page.evaluate((innerUrl: string, innerData: Record<string, any>,
+    innerExtraHeaders: Record<string, any>) => {
+    return new Promise<TResult | null>((resolve, reject) => {
+      fetch(innerUrl, {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: JSON.stringify(innerData),
         credentials: 'include',
         // eslint-disable-next-line prefer-object-spread
-        headers: Object.assign({ 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, extraHeaders),
+        headers: Object.assign({ 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, innerExtraHeaders),
       }).then((result) => {
         if (result.status === 204) {
           // No content response

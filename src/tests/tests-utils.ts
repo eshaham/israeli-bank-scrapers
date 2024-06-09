@@ -1,7 +1,7 @@
 import fs from 'fs';
-import path from 'path';
-import moment from 'moment';
 import * as json2csv from 'json2csv';
+import moment from 'moment';
+import path from 'path';
 import { TransactionsAccount } from '../transactions';
 
 let testsConfig: Record<string, any>;
@@ -27,7 +27,7 @@ export function getTestsConfig() {
       return testsConfig;
     }
   } catch (e) {
-    throw new Error(`failed to parse environment variable 'TESTS_CONFIG' with error '${e.message}'`);
+    throw new Error(`failed to parse environment variable 'TESTS_CONFIG' with error '${(e as Error).message}'`);
   }
 
   try {

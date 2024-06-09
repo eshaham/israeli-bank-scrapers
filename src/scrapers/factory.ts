@@ -1,23 +1,23 @@
-import HapoalimScraper from './hapoalim';
-import OtsarHahayalScraper from './otsar-hahayal';
-import LeumiScraper from './leumi';
-import DiscountScraper from './discount';
-import MercantileScraper from './mercantile';
-import MaxScraper from './max';
-import VisaCalScraper from './visa-cal';
-import IsracardScraper from './isracard';
-import AmexScraper from './amex';
-import MizrahiScraper from './mizrahi';
-import UnionBankScraper from './union-bank';
-import BeinleumiScraper from './beinleumi';
-import MassadScraper from './massad';
-import YahavScraper from './yahav';
-import { Scraper, ScraperCredentials, ScraperOptions } from './interface';
-import { CompanyTypes } from '../definitions';
-import BeyahadBishvilhaScraper from './beyahad-bishvilha';
-import OneZeroScraper from './one-zero';
-import BehatsdaaScraper from './behatsdaa';
 import { assertNever } from '../assertNever';
+import { CompanyTypes } from '../definitions';
+import AmexScraper from './amex';
+import BehatsdaaScraper from './behatsdaa';
+import BeinleumiScraper from './beinleumi';
+import BeyahadBishvilhaScraper from './beyahad-bishvilha';
+import DiscountScraper from './discount';
+import HapoalimScraper from './hapoalim';
+import { Scraper, ScraperCredentials, ScraperOptions } from './interface';
+import IsracardScraper from './isracard';
+import LeumiScraper from './leumi';
+import MassadScraper from './massad';
+import MaxScraper from './max';
+import MercantileScraper from './mercantile';
+import MizrahiScraper from './mizrahi';
+import OneZeroScraper from './one-zero';
+import OtsarHahayalScraper from './otsar-hahayal';
+import UnionBankScraper from './union-bank';
+import VisaCalScraper from './visa-cal';
+import YahavScraper from './yahav';
 
 export default function createScraper(options: ScraperOptions): Scraper<ScraperCredentials> {
   switch (options.companyId) {
@@ -64,6 +64,7 @@ export default function createScraper(options: ScraperOptions): Scraper<ScraperC
     case CompanyTypes.behatsdaa:
       return new BehatsdaaScraper(options);
     default:
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       return assertNever(options.companyId, `unknown company id ${options.companyId}`);
   }
 }

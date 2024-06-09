@@ -1,6 +1,5 @@
 import moment from 'moment';
 import { Frame, Page } from 'puppeteer';
-
 import { getDebug } from '../helpers/debug';
 import {
   clickButton, elementPresentOnPage, pageEval, waitUntilElementFound,
@@ -26,7 +25,7 @@ const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו
 
 const debug = getDebug('visa-cal');
 
-enum trnTypeCode {
+enum TrnTypeCode {
   regular = '5',
   credit = '6',
   installments = '8',
@@ -72,7 +71,7 @@ interface ScrapedTransaction {
   trnNumaretor: number;
   trnPurchaseDate: string;
   trnType: string;
-  trnTypeCode: trnTypeCode;
+  trnTypeCode: TrnTypeCode;
   walletProviderCode: 0;
   walletProviderDesc: '';
 }
@@ -85,6 +84,7 @@ interface InitResponse {
     }[];
   };
 }
+// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 type CurrencySymbol = '₪' | string;
 interface CardTransactionDetailsError {
   title: string;
@@ -213,7 +213,7 @@ function convertParsedDataToTransactions(parsedData: CardTransactionDetails[]): 
 
       const result: Transaction = {
         identifier: transaction.trnIntId,
-        type: [trnTypeCode.regular, trnTypeCode.standingOrder].includes(transaction.trnTypeCode) ?
+        type: [TrnTypeCode.regular, TrnTypeCode.standingOrder].includes(transaction.trnTypeCode) ?
           TransactionTypes.Normal :
           TransactionTypes.Installments,
         status: TransactionStatuses.Completed,

@@ -1,10 +1,5 @@
-import { Page } from 'puppeteer';
 import moment from 'moment';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
-import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
-import { pageEval, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
-import { getDebug } from '../helpers/debug';
-import { filterOldTransactions } from '../helpers/transactions';
+import { Page } from 'puppeteer';
 import {
   DOLLAR_CURRENCY,
   DOLLAR_CURRENCY_SYMBOL, EURO_CURRENCY,
@@ -12,6 +7,11 @@ import {
   SHEKEL_CURRENCY,
   SHEKEL_CURRENCY_SYMBOL,
 } from '../constants';
+import { getDebug } from '../helpers/debug';
+import { pageEval, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
+import { filterOldTransactions } from '../helpers/transactions';
+import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
+import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperOptions } from './interface';
 
 const debug = getDebug('beyahadBishvilha');
@@ -77,7 +77,6 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
     return result;
   });
 }
-
 
 async function fetchTransactions(page: Page, options: ScraperOptions) {
   await page.goto(CARD_URL);
@@ -159,7 +158,7 @@ class BeyahadBishvilhaScraper extends BaseScraperWithBrowser<ScraperSpecificCred
       loginUrl: LOGIN_URL,
       fields: createLoginFields(credentials),
       submitButtonSelector: async () => {
-        const [button] = await this.page.$x("//button[contains(., 'התחבר')]");
+        const [button] = await this.page.$$('xpath//button[contains(., \'התחבר\')]');
         if (button) {
           await button.click();
         }

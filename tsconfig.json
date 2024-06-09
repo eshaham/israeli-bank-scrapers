@@ -20,6 +20,6 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*",".eslintrc.js"],
   "exclude": ["node_modules"]
 }

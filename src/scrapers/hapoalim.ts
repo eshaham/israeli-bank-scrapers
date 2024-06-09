@@ -1,15 +1,15 @@
 import moment from 'moment';
-import uuid4 from 'uuid/v4';
-
 import { Page } from 'puppeteer';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
+import { v4 as uuid4 } from 'uuid';
+import { getDebug } from '../helpers/debug';
+import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntil } from '../helpers/waiting';
-import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import {
-  TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
+  Transaction, TransactionStatuses, TransactionTypes,
+  TransactionsAccount,
 } from '../transactions';
-import { getDebug } from '../helpers/debug';
+import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperOptions } from './interface';
 
 const debug = getDebug('hapoalim');

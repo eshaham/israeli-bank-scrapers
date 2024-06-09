@@ -1,19 +1,22 @@
+// eslint-disable-next-line import/named
 import moment, { Moment } from 'moment';
 import { Page } from 'puppeteer';
-import { BaseScraperWithBrowser, LoginResults, LoginOptions } from './base-scraper-with-browser';
-import {
-  fillInput,
-  clickButton,
-  waitUntilElementFound,
-  pageEvalAll, pageEval,
-} from '../helpers/elements-interactions';
 import { SHEKEL_CURRENCY } from '../constants';
-import {
-  TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
-} from '../transactions';
-import { ScraperScrapingResult } from './interface';
-import { waitForNavigation } from '../helpers/navigation';
 import { getDebug } from '../helpers/debug';
+import {
+  clickButton,
+  fillInput,
+  pageEval,
+  pageEvalAll,
+  waitUntilElementFound,
+} from '../helpers/elements-interactions';
+import { waitForNavigation } from '../helpers/navigation';
+import {
+  Transaction, TransactionStatuses, TransactionTypes,
+  TransactionsAccount,
+} from '../transactions';
+import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
+import { ScraperScrapingResult } from './interface';
 
 const debug = getDebug('leumi');
 const BASE_URL = 'https://hb2.bankleumi.co.il';
@@ -24,7 +27,6 @@ const FILTERED_TRANSACTIONS_URL = `${BASE_URL}/ChannelWCF/Broker.svc/ProcessRequ
 const DATE_FORMAT = 'DD.MM.YY';
 const ACCOUNT_BLOCKED_MSG = 'המנוי חסום';
 const INVALID_PASSWORD_MSG = 'אחד או יותר מפרטי ההזדהות שמסרת שגויים. ניתן לנסות שוב';
-
 
 function getPossibleLoginResults() {
   const urls: LoginOptions['possibleResults'] = {
@@ -100,8 +102,8 @@ function hangProcess(timeout: number) {
 }
 
 async function clickByXPath(page: Page, xpath: string): Promise<void> {
-  await page.waitForXPath(xpath, { timeout: 30000, visible: true });
-  const elm = await page.$x(xpath);
+  await page.waitForSelector(xpath, { timeout: 30000, visible: true });
+  const elm = await page.$$(xpath);
   await elm[0].click();
 }
 
@@ -178,8 +180,8 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
   for (const accountId of accountsIds) {
     if (accountsIds.length > 1) {
       // get list of accounts and check accountId
-      await clickByXPath(page, '//*[contains(@class, "number") and contains(@class, "combo-inner")]');
-      await clickByXPath(page, `//span[contains(text(), '${accountId}')]`);
+      await clickByXPath(page, 'xpath//*[contains(@class, "number") and contains(@class, "combo-inner")]');
+      await clickByXPath(page, `xpath//span[contains(text(), '${accountId}')]`);
     }
 
     accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(accountId)));
@@ -187,7 +189,6 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
 
   return accounts;
 }
-
 
 async function navigateToLogin(page: Page): Promise<void> {
   const loginButtonSelector = '.enter-account a[originaltitle="כניסה לחשבונך"]';
@@ -198,7 +199,7 @@ async function navigateToLogin(page: Page): Promise<void> {
     return (element as any).href;
   });
   debug(`navigating to page (${loginUrl})`);
-  page.goto(loginUrl);
+  await page.goto(loginUrl);
   debug('waiting for page to be loaded (networkidle2)');
   await waitForNavigation(page, { waitUntil: 'networkidle2' });
   debug('waiting for components of login to enter credentials');
@@ -213,12 +214,12 @@ async function waitForPostLogin(page: Page): Promise<void> {
   await Promise.race([
     waitUntilElementFound(page, 'a[title="דלג לחשבון"]', true, 60000),
     waitUntilElementFound(page, 'div.main-content', true, 60000),
-    page.waitForXPath(`//div[contains(string(),"${INVALID_PASSWORD_MSG}")]`),
+    page.waitForSelector(`xpath//div[contains(string(),"${INVALID_PASSWORD_MSG}")]`),
     waitUntilElementFound(page, 'form[action="/changepassword"]', true, 60000), // not sure if they kept this one
   ]);
 }
 
-type ScraperSpecificCredentials = { username: string, password: string};
+type ScraperSpecificCredentials = { username: string, password: string };
 
 class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   getLoginOptions(credentials: ScraperSpecificCredentials) {

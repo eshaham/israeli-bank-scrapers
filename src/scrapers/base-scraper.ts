@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import moment from 'moment-timezone';
+import { CompanyTypes, ScraperProgressTypes } from '../definitions';
 import { TimeoutError } from '../helpers/waiting';
 import { createGenericError, createTimeoutError } from './errors';
 import {
@@ -11,10 +12,8 @@ import {
   ScraperScrapingResult,
   ScraperTwoFactorAuthTriggerResult,
 } from './interface';
-import { CompanyTypes, ScraperProgressTypes } from '../definitions';
 
 const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';
-
 
 export class BaseScraper<TCredentials extends ScraperCredentials> implements Scraper<TCredentials> {
   private eventEmitter = new EventEmitter();
@@ -37,8 +36,8 @@ export class BaseScraper<TCredentials extends ScraperCredentials> implements Scr
       loginResult = await this.login(credentials);
     } catch (e) {
       loginResult = e instanceof TimeoutError ?
-        createTimeoutError(e.message) :
-        createGenericError(e.message);
+        createTimeoutError((e as Error).message) :
+        createGenericError((e as Error).message);
     }
 
     let scrapeResult;
@@ -48,8 +47,8 @@ export class BaseScraper<TCredentials extends ScraperCredentials> implements Scr
       } catch (e) {
         scrapeResult =
           e instanceof TimeoutError ?
-            createTimeoutError(e.message) :
-            createGenericError(e.message);
+            createTimeoutError((e as Error).message) :
+            createGenericError((e as Error).message);
       }
     } else {
       scrapeResult = loginResult;
@@ -59,7 +58,7 @@ export class BaseScraper<TCredentials extends ScraperCredentials> implements Scr
       const success = scrapeResult && scrapeResult.success === true;
       await this.terminate(success);
     } catch (e) {
-      scrapeResult = createGenericError(e.message);
+      scrapeResult = createGenericError((e as Error).message);
     }
     this.emitProgress(ScraperProgressTypes.EndScraping);
 
@@ -99,7 +98,7 @@ export class BaseScraper<TCredentials extends ScraperCredentials> implements Scr
     this.eventEmitter.emit(eventName, this.options.companyId, payload);
   }
 
-  onProgress(func: (companyId: CompanyTypes, payload: {type: ScraperProgressTypes}) => void) {
+  onProgress(func: (companyId: CompanyTypes, payload: { type: ScraperProgressTypes }) => void) {
     this.eventEmitter.on(SCRAPE_PROGRESS, func);
   }
 }
