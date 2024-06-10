@@ -67,7 +67,7 @@ async function getKeyByValue(object: PossibleLoginResults, value: string, page: 
       } else if (typeof condition === 'function') {
         result = await condition({ page, value });
       } else {
-        result = value.toLowerCase() === condition.toLowerCase();
+        result = value.toLowerCase().includes(condition.toLowerCase);
       }
 
       if (result) {
