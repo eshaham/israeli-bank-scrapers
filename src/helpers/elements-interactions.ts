@@ -64,7 +64,7 @@ async function pageEvalAll<R>(page: Page | Frame, selector: string,
     result = await page.$$eval(selector, callback, ...args);
   } catch (e) {
     // TODO temporary workaround to puppeteer@1.5.0 which breaks $$eval bevahvior until they will release a new version.
-    if (e.message.indexOf('Error: failed to find elements matching selector') !== 0) {
+    if ((e as Error).message.indexOf('Error: failed to find elements matching selector') !== 0) {
       throw e;
     }
   }
@@ -79,7 +79,7 @@ async function pageEval<R>(pageOrFrame: Page | Frame, selector: string,
     result = await pageOrFrame.$eval(selector, callback, ...args);
   } catch (e) {
     // TODO temporary workaround to puppeteer@1.5.0 which breaks $$eval bevahvior until they will release a new version.
-    if (e.message.indexOf('Error: failed to find element matching selector') !== 0) {
+    if ((e as Error).message.indexOf('Error: failed to find element matching selector') !== 0) {
       throw e;
     }
   }

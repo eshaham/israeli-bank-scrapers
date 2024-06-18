@@ -27,7 +27,7 @@ export function getTestsConfig() {
       return testsConfig;
     }
   } catch (e) {
-    throw new Error(`failed to parse environment variable 'TESTS_CONFIG' with error '${e.message}'`);
+    throw new Error(`failed to parse environment variable 'TESTS_CONFIG' with error '${(e as Error).message}'`);
   }
 
   try {
