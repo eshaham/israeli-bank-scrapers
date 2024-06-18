@@ -16,7 +16,10 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
+    - uses: browser-actions/setup-chrome@v1
     - name: npm install and test
+      env:
+        PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: ${{ runner.os == 'macOS-latest' && 'true' || 'false' }}
       run: |
         npm ci
         npm run test:ci
