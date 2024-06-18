@@ -1,6 +1,15 @@
 
 export interface TransactionsAccount {
   accountNumber: string;
+
+  /**
+   * Relevant only for credit cards, this is the line of credit utilization, and credit limit.
+   * Only fetched if `includeCreditUtilization` is set to true in the scraper options.
+   */
+  credit?: {
+    creditUtilization: number;
+    creditLimit: number;
+  };
   balance?: number;
   txns: Transaction[];
 }
