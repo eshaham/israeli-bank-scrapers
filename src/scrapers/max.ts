@@ -1,7 +1,7 @@
 import buildUrl from 'build-url';
 // eslint-disable-next-line import/named
-import moment, { Moment } from 'moment';
-import { Page } from 'puppeteer';
+import moment, { type Moment } from 'moment';
+import { type Page } from 'puppeteer';
 import { DOLLAR_CURRENCY, EURO_CURRENCY, SHEKEL_CURRENCY } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
 import { getDebug } from '../helpers/debug';
@@ -9,11 +9,11 @@ import { clickButton, elementPresentOnPage, waitUntilElementFound } from '../hel
 import { fetchGetWithinPage } from '../helpers/fetch';
 import { waitForRedirect } from '../helpers/navigation';
 import { filterOldTransactions, fixInstallments, sortTransactionsByDate } from '../helpers/transactions';
-import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
+import { type Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
 import {
-  BaseScraperWithBrowser, LoginOptions, LoginResults, PossibleLoginResults,
+  BaseScraperWithBrowser, type LoginOptions, LoginResults, type PossibleLoginResults,
 } from './base-scraper-with-browser';
-import { ScraperOptions } from './interface';
+import { type ScraperOptions } from './interface';
 
 const debug = getDebug('max');
 

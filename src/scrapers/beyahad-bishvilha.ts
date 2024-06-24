@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { Page } from 'puppeteer';
+import { type Page } from 'puppeteer';
 import {
   DOLLAR_CURRENCY,
   DOLLAR_CURRENCY_SYMBOL, EURO_CURRENCY,
@@ -10,9 +10,9 @@ import {
 import { getDebug } from '../helpers/debug';
 import { pageEval, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
 import { filterOldTransactions } from '../helpers/transactions';
-import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
-import { ScraperOptions } from './interface';
+import { type Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
+import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
+import { type ScraperOptions } from './interface';
 
 const debug = getDebug('beyahadBishvilha');
 

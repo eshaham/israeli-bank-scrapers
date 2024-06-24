@@ -1,16 +1,16 @@
 import moment from 'moment';
-import { Page } from 'puppeteer';
+import { type Page } from 'puppeteer';
 import { v4 as uuid4 } from 'uuid';
 import { getDebug } from '../helpers/debug';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntil } from '../helpers/waiting';
 import {
-  Transaction, TransactionStatuses, TransactionTypes,
-  TransactionsAccount,
+  type Transaction, TransactionStatuses, TransactionTypes,
+  type TransactionsAccount,
 } from '../transactions';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
-import { ScraperOptions } from './interface';
+import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
+import { type ScraperOptions } from './interface';
 
 const debug = getDebug('hapoalim');
 

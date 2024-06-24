@@ -1,6 +1,6 @@
 // eslint-disable-next-line import/named
-import moment, { Moment } from 'moment';
-import { Page } from 'puppeteer';
+import moment, { type Moment } from 'moment';
+import { type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import { getDebug } from '../helpers/debug';
 import {
@@ -12,11 +12,11 @@ import {
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import {
-  Transaction, TransactionStatuses, TransactionTypes,
-  TransactionsAccount,
+  type Transaction, TransactionStatuses, TransactionTypes,
+  type TransactionsAccount,
 } from '../transactions';
-import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
-import { ScraperScrapingResult } from './interface';
+import { BaseScraperWithBrowser, type LoginOptions, LoginResults } from './base-scraper-with-browser';
+import { type ScraperScrapingResult } from './interface';
 
 const debug = getDebug('leumi');
 const BASE_URL = 'https://hb2.bankleumi.co.il';

@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { Frame, Page } from 'puppeteer';
+import { type Frame, type Page } from 'puppeteer';
 import { getDebug } from '../helpers/debug';
 import {
   clickButton, elementPresentOnPage, pageEval, waitUntilElementFound,
@@ -10,13 +10,13 @@ import { getFromSessionStorage } from '../helpers/storage';
 import { filterOldTransactions } from '../helpers/transactions';
 import { waitUntil } from '../helpers/waiting';
 import {
-  Transaction,
+  type Transaction,
   TransactionStatuses,
   TransactionTypes,
-  TransactionsAccount,
+  type TransactionsAccount,
 } from '../transactions';
-import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
-import { ScraperScrapingResult } from './interface';
+import { BaseScraperWithBrowser, type LoginOptions, LoginResults } from './base-scraper-with-browser';
+import { type ScraperScrapingResult } from './interface';
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_REQUEST_ENDPOINT = 'https://api.cal-online.co.il/Transactions/api/transactionsDetails/getCardTransactionsDetails';

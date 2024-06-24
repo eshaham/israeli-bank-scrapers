@@ -20,6 +20,6 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*",".eslintrc.js"],
+  "include": ["src/**/*",".eslintrc.js","jest.config.js"],
   "exclude": ["node_modules"]
 }

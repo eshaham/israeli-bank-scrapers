@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { Frame, HTTPRequest, Page } from 'puppeteer';
+import { type Frame, type HTTPRequest, type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import {
   pageEvalAll, waitUntilElementDisappear, waitUntilElementFound, waitUntilIframeFound,
@@ -7,11 +7,11 @@ import {
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { waitForUrl } from '../helpers/navigation';
 import {
-  Transaction,
+  type Transaction,
   TransactionStatuses, TransactionTypes,
-  TransactionsAccount,
+  type TransactionsAccount,
 } from '../transactions';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
 
 interface ScrapedTransaction {

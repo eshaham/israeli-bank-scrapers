@@ -1,7 +1,7 @@
-import { Browser, Page } from 'puppeteer';
-import { CompanyTypes, ScraperProgressTypes } from '../definitions';
-import { TransactionsAccount } from '../transactions';
-import { ErrorResult, ScraperErrorTypes } from './errors';
+import { type Browser, type Page } from 'puppeteer';
+import { type CompanyTypes, type ScraperProgressTypes } from '../definitions';
+import { type TransactionsAccount } from '../transactions';
+import { type ErrorResult, type ScraperErrorTypes } from './errors';
 
 // TODO: Remove this type when the scraper 'factory' will return concrete scraper types
 // Instead of a generic interface (which in turn uses this type)

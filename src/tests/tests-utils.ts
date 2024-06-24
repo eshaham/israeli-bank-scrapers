@@ -2,7 +2,7 @@ import fs from 'fs';
 import * as json2csv from 'json2csv';
 import moment from 'moment';
 import path from 'path';
-import { TransactionsAccount } from '../transactions';
+import { type TransactionsAccount } from '../transactions';
 
 let testsConfig: Record<string, any>;
 let configurationLoaded = false;

@@ -1,6 +1,6 @@
 // eslint-disable-next-line import/named
-import moment, { Moment } from 'moment';
-import { Page } from 'puppeteer';
+import moment, { type Moment } from 'moment';
+import { type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL } from '../constants';
 import {
   clickButton,
@@ -11,8 +11,8 @@ import {
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { sleep } from '../helpers/waiting';
-import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
+import { type Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
+import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 
 const BASE_URL = 'https://online.bankotsar.co.il';
 const LONG_DATE_FORMAT = 'DD/MM/YYYY';

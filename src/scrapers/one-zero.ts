@@ -2,16 +2,16 @@ import moment from 'moment/moment';
 import { getDebug } from '../helpers/debug';
 import { fetchGraphql, fetchPost } from '../helpers/fetch';
 import {
-  Transaction as ScrapingTransaction,
+  type Transaction as ScrapingTransaction,
   TransactionStatuses,
   TransactionTypes,
-  TransactionsAccount,
+  type TransactionsAccount,
 } from '../transactions';
 import { BaseScraper } from './base-scraper';
 import { ScraperErrorTypes, createGenericError } from './errors';
 import {
-  ScraperGetLongTermTwoFactorTokenResult, ScraperLoginResult,
-  ScraperScrapingResult, ScraperTwoFactorAuthTriggerResult,
+  type ScraperGetLongTermTwoFactorTokenResult, type ScraperLoginResult,
+  type ScraperScrapingResult, type ScraperTwoFactorAuthTriggerResult,
 } from './interface';
 import { GET_CUSTOMER, GET_MOVEMENTS } from './one-zero-queries';
 

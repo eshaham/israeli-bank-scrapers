@@ -1,16 +1,16 @@
 import { EventEmitter } from 'events';
 import moment from 'moment-timezone';
-import { CompanyTypes, ScraperProgressTypes } from '../definitions';
+import { type CompanyTypes, ScraperProgressTypes } from '../definitions';
 import { TimeoutError } from '../helpers/waiting';
 import { createGenericError, createTimeoutError } from './errors';
 import {
-  Scraper,
-  ScraperCredentials,
-  ScraperGetLongTermTwoFactorTokenResult,
-  ScraperLoginResult,
-  ScraperOptions,
-  ScraperScrapingResult,
-  ScraperTwoFactorAuthTriggerResult,
+  type Scraper,
+  type ScraperCredentials,
+  type ScraperGetLongTermTwoFactorTokenResult,
+  type ScraperLoginResult,
+  type ScraperOptions,
+  type ScraperScrapingResult,
+  type ScraperTwoFactorAuthTriggerResult,
 } from './interface';
 
 const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';

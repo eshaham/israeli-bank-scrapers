@@ -6,7 +6,7 @@ import BeinleumiScraper from './beinleumi';
 import BeyahadBishvilhaScraper from './beyahad-bishvilha';
 import DiscountScraper from './discount';
 import HapoalimScraper from './hapoalim';
-import { Scraper, ScraperCredentials, ScraperOptions } from './interface';
+import { type Scraper, type ScraperCredentials, type ScraperOptions } from './interface';
 import IsracardScraper from './isracard';
 import LeumiScraper from './leumi';
 import MassadScraper from './massad';

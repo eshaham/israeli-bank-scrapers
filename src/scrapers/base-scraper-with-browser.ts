@@ -1,5 +1,5 @@
 import puppeteer, {
-  Browser, Frame, GoToOptions, Page, PuppeteerLifeCycleEvent,
+  type Browser, type Frame, type GoToOptions, type Page, type PuppeteerLifeCycleEvent,
 } from 'puppeteer';
 
 import { ScraperProgressTypes } from '../definitions';
@@ -8,7 +8,7 @@ import { clickButton, fillInput, waitUntilElementFound } from '../helpers/elemen
 import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { BaseScraper } from './base-scraper';
 import { ScraperErrorTypes } from './errors';
-import { ScraperCredentials, ScraperScrapingResult } from './interface';
+import { type ScraperCredentials, type ScraperScrapingResult } from './interface';
 
 const VIEWPORT_WIDTH = 1024;
 const VIEWPORT_HEIGHT = 768;

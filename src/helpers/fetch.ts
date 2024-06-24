@@ -1,5 +1,5 @@
 import nodeFetch from 'node-fetch';
-import { Page } from 'puppeteer';
+import { type Page } from 'puppeteer';
 
 const JSON_CONTENT_TYPE = 'application/json';
 

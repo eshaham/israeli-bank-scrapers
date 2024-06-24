@@ -1,6 +1,6 @@
 // eslint-disable-next-line import/named
-import moment, { Moment } from 'moment';
-import { Page } from 'puppeteer';
+import moment, { type Moment } from 'moment';
+import { type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import {
   clickButton,
@@ -13,11 +13,11 @@ import {
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import {
-  Transaction, TransactionStatuses,
+  type Transaction, TransactionStatuses,
   TransactionTypes,
-  TransactionsAccount,
+  type TransactionsAccount,
 } from '../transactions';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 
 const BASE_URL = 'https://hb.unionbank.co.il';
 const TRANSACTIONS_URL = `${BASE_URL}/eBanking/Accounts/ExtendedActivity.aspx#/`;

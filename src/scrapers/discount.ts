@@ -1,15 +1,15 @@
 import _ from 'lodash';
 import moment from 'moment';
-import { Page } from 'puppeteer';
+import { type Page } from 'puppeteer';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { fetchGetWithinPage } from '../helpers/fetch';
 import { waitForNavigation } from '../helpers/navigation';
 import {
-  Transaction, TransactionStatuses, TransactionTypes,
+  type Transaction, TransactionStatuses, TransactionTypes,
 } from '../transactions';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
-import { ScraperOptions, ScraperScrapingResult } from './interface';
+import { type ScraperOptions, type ScraperScrapingResult } from './interface';
 
 const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';

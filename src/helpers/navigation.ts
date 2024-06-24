@@ -1,6 +1,6 @@
 import {
-  Frame,
-  Page, WaitForOptions,
+  type Frame,
+  type Page, type WaitForOptions,
 } from 'puppeteer';
 import { waitUntil } from './waiting';
 

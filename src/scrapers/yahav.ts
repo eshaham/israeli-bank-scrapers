@@ -1,6 +1,6 @@
 // eslint-disable-next-line import/named
-import moment, { Moment } from 'moment';
-import { Page } from 'puppeteer';
+import moment, { type Moment } from 'moment';
+import { type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import {
   clickButton, elementPresentOnPage,
@@ -8,14 +8,14 @@ import {
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import {
-  Transaction,
+  type Transaction,
   TransactionStatuses, TransactionTypes,
-  TransactionsAccount,
+  type TransactionsAccount,
 } from '../transactions';
 import {
   BaseScraperWithBrowser,
   LoginResults,
-  PossibleLoginResults,
+  type PossibleLoginResults,
 } from './base-scraper-with-browser';
 
 const LOGIN_URL = 'https://login.yahav.co.il/login/';

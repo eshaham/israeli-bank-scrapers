@@ -3,9 +3,9 @@ import { getDebug } from '../helpers/debug';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { sleep } from '../helpers/waiting';
-import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
-import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
-import { ScraperScrapingResult } from './interface';
+import { type Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
+import { BaseScraperWithBrowser, type LoginOptions, LoginResults } from './base-scraper-with-browser';
+import { type ScraperScrapingResult } from './interface';
 
 const BASE_URL = 'https://www.behatsdaa.org.il';
 const LOGIN_URL = `${BASE_URL}/login`;
