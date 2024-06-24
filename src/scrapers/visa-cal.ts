@@ -129,7 +129,7 @@ async function getLoginFrame(page: Page) {
   await waitUntil(() => {
     frame = page
       .frames()
-      .find((f) => f.url().includes('calconnect')) || null;
+      .find((f) => f.url().includes('connect')) || null;
     return Promise.resolve(!!frame);
   }, 'wait for iframe with login form', 10000, 1000);
 
