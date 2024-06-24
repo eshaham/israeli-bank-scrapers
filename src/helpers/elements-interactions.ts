@@ -1,4 +1,4 @@
-import { Frame, Page } from 'puppeteer';
+import { type Frame, type Page } from 'puppeteer';
 import { waitUntil } from './waiting';
 
 async function waitUntilElementFound(page: Page | Frame, elementSelector: string,

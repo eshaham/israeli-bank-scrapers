@@ -1,6 +1,6 @@
 // eslint-disable-next-line import/named
-import moment, { Moment } from 'moment';
-import { Page } from 'puppeteer';
+import moment, { type Moment } from 'moment';
+import { type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import {
   clickButton,
@@ -12,10 +12,11 @@ import {
 import { waitForNavigation } from '../helpers/navigation';
 import { sleep } from '../helpers/waiting';
 import {
-  Transaction, TransactionStatuses, TransactionTypes,
-  TransactionsAccount,
+  TransactionStatuses, TransactionTypes,
+  type Transaction,
+  type TransactionsAccount,
 } from '../transactions';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא נמצאו נתונים בנושא המבוקש';

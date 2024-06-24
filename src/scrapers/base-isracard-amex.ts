@@ -1,8 +1,7 @@
 import buildUrl from 'build-url';
 import _ from 'lodash';
-// eslint-disable-next-line import/named
-import moment, { Moment } from 'moment';
-import { Page } from 'puppeteer';
+import moment, { type Moment } from 'moment';
+import { type Page } from 'puppeteer';
 import {
   ALT_SHEKEL_CURRENCY,
   SHEKEL_CURRENCY,
@@ -15,13 +14,13 @@ import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import { filterOldTransactions, fixInstallments } from '../helpers/transactions';
 import { runSerial } from '../helpers/waiting';
 import {
-  Transaction, TransactionInstallments,
   TransactionStatuses, TransactionTypes,
-  TransactionsAccount,
+  type Transaction, type TransactionInstallments,
+  type TransactionsAccount,
 } from '../transactions';
 import { BaseScraperWithBrowser } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
-import { ScraperOptions, ScraperScrapingResult } from './interface';
+import { type ScraperOptions, type ScraperScrapingResult } from './interface';
 
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';
@@ -93,6 +92,10 @@ interface ScrapedTransactionData {
   Header?: {
     Status: string;
   };
+  PirteyIska_204Bean?: {
+    sector: string;
+  };
+  
   CardsTransactionsListBean?: Record<string, {
     CurrentCardTransactions: ScrapedCurrentCardTransactions[];
   }>;
@@ -253,7 +256,12 @@ function getTransactionExtraDetails(servicesUrl: string, month: Moment, accountI
 async function getExtraScrapTransaction(page: Page, options: ExtendedScraperOptions, month: Moment, accountIndex: number, transaction: Transaction): Promise<Transaction> {
   const dataUrl = getTransactionExtraDetails(options.servicesUrl, month, accountIndex, transaction);
   const data = await fetchGetWithinPage<ScrapedTransactionData>(page, dataUrl);
-  const rawCategory:any = _.get(data, 'PirteyIska_204Bean.sector');
+  
+  if (!data) {
+    return transaction;
+  }
+
+  const rawCategory = _.get(data, 'PirteyIska_204Bean.sector') ?? '';
   return {
     ...transaction,
     category: rawCategory.trim(),
@@ -339,9 +347,9 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
     this.page.on('request', (request) => {
       if (request.url().includes('detector-dom.min.js')) {
         debug('force abort for request do download detector-dom.min.js resource');
-        request.abort().then(() => {}).catch(() => {});
+        void request.abort();
       } else {
-        request.continue().then(() => {}).catch(() => {});
+        void request.continue();
       }
     });
 

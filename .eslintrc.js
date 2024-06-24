@@ -34,6 +34,9 @@ module.exports = {
     '@typescript-eslint/no-unsafe-argument': 0,
     '@typescript-eslint/no-unsafe-return': 0,
     '@typescript-eslint/ban-ts-comment': 0,
+    '@typescript-eslint/consistent-type-imports': ['error', {
+      fixStyle: 'inline-type-imports',
+    }],
     '@typescript-eslint/member-delimiter-style': [ 'error', {
       multiline: {
         delimiter: 'semi',

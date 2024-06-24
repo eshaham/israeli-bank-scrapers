@@ -1,8 +1,8 @@
 import _ from 'lodash';
-// eslint-disable-next-line import/named
-import moment, { Moment } from 'moment';
+import moment, { type Moment } from 'moment';
 import {
-  Transaction, TransactionTypes,
+  TransactionTypes,
+  type Transaction,
 } from '../transactions';
 
 function isNormalTransaction(txn: any): boolean {
