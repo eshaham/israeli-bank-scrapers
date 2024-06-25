@@ -23,6 +23,7 @@ module.exports = {
       "ignorePattern": "^(async )?function "
     }],
     "linebreak-style": process.platform === "win32"? 0: 2,
+    "quote-props": ["error", "consistent-as-needed"],
     "@typescript-eslint/explicit-function-return-type": 0,
     "@typescript-eslint/no-explicit-any": 0,
     "@typescript-eslint/ban-ts-ignore": 0,

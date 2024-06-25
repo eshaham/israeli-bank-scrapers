@@ -105,7 +105,7 @@ function createDataFromRequest(request: Request, optionsStartDate: Date) {
 
 function createHeadersFromRequest(request: Request) {
   return {
-    mizrahixsrftoken: request.headers().mizrahixsrftoken,
+    'mizrahixsrftoken': request.headers().mizrahixsrftoken,
     'Content-Type': request.headers()['content-type'],
   };
 }
