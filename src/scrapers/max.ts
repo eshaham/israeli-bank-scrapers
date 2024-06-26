@@ -1,5 +1,4 @@
 import buildUrl from 'build-url';
-// eslint-disable-next-line import/named
 import moment, { type Moment } from 'moment';
 import { type Page } from 'puppeteer';
 import { DOLLAR_CURRENCY, EURO_CURRENCY, SHEKEL_CURRENCY } from '../constants';
@@ -9,9 +8,12 @@ import { clickButton, elementPresentOnPage, waitUntilElementFound } from '../hel
 import { fetchGetWithinPage } from '../helpers/fetch';
 import { waitForRedirect } from '../helpers/navigation';
 import { filterOldTransactions, fixInstallments, sortTransactionsByDate } from '../helpers/transactions';
-import { type Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
+import { TransactionStatuses, TransactionTypes, type Transaction } from '../transactions';
 import {
-  BaseScraperWithBrowser, type LoginOptions, LoginResults, type PossibleLoginResults,
+  BaseScraperWithBrowser,
+  LoginResults,
+  type LoginOptions,
+  type PossibleLoginResults,
 } from './base-scraper-with-browser';
 import { type ScraperOptions } from './interface';
 

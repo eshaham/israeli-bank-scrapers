@@ -70,7 +70,9 @@ export function fetchGetWithinPage<TResult>(page: Page, url: string): Promise<TR
 
 export function fetchPostWithinPage<TResult>(page: Page, url: string,
   data: Record<string, any>, extraHeaders: Record<string, any> = {}): Promise<TResult | null> {
-  return page.evaluate((innerUrl: string, innerData: Record<string, any>,
+  return page.evaluate((
+    innerUrl: string,
+    innerData: Record<string, any>,
     innerExtraHeaders: Record<string, any>) => {
     return new Promise<TResult | null>((resolve, reject) => {
       fetch(innerUrl, {

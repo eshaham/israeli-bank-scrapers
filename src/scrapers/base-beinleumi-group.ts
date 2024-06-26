@@ -1,4 +1,3 @@
-// eslint-disable-next-line import/named
 import moment, { type Moment } from 'moment';
 import { type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';

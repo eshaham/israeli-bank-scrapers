@@ -10,12 +10,12 @@ import { getFromSessionStorage } from '../helpers/storage';
 import { filterOldTransactions } from '../helpers/transactions';
 import { waitUntil } from '../helpers/waiting';
 import {
-  type Transaction,
   TransactionStatuses,
   TransactionTypes,
+  type Transaction,
   type TransactionsAccount,
 } from '../transactions';
-import { BaseScraperWithBrowser, type LoginOptions, LoginResults } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
 import { type ScraperScrapingResult } from './interface';
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
@@ -84,8 +84,7 @@ interface InitResponse {
     }[];
   };
 }
-// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-type CurrencySymbol = '₪' | string;
+type CurrencySymbol = string;
 interface CardTransactionDetailsError {
   title: string;
   statusCode: number;

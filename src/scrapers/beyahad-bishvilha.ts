@@ -10,7 +10,7 @@ import {
 import { getDebug } from '../helpers/debug';
 import { pageEval, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
 import { filterOldTransactions } from '../helpers/transactions';
-import { type Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
+import { TransactionStatuses, TransactionTypes, type Transaction } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { type ScraperOptions } from './interface';
 
@@ -158,7 +158,7 @@ class BeyahadBishvilhaScraper extends BaseScraperWithBrowser<ScraperSpecificCred
       loginUrl: LOGIN_URL,
       fields: createLoginFields(credentials),
       submitButtonSelector: async () => {
-        const [button] = await this.page.$$('xpath//button[contains(., \'התחבר\')]');
+        const button = await this.page.$('xpath//button[contains(., "התחבר")]');
         if (button) {
           await button.click();
         }

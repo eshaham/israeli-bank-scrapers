@@ -64,7 +64,6 @@ export default function createScraper(options: ScraperOptions): Scraper<ScraperC
     case CompanyTypes.behatsdaa:
       return new BehatsdaaScraper(options);
     default:
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       return assertNever(options.companyId, `unknown company id ${options.companyId}`);
   }
 }
