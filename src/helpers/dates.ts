@@ -1,4 +1,4 @@
-import moment, { Moment } from 'moment';
+import moment, { type Moment } from 'moment';
 
 export default function getAllMonthMoments(startMoment: Moment | string, futureMonths?: number) {
   let monthMoment = moment(startMoment).startOf('month');

@@ -1,4 +1,3 @@
-
 export interface TransactionsAccount {
   accountNumber: string;
   balance?: number;
@@ -7,12 +6,12 @@ export interface TransactionsAccount {
 
 export enum TransactionTypes {
   Normal = 'normal',
-  Installments = 'installments'
+  Installments = 'installments',
 }
 
 export enum TransactionStatuses {
   Completed = 'completed',
-  Pending = 'pending'
+  Pending = 'pending',
 }
 
 export interface TransactionInstallments {

@@ -1,6 +1,5 @@
 import BeinleumiGroupBaseScraper from './base-beinleumi-group';
 
-
 class BeinleumiScraper extends BeinleumiGroupBaseScraper {
   BASE_URL = 'https://online.fibi.co.il';
 

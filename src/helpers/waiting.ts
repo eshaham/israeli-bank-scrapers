@@ -1,4 +1,3 @@
-
 export class TimeoutError extends Error {
 
 }
@@ -50,4 +49,8 @@ export function raceTimeout(ms: number, promise: Promise<any>) {
 
 export function runSerial<T>(actions: (() => Promise<T>)[]): Promise<T[]> {
   return actions.reduce((m, a) => m.then(async (x) => [...x, await a()]), Promise.resolve<T[]>(new Array<T>()));
+}
+
+export function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

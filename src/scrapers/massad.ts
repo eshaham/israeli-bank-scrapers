@@ -1,6 +1,5 @@
 import BeinleumiGroupBaseScraper from './base-beinleumi-group';
 
-
 class MassadScraper extends BeinleumiGroupBaseScraper {
   BASE_URL = 'https://online.bankmassad.co.il';
 

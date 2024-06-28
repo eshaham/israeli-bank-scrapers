@@ -1,5 +1,5 @@
-import moment, { Moment } from 'moment';
-import { Page } from 'puppeteer';
+import moment, { type Moment } from 'moment';
+import { type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import {
   clickButton, elementPresentOnPage,
@@ -7,13 +7,14 @@ import {
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import {
-  Transaction, TransactionsAccount,
   TransactionStatuses, TransactionTypes,
+  type Transaction,
+  type TransactionsAccount,
 } from '../transactions';
 import {
   BaseScraperWithBrowser,
   LoginResults,
-  PossibleLoginResults,
+  type PossibleLoginResults,
 } from './base-scraper-with-browser';
 
 const LOGIN_URL = 'https://login.yahav.co.il/login/';
@@ -125,7 +126,7 @@ async function getAccountTransactions(page: Page): Promise<Transaction[]> {
   const transactionsDivs = await pageEvalAll<TransactionsTr[]>(page, '.list-item-holder .entire-content-ctr', [], (divs) => {
     return (divs as HTMLElement[]).map((div) => ({
       id: (div).getAttribute('id') || '',
-      innerDivs: Array.from(div.getElementsByTagName('div')).map((div) => (div as HTMLElement).innerText),
+      innerDivs: Array.from(div.getElementsByTagName('div')).map((el) => (el as HTMLElement).innerText),
     }));
   });
 
@@ -198,7 +199,6 @@ async function searchByDates(page: Page, startDate: Moment) {
   }
 }
 
-
 async function fetchAccountData(page: Page, startDate: Moment, accountID: string): Promise<TransactionsAccount> {
   await waitUntilElementDisappear(page, '.loading-bar-spinner');
   await searchByDates(page, startDate);
@@ -246,7 +246,7 @@ async function redirectOrDialog(page: Page) {
   await waitUntilElementDisappear(page, '.loading-bar-spinner');
 }
 
-type ScraperSpecificCredentials = {username: string, password: string, nationalID: string};
+type ScraperSpecificCredentials = { username: string, password: string, nationalID: string };
 
 class YahavScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   getLoginOptions(credentials: ScraperSpecificCredentials) {

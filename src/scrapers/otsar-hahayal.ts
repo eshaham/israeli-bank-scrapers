@@ -1,16 +1,17 @@
-import moment, { Moment } from 'moment';
-import { Page } from 'puppeteer';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
-import { waitForNavigation } from '../helpers/navigation';
-import {
-  fillInput,
-  clickButton,
-  waitUntilElementFound,
-  pageEvalAll,
-  elementPresentOnPage,
-} from '../helpers/elements-interactions';
+import moment, { type Moment } from 'moment';
+import { type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL } from '../constants';
-import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
+import {
+  clickButton,
+  elementPresentOnPage,
+  fillInput,
+  pageEvalAll,
+  waitUntilElementFound,
+} from '../helpers/elements-interactions';
+import { waitForNavigation } from '../helpers/navigation';
+import { sleep } from '../helpers/waiting';
+import { TransactionStatuses, TransactionTypes, type Transaction } from '../transactions';
+import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 
 const BASE_URL = 'https://online.bankotsar.co.il';
 const LONG_DATE_FORMAT = 'DD/MM/YYYY';
@@ -205,7 +206,7 @@ class OtsarHahayalScraper extends BaseScraperWithBrowser<ScraperSpecificCredenti
       loginUrl: `${BASE_URL}/MatafLoginService/MatafLoginServlet?bankId=OTSARPRTAL&site=Private&KODSAFA=HE`,
       fields: createLoginFields(credentials),
       submitButtonSelector: async () => {
-        await this.page.waitForTimeout(1000);
+        await sleep(1000);
         await clickButton(this.page, '#continueBtn');
       },
       postAction: async () => waitForPostLogin(this.page),

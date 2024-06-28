@@ -1,7 +1,8 @@
-import moment, { Moment } from 'moment';
 import _ from 'lodash';
+import moment, { type Moment } from 'moment';
 import {
-  Transaction, TransactionTypes,
+  TransactionTypes,
+  type Transaction,
 } from '../transactions';
 
 function isNormalTransaction(txn: any): boolean {

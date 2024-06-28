@@ -1,21 +1,20 @@
 // For a detailed explanation regarding each configuration property, visit:
 // https://jestjs.io/docs/en/configuration.html
-
-module.exports = {
+/** @type {import('jest').Config} */
+const config = {
   preset: 'ts-jest/presets/js-with-babel',
   clearMocks: true,
   coverageDirectory: 'coverage',
   rootDir: './src',
   transform: {
-    '^.+\\.ts$': 'ts-jest'
+    '^.+\\.ts$': ['ts-jest', {
+      babelConfig: true,
+    }],
   },
-  setupFiles: [
+  setupFilesAfterEnv: [
     './tests/jest-setup.ts',
   ],
   testEnvironment: 'node',
-  globals: {
-    'ts-jest': {
-      babelConfig: true,
-    }
-  },
 };
+
+module.exports = config;
