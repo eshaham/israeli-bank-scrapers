@@ -21,6 +21,7 @@ import { ScraperScrapingResult } from './interface';
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_REQUEST_ENDPOINT = 'https://api.cal-online.co.il/Transactions/api/transactionsDetails/getCardTransactionsDetails';
+const CREDIT_FRAME_ENDPOINT = 'https://api.cal-online.co.il/Frames/api/Frames/GetFrameStatus';
 
 const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו שגויים';
 
@@ -85,11 +86,39 @@ interface InitResponse {
     }[];
   };
 }
+
+interface AccountCredit {
+  creditUtilization: number;
+  creditLimit: number;
+}
+
+
 type CurrencySymbol = '₪' | string;
 interface CardTransactionDetailsError {
   title: string;
   statusCode: number;
 }
+
+interface CardFrameStatusError {
+  title: string;
+  statusCode: number;
+  statusDescription: string;
+}
+
+interface CardFrameStatus extends CardFrameStatusError {
+  result: {
+    calIssuedCards: {
+      fictiveMaxAccAmt: number;
+      frameLimitForCardAmount: number;
+      totalUsageAmountForAccountManagementLevel: number;
+      nextTotalDebitForAccount: number;
+    };
+  };
+  statusCode: 1;
+  statusDescription: string;
+  statusTitle: string;
+}
+
 interface CardTransactionDetails extends CardTransactionDetailsError {
   result: {
     bankAccounts: {
@@ -238,6 +267,34 @@ function convertParsedDataToTransactions(parsedData: CardTransactionDetails[]): 
     });
 }
 
+async function fetchCreditUtilization(
+  page: Page,
+  Authorization: string,
+  xSiteId: string,
+  card: { cardUniqueId: string, last4Digits: string },
+): Promise<AccountCredit> {
+  const dataResult = await fetchPostWithinPage<CardFrameStatus | CardFrameStatusError>(
+    page,
+    CREDIT_FRAME_ENDPOINT,
+    { cardsForFrameData: [{ cardUniqueId: card.cardUniqueId }] },
+    {
+      Authorization,
+      'X-Site-Id': xSiteId,
+      'Content-Type': 'application/json',
+    },
+  );
+
+  if (dataResult?.statusCode !== 1) {
+    throw new Error(`failed to fetch frame data. Message: ${dataResult?.title || ''}`);
+  }
+
+  const utilizationData = (dataResult as CardFrameStatus).result.calIssuedCards;
+  return {
+    creditUtilization: utilizationData.nextTotalDebitForAccount,
+    creditLimit: utilizationData.frameLimitForCardAmount,
+  };
+}
+
 type ScraperSpecificCredentials = { username: string, password: string };
 
 class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
@@ -376,10 +433,17 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
           filterOldTransactions(transactions, moment(startDate), this.options.combineInstallments || false) :
           transactions;
 
-        return {
+        const account: TransactionsAccount = {
           txns,
           accountNumber: card.last4Digits,
-        } as TransactionsAccount;
+        };
+
+        if (this.options.includeCreditUtilization) {
+          debug('Getting credit utilization data');
+          account.credit = await fetchCreditUtilization(this.page, Authorization, xSiteId, card);
+        }
+
+        return account;
       }),
     );
 
