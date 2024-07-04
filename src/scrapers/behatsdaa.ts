@@ -100,9 +100,9 @@ class BehatsdaaScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials
     debug('Fetching data');
 
     const res = await fetchPostWithinPage<PurchaseHistoryResponse>(this.page, PURCHASE_HISTORY_URL, body, {
-      authorization: `Bearer ${token}`,
+      'authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
-      organizationid: '20',
+      'organizationid': '20',
     });
 
     debug('Data fetched');

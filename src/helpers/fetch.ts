@@ -5,7 +5,7 @@ const JSON_CONTENT_TYPE = 'application/json';
 
 function getJsonHeaders() {
   return {
-    Accept: JSON_CONTENT_TYPE,
+    'Accept': JSON_CONTENT_TYPE,
     'Content-Type': JSON_CONTENT_TYPE,
   };
 }
