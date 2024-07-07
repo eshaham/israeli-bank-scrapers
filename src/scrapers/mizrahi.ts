@@ -105,7 +105,7 @@ function createDataFromRequest(request: Request, optionsStartDate: Date) {
 
 function createHeadersFromRequest(request: Request) {
   return {
-    mizrahixsrftoken: request.headers().mizrahixsrftoken,
+    'mizrahixsrftoken': request.headers().mizrahixsrftoken,
     'Content-Type': request.headers()['content-type'],
   };
 }
@@ -216,6 +216,7 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
   }
 
   private async fetchAccount() {
+    await this.page.waitForSelector(`a[href*="${OSH_PAGE}"]`);
     await this.page.$eval(`a[href*="${OSH_PAGE}"]`, (el) => (el as HTMLElement).click());
     await waitUntilElementFound(this.page, `a[href*="${TRANSACTIONS_PAGE}"]`);
     await this.page.$eval(`a[href*="${TRANSACTIONS_PAGE}"]`, (el) => (el as HTMLElement).click());
