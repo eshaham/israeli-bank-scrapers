@@ -1,6 +1,5 @@
 import moment from 'moment';
-import { Frame, Page } from 'puppeteer';
-
+import { type Frame, type Page } from 'puppeteer';
 import { getDebug } from '../helpers/debug';
 import {
   clickButton, elementPresentOnPage, pageEval, waitUntilElementFound,
@@ -11,13 +10,13 @@ import { getFromSessionStorage } from '../helpers/storage';
 import { filterOldTransactions } from '../helpers/transactions';
 import { waitUntil } from '../helpers/waiting';
 import {
-  Transaction,
   TransactionStatuses,
   TransactionTypes,
-  TransactionsAccount,
+  type Transaction,
+  type TransactionsAccount,
 } from '../transactions';
-import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
-import { ScraperScrapingResult } from './interface';
+import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
+import { type ScraperScrapingResult } from './interface';
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_REQUEST_ENDPOINT = 'https://api.cal-online.co.il/Transactions/api/transactionsDetails/getCardTransactionsDetails';
@@ -26,7 +25,7 @@ const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו
 
 const debug = getDebug('visa-cal');
 
-enum trnTypeCode {
+enum TrnTypeCode {
   regular = '5',
   credit = '6',
   installments = '8',
@@ -72,7 +71,7 @@ interface ScrapedTransaction {
   trnNumaretor: number;
   trnPurchaseDate: string;
   trnType: string;
-  trnTypeCode: trnTypeCode;
+  trnTypeCode: TrnTypeCode;
   walletProviderCode: 0;
   walletProviderDesc: '';
 }
@@ -85,7 +84,7 @@ interface InitResponse {
     }[];
   };
 }
-type CurrencySymbol = '₪' | string;
+type CurrencySymbol = string;
 interface CardTransactionDetailsError {
   title: string;
   statusCode: number;
@@ -213,7 +212,7 @@ function convertParsedDataToTransactions(parsedData: CardTransactionDetails[]): 
 
       const result: Transaction = {
         identifier: transaction.trnIntId,
-        type: [trnTypeCode.regular, trnTypeCode.standingOrder].includes(transaction.trnTypeCode) ?
+        type: [TrnTypeCode.regular, TrnTypeCode.standingOrder].includes(transaction.trnTypeCode) ?
           TransactionTypes.Normal :
           TransactionTypes.Installments,
         status: TransactionStatuses.Completed,

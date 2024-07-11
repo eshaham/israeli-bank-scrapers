@@ -5,7 +5,7 @@ import {
 import { SCRAPERS } from '../definitions';
 import { ISO_DATE_REGEX } from '../constants';
 import { LoginResults } from './base-scraper-with-browser';
-import { TransactionsAccount } from '../transactions';
+import { type TransactionsAccount } from '../transactions';
 
 const COMPANY_ID = 'mizrahi'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
