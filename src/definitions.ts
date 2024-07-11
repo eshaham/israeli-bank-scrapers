@@ -21,7 +21,7 @@ export enum CompanyTypes {
   yahav = 'yahav',
   behatsdaa = 'behatsdaa',
   beyahadBishvilha = 'beyahadBishvilha',
-  oneZero = 'oneZero'
+  oneZero = 'oneZero',
 }
 
 export const SCRAPERS = {

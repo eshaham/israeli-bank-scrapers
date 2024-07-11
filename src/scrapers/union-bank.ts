@@ -1,21 +1,23 @@
-import moment, { Moment } from 'moment';
-import { Page } from 'puppeteer';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
-import {
-  dropdownSelect,
-  dropdownElements,
-  fillInput,
-  clickButton,
-  waitUntilElementFound,
-  pageEvalAll,
-  elementPresentOnPage,
-} from '../helpers/elements-interactions';
-import { waitForNavigation } from '../helpers/navigation';
+import moment, { type Moment } from 'moment';
+import { type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import {
-  TransactionsAccount, Transaction, TransactionStatuses,
+  clickButton,
+  dropdownElements,
+  dropdownSelect,
+  elementPresentOnPage,
+  fillInput,
+  pageEvalAll,
+  waitUntilElementFound,
+} from '../helpers/elements-interactions';
+import { waitForNavigation } from '../helpers/navigation';
+import {
+  TransactionStatuses,
   TransactionTypes,
+  type Transaction,
+  type TransactionsAccount,
 } from '../transactions';
+import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 
 const BASE_URL = 'https://hb.unionbank.co.il';
 const TRANSACTIONS_URL = `${BASE_URL}/eBanking/Accounts/ExtendedActivity.aspx#/`;

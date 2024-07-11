@@ -1,10 +1,11 @@
 import moment from 'moment';
 import { getDebug } from '../helpers/debug';
-import { fetchPostWithinPage } from '../helpers/fetch';
-import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
-import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
-import { ScraperScrapingResult } from './interface';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
+import { fetchPostWithinPage } from '../helpers/fetch';
+import { sleep } from '../helpers/waiting';
+import { type Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
+import { BaseScraperWithBrowser, type LoginOptions, LoginResults } from './base-scraper-with-browser';
+import { type ScraperScrapingResult } from './interface';
 
 const BASE_URL = 'https://www.behatsdaa.org.il';
 const LOGIN_URL = `${BASE_URL}/login`;
@@ -68,9 +69,9 @@ class BehatsdaaScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials
         [LoginResults.InvalidPassword]: ['.custom-input-error-label'],
       },
       submitButtonSelector: async () => {
-        await this.page.waitForTimeout(1000);
+        await sleep(1000);
         debug('Trying to find submit button');
-        const [button] = await this.page.$x("//button[contains(., 'התחברות')]");
+        const button = await this.page.$('xpath=//button[contains(., "התחברות")]');
         if (button) {
           debug('Submit button found');
           await button.click();
@@ -100,9 +101,9 @@ class BehatsdaaScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials
     debug('Fetching data');
 
     const res = await fetchPostWithinPage<PurchaseHistoryResponse>(this.page, PURCHASE_HISTORY_URL, body, {
-      authorization: `Bearer ${token}`,
+      'authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
-      organizationid: '20',
+      'organizationid': '20',
     });
 
     debug('Data fetched');

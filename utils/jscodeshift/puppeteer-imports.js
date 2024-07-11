@@ -1,4 +1,3 @@
-import { dirname } from 'path';
 
 const transform = (file, api) => {
   const j = api.jscodeshift;
@@ -22,4 +21,4 @@ const transform = (file, api) => {
   return root.toSource();
 };
 
-export default transform;
+module.exports = transform;

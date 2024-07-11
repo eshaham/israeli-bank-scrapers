@@ -1,4 +1,4 @@
-Israeli Bank Scrapers - Get closer to your own data
+Israeli Bank Scrapers - Get closer to your own data!
 ========
 <img src="./logo.png" width="100" height="100" alt="Logo" align="left" />
 
@@ -79,7 +79,7 @@ import { CompanyTypes, createScraper } from 'israeli-bank-scrapers';
 })();
 ```
 
-Check the options declaration [here](./src/scrapers/base-scraper.ts) for available options.
+Check the options declaration [here](./src/scrapers/interface.ts#L29) for available options.
 
 Regarding credentials, you should provide the relevant credentials for the chosen company. See [this file](./src/definitions.ts) with list of credentials per company.
 
