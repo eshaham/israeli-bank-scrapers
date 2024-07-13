@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { Frame, Page, Request } from 'puppeteer';
+import { type Frame, type HTTPRequest, type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import {
   pageEvalAll, waitUntilElementDisappear, waitUntilElementFound, waitUntilIframeFound,
@@ -7,9 +7,11 @@ import {
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { waitForUrl } from '../helpers/navigation';
 import {
-  Transaction, TransactionsAccount, TransactionStatuses, TransactionTypes,
+  type Transaction,
+  TransactionStatuses, TransactionTypes,
+  type TransactionsAccount,
 } from '../transactions';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
 
 interface ScrapedTransaction {
@@ -47,7 +49,7 @@ const TRANSACTIONS_REQUEST_URLS = [
 ];
 const PENDING_TRANSACTIONS_PAGE = '/osh/legacy/legacy-Osh-p420';
 const PENDING_TRANSACTIONS_IFRAME = 'p420.aspx';
-const CHANGE_PASSWORD_URL = /https:\/\/www\.mizrahi-tefahot\.co\.il\/login\/\w+\/index\.html#\/change-pass/;
+const CHANGE_PASSWORD_URL = /https:\/\/www\.mizrahi-tefahot\.co\.il\/login\/index\.html#\/change-pass/;
 const DATE_FORMAT = 'DD/MM/YYYY';
 const MAX_ROWS_PER_REQUEST = 10000000000;
 
@@ -62,7 +64,6 @@ const pendingTrxIdentifierId = '#ctl00_ContentPlaceHolder2_panel1';
 const checkingAccountTabHebrewName = 'עובר ושב';
 const checkingAccountTabEnglishName = 'Checking Account';
 
-
 function createLoginFields(credentials: ScraperSpecificCredentials) {
   return [
     { selector: usernameSelector, value: credentials.username },
@@ -70,9 +71,18 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
   ];
 }
 
+async function isLoggedIn(options: { page?: Page | undefined } | undefined) {
+  if (!options?.page) {
+    return false;
+  }
+  const oshXPath = `//a//span[contains(., "${checkingAccountTabHebrewName}") or contains(., "${checkingAccountTabEnglishName}")]`;
+  const oshTab = await options.page.$$(`xpath${oshXPath}`);
+  return oshTab.length > 0;
+}
+
 function getPossibleLoginResults(page: Page): PossibleLoginResults {
   return {
-    [LoginResults.Success]: [AFTER_LOGIN_BASE_URL, async () => !!(await page.$x(`//a//span[contains(., "${checkingAccountTabHebrewName}") or contains(., "${checkingAccountTabEnglishName}")]`))],
+    [LoginResults.Success]: [AFTER_LOGIN_BASE_URL, isLoggedIn],
     [LoginResults.InvalidPassword]: [async () => !!(await page.$(invalidPasswordSelector))],
     [LoginResults.ChangePassword]: [CHANGE_PASSWORD_URL],
   };
@@ -84,7 +94,7 @@ function getStartMoment(optionsStartDate: Date) {
   return moment.max(defaultStartMoment, moment(startDate));
 }
 
-function createDataFromRequest(request: Request, optionsStartDate: Date) {
+function createDataFromRequest(request: HTTPRequest, optionsStartDate: Date) {
   const data = JSON.parse(request.postData() || '{}');
 
   data.inFromDate = getStartMoment(optionsStartDate).format(DATE_FORMAT);
@@ -94,13 +104,12 @@ function createDataFromRequest(request: Request, optionsStartDate: Date) {
   return data;
 }
 
-function createHeadersFromRequest(request: Request) {
+function createHeadersFromRequest(request: HTTPRequest) {
   return {
-    mizrahixsrftoken: request.headers().mizrahixsrftoken,
+    'mizrahixsrftoken': request.headers().mizrahixsrftoken,
     'Content-Type': request.headers()['content-type'],
   };
 }
-
 
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map((row) => {
@@ -189,7 +198,7 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
       return {
         success: false,
         errorType: ScraperErrorTypes.Generic,
-        errorMessage: e.message,
+        errorMessage: (e as Error).message,
       };
     }
   }
@@ -207,13 +216,14 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
   }
 
   private async fetchAccount() {
+    await this.page.waitForSelector(`a[href*="${OSH_PAGE}"]`);
     await this.page.$eval(`a[href*="${OSH_PAGE}"]`, (el) => (el as HTMLElement).click());
     await waitUntilElementFound(this.page, `a[href*="${TRANSACTIONS_PAGE}"]`);
     await this.page.$eval(`a[href*="${TRANSACTIONS_PAGE}"]`, (el) => (el as HTMLElement).click());
 
-    const accountNumberElement = (await this.page.$$('#AccountPicker b'))[0];
-    const accountNumberHandle = await accountNumberElement.getProperty('title');
-    const accountNumber = ((await accountNumberHandle.jsonValue()) as string);
+    const accountNumberElement = await this.page.$('#dropdownBasic b');
+    const accountNumberHandle = await accountNumberElement?.getProperty('title');
+    const accountNumber = ((await accountNumberHandle?.jsonValue()) as string);
 
     const response = await Promise.any(TRANSACTIONS_REQUEST_URLS.map(async (url) => {
       const request = await this.page.waitForRequest(url);
@@ -222,7 +232,6 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
       return fetchPostWithinPage<ScrapedTransactionsResult>(this.page, url, data, headers);
     }));
-
 
     if (!response || response.header.success === false) {
       throw new Error(`Error fetching transaction. Response message: ${response ? response.header.messages[0].text : ''}`);

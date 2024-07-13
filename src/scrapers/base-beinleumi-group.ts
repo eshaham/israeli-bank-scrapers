@@ -1,18 +1,21 @@
-import moment, { Moment } from 'moment';
-import { Page } from 'puppeteer';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
+import moment, { type Moment } from 'moment';
+import { type Page } from 'puppeteer';
+import { SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL } from '../constants';
 import {
-  fillInput,
   clickButton,
-  waitUntilElementFound,
-  pageEvalAll,
   elementPresentOnPage,
+  fillInput,
+  pageEvalAll,
+  waitUntilElementFound,
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
-import { SHEKEL_CURRENCY } from '../constants';
+import { sleep } from '../helpers/waiting';
 import {
-  TransactionsAccount, Transaction, TransactionStatuses, TransactionTypes,
+  TransactionStatuses, TransactionTypes,
+  type Transaction,
+  type TransactionsAccount,
 } from '../transactions';
+import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא נמצאו נתונים בנושא המבוקש';
@@ -22,7 +25,7 @@ const DESCRIPTION_COLUMN_CLASS_COMPLETED = 'reference wrap_normal';
 const DESCRIPTION_COLUMN_CLASS_PENDING = 'details wrap_normal';
 const REFERENCE_COLUMN_CLASS = 'details';
 const DEBIT_COLUMN_CLASS = 'debit';
-const CREDIT_COLUMN_CLASS = 'credit';
+const CREDIT_COLUMN_CLASS = 'credit'; 
 const ERROR_MESSAGE_CLASS = 'NO_DATA';
 const ACCOUNTS_NUMBER = 'div.fibi_account span.acc_num';
 const CLOSE_SEARCH_BY_DATES_BUTTON_CLASS = 'ui-datepicker-close';
@@ -46,7 +49,6 @@ interface ScrapedTransaction {
   status: TransactionStatuses;
 }
 
-
 export function getPossibleLoginResults(): PossibleLoginResults {
   const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [/FibiMenu\/Online/];
@@ -62,7 +64,8 @@ export function createLoginFields(credentials: ScraperSpecificCredentials) {
 }
 
 function getAmountData(amountStr: string) {
-  const amountStrCopy = amountStr.replace(',', '');
+  let amountStrCopy = amountStr.replace(SHEKEL_CURRENCY_SYMBOL, '');
+  amountStrCopy = amountStrCopy.replaceAll(',', '');
   return parseFloat(amountStrCopy);
 }
 
@@ -200,7 +203,7 @@ async function getAccountNumber(page: Page) {
     return (option as HTMLElement).innerText;
   });
 
-  return selectedSnifAccount.replace('/', '_');
+  return selectedSnifAccount.replace('/', '_').trim();
 }
 
 async function checkIfHasNextPage(page: Page) {
@@ -281,15 +284,34 @@ async function fetchAccountData(page: Page, startDate: Moment) {
   };
 }
 
-// TODO: Add support of multiple accounts
+async function getAccountIdsBySelector(page: Page): Promise<string[]> {
+  const accountsIds = await page.evaluate(() => {
+    const selectElement = document.getElementById('account_num_select');
+    const options = selectElement ? selectElement.querySelectorAll('option') : [];
+    if (!options) return [];
+    return Array.from(options, (option) => option.value);
+  });
+  return accountsIds;
+}
+
 async function fetchAccounts(page: Page, startDate: Moment) {
   const accounts: TransactionsAccount[] = [];
-  const accountData = await fetchAccountData(page, startDate);
-  accounts.push(accountData);
+  const accountsIds = await getAccountIdsBySelector(page);
+  if (accountsIds.length <= 1) {
+    const accountData = await fetchAccountData(page, startDate);
+    accounts.push(accountData);
+  } else {
+    for (const accountId of accountsIds) {
+      await page.select('#account_num_select', accountId);
+      await waitUntilElementFound(page, '#account_num_select', true);
+      const accountData = await fetchAccountData(page, startDate);
+      accounts.push(accountData);
+    }
+  }
   return accounts;
 }
 
-type ScraperSpecificCredentials = {username: string, password: string};
+type ScraperSpecificCredentials = { username: string, password: string };
 
 class BeinleumiGroupBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   BASE_URL = '';
@@ -308,7 +330,7 @@ class BeinleumiGroupBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCr
       // HACK: For some reason, though the login button (#continueBtn) is present and visible, the click action does not perform.
       // Adding this delay fixes the issue.
       preAction: async () => {
-        await this.page.waitForTimeout(1000);
+        await sleep(1000);
       },
     };
   }

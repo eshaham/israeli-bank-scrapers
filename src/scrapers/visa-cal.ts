@@ -1,6 +1,5 @@
 import moment from 'moment';
-import { Frame, Page } from 'puppeteer';
-
+import { type Frame, type Page } from 'puppeteer';
 import { getDebug } from '../helpers/debug';
 import {
   clickButton, elementPresentOnPage, pageEval, waitUntilElementFound,
@@ -11,13 +10,13 @@ import { getFromSessionStorage } from '../helpers/storage';
 import { filterOldTransactions } from '../helpers/transactions';
 import { waitUntil } from '../helpers/waiting';
 import {
-  Transaction,
   TransactionStatuses,
   TransactionTypes,
-  TransactionsAccount,
+  type Transaction,
+  type TransactionsAccount,
 } from '../transactions';
-import { BaseScraperWithBrowser, LoginOptions, LoginResults } from './base-scraper-with-browser';
-import { ScraperScrapingResult } from './interface';
+import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
+import { type ScraperScrapingResult } from './interface';
 
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_REQUEST_ENDPOINT = 'https://api.cal-online.co.il/Transactions/api/transactionsDetails/getCardTransactionsDetails';
@@ -27,7 +26,7 @@ const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו
 
 const debug = getDebug('visa-cal');
 
-enum trnTypeCode {
+enum TrnTypeCode {
   regular = '5',
   credit = '6',
   installments = '8',
@@ -73,7 +72,7 @@ interface ScrapedTransaction {
   trnNumaretor: number;
   trnPurchaseDate: string;
   trnType: string;
-  trnTypeCode: trnTypeCode;
+  trnTypeCode: TrnTypeCode;
   walletProviderCode: 0;
   walletProviderDesc: '';
   earlyPaymentInd: boolean;
@@ -87,7 +86,7 @@ interface ScrapedPendingTransaction {
   trnAmt: number;
   tpaApprovalAmount: unknown;
   trnCurrencySymbol: CurrencySymbol;
-  trnTypeCode: trnTypeCode;
+  trnTypeCode: TrnTypeCode;
   trnType: string;
   branchCodeDesc: string;
   transCardPresentInd: boolean;
@@ -106,7 +105,7 @@ interface InitResponse {
     }[];
   };
 }
-type CurrencySymbol = '₪' | string;
+type CurrencySymbol = string;
 interface CardTransactionDetailsError {
   title: string;
   statusCode: number;
@@ -174,7 +173,7 @@ async function getLoginFrame(page: Page) {
   await waitUntil(() => {
     frame = page
       .frames()
-      .find((f) => f.url().includes('calconnect')) || null;
+      .find((f) => f.url().includes('connect')) || null;
     return Promise.resolve(!!frame);
   }, 'wait for iframe with login form', 10000, 1000);
 
@@ -195,6 +194,12 @@ async function hasInvalidPasswordError(page: Page) {
   return errorMessage === InvalidPasswordMessage;
 }
 
+async function hasChangePasswordForm(page: Page) {
+  const frame = await getLoginFrame(page);
+  const errorFound = await elementPresentOnPage(frame, '.change-password-subtitle');
+  return errorFound;
+}
+
 function getPossibleLoginResults() {
   debug('return possible login results');
   const urls: LoginOptions['possibleResults'] = {
@@ -207,7 +212,13 @@ function getPossibleLoginResults() {
       return hasInvalidPasswordError(page);
     }],
     // [LoginResults.AccountBlocked]: [], // TODO add when reaching this scenario
-    // [LoginResults.ChangePassword]: [], // TODO add when reaching this scenario
+    [LoginResults.ChangePassword]: [async (options?: { page?: Page }) => {
+      const page = options?.page;
+      if (!page) {
+        return false;
+      }
+      return hasChangePasswordForm(page);
+    }],
   };
   return urls;
 }
@@ -249,14 +260,14 @@ function convertParsedDataToTransactions(pendingData: CardPendingTransactionDeta
     let chargedAmount = isPending(transaction) ? transaction.trnAmt * (-1) : transaction.amtBeforeConvAndIndex * (-1);
     let originalAmount = transaction.trnAmt * (-1);
 
-    if (transaction.trnTypeCode === trnTypeCode.credit) {
+    if (transaction.trnTypeCode === TrnTypeCode.credit) {
       chargedAmount = isPending(transaction) ? transaction.trnAmt : transaction.amtBeforeConvAndIndex;
       originalAmount = transaction.trnAmt;
     }
 
     const result: Transaction = {
       identifier: !isPending(transaction) ? transaction.trnIntId : undefined,
-      type: [trnTypeCode.regular, trnTypeCode.standingOrder].includes(transaction.trnTypeCode) ?
+      type: [TrnTypeCode.regular, TrnTypeCode.standingOrder].includes(transaction.trnTypeCode) ?
         TransactionTypes.Normal :
         TransactionTypes.Installments,
       status: isPending(transaction) ? TransactionStatuses.Pending : TransactionStatuses.Completed,
@@ -358,6 +369,8 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         } catch (e) {
           const currentUrl = await getCurrentUrl(this.page);
           if (currentUrl.endsWith('dashboard')) return;
+          const requiresChangePassword = await hasChangePasswordForm(this.page);
+          if (requiresChangePassword) return;
           throw e;
         }
       },

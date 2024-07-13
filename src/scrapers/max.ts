@@ -1,20 +1,25 @@
 import buildUrl from 'build-url';
-import moment, { Moment } from 'moment';
-import { Page, LoadEvent } from 'puppeteer';
-import { fetchGetWithinPage } from '../helpers/fetch';
-import { BaseScraperWithBrowser, LoginResults, PossibleLoginResults } from './base-scraper-with-browser';
-import { waitForRedirect } from '../helpers/navigation';
-import { waitUntilElementFound, elementPresentOnPage, clickButton } from '../helpers/elements-interactions';
+import moment, { type Moment } from 'moment';
+import { type Page } from 'puppeteer';
+import { DOLLAR_CURRENCY, EURO_CURRENCY, SHEKEL_CURRENCY } from '../constants';
 import getAllMonthMoments from '../helpers/dates';
-import { fixInstallments, sortTransactionsByDate, filterOldTransactions } from '../helpers/transactions';
-import { Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
 import { getDebug } from '../helpers/debug';
-import { ScraperOptions } from './interface';
-import { SHEKEL_CURRENCY, DOLLAR_CURRENCY, EURO_CURRENCY } from '../constants';
+import { clickButton, elementPresentOnPage, waitUntilElementFound } from '../helpers/elements-interactions';
+import { fetchGetWithinPage } from '../helpers/fetch';
+import { waitForRedirect } from '../helpers/navigation';
+import { filterOldTransactions, fixInstallments, sortTransactionsByDate } from '../helpers/transactions';
+import { TransactionStatuses, TransactionTypes, type Transaction } from '../transactions';
+import {
+  BaseScraperWithBrowser,
+  LoginResults,
+  type LoginOptions,
+  type PossibleLoginResults,
+} from './base-scraper-with-browser';
+import { type ScraperOptions } from './interface';
 
 const debug = getDebug('max');
 
-interface ScrapedTransaction {
+export interface ScrapedTransaction {
   shortCardNumber: string;
   paymentDate?: string;
   purchaseDate: string;
@@ -23,43 +28,48 @@ interface ScrapedTransaction {
   originalCurrency: string;
   originalAmount: number;
   planName: string;
+  planTypeId: number;
   comments: string;
   merchantName: string;
   categoryId: number;
+  fundsTransferComment?: string;
+  fundsTransferReceiverOrTransfer?: string;
   dealData?: {
     arn: string;
   };
 }
 
-const BASE_ACTIONS_URL = 'https://online.max.co.il';
 const BASE_API_ACTIONS_URL = 'https://onlinelcapi.max.co.il';
 const BASE_WELCOME_URL = 'https://www.max.co.il';
 
 const LOGIN_URL = `${BASE_WELCOME_URL}/homepage/welcome`;
-const PASSWORD_EXPIRED_URL = `${BASE_ACTIONS_URL}/Anonymous/Login/PasswordExpired.aspx`;
+const PASSWORD_EXPIRED_URL = `${BASE_WELCOME_URL}/renew-password`;
 const SUCCESS_URL = `${BASE_WELCOME_URL}/homepage/personal`;
 
-const NORMAL_TYPE_NAME = 'רגילה';
-const ATM_TYPE_NAME = 'חיוב עסקות מיידי';
-const INTERNET_SHOPPING_TYPE_NAME = 'אינטרנט/חו"ל';
-const INSTALLMENTS_TYPE_NAME = 'תשלומים';
-const MONTHLY_CHARGE_TYPE_NAME = 'חיוב חודשי';
-const ONE_MONTH_POSTPONED_TYPE_NAME = 'דחוי חודש';
-const MONTHLY_POSTPONED_TYPE_NAME = 'דחוי לחיוב החודשי';
-const MONTHLY_PAYMENT_TYPE_NAME = 'תשלום חודשי';
-const FUTURE_PURCHASE_FINANCING = 'מימון לרכישה עתידית';
-const MONTHLY_POSTPONED_INSTALLMENTS_TYPE_NAME = 'דחוי חודש תשלומים';
-const THIRTY_DAYS_PLUS_TYPE_NAME = 'עסקת 30 פלוס';
-const TWO_MONTHS_POSTPONED_TYPE_NAME = 'דחוי חודשיים';
-const TWO_MONTHS_POSTPONED_TYPE_NAME2 = 'דחוי 2 ח\' תשלומים';
-const MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME = 'חודשי + ריבית';
-const CREDIT_TYPE_NAME = 'קרדיט';
-const CREDIT_OUTSIDE_THE_LIMIT = 'קרדיט-מחוץ למסגרת';
-const ACCUMULATING_BASKET = 'סל מצטבר';
-const POSTPONED_TRANSACTION_INSTALLMENTS = 'פריסת העסקה הדחויה';
-const REPLACEMENT_CARD = 'כרטיס חליפי';
-const EARLY_REPAYMENT = 'פרעון מוקדם';
-const MONTHLY_CARD_FEE = 'דמי כרטיס';
+enum MaxPlanName {
+  Normal = 'רגילה',
+  ImmediateCharge = 'חיוב עסקות מיידי',
+  InternetShopping = 'אינטרנט/חו"ל',
+  Installments = 'תשלומים',
+  MonthlyCharge = 'חיוב חודשי',
+  OneMonthPostponed = 'דחוי חודש',
+  MonthlyPostponed = 'דחוי לחיוב החודשי',
+  MonthlyPayment = 'תשלום חודשי',
+  FuturePurchaseFinancing = 'מימון לרכישה עתידית',
+  MonthlyPostponedInstallments = 'דחוי חודש תשלומים',
+  ThirtyDaysPlus = 'עסקת 30 פלוס',
+  TwoMonthsPostponed = 'דחוי חודשיים',
+  TwoMonthsPostponed2 = 'דחוי 2 ח\' תשלומים',
+  MonthlyChargePlusInterest = 'חודשי + ריבית',
+  Credit = 'קרדיט',
+  CreditOutsideTheLimit = 'קרדיט-מחוץ למסגרת',
+  AccumulatingBasket = 'סל מצטבר',
+  PostponedTransactionInstallments = 'פריסת העסקה הדחויה',
+  ReplacementCard = 'כרטיס חליפי',
+  EarlyRepayment = 'פרעון מוקדם',
+  MonthlyCardFee = 'דמי כרטיס',
+  CurrencyPocket = 'חיוב ארנק מטח',
+}
 
 const INVALID_DETAILS_SELECTOR = '#popupWrongDetails';
 const LOGIN_ERROR_SELECTOR = '#popupCardHoldersLoginError';
@@ -102,38 +112,47 @@ async function loadCategories(page: Page) {
   const res = await fetchGetWithinPage<FetchCategoryResult>(page, `${BASE_API_ACTIONS_URL}/api/contents/getCategories`);
   if (res && Array.isArray(res.result)) {
     debug(`${res.result.length} categories loaded`);
-      res.result?.forEach(({ id, name }) => categories.set(id, name));
+    res.result?.forEach(({ id, name }) => categories.set(id, name));
   }
 }
 
-function getTransactionType(txnTypeStr: string) {
-  const cleanedUpTxnTypeStr = txnTypeStr.replace('\t', ' ').trim();
+function getTransactionType(planName: string, planTypeId: number) {
+  const cleanedUpTxnTypeStr = planName.replace('\t', ' ').trim() as MaxPlanName;
   switch (cleanedUpTxnTypeStr) {
-    case ATM_TYPE_NAME:
-    case NORMAL_TYPE_NAME:
-    case MONTHLY_CHARGE_TYPE_NAME:
-    case ONE_MONTH_POSTPONED_TYPE_NAME:
-    case MONTHLY_POSTPONED_TYPE_NAME:
-    case FUTURE_PURCHASE_FINANCING:
-    case MONTHLY_PAYMENT_TYPE_NAME:
-    case MONTHLY_POSTPONED_INSTALLMENTS_TYPE_NAME:
-    case THIRTY_DAYS_PLUS_TYPE_NAME:
-    case TWO_MONTHS_POSTPONED_TYPE_NAME:
-    case TWO_MONTHS_POSTPONED_TYPE_NAME2:
-    case ACCUMULATING_BASKET:
-    case INTERNET_SHOPPING_TYPE_NAME:
-    case MONTHLY_CHARGE_PLUS_INTEREST_TYPE_NAME:
-    case POSTPONED_TRANSACTION_INSTALLMENTS:
-    case REPLACEMENT_CARD:
-    case EARLY_REPAYMENT:
-    case MONTHLY_CARD_FEE:
+    case MaxPlanName.ImmediateCharge:
+    case MaxPlanName.Normal:
+    case MaxPlanName.MonthlyCharge:
+    case MaxPlanName.OneMonthPostponed:
+    case MaxPlanName.MonthlyPostponed:
+    case MaxPlanName.FuturePurchaseFinancing:
+    case MaxPlanName.MonthlyPayment:
+    case MaxPlanName.MonthlyPostponedInstallments:
+    case MaxPlanName.ThirtyDaysPlus:
+    case MaxPlanName.TwoMonthsPostponed:
+    case MaxPlanName.TwoMonthsPostponed2:
+    case MaxPlanName.AccumulatingBasket:
+    case MaxPlanName.InternetShopping:
+    case MaxPlanName.MonthlyChargePlusInterest:
+    case MaxPlanName.PostponedTransactionInstallments:
+    case MaxPlanName.ReplacementCard:
+    case MaxPlanName.EarlyRepayment:
+    case MaxPlanName.MonthlyCardFee:
+    case MaxPlanName.CurrencyPocket:
       return TransactionTypes.Normal;
-    case INSTALLMENTS_TYPE_NAME:
-    case CREDIT_TYPE_NAME:
-    case CREDIT_OUTSIDE_THE_LIMIT:
+    case MaxPlanName.Installments:
+    case MaxPlanName.Credit:
+    case MaxPlanName.CreditOutsideTheLimit:
       return TransactionTypes.Installments;
     default:
-      throw new Error(`Unknown transaction type ${cleanedUpTxnTypeStr}`);
+      switch (planTypeId) {
+        case 2:
+        case 3:
+          return TransactionTypes.Installments;
+        case 5:
+          return TransactionTypes.Normal;
+        default:
+          throw new Error(`Unknown transaction type ${cleanedUpTxnTypeStr as string}`);
+      }
   }
 }
 
@@ -165,6 +184,17 @@ function getChargedCurrency(currencyId: number | null) {
   }
 }
 
+export function getMemo({
+  comments, fundsTransferReceiverOrTransfer, fundsTransferComment,
+}: Pick<ScrapedTransaction, 'comments' | 'fundsTransferReceiverOrTransfer' | 'fundsTransferComment'>) {
+  if (fundsTransferReceiverOrTransfer) {
+    const memo = comments ? `${comments} ${fundsTransferReceiverOrTransfer}` : fundsTransferReceiverOrTransfer;
+    return fundsTransferComment ? `${memo}: ${fundsTransferComment}` : memo;
+  }
+
+  return comments;
+}
+
 function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
   const isPending = rawTransaction.paymentDate === null;
   const processedDate = moment(isPending ?
@@ -178,7 +208,7 @@ function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
     rawTransaction.dealData?.arn;
 
   return {
-    type: getTransactionType(rawTransaction.planName),
+    type: getTransactionType(rawTransaction.planName, rawTransaction.planTypeId),
     date: moment(rawTransaction.purchaseDate).toISOString(),
     processedDate,
     originalAmount: -rawTransaction.originalAmount,
@@ -186,14 +216,14 @@ function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
     chargedAmount: -rawTransaction.actualPaymentAmount,
     chargedCurrency: getChargedCurrency(rawTransaction.paymentCurrency),
     description: rawTransaction.merchantName.trim(),
-    memo: rawTransaction.comments,
+    memo: getMemo(rawTransaction),
     category: categories.get(rawTransaction?.categoryId),
     installments,
     identifier,
     status,
   };
 }
-interface ScrapedTransactionsResult{
+interface ScrapedTransactionsResult {
   result?: {
     transactions: ScrapedTransaction[];
   };
@@ -290,10 +320,10 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
   ];
 }
 
-type ScraperSpecificCredentials = {username: string, password: string};
+type ScraperSpecificCredentials = { username: string, password: string };
 
 class MaxScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
-  getLoginOptions(credentials: ScraperSpecificCredentials) {
+  getLoginOptions(credentials: ScraperSpecificCredentials): LoginOptions {
     return {
       loginUrl: LOGIN_URL,
       fields: createLoginFields(credentials),
@@ -312,7 +342,7 @@ class MaxScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
       },
       postAction: async () => redirectOrDialog(this.page),
       possibleResults: getPossibleLoginResults(this.page),
-      waitUntil: 'domcontentloaded' as LoadEvent,
+      waitUntil: 'domcontentloaded',
     };
   }
 

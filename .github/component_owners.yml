@@ -1,0 +1,50 @@
+# https://github.com/dyladan/component-owners
+
+components:
+  src/scrapers/base-beinleumi-group.ts:
+  # Beinleumi and Massad are using this base scraper
+    - nissant
+  src/scrapers/base-isracard-amex.ts:
+  # Isracard and Amex are using this base scraper
+    - baruchiro
+    - galbarm
+    - daniel-hauser
+
+  src/scrapers/amex.ts:
+    - daniel-hauser
+  src/scrapers/behatsdaa.ts:
+    - daniel-hauser
+  src/scrapers/beinleumi.ts:
+    - nissant
+  # src/scrapers/beyahad-bishvilha.ts:
+  src/scrapers/discount.ts:
+    - galbarm
+  src/scrapers/hapoalim.ts:
+    - galbarm
+    - daniel-hauser
+  src/scrapers/isracard.ts:
+    - baruchiro
+    - galbarm
+    - daniel-hauser
+  src/scrapers/leumi.ts:
+    - dimdimi4
+  # src/scrapers/massad.ts:
+  src/scrapers/max.ts:
+    - baruchiro
+    - galbarm
+    - daniel-hauser
+    - dimdimi4
+  src/scrapers/marcentile.ts:
+    - kfirarad
+    - EzzatQ
+  src/scrapers/mizrahi.ts:
+    - baruchiro
+  # src/scrapers/one-zero.ts:
+  # src/scrapers/otzar-hahayal.ts:
+  # src/scrapers/union-bank.ts:
+  src/scrapers/visa-cal.ts:
+    - baruchiro
+    - galbarm
+    - daniel-hauser
+  src/scrapers/yahav.ts:
+    - gczobel
