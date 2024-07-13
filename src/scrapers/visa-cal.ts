@@ -231,9 +231,10 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
   ];
 }
 
-function convertParsedDataToTransactions(pendingData: CardPendingTransactionDetails, data: CardTransactionDetails[]): Transaction[] {
-  const pendingTransactions = pendingData.result === null ? [] :
-    pendingData.result.cardsList.flatMap((card) => card.authDetalisList);
+function convertParsedDataToTransactions(data: CardTransactionDetails[], pendingData?: CardPendingTransactionDetails | null): Transaction[] {
+  const pendingTransactions = pendingData?.result ?
+    pendingData.result.cardsList.flatMap((card) => card.authDetalisList) :
+    [];
 
   const bankAccounts = data
     .flatMap((monthData) => monthData.result.bankAccounts);
@@ -397,7 +398,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         const allMonthsData: (CardTransactionDetails)[] = [];
 
         debug(`fetch pending transactions for card ${card.cardUniqueId}`);
-        const pendingData = await fetchPostWithinPage<CardPendingTransactionDetails | CardTransactionDetailsError>(
+        let pendingData = await fetchPostWithinPage<CardPendingTransactionDetails | CardTransactionDetailsError>(
           this.page, PENDING_TRANSACTIONS_REQUEST_ENDPOINT,
           { cardUniqueIDArray: [card.cardUniqueId] },
           {
@@ -406,12 +407,6 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
             'Content-Type': 'application/json',
           },
         );
-
-        if (pendingData?.statusCode !== 1 && pendingData?.statusCode !== 96) {
-          debug(`failed to fetch pending transactions for card ${card.last4Digits}. Message: ${pendingData?.title || ''}`);
-        } else if (!isCardPendingTransactionDetails(pendingData)) {
-          debug('pendingData is not of type CardTransactionDetails');
-        }
 
         debug(`fetch completed transactions for card ${card.cardUniqueId}`);
         for (let i = 0; i <= months; i += 1) {
@@ -435,7 +430,15 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
           allMonthsData.push(monthData);
         }
 
-        const transactions = convertParsedDataToTransactions(pendingData, allMonthsData);
+        if (pendingData?.statusCode !== 1 && pendingData?.statusCode !== 96) {
+          debug(`failed to fetch pending transactions for card ${card.last4Digits}. Message: ${pendingData?.title || ''}`);
+          pendingData = null;
+        } else if (!isCardPendingTransactionDetails(pendingData)) {
+          debug('pendingData is not of type CardTransactionDetails');
+          pendingData = null;
+        }
+
+        const transactions = convertParsedDataToTransactions(allMonthsData, pendingData);
 
         debug('filer out old transactions');
         const txns = (this.options.outputData?.enableTransactionsFilterByDate ?? true) ?
