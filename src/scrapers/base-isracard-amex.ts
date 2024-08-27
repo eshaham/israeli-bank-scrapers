@@ -188,7 +188,7 @@ function convertTransactions(txns: ScrapedTransaction[], processedDate: string):
       date: txnMoment.toISOString(),
       processedDate: currentProcessedDate,
       originalAmount: isOutbound ? -txn.dealSumOutbound : -txn.dealSum,
-      originalCurrency: convertCurrency(txn.currentPaymentCurrency),
+      originalCurrency: convertCurrency(txn.currentPaymentCurrency ?? txn.currencyId),
       chargedAmount: isOutbound ? -txn.paymentSumOutbound : -txn.paymentSum,
       chargedCurrency: convertCurrency(txn.currencyId),
       description: isOutbound ? txn.fullSupplierNameOutbound : txn.fullSupplierNameHeb,
