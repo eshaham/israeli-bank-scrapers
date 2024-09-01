@@ -23,7 +23,7 @@ const INVALID_DETAILS_SELECTOR = '.ui-dialog-buttons';
 const CHANGE_PASSWORD_OLD_PASS = 'input#ef_req_parameter_old_credential';
 const BASE_WELCOME_URL = `${BASE_URL}main/home`;
 
-const ACCOUNT_ID_SELECTOR = '.dropdown-dir .selected-item-top';
+const ACCOUNT_ID_SELECTOR = 'span.portfolio-value[ng-if="mainController.data.portfolioList.length === 1"]';
 const ACCOUNT_DETAILS_SELECTOR = '.account-details';
 const DATE_FORMAT = 'DD/MM/YYYY';
 
@@ -60,10 +60,9 @@ function getPossibleLoginResults(page: Page): PossibleLoginResults {
 }
 
 async function getAccountID(page: Page) {
-  const selectedSnifAccount = await page.$eval(`${ACCOUNT_ID_SELECTOR}`, (option) => {
-    return (option as HTMLElement).innerText;
+  const selectedSnifAccount = await page.$eval(ACCOUNT_ID_SELECTOR, (e: Element) => {
+    return e.textContent ?? '';
   });
-
   return selectedSnifAccount;
 }
 
