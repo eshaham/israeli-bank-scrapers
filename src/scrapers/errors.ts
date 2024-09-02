@@ -5,7 +5,7 @@ export enum ScraperErrorTypes {
   Timeout = 'TIMEOUT',
   AccountBlocked = 'ACCOUNT_BLOCKED',
   Generic = 'GENERIC',
-  General = 'GENERAL_ERROR'
+  General = 'GENERAL_ERROR',
 }
 
 export type ErrorResult = {

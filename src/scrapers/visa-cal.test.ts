@@ -1,9 +1,11 @@
-import VisaCalScraper from './visa-cal';
-import {
-  maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
-} from '../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
+import {
+  exportTransactions,
+  extendAsyncTimeout, getTestsConfig,
+  maybeTestCompanyAPI,
+} from '../tests/tests-utils';
 import { LoginResults } from './base-scraper-with-browser';
+import VisaCalScraper from './visa-cal';
 
 const COMPANY_ID = 'visaCal'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
