@@ -44,6 +44,7 @@ interface ScrapedTransaction {
   moreInfo?: string;
   dealSumOutbound: boolean;
   currencyId: string;
+  currentPaymentCurrency: string;
   dealSum: number;
   fullPaymentDate?: string;
   fullPurchaseDate?: string;
@@ -190,8 +191,9 @@ function convertTransactions(txns: ScrapedTransaction[], processedDate: string):
       date: txnMoment.toISOString(),
       processedDate: currentProcessedDate,
       originalAmount: isOutbound ? -txn.dealSumOutbound : -txn.dealSum,
-      originalCurrency: convertCurrency(txn.currencyId),
+      originalCurrency: convertCurrency(txn.currentPaymentCurrency ?? txn.currencyId),
       chargedAmount: isOutbound ? -txn.paymentSumOutbound : -txn.paymentSum,
+      chargedCurrency: convertCurrency(txn.currencyId),
       description: isOutbound ? txn.fullSupplierNameOutbound : txn.fullSupplierNameHeb,
       memo: txn.moreInfo || '',
       installments: getInstallmentsInfo(txn) || undefined,
