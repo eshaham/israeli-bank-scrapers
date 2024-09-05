@@ -59,11 +59,18 @@ function getPossibleLoginResults(page: Page): PossibleLoginResults {
   return urls;
 }
 
-async function getAccountID(page: Page) {
-  const selectedSnifAccount = await page.$eval(ACCOUNT_ID_SELECTOR, (e: Element) => {
-    return e.textContent ?? '';
-  });
-  return selectedSnifAccount;
+async function getAccountID(page: Page): Promise<string> {
+  try {
+    // Attempt to extract the account ID using the selector
+    const selectedSnifAccount = await page.$eval(ACCOUNT_ID_SELECTOR, (element: Element) => {
+      return element.textContent as string;
+    });
+    return selectedSnifAccount;
+  } catch (error) {
+    // Handle the case where the selector is outdated or the element is not found
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to retrieve account ID. Possible outdated selector. ${errorMessage}`);
+  }
 }
 
 function getAmountData(amountStr: string) {
