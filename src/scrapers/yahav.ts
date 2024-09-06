@@ -23,7 +23,7 @@ const INVALID_DETAILS_SELECTOR = '.ui-dialog-buttons';
 const CHANGE_PASSWORD_OLD_PASS = 'input#ef_req_parameter_old_credential';
 const BASE_WELCOME_URL = `${BASE_URL}main/home`;
 
-const ACCOUNT_ID_SELECTOR = '.dropdown-dir .selected-item-top';
+const ACCOUNT_ID_SELECTOR = 'span.portfolio-value[ng-if="mainController.data.portfolioList.length === 1"]';
 const ACCOUNT_DETAILS_SELECTOR = '.account-details';
 const DATE_FORMAT = 'DD/MM/YYYY';
 
@@ -59,12 +59,17 @@ function getPossibleLoginResults(page: Page): PossibleLoginResults {
   return urls;
 }
 
-async function getAccountID(page: Page) {
-  const selectedSnifAccount = await page.$eval(`${ACCOUNT_ID_SELECTOR}`, (option) => {
-    return (option as HTMLElement).innerText;
-  });
-
-  return selectedSnifAccount;
+async function getAccountID(page: Page): Promise<string> {
+  try {
+    const selectedSnifAccount = await page.$eval(ACCOUNT_ID_SELECTOR, (element: Element) => {
+      return element.textContent as string;
+    });
+    
+    return selectedSnifAccount;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to retrieve account ID. Possible outdated selector '${ACCOUNT_ID_SELECTOR}: ${errorMessage}`);
+  }
 }
 
 function getAmountData(amountStr: string) {
