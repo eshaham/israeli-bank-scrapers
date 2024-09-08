@@ -253,6 +253,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
         const hasInstallments = movement.transaction?.enrichment?.recurrences?.some((x) => x.isRecurrent);
         const modifier = movement.creditDebit === 'DEBIT' ? -1 : 1;
         return ({
+          identifier: movement.movementId,
           date: movement.valueDate,
           chargedAmount: (+movement.movementAmount) * modifier,
           chargedCurrency: movement.movementCurrency,
