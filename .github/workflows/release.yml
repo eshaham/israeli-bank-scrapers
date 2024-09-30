@@ -10,11 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
       - name: Setup Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v4
         with:
-          node-version: 18.19.x
+          node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org/
       - name: prepare default version
         run: npm run prepare:default
