@@ -1,4 +1,4 @@
-import { type Browser, type Page } from 'puppeteer';
+import { type BrowserContext, type Browser, type Page } from 'puppeteer';
 import { type CompanyTypes, type ScraperProgressTypes } from '../definitions';
 import { type TransactionsAccount } from '../transactions';
 import { type ErrorResult, type ScraperErrorTypes } from './errors';
@@ -26,7 +26,7 @@ export interface FutureDebit {
   bankAccountNumber?: string;
 }
 
-export interface ScraperOptions {
+export type ScraperOptions = ScraperBrowserOptions & {
   /**
    * The company you want to scrape
    */
@@ -43,59 +43,14 @@ export interface ScraperOptions {
   startDate: Date;
 
   /**
-   * shows the browser while scraping, good for debugging (default false)
-   */
-  showBrowser?: boolean;
-
-  /**
    * scrape transactions to be processed X months in the future
    */
   futureMonthsToScrape?: number;
 
   /**
-   * option from init puppeteer browser instance outside the libary scope. you can get
-   * browser diretly from puppeteer via `puppeteer.launch()`
-   */
-  browser?: any;
-
-  /**
-   * provide a patch to local chromium to be used by puppeteer. Relevant when using
-   * `israeli-bank-scrapers-core` library
-   */
-  executablePath?: string;
-
-  /**
    * if set to true, all installment transactions will be combine into the first one
    */
   combineInstallments?: boolean;
-
-  /**
-   * additional arguments to pass to the browser instance. The list of flags can be found in
-   *
-   * https://developer.mozilla.org/en-US/docs/Mozilla/Command_Line_Options
-   * https://peter.sh/experiments/chromium-command-line-switches/
-   */
-  args?: string[];
-
-  /**
-   * Maximum navigation time in milliseconds, pass 0 to disable timeout.
-   * @default 30000
-   */
-  timeout?: number | undefined;
-
-  /**
-   * adjust the browser instance before it is being used
-   *
-   * @param browser
-   */
-  prepareBrowser?: (browser: Browser) => Promise<void>;
-
-  /**
-   * adjust the page instance before it is being used.
-   *
-   * @param page
-   */
-  preparePage?: (page: Page) => Promise<void>;
 
   /**
    * if set, store a screenshot if failed to scrape. Used for debug purposes
@@ -117,7 +72,59 @@ export interface ScraperOptions {
    * Please note: It will take more time to finish the process.
    */
   additionalTransactionInformation?: boolean;
-}
+};
+
+export type ScraperBrowserOptions = {
+  /**
+   * adjust the page instance before it is being used.
+   *
+   * @param page
+   */
+  preparePage?: (page: Page) => Promise<void>; } & ({
+  /**
+   * option from init puppeteer browser instance outside the library scope. you can get
+   * browser directly from puppeteer via `puppeteer.launch()`
+   */
+  browser: Browser;
+} | {
+  /**
+   * 
+   */
+  browserContext: BrowserContext;
+} |  {
+  /**
+   * shows the browser while scraping, good for debugging (default false)
+   */
+  showBrowser?: boolean;
+
+
+  /**
+   * provide a patch to local chromium to be used by puppeteer. Relevant when using
+   * `israeli-bank-scrapers-core` library
+   */
+  executablePath?: string;
+
+  /**
+   * additional arguments to pass to the browser instance. The list of flags can be found in
+   *
+   * https://developer.mozilla.org/en-US/docs/Mozilla/Command_Line_Options
+   * https://peter.sh/experiments/chromium-command-line-switches/
+   */
+  args?: string[];
+
+  /**
+   * Maximum navigation time in milliseconds, pass 0 to disable timeout.
+   * @default 30000
+   */
+  timeout?: number | undefined;
+
+  /**
+   * adjust the browser instance before it is being used
+   *
+   * @param browser
+   */
+  prepareBrowser?: (browser: Browser) => Promise<void>;
+});
 
 export interface OutputDataOptions {
   /**
