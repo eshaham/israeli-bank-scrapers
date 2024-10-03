@@ -30,10 +30,10 @@ const DATE_FORMAT = 'DD/MM/YYYY';
 
 const debug = getDebug('base-isracard-amex');
 
-interface ExtendedScraperOptions extends ScraperOptions {
+type CompanyServiceOptions = {
   servicesUrl: string;
   companyCode: string;
-}
+};
 
 type ScrapedAccountsWithIndex = Record<string, TransactionsAccount & { index: number }>;
 
@@ -202,9 +202,9 @@ function convertTransactions(txns: ScrapedTransaction[], processedDate: string):
   });
 }
 
-async function fetchTransactions(page: Page, options: ExtendedScraperOptions, startMoment: Moment, monthMoment: Moment): Promise<ScrapedAccountsWithIndex> {
-  const accounts = await fetchAccounts(page, options.servicesUrl, monthMoment);
-  const dataUrl = getTransactionsUrl(options.servicesUrl, monthMoment);
+async function fetchTransactions(page: Page, options: ScraperOptions, companyServiceOptions:CompanyServiceOptions, startMoment: Moment, monthMoment: Moment): Promise<ScrapedAccountsWithIndex> {
+  const accounts = await fetchAccounts(page, companyServiceOptions.servicesUrl, monthMoment);
+  const dataUrl = getTransactionsUrl(companyServiceOptions.servicesUrl, monthMoment);
   const dataResult = await fetchGetWithinPage<ScrapedTransactionData>(page, dataUrl);
   if (dataResult && _.get(dataResult, 'Header.Status') === '1' && dataResult.CardsTransactionsListBean) {
     const accountTxns: ScrapedAccountsWithIndex = {};
@@ -253,7 +253,7 @@ function getTransactionExtraDetails(servicesUrl: string, month: Moment, accountI
     },
   });
 }
-async function getExtraScrapTransaction(page: Page, options: ExtendedScraperOptions, month: Moment, accountIndex: number, transaction: Transaction): Promise<Transaction> {
+async function getExtraScrapTransaction(page: Page, options:CompanyServiceOptions, month: Moment, accountIndex: number, transaction: Transaction): Promise<Transaction> {
   const dataUrl = getTransactionExtraDetails(options.servicesUrl, month, accountIndex, transaction);
   const data = await fetchGetWithinPage<ScrapedTransactionData>(page, dataUrl);
   
@@ -268,13 +268,13 @@ async function getExtraScrapTransaction(page: Page, options: ExtendedScraperOpti
   };
 }
 
-function getExtraScrapTransactions(accountWithIndex: TransactionsAccount & { index: number }, page: Page, options: ExtendedScraperOptions, month: moment.Moment): Promise<Transaction[]> {
+function getExtraScrapTransactions(accountWithIndex: TransactionsAccount & { index: number }, page: Page, options: CompanyServiceOptions, month: moment.Moment): Promise<Transaction[]> {
   const promises = accountWithIndex.txns
     .map((t) => getExtraScrapTransaction(page, options, month, accountWithIndex.index, t));
   return Promise.all(promises);
 }
 
-async function getExtraScrapAccount(page: Page, options: ExtendedScraperOptions, accountMap: ScrapedAccountsWithIndex, month: moment.Moment): Promise<ScrapedAccountsWithIndex> {
+async function getExtraScrapAccount(page: Page, options: CompanyServiceOptions, accountMap: ScrapedAccountsWithIndex, month: moment.Moment): Promise<ScrapedAccountsWithIndex> {
   const promises = Object.keys(accountMap)
     .map(async (a) => ({
       ...accountMap[a],
@@ -284,20 +284,20 @@ async function getExtraScrapAccount(page: Page, options: ExtendedScraperOptions,
   return accounts.reduce((m, x) => ({ ...m, [x.accountNumber]: x }), {});
 }
 
-function getExtraScrap(accountsWithIndex: ScrapedAccountsWithIndex[], page: Page, options: ExtendedScraperOptions, allMonths: moment.Moment[]): Promise<ScrapedAccountsWithIndex[]> {
+function getExtraScrap(accountsWithIndex: ScrapedAccountsWithIndex[], page: Page, options: CompanyServiceOptions, allMonths: moment.Moment[]): Promise<ScrapedAccountsWithIndex[]> {
   const actions = accountsWithIndex.map((a, i) => () => getExtraScrapAccount(page, options, a, allMonths[i]));
   return runSerial(actions);
 }
 
-async function fetchAllTransactions(page: Page, options: ExtendedScraperOptions, startMoment: Moment) {
+async function fetchAllTransactions(page: Page, options: ScraperOptions, companyServiceOptions:CompanyServiceOptions, startMoment: Moment) {
   const futureMonthsToScrape = options.futureMonthsToScrape ?? 1;
   const allMonths = getAllMonthMoments(startMoment, futureMonthsToScrape);
   const results: ScrapedAccountsWithIndex[] = await Promise.all(allMonths.map(async (monthMoment) => {
-    return fetchTransactions(page, options, startMoment, monthMoment);
+    return fetchTransactions(page, options, companyServiceOptions, startMoment, monthMoment);
   }));
 
   const finalResult = options.additionalTransactionInformation ?
-    await getExtraScrap(results, page, options, allMonths) : results;
+    await getExtraScrap(results, page, companyServiceOptions, allMonths) : results;
 
   const combinedTxns: Record<string, Transaction[]> = {};
 
@@ -429,8 +429,8 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-    return fetchAllTransactions(this.page, {
-      ...this.options,
+    return fetchAllTransactions(this.page, this.options, {
+
       servicesUrl: this.servicesUrl,
       companyCode: this.companyCode,
     }, startMoment);
