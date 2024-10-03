@@ -72,23 +72,31 @@ export type ScraperOptions = ScraperBrowserOptions & {
    * Please note: It will take more time to finish the process.
    */
   additionalTransactionInformation?: boolean;
-};
 
-export type ScraperBrowserOptions = {
   /**
    * adjust the page instance before it is being used.
    *
    * @param page
    */
-  preparePage?: (page: Page) => Promise<void>; } & ({
+  preparePage?: (page: Page) => Promise<void>;
+};
+
+type ScraperBrowserOptions =  {
   /**
-   * option from init puppeteer browser instance outside the library scope. you can get
-   * browser directly from puppeteer via `puppeteer.launch()`
+   * An externally created browser instance.
+   * you can get a browser directly from puppeteer via `puppeteer.launch()`
+   * 
+   * Note: The browser will be closed by the library after the scraper finishes unless `skipCloseBrowser` is set to true
    */
   browser: Browser;
+
+  /**
+   * If true, the browser will not be closed by the library after the scraper finishes
+   */
+  skipCloseBrowser?: boolean;
 } | {
   /**
-   * 
+   * An externally managed browser context. This is useful when you want to manage the browser
    */
   browserContext: BrowserContext;
 } |  {
@@ -96,7 +104,6 @@ export type ScraperBrowserOptions = {
    * shows the browser while scraping, good for debugging (default false)
    */
   showBrowser?: boolean;
-
 
   /**
    * provide a patch to local chromium to be used by puppeteer. Relevant when using
@@ -124,7 +131,7 @@ export type ScraperBrowserOptions = {
    * @param browser
    */
   prepareBrowser?: (browser: Browser) => Promise<void>;
-});
+};
 
 export interface OutputDataOptions {
   /**

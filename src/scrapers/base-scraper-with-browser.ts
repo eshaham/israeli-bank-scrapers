@@ -109,10 +109,12 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
       /**
        * For backward compatibility, we will close the browser even if we didn't create it
        */
-      this.cleanups.push(async () => {
-        debug('closing the browser');
-        await browser.close();
-      });
+      if (!this.options.skipCloseBrowser) {
+        this.cleanups.push(async () => {
+          debug('closing the browser');
+          await browser.close();
+        });
+      }
 
       return browser.newPage();
     } 
