@@ -26,6 +26,61 @@ export interface FutureDebit {
   bankAccountNumber?: string;
 }
 
+type ScraperBrowserOptions =
+  | {
+    /**
+       * An externally created browser instance.
+       * you can get a browser directly from puppeteer via `puppeteer.launch()`
+       *
+       * Note: The browser will be closed by the library after the scraper finishes unless `skipCloseBrowser` is set to true
+       */
+    browser: Browser;
+
+    /**
+       * If true, the browser will not be closed by the library after the scraper finishes
+       */
+    skipCloseBrowser?: boolean;
+  }
+  | {
+    /**
+       * An externally managed browser context. This is useful when you want to manage the browser
+       */
+    browserContext: BrowserContext;
+  }
+  | {
+    /**
+       * shows the browser while scraping, good for debugging (default false)
+       */
+    showBrowser?: boolean;
+
+    /**
+       * provide a patch to local chromium to be used by puppeteer. Relevant when using
+       * `israeli-bank-scrapers-core` library
+       */
+    executablePath?: string;
+
+    /**
+       * additional arguments to pass to the browser instance. The list of flags can be found in
+       *
+       * https://developer.mozilla.org/en-US/docs/Mozilla/Command_Line_Options
+       * https://peter.sh/experiments/chromium-command-line-switches/
+       */
+    args?: string[];
+
+    /**
+       * Maximum navigation time in milliseconds, pass 0 to disable timeout.
+       * @default 30000
+       */
+    timeout?: number | undefined;
+
+    /**
+       * adjust the browser instance before it is being used
+       *
+       * @param browser
+       */
+    prepareBrowser?: (browser: Browser) => Promise<void>;
+  };
+
 export type ScraperOptions = ScraperBrowserOptions & {
   /**
    * The company you want to scrape
@@ -79,58 +134,6 @@ export type ScraperOptions = ScraperBrowserOptions & {
    * @param page
    */
   preparePage?: (page: Page) => Promise<void>;
-};
-
-type ScraperBrowserOptions =  {
-  /**
-   * An externally created browser instance.
-   * you can get a browser directly from puppeteer via `puppeteer.launch()`
-   * 
-   * Note: The browser will be closed by the library after the scraper finishes unless `skipCloseBrowser` is set to true
-   */
-  browser: Browser;
-
-  /**
-   * If true, the browser will not be closed by the library after the scraper finishes
-   */
-  skipCloseBrowser?: boolean;
-} | {
-  /**
-   * An externally managed browser context. This is useful when you want to manage the browser
-   */
-  browserContext: BrowserContext;
-} |  {
-  /**
-   * shows the browser while scraping, good for debugging (default false)
-   */
-  showBrowser?: boolean;
-
-  /**
-   * provide a patch to local chromium to be used by puppeteer. Relevant when using
-   * `israeli-bank-scrapers-core` library
-   */
-  executablePath?: string;
-
-  /**
-   * additional arguments to pass to the browser instance. The list of flags can be found in
-   *
-   * https://developer.mozilla.org/en-US/docs/Mozilla/Command_Line_Options
-   * https://peter.sh/experiments/chromium-command-line-switches/
-   */
-  args?: string[];
-
-  /**
-   * Maximum navigation time in milliseconds, pass 0 to disable timeout.
-   * @default 30000
-   */
-  timeout?: number | undefined;
-
-  /**
-   * adjust the browser instance before it is being used
-   *
-   * @param browser
-   */
-  prepareBrowser?: (browser: Browser) => Promise<void>;
 };
 
 export interface OutputDataOptions {
