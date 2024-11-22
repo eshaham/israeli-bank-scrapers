@@ -23,7 +23,6 @@ interface ScrapedTransaction {
   MC02KodGoremEZ: string;
   MC02SugTnuaKaspitEZ: string;
   MC02AgidEZ: string;
-  MC02ErehTaaEZ: string;
   MC02SeifMaralEZ: string;
   MC02NoseMaralEZ: string;
   TransactionNumber: string;
@@ -161,7 +160,6 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
 
 async function getTransactionExtraScrap(record: ScrapedTransaction, headers: Headers): Promise<ExtraTransactionResult> {
   const formattedPeulaDate = moment(record.MC02PeulaTaaEZ).format(DATE_FORMAT);
-  // const formattedErechDate = moment(record.MC02ErehTaaEZ).format(DATE_FORMAT);
   const data = {
     inKodGorem: record.MC02KodGoremEZ,
     inAsmachta: record.MC02AsmahtaMekoritEZ,
