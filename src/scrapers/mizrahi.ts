@@ -13,6 +13,7 @@ import {
 } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
+import { sleep } from '../helpers/waiting';
 
 interface ScrapedTransaction {
   RecTypeSpecified: boolean;
@@ -25,6 +26,7 @@ interface ScrapedTransaction {
   MC02AgidEZ: string;
   MC02SeifMaralEZ: string;
   MC02NoseMaralEZ: string;
+  MC02ShowDetailsEZ: string;
   TransactionNumber: string;
 }
 
@@ -80,6 +82,8 @@ const PENDING_TRANSACTIONS_IFRAME = 'p420.aspx';
 const CHANGE_PASSWORD_URL = /https:\/\/www\.mizrahi-tefahot\.co\.il\/login\/index\.html#\/change-pass/;
 const DATE_FORMAT = 'DD/MM/YYYY';
 const MAX_ROWS_PER_REQUEST = 10000000000;
+const TRANSACTION_DETAILS_REQUEST_CONCURRENCY = 1;
+const TRANSACTION_DETAILS_REQUEST_WAIT_TIME = 500; // ms
 
 const usernameSelector = '#emailDesktopHeb';
 const passwordSelector = '#passwordIDDesktopHEB';
@@ -158,7 +162,7 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   });
 }
 
-async function getTransactionExtraScrap(record: ScrapedTransaction, headers: Headers): Promise<ExtraTransactionResult> {
+async function getTransactionExtraScrap(record: ScrapedTransaction, headers: Headers): Promise<ExtraTransactionResult | null> {
   const formattedPeulaDate = moment(record.MC02PeulaTaaEZ).format(DATE_FORMAT);
   const data = {
     inKodGorem: record.MC02KodGoremEZ,
@@ -174,8 +178,13 @@ async function getTransactionExtraScrap(record: ScrapedTransaction, headers: Hea
     inTransactionNumber: record.TransactionNumber,
   };
   
-  const res = await fetchPost(TRANSACTION_DETAILS_REQUEST_URL, data, headers);
-  return res;
+  try {
+    const res = await fetchPost(TRANSACTION_DETAILS_REQUEST_URL, data, headers);
+    return res;
+  } catch (e) {
+    console.error(`Error fetching extra transaction details for record ${JSON.stringify(record)}`, e);
+  }
+  return null;
 }
 
 function simplifyExtraTransactionResultsToMemo(extraResult: ExtraTransactionResult): string {
@@ -193,11 +202,21 @@ function simplifyExtraTransactionResultsToMemo(extraResult: ExtraTransactionResu
 }
 
 async function getExtraScrap(originalRecords: ScrapedTransaction[], currentTxns: Transaction[], headers: Headers): Promise<Transaction[]> {
-  const promises = Object.values(originalRecords)
-    .map(async (record) => getTransactionExtraScrap(record, headers));
-  const accounts = await Promise.all(promises);
+  const recordsWithDetails = originalRecords
+    .map((record, index) => ({ record, index }))
+    .filter(({ record }) => record.MC02ShowDetailsEZ === '1');
+
+  const promises = recordsWithDetails.map(({ record }) => getTransactionExtraScrap(record, headers));
+  let accounts: Array<ExtraTransactionResult | null> = [];
+  while (promises.length > 0) {
+    const currentPromises = promises.splice(0, TRANSACTION_DETAILS_REQUEST_CONCURRENCY);
+    accounts = accounts.concat(await Promise.all(currentPromises));
+    await sleep(TRANSACTION_DETAILS_REQUEST_WAIT_TIME);
+  }
+
   const txnsWithExtra = currentTxns.map((txn, i) => {
-    const extraDetails = accounts[i];
+    const extraDetailIndex = recordsWithDetails.findIndex(({ index }) => index === i);
+    const extraDetails = extraDetailIndex !== -1 ? accounts[extraDetailIndex] : undefined;
     const currentTxn = { ...txn };
     if (extraDetails) {
       currentTxn.memo = simplifyExtraTransactionResultsToMemo(extraDetails);
