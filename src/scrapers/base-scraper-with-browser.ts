@@ -95,6 +95,42 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     };
   }
 
+  async initialize() {
+    await super.initialize();
+    debug('initialize scraper');
+    this.emitProgress(ScraperProgressTypes.Initializing);
+
+    const page = await this.initializePage();
+    if (!page) {
+      debug('failed to initiate a browser page, exit');
+      return;
+    }
+
+    this.page = page;
+
+    this.cleanups.push( () => page.close());
+
+    if (this.options.defaultTimeout) {
+      this.page.setDefaultTimeout(this.options.defaultTimeout);
+    }
+
+    if (this.options.preparePage) {
+      debug("execute 'preparePage' interceptor provided in options");
+      await this.options.preparePage(this.page);
+    }
+
+    const viewport = this.getViewPort();
+    debug(`set viewport to width ${viewport.width}, height ${viewport.height}`);
+    await this.page.setViewport({
+      width: viewport.width,
+      height: viewport.height,
+    });
+
+    this.page.on('requestfailed', (request) => {
+      debug('Request failed: %s %s', request.failure()?.errorText, request.url());
+    });
+  }
+
   private async initializePage() {
     debug('initialize browser page');
     if ('browserContext' in this.options) {
@@ -144,42 +180,6 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
 
     debug('create a new browser page');
     return browser.newPage();
-  }
-
-  async initialize() {
-    await super.initialize();
-    debug('initialize scraper');
-    this.emitProgress(ScraperProgressTypes.Initializing);
-
-    const page = await this.initializePage();
-    if (!page) {
-      debug('failed to initiate a browser page, exit');
-      return;
-    }
-
-    this.page = page;
-
-    this.cleanups.push( () => page.close());
-
-    if (this.options.defaultTimeout) {
-      this.page.setDefaultTimeout(this.options.defaultTimeout);
-    }
-
-    if (this.options.preparePage) {
-      debug("execute 'preparePage' interceptor provided in options");
-      await this.options.preparePage(this.page);
-    }
-
-    const viewport = this.getViewPort();
-    debug(`set viewport to width ${viewport.width}, height ${viewport.height}`);
-    await this.page.setViewport({
-      width: viewport.width,
-      height: viewport.height,
-    });
-
-    this.page.on('requestfailed', (request) => {
-      debug('Request failed: %s %s', request.failure()?.errorText, request.url());
-    });
   }
 
   async navigateTo(
