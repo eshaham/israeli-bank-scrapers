@@ -180,8 +180,8 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
   for (const accountId of accountsIds) {
     if (accountsIds.length > 1) {
       // get list of accounts and check accountId
-      await clickByXPath(page, 'xpath//*[contains(@class, "number") and contains(@class, "combo-inner")]');
-      await clickByXPath(page, `xpath//span[contains(text(), '${accountId}')]`);
+      await clickByXPath(page, 'xpath///*[contains(@class, "number") and contains(@class, "combo-inner")]');
+      await clickByXPath(page, `xpath///span[contains(text(), '${accountId}')]`);
     }
 
     accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(accountId)));
