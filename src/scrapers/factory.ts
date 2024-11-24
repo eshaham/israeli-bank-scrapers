@@ -15,6 +15,7 @@ import MercantileScraper from './mercantile';
 import MizrahiScraper from './mizrahi';
 import OneZeroScraper from './one-zero';
 import OtsarHahayalScraper from './otsar-hahayal';
+import PagiScraper from './pagi';
 import UnionBankScraper from './union-bank';
 import VisaCalScraper from './visa-cal';
 import YahavScraper from './yahav';
@@ -63,6 +64,8 @@ export default function createScraper(options: ScraperOptions): Scraper<ScraperC
       return new OneZeroScraper(options);
     case CompanyTypes.behatsdaa:
       return new BehatsdaaScraper(options);
+    case CompanyTypes.pagi:
+      return new PagiScraper(options);
     default:
       return assertNever(options.companyId, `unknown company id ${options.companyId}`);
   }
