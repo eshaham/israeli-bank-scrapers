@@ -19,7 +19,7 @@ jobs:
       - name: prepare default version
         run: npm run prepare:default
       - name: Release to Github
-        uses: cycjimmy/semantic-release-action@v2
+        uses: cycjimmy/semantic-release-action@v4
         id: semantic   # Need an `id` for output variables
         with:
           semantic_version: 16.0.2

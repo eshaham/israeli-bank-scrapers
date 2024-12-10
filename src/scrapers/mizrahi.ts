@@ -221,9 +221,12 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     await waitUntilElementFound(this.page, `a[href*="${TRANSACTIONS_PAGE}"]`);
     await this.page.$eval(`a[href*="${TRANSACTIONS_PAGE}"]`, (el) => (el as HTMLElement).click());
 
-    const accountNumberElement = await this.page.$('#dropdownBasic b');
+    const accountNumberElement = await this.page.$('#dropdownBasic b span');
     const accountNumberHandle = await accountNumberElement?.getProperty('title');
     const accountNumber = ((await accountNumberHandle?.jsonValue()) as string);
+    if (!accountNumber) {
+      throw new Error('Account number not found');
+    }
 
     const response = await Promise.any(TRANSACTIONS_REQUEST_URLS.map(async (url) => {
       const request = await this.page.waitForRequest(url);
