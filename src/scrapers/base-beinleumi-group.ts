@@ -258,6 +258,10 @@ async function getAccountTransactions(page: Page) {
 }
 
 async function getCurrentBalance(page: Page) {
+  const balanceElement = await page.$(CURRENT_BALANCE);
+  if (!balanceElement) {
+    return null;
+  }
   const balanceStr = await page.$eval(CURRENT_BALANCE, (option) => {
     return (option as HTMLElement).innerText;
   });
@@ -280,7 +284,7 @@ async function fetchAccountData(page: Page, startDate: Moment) {
   return {
     accountNumber,
     txns,
-    balance,
+    balance: balance === null ? undefined : balance,
   };
 }
 
