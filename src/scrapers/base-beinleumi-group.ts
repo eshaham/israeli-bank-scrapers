@@ -25,7 +25,7 @@ const DESCRIPTION_COLUMN_CLASS_COMPLETED = 'reference wrap_normal';
 const DESCRIPTION_COLUMN_CLASS_PENDING = 'details wrap_normal';
 const REFERENCE_COLUMN_CLASS = 'details';
 const DEBIT_COLUMN_CLASS = 'debit';
-const CREDIT_COLUMN_CLASS = 'credit'; 
+const CREDIT_COLUMN_CLASS = 'credit';
 const ERROR_MESSAGE_CLASS = 'NO_DATA';
 const ACCOUNTS_NUMBER = 'div.fibi_account span.acc_num';
 const CLOSE_SEARCH_BY_DATES_BUTTON_CLASS = 'ui-datepicker-close';
@@ -262,7 +262,7 @@ async function getCurrentBalance(page: Page) {
   if (!balanceElement) {
     return undefined;
   }
-  const balanceStr = await page.$eval(CURRENT_BALANCE, (option) => {
+  const balanceStr = await balanceElement.evaluate((option) => {
     return (option as HTMLElement).innerText;
   });
   return getAmountData(balanceStr);
