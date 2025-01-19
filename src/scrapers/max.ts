@@ -278,8 +278,9 @@ function prepareTransactions(txns: Transaction[], startMoment: moment.Moment, co
 async function fetchTransactions(page: Page, options: ScraperOptions) {
   const futureMonthsToScrape = options.futureMonthsToScrape ?? 1;
   const defaultStartMoment = moment().subtract(1, 'years');
+  const startMomentLimit = moment().subtract(4, 'years');
   const startDate = options.startDate || defaultStartMoment.toDate();
-  const startMoment = moment.max(defaultStartMoment, moment(startDate));
+  const startMoment = moment.max(startMomentLimit, moment(startDate));
   const allMonths = getAllMonthMoments(startMoment, futureMonthsToScrape);
 
   await loadCategories(page);
