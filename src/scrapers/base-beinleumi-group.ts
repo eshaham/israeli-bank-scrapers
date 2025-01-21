@@ -258,7 +258,11 @@ async function getAccountTransactions(page: Page) {
 }
 
 async function getCurrentBalance(page: Page) {
-  const balanceStr = await page.$eval(CURRENT_BALANCE, (option) => {
+  const balanceElement = await page.$(CURRENT_BALANCE);
+  if (!balanceElement) {
+    return undefined;
+  }
+  const balanceStr = await balanceElement.evaluate((option) => {
     return (option as HTMLElement).innerText;
   });
   return getAmountData(balanceStr);
