@@ -114,6 +114,13 @@ export type ScraperOptions = ScraperBrowserOptions & {
   combineInstallments?: boolean;
 
   /**
+   * adjust the page instance before it is being used.
+   *
+   * @param page
+   */
+  preparePage?: (page: Page) => Promise<void>;
+
+  /**
    * if set, store a screenshot if failed to scrape. Used for debug purposes
    */
   storeFailureScreenShotPath?: string;
@@ -133,13 +140,6 @@ export type ScraperOptions = ScraperBrowserOptions & {
    * Please note: It will take more time to finish the process.
    */
   additionalTransactionInformation?: boolean;
-
-  /**
-   * adjust the page instance before it is being used.
-   *
-   * @param page
-   */
-  preparePage?: (page: Page) => Promise<void>;
 };
 
 export interface OutputDataOptions {
