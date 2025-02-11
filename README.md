@@ -129,6 +129,45 @@ The return value is a list of scraper metadata:
   }
 }
 ```
+## Advanced options
+### ExternalBrowserOptions
+This option allows you to provide an externally created browser instance. You can get a browser directly from puppeteer via `puppeteer.launch()`.
+Note that for backwards compatibility, the browser will be closed by the library after the scraper finishes unless `skipCloseBrowser` is set to true.
+Example:
+```ts
+import puppeteer from 'puppeteer';
+import { CompanyTypes, createScraper } from 'israeli-bank-scrapers';
+const browser = await puppeteer.launch();
+const options = {
+  companyId: CompanyTypes.leumi,
+  startDate: new Date('2020-05-01'),
+  browser,
+  skipCloseBrowser: true, // Or false [default] if you want it to auto-close
+};
+const scraper = createScraper(options);
+const scrapeResult = await scraper.scrape({ username: 'vr29485', password: 'sometingsomething' });
+await browser.close(); // Or not if `skipCloseBrowser` is false
+// TODO: Use scrapeResult
+```
+### ExternalBrowserContextOptions
+This option allows you to provide an externally managed browser context. This is useful when you want to manage the browser context yourself.
+Example:
+```ts
+import puppeteer from 'puppeteer';
+import { CompanyTypes, createScraper } from 'israeli-bank-scrapers';
+const browser = await puppeteer.launch();
+const browserContext = await browser.createIncognitoBrowserContext();
+const options = {
+  companyId: CompanyTypes.leumi,
+  startDate: new Date('2020-05-01'),
+  browserContext
+};
+const scraper = createScraper(options);
+const scrapeResult = await scraper.scrape({ username: 'vr29485', password: 'sometingsomething' });
+await browserContext.close();
+await browser.close();
+// TODO: Use scrapeResult
+```
 
 ## Two-Factor Authentication Scrapers
 Some companies require two-factor authentication, and as such the scraper cannot be fully automated. When using the relevant scrapers, you have two options:
