@@ -157,7 +157,7 @@ await browser.close(); // Or not if `skipCloseBrowser` is false
 
 ### ExternalBrowserContextOptions
 
-This option allows you to provide an externally managed browser context. This is useful when you want to manage the browser context yourself.
+This option allows you to provide a [browser context](https://pptr.dev/api/puppeteer.browsercontext). This is useful if you don't want to share cookies with other scrapers (i.e. multiple parallel runs of the same scraper with different users) without creating a new browser for each scraper.
 
 Example:
 
@@ -166,7 +166,7 @@ import puppeteer from 'puppeteer';
 import { CompanyTypes, createScraper } from 'israeli-bank-scrapers';
 
 const browser = await puppeteer.launch();
-const browserContext = await browser.createIncognitoBrowserContext();
+const browserContext = await browser.createBrowserContext();
 const options = {
   companyId: CompanyTypes.leumi,
   startDate: new Date('2020-05-01'),
@@ -174,7 +174,6 @@ const options = {
 };
 const scraper = createScraper(options);
 const scrapeResult = await scraper.scrape({ username: 'vr29485', password: 'sometingsomething' });
-await browserContext.close();
 await browser.close();
 ```
 
