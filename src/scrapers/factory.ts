@@ -24,10 +24,6 @@ export default function createScraper(options: ScraperOptions): Scraper<ScraperC
   switch (options.companyId) {
     case CompanyTypes.hapoalim:
       return new HapoalimScraper(options);
-    case CompanyTypes.hapoalimBeOnline:
-      // eslint-disable-next-line no-console
-      console.warn("hapoalimBeOnline is deprecated, use 'hapoalim' instead");
-      return new HapoalimScraper(options);
     case CompanyTypes.leumi:
       return new LeumiScraper(options);
     case CompanyTypes.beyahadBishvilha:
@@ -42,10 +38,6 @@ export default function createScraper(options: ScraperOptions): Scraper<ScraperC
       return new OtsarHahayalScraper(options);
     case CompanyTypes.visaCal:
       return new VisaCalScraper(options);
-    case CompanyTypes.leumiCard:
-      // eslint-disable-next-line no-console
-      console.warn("leumiCard is deprecated, use 'max' instead");
-      return new MaxScraper(options);
     case CompanyTypes.max:
       return new MaxScraper(options);
     case CompanyTypes.isracard:
