@@ -1,5 +1,5 @@
 import moment, { type Moment } from 'moment';
-import { Frame, type Page } from 'puppeteer';
+import { type Frame, type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL } from '../constants';
 import {
   clickButton,
@@ -298,6 +298,18 @@ async function getAccountIdsBySelector(page: Page): Promise<string[]> {
   return accountsIds;
 }
 
+async function getTransactionsFrame(page: Page): Promise<Frame> {
+  await sleep(5000);
+  const frames = page.frames();
+  const targetFrame = frames.find(f => f.name() === 'iframe-old-pages' || f.url().includes('some-part-of-url'));
+
+  if (!targetFrame) {
+    throw new Error('Target iframe not found');
+  }
+
+  return targetFrame;
+}
+
 async function fetchAccounts(page: Page, startDate: Moment) {
   const accounts: TransactionsAccount[] = [];
   const accountsIds = await getAccountIdsBySelector(page);
@@ -316,17 +328,6 @@ async function fetchAccounts(page: Page, startDate: Moment) {
   return accounts;
 }
 
-async function getTransactionsFrame(page: Page): Promise<Frame> {
-  await sleep(5000);
-  const frames = page.frames();
-  const targetFrame = frames.find(f => f.name() === 'iframe-old-pages' || f.url().includes('some-part-of-url'));
-
-  if (!targetFrame) {
-    throw new Error('Target iframe not found');
-  }
-
-  return targetFrame
-}
 
 type ScraperSpecificCredentials = { username: string, password: string };
 
