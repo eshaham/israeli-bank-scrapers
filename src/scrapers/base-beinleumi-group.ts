@@ -1,5 +1,5 @@
 import moment, { type Moment } from 'moment';
-import { type Page } from 'puppeteer';
+import { Frame, type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL } from '../constants';
 import {
   clickButton,
@@ -25,7 +25,7 @@ const DESCRIPTION_COLUMN_CLASS_COMPLETED = 'reference wrap_normal';
 const DESCRIPTION_COLUMN_CLASS_PENDING = 'details wrap_normal';
 const REFERENCE_COLUMN_CLASS = 'details';
 const DEBIT_COLUMN_CLASS = 'debit';
-const CREDIT_COLUMN_CLASS = 'credit'; 
+const CREDIT_COLUMN_CLASS = 'credit';
 const ERROR_MESSAGE_CLASS = 'NO_DATA';
 const ACCOUNTS_NUMBER = 'div.fibi_account span.acc_num';
 const CLOSE_SEARCH_BY_DATES_BUTTON_CLASS = 'ui-datepicker-close';
@@ -51,7 +51,7 @@ interface ScrapedTransaction {
 
 export function getPossibleLoginResults(): PossibleLoginResults {
   const urls: PossibleLoginResults = {};
-  urls[LoginResults.Success] = [/FibiMenu\/Online/];
+  urls[LoginResults.Success] = [/fibi.*accountSummary/];
   urls[LoginResults.InvalidPassword] = [/FibiMenu\/Marketing\/Private\/Home/];
   return urls;
 }
@@ -185,7 +185,7 @@ async function isNoTransactionInDateRangeError(page: Page) {
   return false;
 }
 
-async function searchByDates(page: Page, startDate: Moment) {
+async function searchByDates(page: Page | Frame, startDate: Moment) {
   await clickButton(page, 'a#tabHeader4');
   await waitUntilElementFound(page, 'div#fibi_dates');
   await fillInput(
@@ -198,7 +198,7 @@ async function searchByDates(page: Page, startDate: Moment) {
   await waitForNavigation(page);
 }
 
-async function getAccountNumber(page: Page) {
+async function getAccountNumber(page: Page | Frame) {
   const selectedSnifAccount = await page.$eval(ACCOUNTS_NUMBER, (option) => {
     return (option as HTMLElement).innerText;
   });
@@ -235,7 +235,7 @@ async function scrapeTransactions(page: Page, tableLocator: string, transactionS
   return convertTransactions(txns);
 }
 
-async function getAccountTransactions(page: Page) {
+async function getAccountTransactions(page: Page | Frame) {
   await Promise.race([
     waitUntilElementFound(page, 'div[id*=\'divTable\']', false),
     waitUntilElementFound(page, `.${ERROR_MESSAGE_CLASS}`, false),
@@ -257,7 +257,7 @@ async function getAccountTransactions(page: Page) {
   return txns;
 }
 
-async function getCurrentBalance(page: Page) {
+async function getCurrentBalance(page: Page | Frame) {
   const balanceElement = await page.$(CURRENT_BALANCE);
   if (!balanceElement) {
     return undefined;
@@ -270,12 +270,12 @@ async function getCurrentBalance(page: Page) {
 
 export async function waitForPostLogin(page: Page) {
   return Promise.race([
-    waitUntilElementFound(page, '#matafLogoutLink', true),
-    waitUntilElementFound(page, '#validationMsg', true),
+    waitUntilElementFound(page, '#card-header', true),
+    waitUntilElementFound(page, '#account_num', true),
   ]);
 }
 
-async function fetchAccountData(page: Page, startDate: Moment) {
+async function fetchAccountData(page: Page | Frame, startDate: Moment) {
   await searchByDates(page, startDate);
   const accountNumber = await getAccountNumber(page);
   const balance = await getCurrentBalance(page);
@@ -302,7 +302,8 @@ async function fetchAccounts(page: Page, startDate: Moment) {
   const accounts: TransactionsAccount[] = [];
   const accountsIds = await getAccountIdsBySelector(page);
   if (accountsIds.length <= 1) {
-    const accountData = await fetchAccountData(page, startDate);
+    const frame = await getTransactionsFrame(page);
+    const accountData = await fetchAccountData(frame, startDate);
     accounts.push(accountData);
   } else {
     for (const accountId of accountsIds) {
@@ -313,6 +314,18 @@ async function fetchAccounts(page: Page, startDate: Moment) {
     }
   }
   return accounts;
+}
+
+async function getTransactionsFrame(page: Page): Promise<Frame> {
+  await sleep(5000);
+  const frames = page.frames();
+  const targetFrame = frames.find(f => f.name() === 'iframe-old-pages' || f.url().includes('some-part-of-url'));
+
+  if (!targetFrame) {
+    throw new Error('Target iframe not found');
+  }
+
+  return targetFrame
 }
 
 type ScraperSpecificCredentials = { username: string, password: string };

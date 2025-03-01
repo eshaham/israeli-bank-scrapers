@@ -101,6 +101,8 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     this.emitProgress(ScraperProgressTypes.Initializing);
 
     const page = await this.initializePage();
+    await page.setCacheEnabled(false); // Clear cache and avoid 300's response status
+
     if (!page) {
       debug('failed to initiate a browser page, exit');
       return;
@@ -153,7 +155,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
       }
 
       return browser.newPage();
-    } 
+    }
 
     const { timeout, args, executablePath, showBrowser } = this.options;
 
