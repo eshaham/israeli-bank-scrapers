@@ -134,7 +134,7 @@ function extractTransactionDetails(txnRow: TransactionsTr, transactionStatus: Tr
   return item;
 }
 
-async function getTransactionsColsTypeClasses(page: Page, tableLocator: string): Promise<TransactionsColsTypes> {
+async function getTransactionsColsTypeClasses(page: Page | Frame, tableLocator: string): Promise<TransactionsColsTypes> {
   const result: TransactionsColsTypes = {};
   const typeClassesObjs = await pageEvalAll(page, `${tableLocator} tbody tr:first-of-type td`, null, (tds) => {
     return tds.map((td, index) => ({
@@ -158,7 +158,7 @@ function extractTransaction(txns: ScrapedTransaction[], transactionStatus: Trans
   }
 }
 
-async function extractTransactions(page: Page, tableLocator: string, transactionStatus: TransactionStatuses) {
+async function extractTransactions(page: Page | Frame, tableLocator: string, transactionStatus: TransactionStatuses) {
   const txns: ScrapedTransaction[] = [];
   const transactionsColsTypes = await getTransactionsColsTypeClasses(page, tableLocator);
 
@@ -174,7 +174,7 @@ async function extractTransactions(page: Page, tableLocator: string, transaction
   return txns;
 }
 
-async function isNoTransactionInDateRangeError(page: Page) {
+async function isNoTransactionInDateRangeError(page: Page | Frame) {
   const hasErrorInfoElement = await elementPresentOnPage(page, `.${ERROR_MESSAGE_CLASS}`);
   if (hasErrorInfoElement) {
     const errorText = await page.$eval(`.${ERROR_MESSAGE_CLASS}`, (errorElement) => {
@@ -206,18 +206,18 @@ async function getAccountNumber(page: Page | Frame) {
   return selectedSnifAccount.replace('/', '_').trim();
 }
 
-async function checkIfHasNextPage(page: Page) {
+async function checkIfHasNextPage(page: Page | Frame) {
   return elementPresentOnPage(page, NEXT_PAGE_LINK);
 }
 
-async function navigateToNextPage(page: Page) {
+async function navigateToNextPage(page: Page | Frame) {
   await clickButton(page, NEXT_PAGE_LINK);
   await waitForNavigation(page);
 }
 
 /* Couldn't reproduce scenario with multiple pages of pending transactions - Should support if exists such case.
    needToPaginate is false if scraping pending transactions */
-async function scrapeTransactions(page: Page, tableLocator: string, transactionStatus: TransactionStatuses, needToPaginate: boolean) {
+async function scrapeTransactions(page: Page | Frame, tableLocator: string, transactionStatus: TransactionStatuses, needToPaginate: boolean) {
   const txns = [];
   let hasNextPage = false;
 
