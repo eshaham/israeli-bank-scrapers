@@ -301,10 +301,10 @@ async function getAccountIdsBySelector(page: Page): Promise<string[]> {
 async function getTransactionsFrame(page: Page): Promise<Frame> {
   await sleep(5000);
   const frames = page.frames();
-  const targetFrame = frames.find(f => f.name() === 'iframe-old-pages' || f.url().includes('some-part-of-url'));
+  const targetFrame = frames.find(f => f.name() === 'iframe-old-pages');
 
   if (!targetFrame) {
-    throw new Error('Target iframe not found');
+    throw new Error('iframe: "iframe-old-pages" (used for transactions page) was not found on the page');
   }
 
   return targetFrame;
