@@ -4,7 +4,7 @@ import { SHEKEL_CURRENCY } from '../constants';
 import {
   pageEvalAll, waitUntilElementDisappear, waitUntilElementFound, waitUntilIframeFound,
 } from '../helpers/elements-interactions';
-import { fetchPostWithinPage } from '../helpers/fetch';
+import { fetchPost, fetchPostWithinPage } from '../helpers/fetch';
 import { waitForUrl } from '../helpers/navigation';
 import {
   type Transaction,
@@ -13,6 +13,7 @@ import {
 } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
+import { sleep } from '../helpers/waiting';
 
 interface ScrapedTransaction {
   RecTypeSpecified: boolean;
@@ -20,6 +21,13 @@ interface ScrapedTransaction {
   MC02SchumEZ: number;
   MC02AsmahtaMekoritEZ: string;
   MC02TnuaTeurEZ: string;
+  MC02KodGoremEZ: string;
+  MC02SugTnuaKaspitEZ: string;
+  MC02AgidEZ: string;
+  MC02SeifMaralEZ: string;
+  MC02NoseMaralEZ: string;
+  MC02ShowDetailsEZ: string;
+  TransactionNumber: string;
 }
 
 interface ScrapedTransactionsResult {
@@ -37,6 +45,27 @@ interface ScrapedTransactionsResult {
   };
 }
 
+interface ExtraTransactionDetail {
+  Label: string;
+  Value: string;
+}
+
+interface ExtraTransactionResult {
+  body: {
+    fields: [
+      [
+        {
+          Records: [
+            {
+              Fields: ExtraTransactionDetail[];
+            },
+          ];
+        },
+      ],
+    ];
+  };
+}
+
 const BASE_WEBSITE_URL = 'https://www.mizrahi-tefahot.co.il';
 const LOGIN_URL = `${BASE_WEBSITE_URL}/login/index.html#/auth-page-he`;
 const BASE_APP_URL = 'https://mto.mizrahi-tefahot.co.il';
@@ -47,11 +76,14 @@ const TRANSACTIONS_REQUEST_URLS = [
   `${BASE_APP_URL}/OnlinePilot/api/SkyOSH/get428Index`,
   `${BASE_APP_URL}/Online/api/SkyOSH/get428Index`,
 ];
+const TRANSACTION_DETAILS_REQUEST_URL = `${BASE_APP_URL}/Online/api/OSH/getMaherBerurimSMF`;
 const PENDING_TRANSACTIONS_PAGE = '/osh/legacy/legacy-Osh-p420';
 const PENDING_TRANSACTIONS_IFRAME = 'p420.aspx';
 const CHANGE_PASSWORD_URL = /https:\/\/www\.mizrahi-tefahot\.co\.il\/login\/index\.html#\/change-pass/;
 const DATE_FORMAT = 'DD/MM/YYYY';
 const MAX_ROWS_PER_REQUEST = 10000000000;
+const TRANSACTION_DETAILS_REQUEST_CONCURRENCY = 1;
+const TRANSACTION_DETAILS_REQUEST_WAIT_TIME = 500; // ms
 
 const usernameSelector = '#emailDesktopHeb';
 const passwordSelector = '#passwordIDDesktopHEB';
@@ -128,6 +160,70 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
       status: TransactionStatuses.Completed,
     };
   });
+}
+
+async function getTransactionExtraScrap(record: ScrapedTransaction, headers: Headers): Promise<ExtraTransactionResult | null> {
+  const formattedPeulaDate = moment(record.MC02PeulaTaaEZ).format(DATE_FORMAT);
+  const data = {
+    inKodGorem: record.MC02KodGoremEZ,
+    inAsmachta: record.MC02AsmahtaMekoritEZ,
+    inSchum: record.MC02SchumEZ,
+    inNakvanit: record.MC02KodGoremEZ,
+    inSugTnua: record.MC02SugTnuaKaspitEZ,
+    inAgid: record.MC02AgidEZ,
+    inTarPeulaFormatted: formattedPeulaDate,
+    inTarErechFormatted: formattedPeulaDate,
+    inKodNose: record.MC02SeifMaralEZ,
+    inKodTatNose: record.MC02NoseMaralEZ,
+    inTransactionNumber: record.TransactionNumber,
+  };
+  
+  try {
+    const res = await fetchPost(TRANSACTION_DETAILS_REQUEST_URL, data, headers);
+    return res;
+  } catch (e) {
+    console.error(`Error fetching extra transaction details for record ${JSON.stringify(record)}`, e);
+  }
+  return null;
+}
+
+function simplifyExtraTransactionResultsToMemo(extraResult: ExtraTransactionResult): string {
+  let memo = '';
+  extraResult.body.fields.forEach(field => 
+    field?.forEach(group => 
+      group?.Records.forEach(record => 
+        record?.Fields.forEach((fieldRecord) => {
+          memo += `${fieldRecord.Label} ${fieldRecord.Value}; `;
+        }),
+      ),
+    ),
+  );
+  return memo;
+}
+
+async function getExtraScrap(originalRecords: ScrapedTransaction[], currentTxns: Transaction[], headers: Headers): Promise<Transaction[]> {
+  const recordsWithDetails = originalRecords
+    .map((record, index) => ({ record, index }))
+    .filter(({ record }) => record.MC02ShowDetailsEZ === '1');
+
+  const promises = recordsWithDetails.map(({ record }) => getTransactionExtraScrap(record, headers));
+  let accounts: Array<ExtraTransactionResult | null> = [];
+  while (promises.length > 0) {
+    const currentPromises = promises.splice(0, TRANSACTION_DETAILS_REQUEST_CONCURRENCY);
+    accounts = accounts.concat(await Promise.all(currentPromises));
+    await sleep(TRANSACTION_DETAILS_REQUEST_WAIT_TIME);
+  }
+
+  const txnsWithExtra = currentTxns.map((txn, i) => {
+    const extraDetailIndex = recordsWithDetails.findIndex(({ index }) => index === i);
+    const extraDetails = extraDetailIndex !== -1 ? accounts[extraDetailIndex] : undefined;
+    const currentTxn = { ...txn };
+    if (extraDetails) {
+      currentTxn.memo = simplifyExtraTransactionResultsToMemo(extraDetails);
+    }
+    return currentTxn;
+  });
+  return txnsWithExtra;
 }
 
 async function extractPendingTransactions(page: Frame): Promise<Transaction[]> {
@@ -228,14 +324,18 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
       throw new Error('Account number not found');
     }
 
+    const headersMap: Record<string, any> = {};
     const response = await Promise.any(TRANSACTIONS_REQUEST_URLS.map(async (url) => {
       const request = await this.page.waitForRequest(url);
       const data = createDataFromRequest(request, this.options.startDate);
-      const headers = createHeadersFromRequest(request);
+      headersMap[url] = createHeadersFromRequest(request);
 
-      return fetchPostWithinPage<ScrapedTransactionsResult>(this.page, url, data, headers);
+      return fetchPostWithinPage<ScrapedTransactionsResult>(this.page, url, data, headersMap[url]);
     }));
-
+    const cookies = await this.page.cookies();
+    const headers = Object.values(headersMap)[0];
+    headers.Cookie = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join('; ');
+    
     if (!response || response.header.success === false) {
       throw new Error(`Error fetching transaction. Response message: ${response ? response.header.messages[0].text : ''}`);
     }
@@ -243,9 +343,12 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     const relevantRows = response.body.table.rows.filter((row) => row.RecTypeSpecified);
     const oshTxn = convertTransactions(relevantRows);
 
+    const oshTxnWithExtra = this.options.additionalTransactionInformation ? 
+      await getExtraScrap(relevantRows, oshTxn, headers) : oshTxn;
+    
     // workaround for a bug which the bank's API returns transactions before the requested start date
     const startMoment = getStartMoment(this.options.startDate);
-    const oshTxnAfterStartDate = oshTxn.filter((txn) => moment(txn.date).isSameOrAfter(startMoment));
+    const oshTxnAfterStartDate = oshTxnWithExtra.filter((txn) => moment(txn.date).isSameOrAfter(startMoment));
 
     const pendingTxn = await this.getPendingTransactions();
     const allTxn = oshTxnAfterStartDate.concat(pendingTxn);
