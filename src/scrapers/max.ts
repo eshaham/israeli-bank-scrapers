@@ -328,7 +328,7 @@ class MaxScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
     return {
       loginUrl: LOGIN_URL,
       fields: createLoginFields(credentials),
-      submitButtonSelector: '#login-password #send-code',
+      submitButtonSelector: 'app-user-login-form .general-button.send-me-code',
       preAction: async () => {
         if (await elementPresentOnPage(this.page, '#closePopup')) {
           await clickButton(this.page, '#closePopup');
