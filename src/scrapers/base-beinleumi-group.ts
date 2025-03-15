@@ -34,6 +34,7 @@ const COMPLETED_TRANSACTIONS_TABLE = 'table#dataTable077';
 const PENDING_TRANSACTIONS_TABLE = 'table#dataTable023';
 const NEXT_PAGE_LINK = 'a#Npage.paging';
 const CURRENT_BALANCE = '.main_balance';
+const IFRAME_NAME = 'iframe-old-pages';
 
 type TransactionsColsTypes = Record<string, number>;
 type TransactionsTrTds = string[];
@@ -51,7 +52,10 @@ interface ScrapedTransaction {
 
 export function getPossibleLoginResults(): PossibleLoginResults {
   const urls: PossibleLoginResults = {};
-  urls[LoginResults.Success] = [/fibi.*accountSummary/];
+  urls[LoginResults.Success] = [
+    /fibi.*accountSummary/,  // New UI pattern
+    /FibiMenu\/Online/       // Old UI pattern
+  ];
   urls[LoginResults.InvalidPassword] = [/FibiMenu\/Marketing\/Private\/Home/];
   return urls;
 }
@@ -270,8 +274,10 @@ async function getCurrentBalance(page: Page | Frame) {
 
 export async function waitForPostLogin(page: Page) {
   return Promise.race([
-    waitUntilElementFound(page, '#card-header', true),
-    waitUntilElementFound(page, '#account_num', true),
+    waitUntilElementFound(page, '#card-header', true), // New UI
+    waitUntilElementFound(page, '#account_num', true), // New UI
+    waitUntilElementFound(page, '#matafLogoutLink', true), // Old UI
+    waitUntilElementFound(page, '#validationMsg', true), // Old UI
   ]);
 }
 
@@ -298,36 +304,46 @@ async function getAccountIdsBySelector(page: Page): Promise<string[]> {
   return accountsIds;
 }
 
-async function getTransactionsFrame(page: Page): Promise<Frame> {
-  await sleep(5000);
-  const frames = page.frames();
-  const targetFrame = frames.find(f => f.name() === 'iframe-old-pages');
-
-  if (!targetFrame) {
-    throw new Error('iframe: "iframe-old-pages" (used for transactions page) was not found on the page');
+async function getTransactionsFrame(page: Page): Promise<Frame | null> {
+  // Try a few times to find the iframe, as it might not be immediately available
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await sleep(2000);
+    const frames = page.frames();
+    const targetFrame = frames.find(f => f.name() === IFRAME_NAME);
+    
+    if (targetFrame) {
+      return targetFrame;
+    }
   }
-
-  return targetFrame;
+  
+  return null;
 }
 
 async function fetchAccounts(page: Page, startDate: Moment) {
   const accounts: TransactionsAccount[] = [];
   const accountsIds = await getAccountIdsBySelector(page);
-  if (accountsIds.length <= 1) {
-    const frame = await getTransactionsFrame(page);
-    const accountData = await fetchAccountData(frame, startDate);
-    accounts.push(accountData);
-  } else {
-    for (const accountId of accountsIds) {
+  
+  // Convert single account case to an array with one item
+  const accountsToProcess = accountsIds.length <= 1 ? [''] : accountsIds;
+  
+  for (const accountId of accountsToProcess) {
+    // Only select account if we have multiple accounts
+    if (accountsIds.length > 1) {
       await page.select('#account_num_select', accountId);
       await waitUntilElementFound(page, '#account_num_select', true);
-      const accountData = await fetchAccountData(page, startDate);
-      accounts.push(accountData);
     }
+    
+    // Try to get the iframe for the new UI
+    const frame = await getTransactionsFrame(page);
+    
+    // Use the frame if available (new UI), otherwise use the page directly (old UI)
+    const targetPage = frame || page;
+    const accountData = await fetchAccountData(targetPage, startDate);
+    accounts.push(accountData);
   }
+  
   return accounts;
 }
-
 
 type ScraperSpecificCredentials = { username: string, password: string };
 
