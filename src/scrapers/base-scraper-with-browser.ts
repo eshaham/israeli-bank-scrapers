@@ -1,7 +1,4 @@
-import puppeteer, {
-  type Browser, type Frame, type GoToOptions, type Page, type PuppeteerLifeCycleEvent,
-} from 'puppeteer';
-
+import puppeteer, { type Frame, type GoToOptions, type Page, type PuppeteerLifeCycleEvent } from 'puppeteer';
 import { ScraperProgressTypes } from '../definitions';
 import { getDebug } from '../helpers/debug';
 import { clickButton, fillInput, waitUntilElementFound } from '../helpers/elements-interactions';
@@ -85,9 +82,7 @@ function createGeneralError(): ScraperScrapingResult {
 }
 
 class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends BaseScraper<TCredentials> {
-  // NOTICE - it is discouraged to use bang (!) in general. It is used here because
-  // all the classes that inherit from this base assume is it mandatory.
-  protected browser!: Browser;
+  private cleanups: Array<() => Promise<void>> = [];
 
   // NOTICE - it is discouraged to use bang (!) in general. It is used here because
   // all the classes that inherit from this base assume is it mandatory.
@@ -105,48 +100,17 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     debug('initialize scraper');
     this.emitProgress(ScraperProgressTypes.Initializing);
 
-    let env: Record<string, any> | undefined;
-    if (this.options.verbose) {
-      env = { DEBUG: '*', ...process.env };
-    }
+    const page = await this.initializePage();
+    await page.setCacheEnabled(false); // Clear cache and avoid 300's response status
 
-    if (typeof this.options.browser !== 'undefined' && this.options.browser !== null) {
-      debug('use custom browser instance provided in options');
-      this.browser = this.options.browser;
-    } else {
-      const executablePath = this.options.executablePath || undefined;
-      const args = this.options.args || [];
-      const { timeout } = this.options;
-
-      const headless = !this.options.showBrowser;
-      debug(`launch a browser with headless mode = ${headless}`);
-      this.browser = await puppeteer.launch({
-        env,
-        headless,
-        executablePath,
-        args,
-        timeout,
-      });
-    }
-
-    if (this.options.prepareBrowser) {
-      debug("execute 'prepareBrowser' interceptor provided in options");
-      await this.options.prepareBrowser(this.browser);
-    }
-
-    if (!this.browser) {
-      debug('failed to initiate a browser, exit');
+    if (!page) {
+      debug('failed to initiate a browser page, exit');
       return;
     }
 
-    const pages = await this.browser.pages();
-    if (pages.length) {
-      debug('browser has already pages open, use the first one');
-      [this.page] = pages;
-    } else {
-      debug('create a new browser page');
-      this.page = await this.browser.newPage();
-    }
+    this.page = page;
+
+    this.cleanups.push( () => page.close());
 
     if (this.options.defaultTimeout) {
       this.page.setDefaultTimeout(this.options.defaultTimeout);
@@ -167,6 +131,57 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     this.page.on('requestfailed', (request) => {
       debug('Request failed: %s %s', request.failure()?.errorText, request.url());
     });
+  }
+
+  private async initializePage() {
+    debug('initialize browser page');
+    if ('browserContext' in this.options) {
+      debug('Using the browser context provided in options');
+      return this.options.browserContext.newPage();
+    }
+
+    if ('browser' in this.options) {
+      debug('Using the browser instance provided in options');
+      const { browser } = this.options;
+
+      /**
+       * For backward compatibility, we will close the browser even if we didn't create it
+       */
+      if (!this.options.skipCloseBrowser) {
+        this.cleanups.push(async () => {
+          debug('closing the browser');
+          await browser.close();
+        });
+      }
+
+      return browser.newPage();
+    }
+
+    const { timeout, args, executablePath, showBrowser } = this.options;
+
+    const headless = !showBrowser;
+    debug(`launch a browser with headless mode = ${headless}`);
+
+    const browser = await puppeteer.launch({
+      env: this.options.verbose ? { DEBUG: '*', ...process.env } : undefined,
+      headless,
+      executablePath,
+      args,
+      timeout,
+    });
+
+    this.cleanups.push(async () => {
+      debug('closing the browser');
+      await browser.close();
+    });
+
+    if (this.options.prepareBrowser) {
+      debug("execute 'prepareBrowser' interceptor provided in options");
+      await this.options.prepareBrowser(browser);
+    }
+
+    debug('create a new browser page');
+    return browser.newPage();
   }
 
   async navigateTo(
@@ -274,11 +289,8 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
       });
     }
 
-    if (!this.browser) {
-      return;
-    }
-
-    await this.browser.close();
+    await Promise.all(this.cleanups.reverse().map((cleanup) => cleanup()));
+    this.cleanups = [];
   }
 
   private handleLoginResult(loginResult: LoginResults) {

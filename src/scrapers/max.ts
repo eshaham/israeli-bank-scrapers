@@ -278,8 +278,9 @@ function prepareTransactions(txns: Transaction[], startMoment: moment.Moment, co
 async function fetchTransactions(page: Page, options: ScraperOptions) {
   const futureMonthsToScrape = options.futureMonthsToScrape ?? 1;
   const defaultStartMoment = moment().subtract(1, 'years');
+  const startMomentLimit = moment().subtract(4, 'years');
   const startDate = options.startDate || defaultStartMoment.toDate();
-  const startMoment = moment.max(defaultStartMoment, moment(startDate));
+  const startMoment = moment.max(startMomentLimit, moment(startDate));
   const allMonths = getAllMonthMoments(startMoment, futureMonthsToScrape);
 
   await loadCategories(page);
@@ -327,7 +328,7 @@ class MaxScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
     return {
       loginUrl: LOGIN_URL,
       fields: createLoginFields(credentials),
-      submitButtonSelector: '#login-password #send-code',
+      submitButtonSelector: 'app-user-login-form .general-button.send-me-code',
       preAction: async () => {
         if (await elementPresentOnPage(this.page, '#closePopup')) {
           await clickButton(this.page, '#closePopup');
