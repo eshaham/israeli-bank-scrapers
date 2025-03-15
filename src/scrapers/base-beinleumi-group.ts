@@ -54,7 +54,7 @@ export function getPossibleLoginResults(): PossibleLoginResults {
   const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [
     /fibi.*accountSummary/,  // New UI pattern
-    /FibiMenu\/Online/       // Old UI pattern
+    /FibiMenu\/Online/,       // Old UI pattern
   ];
   urls[LoginResults.InvalidPassword] = [/FibiMenu\/Marketing\/Private\/Home/];
   return urls;
