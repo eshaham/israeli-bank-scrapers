@@ -319,26 +319,33 @@ async function getTransactionsFrame(page: Page): Promise<Frame | null> {
   return null;
 }
 
-async function fetchAccounts(page: Page, startDate: Moment) {
-  const accounts: TransactionsAccount[] = [];
+async function selectAccount(page: Page, accountId: string) {
+  await page.select('#account_num_select', accountId);
+  await waitUntilElementFound(page, '#account_num_select', true);
+}
+
+async function fetchAccountDataBothUIs(page: Page, startDate: Moment) {
+  // Try to get the iframe for the new UI
+  const frame = await getTransactionsFrame(page);
+    
+  // Use the frame if available (new UI), otherwise use the page directly (old UI)
+  const targetPage = frame || page;
+  return fetchAccountData(targetPage, startDate);
+}
+
+async function fetchAccounts(page: Page, startDate: Moment):Promise<TransactionsAccount[]> {
   const accountsIds = await getAccountIdsBySelector(page);
-  
-  // Convert single account case to an array with one item
-  const accountsToProcess = accountsIds.length <= 1 ? [''] : accountsIds;
-  
-  for (const accountId of accountsToProcess) {
-    // Only select account if we have multiple accounts
-    if (accountsIds.length > 1) {
-      await page.select('#account_num_select', accountId);
-      await waitUntilElementFound(page, '#account_num_select', true);
-    }
+
+  if (accountsIds.length <= 1) {
+    const accountData = await fetchAccountDataBothUIs(page, startDate);
+    return [accountData];
+  }
+
+  const accounts: TransactionsAccount[] = [];
+  for (const accountId of accountsIds) {
+    await selectAccount(page, accountId);
     
-    // Try to get the iframe for the new UI
-    const frame = await getTransactionsFrame(page);
-    
-    // Use the frame if available (new UI), otherwise use the page directly (old UI)
-    const targetPage = frame || page;
-    const accountData = await fetchAccountData(targetPage, startDate);
+    const accountData = await fetchAccountDataBothUIs(page, startDate);
     accounts.push(accountData);
   }
   
