@@ -362,7 +362,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
       preAction: this.openLoginPopup,
       postAction: async () => {
         try {
-          await waitUntilElementFound(this.page, 'button.btn-close');
+          await waitUntilElementFound(this.page, 'button.btn-next-time');
           const currentUrl = await getCurrentUrl(this.page);
           if (currentUrl.endsWith('site-tutorial')) {
             await clickButton(this.page, 'button.btn-close');
