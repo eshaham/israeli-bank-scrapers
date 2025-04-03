@@ -5,7 +5,7 @@ import {
   clickButton, elementPresentOnPage, pageEval, waitUntilElementFound,
 } from '../helpers/elements-interactions';
 import { fetchPostWithinPage } from '../helpers/fetch';
-import { getCurrentUrl } from '../helpers/navigation';
+import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { getFromSessionStorage } from '../helpers/storage';
 import { filterOldTransactions } from '../helpers/transactions';
 import { waitUntil } from '../helpers/waiting';
@@ -362,7 +362,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
       preAction: this.openLoginPopup,
       postAction: async () => {
         try {
-          await waitUntilElementFound(this.page, 'button.butn-small-light-grey.btn-next-time');
+          await waitForNavigation(this.page);
           const currentUrl = await getCurrentUrl(this.page);
           if (currentUrl.endsWith('site-tutorial')) {
             await clickButton(this.page, 'button.btn-close');
