@@ -4,14 +4,12 @@ export const PASSWORD_FIELD = 'password';
 
 export enum CompanyTypes {
   hapoalim = 'hapoalim',
-  hapoalimBeOnline = 'hapoalimBeOnline',
   beinleumi = 'beinleumi',
   union = 'union',
   amex = 'amex',
   isracard = 'isracard',
   visaCal = 'visaCal',
   max = 'max',
-  leumiCard = 'leumiCard',
   otsarHahayal = 'otsarHahayal',
   discount = 'discount',
   mercantile = 'mercantile',
@@ -27,10 +25,6 @@ export enum CompanyTypes {
 
 export const SCRAPERS = {
   [CompanyTypes.hapoalim]: {
-    name: 'Bank Hapoalim',
-    loginFields: ['userCode', PASSWORD_FIELD],
-  },
-  [CompanyTypes.hapoalimBeOnline]: { // TODO remove in Major version
     name: 'Bank Hapoalim',
     loginFields: ['userCode', PASSWORD_FIELD],
   },
@@ -52,10 +46,6 @@ export const SCRAPERS = {
   },
   [CompanyTypes.otsarHahayal]: {
     name: 'Bank Otsar Hahayal',
-    loginFields: ['username', PASSWORD_FIELD],
-  },
-  [CompanyTypes.leumiCard]: { // TODO remove in Major version
-    name: 'Leumi Card',
     loginFields: ['username', PASSWORD_FIELD],
   },
   [CompanyTypes.max]: {
@@ -96,7 +86,13 @@ export const SCRAPERS = {
   },
   [CompanyTypes.oneZero]: {
     name: 'One Zero',
-    loginFields: ['email', PASSWORD_FIELD, 'otpCodeRetriever', 'phoneNumber', 'otpLongTermToken'],
+    loginFields: [
+      'email',
+      PASSWORD_FIELD,
+      'otpCodeRetriever',
+      'phoneNumber',
+      'otpLongTermToken',
+    ],
   },
   [CompanyTypes.behatsdaa]: {
     name: 'Behatsdaa',
