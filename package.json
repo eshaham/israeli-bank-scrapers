@@ -80,7 +80,7 @@
     "moment": "^2.22.2",
     "moment-timezone": "^0.5.37",
     "node-fetch": "^2.2.0",
-    "puppeteer": "22.12.1",
+    "puppeteer": "22.15.0",
     "uuid": "^9.0.1"
   },
   "files": [
