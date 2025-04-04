@@ -1,6 +1,4 @@
-import { type Frame, type GoToOptions, type Page, type PuppeteerLifeCycleEvent } from 'puppeteer';
-import puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import puppeteer, { type Frame, type GoToOptions, type Page, type PuppeteerLifeCycleEvent } from 'puppeteer';
 import { ScraperProgressTypes } from '../definitions';
 import { getDebug } from '../helpers/debug';
 import { clickButton, fillInput, waitUntilElementFound } from '../helpers/elements-interactions';
@@ -112,7 +110,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
 
     this.page = page;
 
-    this.cleanups.push( () => page.close());
+    this.cleanups.push(() => page.close());
 
     if (this.options.defaultTimeout) {
       this.page.setDefaultTimeout(this.options.defaultTimeout);
@@ -164,7 +162,6 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     const headless = !showBrowser;
     debug(`launch a browser with headless mode = ${headless}`);
 
-    puppeteer.use(StealthPlugin());
     const browser = await puppeteer.launch({
       env: this.options.verbose ? { DEBUG: '*', ...process.env } : undefined,
       headless,
