@@ -149,6 +149,11 @@ export type ScraperOptions = ScraperBrowserOptions & {
     width: number;
     height: number;
   };
+
+  /**
+   * The number of times to retry the navigation in case of a failure (default 0)
+   */
+  navigationRetryCount?: number;
 };
 
 export interface OutputDataOptions {

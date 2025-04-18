@@ -1,4 +1,4 @@
-import puppeteer, { type Frame, type GoToOptions, type Page, type PuppeteerLifeCycleEvent } from 'puppeteer';
+import puppeteer, { type Frame, type Page, type PuppeteerLifeCycleEvent } from 'puppeteer';
 import { ScraperProgressTypes } from '../definitions';
 import { getDebug } from '../helpers/debug';
 import { clickButton, fillInput, waitUntilElementFound } from '../helpers/elements-interactions';
@@ -6,8 +6,6 @@ import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { BaseScraper } from './base-scraper';
 import { ScraperErrorTypes } from './errors';
 import { type ScraperCredentials, type ScraperScrapingResult } from './interface';
-
-const OK_STATUS = 200;
 
 const debug = getDebug('base-scraper-with-browser');
 
@@ -189,6 +187,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     page?: Page,
     timeout?: number,
     waitUntil: PuppeteerLifeCycleEvent | undefined = 'load',
+    retries = this.options.navigationRetryCount ?? 0,
   ): Promise<void> {
     const pageToUse = page || this.page;
 
@@ -196,12 +195,30 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
       return;
     }
 
-    const options: GoToOptions = { ...(timeout === null ? null : { timeout }), waitUntil };
-    const response = await pageToUse.goto(url, options);
+    const response = await pageToUse.goto(url, {
+      ...(timeout === null ? null : { timeout }),
+      waitUntil,
+    });
 
-    // note: response will be null when navigating to same url while changing the hash part. the condition below will always accept null as valid result.
-    if (response !== null && (response === undefined || response.status() !== OK_STATUS)) {
-      throw new Error(`Error while trying to navigate to url ${url}`);
+    if (response === null) {
+      // note: response will be null when navigating to same url while changing the hash part.
+      // the condition below will always accept null as valid result.
+      return;
+    }
+
+    if (!response) {
+      throw new Error(
+        `Error while trying to navigate to url ${url}, response is undefined`,
+      );
+    }
+
+    if (!response.ok()) {
+      if (retries > 0) {
+        debug(`Failed to navigate to url ${url}, retrying ${retries} more times`);
+        await this.navigateTo(url, pageToUse, timeout, waitUntil, retries - 1);
+      } else {
+        throw new Error( `Failed to navigate to url ${url}, status code: ${response.status()}`);
+      }
     }
   }
 
