@@ -7,8 +7,6 @@ import { BaseScraper } from './base-scraper';
 import { ScraperErrorTypes } from './errors';
 import { type ScraperCredentials, type ScraperScrapingResult } from './interface';
 
-const VIEWPORT_WIDTH = 1024;
-const VIEWPORT_HEIGHT = 768;
 const OK_STATUS = 200;
 
 const debug = getDebug('base-scraper-with-browser');
@@ -89,10 +87,12 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
   protected page!: Page;
 
   protected getViewPort() {
-    return {
-      width: VIEWPORT_WIDTH,
-      height: VIEWPORT_HEIGHT,
-    };
+    return (
+      this.options.viewportSize ?? {
+        width: 1024,
+        height: 768,
+      }
+    );
   }
 
   async initialize() {
