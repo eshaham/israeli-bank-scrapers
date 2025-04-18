@@ -1,6 +1,6 @@
 import BeinleumiGroupBaseScraper from './base-beinleumi-group';
 
-class BeinleumiScraper extends BeinleumiGroupBaseScraper {
+class PagiScraper extends BeinleumiGroupBaseScraper {
   BASE_URL = 'https://online.pagi.co.il';
 
   LOGIN_URL = `${this.BASE_URL}/MatafLoginService/MatafLoginServlet?bankId=FIBIPORTAL&site=Private&KODSAFA=HE`;
@@ -8,4 +8,4 @@ class BeinleumiScraper extends BeinleumiGroupBaseScraper {
   TRANSACTIONS_URL = `${this.BASE_URL}/wps/myportal/FibiMenu/Online/OnAccountMngment/OnBalanceTrans/PrivateAccountFlow`;
 }
 
-export default BeinleumiScraper;
+export default PagiScraper;
