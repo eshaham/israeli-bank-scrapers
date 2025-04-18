@@ -184,22 +184,10 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
 
   async navigateTo(
     url: string,
-    page?: Page,
-    timeout?: number,
     waitUntil: PuppeteerLifeCycleEvent | undefined = 'load',
     retries = this.options.navigationRetryCount ?? 0,
   ): Promise<void> {
-    const pageToUse = page || this.page;
-
-    if (!pageToUse) {
-      return;
-    }
-
-    const response = await pageToUse.goto(url, {
-      ...(timeout === null ? null : { timeout }),
-      waitUntil,
-    });
-
+    const response = await this.page?.goto(url, { waitUntil });
     if (response === null) {
       // note: response will be null when navigating to same url while changing the hash part.
       // the condition below will always accept null as valid result.
@@ -215,7 +203,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     if (!response.ok()) {
       if (retries > 0) {
         debug(`Failed to navigate to url ${url}, retrying ${retries} more times`);
-        await this.navigateTo(url, pageToUse, timeout, waitUntil, retries - 1);
+        await this.navigateTo(url, waitUntil, retries - 1);
       } else {
         throw new Error( `Failed to navigate to url ${url}, status code: ${response.status()}`);
       }
@@ -254,7 +242,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     }
 
     debug('navigate to login url');
-    await this.navigateTo(loginOptions.loginUrl, undefined, undefined, loginOptions.waitUntil);
+    await this.navigateTo(loginOptions.loginUrl, loginOptions.waitUntil);
     if (loginOptions.checkReadiness) {
       debug("execute 'checkReadiness' interceptor provided in login options");
       await loginOptions.checkReadiness();
