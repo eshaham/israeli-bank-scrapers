@@ -202,7 +202,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
 
     if (!response.ok()) {
       if (retries > 0) {
-        debug(`Failed to navigate to url ${url}, retrying ${retries} more times`);
+        debug(`Failed to navigate to url ${url}, status code: ${response.status()}, retrying ${retries} more times`);
         await this.navigateTo(url, waitUntil, retries - 1);
       } else {
         throw new Error( `Failed to navigate to url ${url}, status code: ${response.status()}`);
