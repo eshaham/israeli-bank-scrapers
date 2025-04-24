@@ -110,7 +110,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
 
     this.page = page;
 
-    this.cleanups.push( () => page.close());
+    this.cleanups.push(() => page.close());
 
     if (this.options.defaultTimeout) {
       this.page.setDefaultTimeout(this.options.defaultTimeout);

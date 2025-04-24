@@ -21,6 +21,7 @@ import {
 import { BaseScraperWithBrowser } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
 import { type ScraperOptions, type ScraperScrapingResult } from './interface';
+import { maskHeadlessUserAgent } from '../helpers/browser';
 
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';
@@ -355,7 +356,8 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
       }
     });
 
-    debug('navigate to login page');
+    await maskHeadlessUserAgent(this.page);
+
     await this.navigateTo(`${this.baseUrl}/personalarea/Login`);
 
     this.emitProgress(ScraperProgressTypes.LoggingIn);
