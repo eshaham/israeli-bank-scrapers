@@ -334,6 +334,9 @@ class MaxScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
           await clickButton(this.page, '#closePopup');
         }
         await clickButton(this.page, '.personal-area > a.go-to-personal-area');
+        if (await elementPresentOnPage(this.page, '.login-link#private')) {
+          await clickButton(this.page, '.login-link#private');
+        }
         await waitUntilElementFound(this.page, '#login-password-link', true);
         await clickButton(this.page, '#login-password-link');
         await waitUntilElementFound(this.page, '#login-password.tab-pane.active app-user-login-form', true);
