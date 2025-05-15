@@ -350,9 +350,9 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
     this.page.on('request', (request) => {
       if (request.url().includes('detector-dom.min.js')) {
         debug('force abort for request do download detector-dom.min.js resource');
-        void request.abort();
+        void request.abort(undefined, 1000);
       } else {
-        void request.continue();
+        void request.continue(undefined, 10);
       }
     });
 
