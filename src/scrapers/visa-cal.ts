@@ -21,6 +21,7 @@ import { type ScraperScrapingResult } from './interface';
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_REQUEST_ENDPOINT = 'https://api.cal-online.co.il/Transactions/api/transactionsDetails/getCardTransactionsDetails';
 const PENDING_TRANSACTIONS_REQUEST_ENDPOINT = 'https://api.cal-online.co.il/Transactions/api/approvals/getClearanceRequests';
+const SSO_AUTHORIZATION_REQUEST_ENDPOINT = 'https://connect.cal-online.co.il/col-rest/calconnect/authentication/SSO';
 
 const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו שגויים';
 
@@ -328,7 +329,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
   async getAuthorizationHeader() {
     const authModule = await getFromSessionStorage<{ auth: { calConnectToken: string } }>(this.page, 'auth-module');
-    if (!authModule) {
+    if (!authModule?.auth?.calConnectToken) {
       throw new Error('could not find \'auth-module\' in session storage');
     }
     return `CALAuthScheme ${authModule.auth.calConnectToken}`;
@@ -353,6 +354,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
   }
 
   getLoginOptions(credentials: ScraperSpecificCredentials): LoginOptions {
+    const requestPromise = this.page.waitForRequest(SSO_AUTHORIZATION_REQUEST_ENDPOINT);
     return {
       loginUrl: `${LOGIN_URL}`,
       fields: createLoginFields(credentials),
@@ -367,6 +369,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
           if (currentUrl.endsWith('site-tutorial')) {
             await clickButton(this.page, 'button.btn-close');
           }
+          await requestPromise;
         } catch (e) {
           const currentUrl = await getCurrentUrl(this.page);
           if (currentUrl.endsWith('dashboard')) return;
