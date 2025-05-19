@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { type Frame, type Page } from 'puppeteer';
+import { type HTTPRequest, type Frame, type Page } from 'puppeteer';
 import { getDebug } from '../helpers/debug';
 import {
   clickButton, elementPresentOnPage, pageEval, waitUntilElementFound,
@@ -297,6 +297,10 @@ function convertParsedDataToTransactions(data: CardTransactionDetails[], pending
 type ScraperSpecificCredentials = { username: string, password: string };
 
 class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
+  private authorization: string | undefined = undefined;
+
+  private requestPromise: Promise<HTTPRequest> | null = null;
+  
   openLoginPopup = async () => {
     debug('open login popup, wait until login button available');
     await waitUntilElementFound(this.page, '#ccLoginDesktopBtn', true);
@@ -327,12 +331,11 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     return initData?.result.cards.map(({ cardUniqueId, last4Digits }) => ({ cardUniqueId, last4Digits }));
   }
 
-  async getAuthorizationHeader() {
-    const authModule = await getFromSessionStorage<{ auth: { calConnectToken: string } }>(this.page, 'auth-module');
-    if (!authModule?.auth?.calConnectToken) {
-      throw new Error('could not find \'auth-module\' in session storage');
+  getAuthorizationHeader() {
+    if (!this.authorization) {
+      throw new Error('could not retrieve authorization header');
     }
-    return `CALAuthScheme ${authModule.auth.calConnectToken}`;
+    return this.authorization;
   }
 
   async getXSiteId() {
@@ -354,7 +357,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
   }
 
   getLoginOptions(credentials: ScraperSpecificCredentials): LoginOptions {
-    const requestPromise = this.page.waitForRequest(SSO_AUTHORIZATION_REQUEST_ENDPOINT);
+    this.requestPromise = this.page.waitForRequest(SSO_AUTHORIZATION_REQUEST_ENDPOINT);
     return {
       loginUrl: `${LOGIN_URL}`,
       fields: createLoginFields(credentials),
@@ -369,7 +372,8 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
           if (currentUrl.endsWith('site-tutorial')) {
             await clickButton(this.page, 'button.btn-close');
           }
-          await requestPromise;
+          const request = await this.requestPromise;
+          this.authorization = request?.headers()?.authorization;
         } catch (e) {
           const currentUrl = await getCurrentUrl(this.page);
           if (currentUrl.endsWith('dashboard')) return;
@@ -388,7 +392,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
     debug(`fetch transactions starting ${startMoment.format()}`);
 
-    const Authorization = await this.getAuthorizationHeader();
+    const Authorization = this.getAuthorizationHeader();
     const cards = await this.getCards();
     const xSiteId = await this.getXSiteId();
     const futureMonthsToScrape = this.options.futureMonthsToScrape ?? 1;
