@@ -13,7 +13,7 @@ const PURCHASE_HISTORY_URL = 'https://back.behatsdaa.org.il/api/purchases/purcha
 
 const debug = getDebug('behatsdaa');
 
-type ScraperSpecificCredentials = { id: string, password: string };
+type ScraperSpecificCredentials = { id: string; password: string };
 
 type Variant = {
   name: string;
@@ -101,9 +101,9 @@ class BehatsdaaScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials
     debug('Fetching data');
 
     const res = await fetchPostWithinPage<PurchaseHistoryResponse>(this.page, PURCHASE_HISTORY_URL, body, {
-      'authorization': `Bearer ${token}`,
+      authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
-      'organizationid': '20',
+      organizationid: '20',
     });
 
     debug('Data fetched');
@@ -121,10 +121,12 @@ class BehatsdaaScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials
     debug('Data fetched successfully');
     return {
       success: true,
-      accounts: [{
-        accountNumber: res.data.memberId,
-        txns: res.data.variants.map(variantToTransaction),
-      }],
+      accounts: [
+        {
+          accountNumber: res.data.memberId,
+          txns: res.data.variants.map(variantToTransaction),
+        },
+      ],
     };
   }
 }

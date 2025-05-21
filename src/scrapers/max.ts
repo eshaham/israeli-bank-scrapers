@@ -59,7 +59,7 @@ enum MaxPlanName {
   MonthlyPostponedInstallments = 'דחוי חודש תשלומים',
   ThirtyDaysPlus = 'עסקת 30 פלוס',
   TwoMonthsPostponed = 'דחוי חודשיים',
-  TwoMonthsPostponed2 = 'דחוי 2 ח\' תשלומים',
+  TwoMonthsPostponed2 = "דחוי 2 ח' תשלומים",
   MonthlyChargePlusInterest = 'חודשי + ריבית',
   Credit = 'קרדיט',
   CreditOutsideTheLimit = 'קרדיט-מחוץ למסגרת',
@@ -90,18 +90,18 @@ function getTransactionsUrl(monthMoment: Moment) {
   const date = `${year}-${month}-01`;
 
   /**
-     * url explanation:
-     * userIndex: -1 for all account owners
-     * cardIndex: -1 for all cards under the account
-     * all other query params are static, beside the date which changes for request per month
-     */
+   * url explanation:
+   * userIndex: -1 for all account owners
+   * cardIndex: -1 for all cards under the account
+   * all other query params are static, beside the date which changes for request per month
+   */
   return buildUrl(BASE_API_ACTIONS_URL, {
     path: `/api/registered/transactionDetails/getTransactionsAndGraphs?filterData={"userIndex":-1,"cardIndex":-1,"monthView":true,"date":"${date}","dates":{"startDate":"0","endDate":"0"},"bankAccount":{"bankAccountIndex":-1,"cards":null}}&firstCallCardIndex=-1`,
   });
 }
 
 interface FetchCategoryResult {
-  result? : Array<{
+  result?: Array<{
     id: number;
     name: string;
   }>;
@@ -185,7 +185,9 @@ function getChargedCurrency(currencyId: number | null) {
 }
 
 export function getMemo({
-  comments, fundsTransferReceiverOrTransfer, fundsTransferComment,
+  comments,
+  fundsTransferReceiverOrTransfer,
+  fundsTransferComment,
 }: Pick<ScrapedTransaction, 'comments' | 'fundsTransferReceiverOrTransfer' | 'fundsTransferComment'>) {
   if (fundsTransferReceiverOrTransfer) {
     const memo = comments ? `${comments} ${fundsTransferReceiverOrTransfer}` : fundsTransferReceiverOrTransfer;
@@ -197,15 +199,13 @@ export function getMemo({
 
 function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
   const isPending = rawTransaction.paymentDate === null;
-  const processedDate = moment(isPending ?
-    rawTransaction.purchaseDate :
-    rawTransaction.paymentDate).toISOString();
+  const processedDate = moment(isPending ? rawTransaction.purchaseDate : rawTransaction.paymentDate).toISOString();
   const status = isPending ? TransactionStatuses.Pending : TransactionStatuses.Completed;
 
   const installments = getInstallmentsInfo(rawTransaction.comments);
-  const identifier = installments ?
-    `${rawTransaction.dealData?.arn}_${installments.number}` :
-    rawTransaction.dealData?.arn;
+  const identifier = installments
+    ? `${rawTransaction.dealData?.arn}_${installments.number}`
+    : rawTransaction.dealData?.arn;
 
   return {
     type: getTransactionType(rawTransaction.planName, rawTransaction.planTypeId),
@@ -239,7 +239,7 @@ async function fetchTransactionsForMonth(page: Page, monthMoment: Moment) {
 
   data.result.transactions
     // Filter out non-transactions without a plan type, e.g. summary rows
-    .filter((transaction) => !!transaction.planName)
+    .filter(transaction => !!transaction.planName)
     .forEach((transaction: ScrapedTransaction) => {
       if (!transactionsByAccount[transaction.shortCardNumber]) {
         transactionsByAccount[transaction.shortCardNumber] = [];
@@ -254,7 +254,7 @@ async function fetchTransactionsForMonth(page: Page, monthMoment: Moment) {
 
 function addResult(allResults: Record<string, Transaction[]>, result: Record<string, Transaction[]>) {
   const clonedResults: Record<string, Transaction[]> = { ...allResults };
-  Object.keys(result).forEach((accountNumber) => {
+  Object.keys(result).forEach(accountNumber => {
     if (!clonedResults[accountNumber]) {
       clonedResults[accountNumber] = [];
     }
@@ -263,15 +263,20 @@ function addResult(allResults: Record<string, Transaction[]>, result: Record<str
   return clonedResults;
 }
 
-function prepareTransactions(txns: Transaction[], startMoment: moment.Moment, combineInstallments: boolean, enableTransactionsFilterByDate: boolean) {
+function prepareTransactions(
+  txns: Transaction[],
+  startMoment: moment.Moment,
+  combineInstallments: boolean,
+  enableTransactionsFilterByDate: boolean,
+) {
   let clonedTxns = Array.from(txns);
   if (!combineInstallments) {
     clonedTxns = fixInstallments(clonedTxns);
   }
   clonedTxns = sortTransactionsByDate(clonedTxns);
-  clonedTxns = enableTransactionsFilterByDate ?
-    filterOldTransactions(clonedTxns, startMoment, combineInstallments || false) :
-    clonedTxns;
+  clonedTxns = enableTransactionsFilterByDate
+    ? filterOldTransactions(clonedTxns, startMoment, combineInstallments || false)
+    : clonedTxns;
   return clonedTxns;
 }
 
@@ -291,10 +296,14 @@ async function fetchTransactions(page: Page, options: ScraperOptions) {
     allResults = addResult(allResults, result);
   }
 
-  Object.keys(allResults).forEach((accountNumber) => {
+  Object.keys(allResults).forEach(accountNumber => {
     let txns = allResults[accountNumber];
-    txns = prepareTransactions(txns, startMoment, options.combineInstallments || false,
-      (options.outputData?.enableTransactionsFilterByDate ?? true));
+    txns = prepareTransactions(
+      txns,
+      startMoment,
+      options.combineInstallments || false,
+      options.outputData?.enableTransactionsFilterByDate ?? true,
+    );
     allResults[accountNumber] = txns;
   });
 
@@ -305,12 +314,16 @@ function getPossibleLoginResults(page: Page): PossibleLoginResults {
   const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [SUCCESS_URL];
   urls[LoginResults.ChangePassword] = [PASSWORD_EXPIRED_URL];
-  urls[LoginResults.InvalidPassword] = [async () => {
-    return elementPresentOnPage(page, INVALID_DETAILS_SELECTOR);
-  }];
-  urls[LoginResults.UnknownError] = [async () => {
-    return elementPresentOnPage(page, LOGIN_ERROR_SELECTOR);
-  }];
+  urls[LoginResults.InvalidPassword] = [
+    async () => {
+      return elementPresentOnPage(page, INVALID_DETAILS_SELECTOR);
+    },
+  ];
+  urls[LoginResults.UnknownError] = [
+    async () => {
+      return elementPresentOnPage(page, LOGIN_ERROR_SELECTOR);
+    },
+  ];
   return urls;
 }
 
@@ -321,7 +334,7 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
   ];
 }
 
-type ScraperSpecificCredentials = { username: string, password: string };
+type ScraperSpecificCredentials = { username: string; password: string };
 
 class MaxScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   getLoginOptions(credentials: ScraperSpecificCredentials): LoginOptions {
@@ -352,7 +365,7 @@ class MaxScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
 
   async fetchData() {
     const results = await fetchTransactions(this.page, this.options);
-    const accounts = Object.keys(results).map((accountNumber) => {
+    const accounts = Object.keys(results).map(accountNumber => {
       return {
         accountNumber,
         txns: results[accountNumber],

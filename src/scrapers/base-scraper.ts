@@ -18,8 +18,7 @@ const SCRAPE_PROGRESS = 'SCRAPE_PROGRESS';
 export class BaseScraper<TCredentials extends ScraperCredentials> implements Scraper<TCredentials> {
   private eventEmitter = new EventEmitter();
 
-  constructor(public options: ScraperOptions) {
-  }
+  constructor(public options: ScraperOptions) {}
 
   // eslint-disable-next-line  @typescript-eslint/require-await
   async initialize() {
@@ -35,9 +34,8 @@ export class BaseScraper<TCredentials extends ScraperCredentials> implements Scr
     try {
       loginResult = await this.login(credentials);
     } catch (e) {
-      loginResult = e instanceof TimeoutError ?
-        createTimeoutError((e as Error).message) :
-        createGenericError((e as Error).message);
+      loginResult =
+        e instanceof TimeoutError ? createTimeoutError((e as Error).message) : createGenericError((e as Error).message);
     }
 
     let scrapeResult;
@@ -46,9 +44,9 @@ export class BaseScraper<TCredentials extends ScraperCredentials> implements Scr
         scrapeResult = await this.fetchData();
       } catch (e) {
         scrapeResult =
-          e instanceof TimeoutError ?
-            createTimeoutError((e as Error).message) :
-            createGenericError((e as Error).message);
+          e instanceof TimeoutError
+            ? createTimeoutError((e as Error).message)
+            : createGenericError((e as Error).message);
       }
     } else {
       scrapeResult = loginResult;
