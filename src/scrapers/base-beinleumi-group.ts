@@ -10,11 +10,7 @@ import {
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { sleep } from '../helpers/waiting';
-import {
-  TransactionStatuses, TransactionTypes,
-  type Transaction,
-  type TransactionsAccount,
-} from '../transactions';
+import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
@@ -53,8 +49,8 @@ interface ScrapedTransaction {
 export function getPossibleLoginResults(): PossibleLoginResults {
   const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [
-    /fibi.*accountSummary/,  // New UI pattern
-    /FibiMenu\/Online/,       // Old UI pattern
+    /fibi.*accountSummary/, // New UI pattern
+    /FibiMenu\/Online/, // Old UI pattern
   ];
   urls[LoginResults.InvalidPassword] = [/FibiMenu\/Marketing\/Private\/Home/];
   return urls;
@@ -98,14 +94,22 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   });
 }
 
-function getTransactionDate(tds: TransactionsTrTds, transactionType: string, transactionsColsTypes: TransactionsColsTypes) {
+function getTransactionDate(
+  tds: TransactionsTrTds,
+  transactionType: string,
+  transactionsColsTypes: TransactionsColsTypes,
+) {
   if (transactionType === 'completed') {
     return (tds[transactionsColsTypes[DATE_COLUMN_CLASS_COMPLETED]] || '').trim();
   }
   return (tds[transactionsColsTypes[DATE_COLUMN_CLASS_PENDING]] || '').trim();
 }
 
-function getTransactionDescription(tds: TransactionsTrTds, transactionType: string, transactionsColsTypes: TransactionsColsTypes) {
+function getTransactionDescription(
+  tds: TransactionsTrTds,
+  transactionType: string,
+  transactionsColsTypes: TransactionsColsTypes,
+) {
   if (transactionType === 'completed') {
     return (tds[transactionsColsTypes[DESCRIPTION_COLUMN_CLASS_COMPLETED]] || '').trim();
   }
@@ -124,7 +128,11 @@ function getTransactionCredit(tds: TransactionsTrTds, transactionsColsTypes: Tra
   return (tds[transactionsColsTypes[CREDIT_COLUMN_CLASS]] || '').trim();
 }
 
-function extractTransactionDetails(txnRow: TransactionsTr, transactionStatus: TransactionStatuses, transactionsColsTypes: TransactionsColsTypes): ScrapedTransaction {
+function extractTransactionDetails(
+  txnRow: TransactionsTr,
+  transactionStatus: TransactionStatuses,
+  transactionsColsTypes: TransactionsColsTypes,
+): ScrapedTransaction {
   const tds = txnRow.innerTds;
   const item = {
     status: transactionStatus,
@@ -138,9 +146,12 @@ function extractTransactionDetails(txnRow: TransactionsTr, transactionStatus: Tr
   return item;
 }
 
-async function getTransactionsColsTypeClasses(page: Page | Frame, tableLocator: string): Promise<TransactionsColsTypes> {
+async function getTransactionsColsTypeClasses(
+  page: Page | Frame,
+  tableLocator: string,
+): Promise<TransactionsColsTypes> {
   const result: TransactionsColsTypes = {};
-  const typeClassesObjs = await pageEvalAll(page, `${tableLocator} tbody tr:first-of-type td`, null, (tds) => {
+  const typeClassesObjs = await pageEvalAll(page, `${tableLocator} tbody tr:first-of-type td`, null, tds => {
     return tds.map((td, index) => ({
       colClass: td.getAttribute('class'),
       index,
@@ -155,7 +166,12 @@ async function getTransactionsColsTypeClasses(page: Page | Frame, tableLocator: 
   return result;
 }
 
-function extractTransaction(txns: ScrapedTransaction[], transactionStatus: TransactionStatuses, txnRow: TransactionsTr, transactionsColsTypes: TransactionsColsTypes) {
+function extractTransaction(
+  txns: ScrapedTransaction[],
+  transactionStatus: TransactionStatuses,
+  txnRow: TransactionsTr,
+  transactionsColsTypes: TransactionsColsTypes,
+) {
   const txn = extractTransactionDetails(txnRow, transactionStatus, transactionsColsTypes);
   if (txn.date !== '') {
     txns.push(txn);
@@ -166,9 +182,9 @@ async function extractTransactions(page: Page | Frame, tableLocator: string, tra
   const txns: ScrapedTransaction[] = [];
   const transactionsColsTypes = await getTransactionsColsTypeClasses(page, tableLocator);
 
-  const transactionsRows = await pageEvalAll<TransactionsTr[]>(page, `${tableLocator} tbody tr`, [], (trs) => {
-    return trs.map((tr) => ({
-      innerTds: Array.from(tr.getElementsByTagName('td')).map((td) => td.innerText),
+  const transactionsRows = await pageEvalAll<TransactionsTr[]>(page, `${tableLocator} tbody tr`, [], trs => {
+    return trs.map(tr => ({
+      innerTds: Array.from(tr.getElementsByTagName('td')).map(td => td.innerText),
     }));
   });
 
@@ -181,7 +197,7 @@ async function extractTransactions(page: Page | Frame, tableLocator: string, tra
 async function isNoTransactionInDateRangeError(page: Page | Frame) {
   const hasErrorInfoElement = await elementPresentOnPage(page, `.${ERROR_MESSAGE_CLASS}`);
   if (hasErrorInfoElement) {
-    const errorText = await page.$eval(`.${ERROR_MESSAGE_CLASS}`, (errorElement) => {
+    const errorText = await page.$eval(`.${ERROR_MESSAGE_CLASS}`, errorElement => {
       return (errorElement as HTMLElement).innerText;
     });
     return errorText.trim() === NO_TRANSACTION_IN_DATE_RANGE_TEXT;
@@ -192,18 +208,14 @@ async function isNoTransactionInDateRangeError(page: Page | Frame) {
 async function searchByDates(page: Page | Frame, startDate: Moment) {
   await clickButton(page, 'a#tabHeader4');
   await waitUntilElementFound(page, 'div#fibi_dates');
-  await fillInput(
-    page,
-    'input#fromDate',
-    startDate.format(DATE_FORMAT),
-  );
+  await fillInput(page, 'input#fromDate', startDate.format(DATE_FORMAT));
   await clickButton(page, `button[class*=${CLOSE_SEARCH_BY_DATES_BUTTON_CLASS}]`);
   await clickButton(page, `input[value=${SHOW_SEARCH_BY_DATES_BUTTON_VALUE}]`);
   await waitForNavigation(page);
 }
 
 async function getAccountNumber(page: Page | Frame) {
-  const selectedSnifAccount = await page.$eval(ACCOUNTS_NUMBER, (option) => {
+  const selectedSnifAccount = await page.$eval(ACCOUNTS_NUMBER, option => {
     return (option as HTMLElement).innerText;
   });
 
@@ -221,7 +233,12 @@ async function navigateToNextPage(page: Page | Frame) {
 
 /* Couldn't reproduce scenario with multiple pages of pending transactions - Should support if exists such case.
    needToPaginate is false if scraping pending transactions */
-async function scrapeTransactions(page: Page | Frame, tableLocator: string, transactionStatus: TransactionStatuses, needToPaginate: boolean) {
+async function scrapeTransactions(
+  page: Page | Frame,
+  tableLocator: string,
+  transactionStatus: TransactionStatuses,
+  needToPaginate: boolean,
+) {
   const txns = [];
   let hasNextPage = false;
 
@@ -241,7 +258,7 @@ async function scrapeTransactions(page: Page | Frame, tableLocator: string, tran
 
 async function getAccountTransactions(page: Page | Frame) {
   await Promise.race([
-    waitUntilElementFound(page, 'div[id*=\'divTable\']', false),
+    waitUntilElementFound(page, "div[id*='divTable']", false),
     waitUntilElementFound(page, `.${ERROR_MESSAGE_CLASS}`, false),
   ]);
 
@@ -250,14 +267,14 @@ async function getAccountTransactions(page: Page | Frame) {
     return [];
   }
 
-  const pendingTxns = await scrapeTransactions(page, PENDING_TRANSACTIONS_TABLE,
-    TransactionStatuses.Pending, false);
-  const completedTxns = await scrapeTransactions(page, COMPLETED_TRANSACTIONS_TABLE,
-    TransactionStatuses.Completed, true);
-  const txns = [
-    ...pendingTxns,
-    ...completedTxns,
-  ];
+  const pendingTxns = await scrapeTransactions(page, PENDING_TRANSACTIONS_TABLE, TransactionStatuses.Pending, false);
+  const completedTxns = await scrapeTransactions(
+    page,
+    COMPLETED_TRANSACTIONS_TABLE,
+    TransactionStatuses.Completed,
+    true,
+  );
+  const txns = [...pendingTxns, ...completedTxns];
   return txns;
 }
 
@@ -266,7 +283,7 @@ async function getCurrentBalance(page: Page | Frame) {
   if (!balanceElement) {
     return undefined;
   }
-  const balanceStr = await balanceElement.evaluate((option) => {
+  const balanceStr = await balanceElement.evaluate(option => {
     return (option as HTMLElement).innerText;
   });
   return getAmountData(balanceStr);
@@ -299,7 +316,7 @@ async function getAccountIdsBySelector(page: Page): Promise<string[]> {
     const selectElement = document.getElementById('account_num_select');
     const options = selectElement ? selectElement.querySelectorAll('option') : [];
     if (!options) return [];
-    return Array.from(options, (option) => option.value);
+    return Array.from(options, option => option.value);
   });
   return accountsIds;
 }
@@ -310,12 +327,12 @@ async function getTransactionsFrame(page: Page): Promise<Frame | null> {
     await sleep(2000);
     const frames = page.frames();
     const targetFrame = frames.find(f => f.name() === IFRAME_NAME);
-    
+
     if (targetFrame) {
       return targetFrame;
     }
   }
-  
+
   return null;
 }
 
@@ -327,13 +344,13 @@ async function selectAccount(page: Page, accountId: string) {
 async function fetchAccountDataBothUIs(page: Page, startDate: Moment) {
   // Try to get the iframe for the new UI
   const frame = await getTransactionsFrame(page);
-    
+
   // Use the frame if available (new UI), otherwise use the page directly (old UI)
   const targetPage = frame || page;
   return fetchAccountData(targetPage, startDate);
 }
 
-async function fetchAccounts(page: Page, startDate: Moment):Promise<TransactionsAccount[]> {
+async function fetchAccounts(page: Page, startDate: Moment): Promise<TransactionsAccount[]> {
   const accountsIds = await getAccountIdsBySelector(page);
 
   if (accountsIds.length <= 1) {
@@ -344,15 +361,15 @@ async function fetchAccounts(page: Page, startDate: Moment):Promise<Transactions
   const accounts: TransactionsAccount[] = [];
   for (const accountId of accountsIds) {
     await selectAccount(page, accountId);
-    
+
     const accountData = await fetchAccountDataBothUIs(page, startDate);
     accounts.push(accountData);
   }
-  
+
   return accounts;
 }
 
-type ScraperSpecificCredentials = { username: string, password: string };
+type ScraperSpecificCredentials = { username: string; password: string };
 
 class BeinleumiGroupBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   BASE_URL = '';

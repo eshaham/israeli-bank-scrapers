@@ -1,8 +1,12 @@
 import { type Frame, type Page } from 'puppeteer';
 import { waitUntil } from './waiting';
 
-async function waitUntilElementFound(page: Page | Frame, elementSelector: string,
-  onlyVisible = false, timeout?: number) {
+async function waitUntilElementFound(
+  page: Page | Frame,
+  elementSelector: string,
+  onlyVisible = false,
+  timeout?: number,
+) {
   await page.waitForSelector(elementSelector, { visible: onlyVisible, timeout });
 }
 
@@ -10,14 +14,22 @@ async function waitUntilElementDisappear(page: Page, elementSelector: string, ti
   await page.waitForSelector(elementSelector, { hidden: true, timeout });
 }
 
-async function waitUntilIframeFound(page: Page, framePredicate: (frame: Frame) => boolean, description = '', timeout = 30000) {
+async function waitUntilIframeFound(
+  page: Page,
+  framePredicate: (frame: Frame) => boolean,
+  description = '',
+  timeout = 30000,
+) {
   let frame: Frame | undefined;
-  await waitUntil(() => {
-    frame = page
-      .frames()
-      .find(framePredicate);
-    return Promise.resolve(!!frame);
-  }, description, timeout, 1000);
+  await waitUntil(
+    () => {
+      frame = page.frames().find(framePredicate);
+      return Promise.resolve(!!frame);
+    },
+    description,
+    timeout,
+    1000,
+  );
 
   if (!frame) {
     throw new Error('failed to find iframe');
@@ -36,15 +48,19 @@ async function fillInput(pageOrFrame: Page | Frame, inputSelector: string, input
 }
 
 async function setValue(pageOrFrame: Page | Frame, inputSelector: string, inputValue: string): Promise<void> {
-  await pageOrFrame.$eval(inputSelector, (input: Element, value) => {
-    const inputElement = input;
-    // @ts-ignore
-    inputElement.value = value;
-  }, [inputValue]);
+  await pageOrFrame.$eval(
+    inputSelector,
+    (input: Element, value) => {
+      const inputElement = input;
+      // @ts-ignore
+      inputElement.value = value;
+    },
+    [inputValue],
+  );
 }
 
 async function clickButton(page: Page | Frame, buttonSelector: string) {
-  await page.$eval(buttonSelector, (el) => (el as HTMLElement).click());
+  await page.$eval(buttonSelector, el => (el as HTMLElement).click());
 }
 
 async function clickLink(page: Page, aSelector: string) {
@@ -57,8 +73,13 @@ async function clickLink(page: Page, aSelector: string) {
   });
 }
 
-async function pageEvalAll<R>(page: Page | Frame, selector: string,
-  defaultResult: any, callback: (elements: Element[], ...args: any) => R, ...args: any[]): Promise<R> {
+async function pageEvalAll<R>(
+  page: Page | Frame,
+  selector: string,
+  defaultResult: any,
+  callback: (elements: Element[], ...args: any) => R,
+  ...args: any[]
+): Promise<R> {
   let result = defaultResult;
   try {
     result = await page.$$eval(selector, callback, ...args);
@@ -72,8 +93,13 @@ async function pageEvalAll<R>(page: Page | Frame, selector: string,
   return result;
 }
 
-async function pageEval<R>(pageOrFrame: Page | Frame, selector: string,
-  defaultResult: any, callback: (elements: Element, ...args: any) => R, ...args: any[]): Promise<R> {
+async function pageEval<R>(
+  pageOrFrame: Page | Frame,
+  selector: string,
+  defaultResult: any,
+  callback: (elements: Element, ...args: any) => R,
+  ...args: any[]
+): Promise<R> {
   let result = defaultResult;
   try {
     result = await pageOrFrame.$eval(selector, callback, ...args);
@@ -88,7 +114,7 @@ async function pageEval<R>(pageOrFrame: Page | Frame, selector: string,
 }
 
 async function elementPresentOnPage(pageOrFrame: Page | Frame, selector: string) {
-  return await pageOrFrame.$(selector) !== null;
+  return (await pageOrFrame.$(selector)) !== null;
 }
 
 async function dropdownSelect(page: Page, selectSelector: string, value: string) {
@@ -96,10 +122,10 @@ async function dropdownSelect(page: Page, selectSelector: string, value: string)
 }
 
 async function dropdownElements(page: Page, selector: string) {
-  const options = await page.evaluate((optionSelector) => {
+  const options = await page.evaluate(optionSelector => {
     return Array.from(document.querySelectorAll<HTMLOptionElement>(optionSelector))
-      .filter((o) => o.value)
-      .map((o) => {
+      .filter(o => o.value)
+      .map(o => {
         return {
           name: o.text,
           value: o.value,
@@ -111,7 +137,15 @@ async function dropdownElements(page: Page, selector: string) {
 
 export {
   clickButton,
-  clickLink, dropdownElements, dropdownSelect, elementPresentOnPage, fillInput, pageEval,
-  pageEvalAll, setValue, waitUntilElementDisappear, waitUntilElementFound, waitUntilIframeFound,
+  clickLink,
+  dropdownElements,
+  dropdownSelect,
+  elementPresentOnPage,
+  fillInput,
+  pageEval,
+  pageEvalAll,
+  setValue,
+  waitUntilElementDisappear,
+  waitUntilElementFound,
+  waitUntilIframeFound,
 };
-

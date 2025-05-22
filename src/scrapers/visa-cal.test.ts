@@ -1,9 +1,5 @@
 import { SCRAPERS } from '../definitions';
-import {
-  exportTransactions,
-  extendAsyncTimeout, getTestsConfig,
-  maybeTestCompanyAPI,
-} from '../tests/tests-utils';
+import { exportTransactions, extendAsyncTimeout, getTestsConfig, maybeTestCompanyAPI } from '../tests/tests-utils';
 import { LoginResults } from './base-scraper-with-browser';
 import VisaCalScraper from './visa-cal';
 
@@ -21,20 +17,23 @@ describe('VisaCal legacy scraper', () => {
     expect(SCRAPERS.visaCal.loginFields).toContain('password');
   });
 
-  maybeTestCompanyAPI(COMPANY_ID, (config) => config.companyAPI.invalidPassword)('should fail on invalid user/password"', async () => {
-    const options = {
-      ...testsConfig.options,
-      companyId: COMPANY_ID,
-    };
+  maybeTestCompanyAPI(COMPANY_ID, config => config.companyAPI.invalidPassword)(
+    'should fail on invalid user/password"',
+    async () => {
+      const options = {
+        ...testsConfig.options,
+        companyId: COMPANY_ID,
+      };
 
-    const scraper = new VisaCalScraper(options);
+      const scraper = new VisaCalScraper(options);
 
-    const result = await scraper.scrape({ username: '971sddksmsl', password: '3f3ssdkSD3d' });
+      const result = await scraper.scrape({ username: '971sddksmsl', password: '3f3ssdkSD3d' });
 
-    expect(result).toBeDefined();
-    expect(result.success).toBeFalsy();
-    expect(result.errorType).toBe(LoginResults.InvalidPassword);
-  });
+      expect(result).toBeDefined();
+      expect(result.success).toBeFalsy();
+      expect(result.errorType).toBe(LoginResults.InvalidPassword);
+    },
+  );
 
   maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions"', async () => {
     const options = {

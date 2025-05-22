@@ -2,19 +2,9 @@ import moment, { type Moment } from 'moment';
 import { type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import { getDebug } from '../helpers/debug';
-import {
-  clickButton,
-  fillInput,
-  pageEval,
-  pageEvalAll,
-  waitUntilElementFound,
-} from '../helpers/elements-interactions';
+import { clickButton, fillInput, pageEval, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
-import {
-  TransactionStatuses, TransactionTypes,
-  type Transaction,
-  type TransactionsAccount,
-} from '../transactions';
+import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
 import { type ScraperScrapingResult } from './interface';
 
@@ -32,23 +22,24 @@ function getPossibleLoginResults() {
   const urls: LoginOptions['possibleResults'] = {
     [LoginResults.Success]: [/ebanking\/SO\/SPA.aspx/i],
     [LoginResults.InvalidPassword]: [
-      async (options) => {
+      async options => {
         if (!options || !options.page) {
           throw new Error('missing page options argument');
         }
-        const errorMessage = await pageEvalAll(options.page, 'svg#Capa_1', '', (element) => {
+        const errorMessage = await pageEvalAll(options.page, 'svg#Capa_1', '', element => {
           return (element[0]?.parentElement?.children[1] as HTMLDivElement)?.innerText;
         });
 
         return errorMessage?.startsWith(INVALID_PASSWORD_MSG);
       },
     ],
-    [LoginResults.AccountBlocked]: [ // NOTICE - might not be relevant starting the Leumi re-design during 2022 Sep
-      async (options) => {
+    [LoginResults.AccountBlocked]: [
+      // NOTICE - might not be relevant starting the Leumi re-design during 2022 Sep
+      async options => {
         if (!options || !options.page) {
           throw new Error('missing page options argument');
         }
-        const errorMessage = await pageEvalAll(options.page, '.errHeader', '', (label) => {
+        const errorMessage = await pageEvalAll(options.page, '.errHeader', '', label => {
           return (label[0] as HTMLElement)?.innerText;
         });
 
@@ -72,7 +63,7 @@ function extractTransactionsFromPage(transactions: any[], status: TransactionSta
     return [];
   }
 
-  const result: Transaction[] = transactions.map((rawTransaction) => {
+  const result: Transaction[] = transactions.map(rawTransaction => {
     const date = moment(rawTransaction.DateUTC).milliseconds(0).toISOString();
     const newTransaction: Transaction = {
       status,
@@ -94,7 +85,7 @@ function extractTransactionsFromPage(transactions: any[], status: TransactionSta
 }
 
 function hangProcess(timeout: number) {
-  return new Promise<void>((resolve) => {
+  return new Promise<void>(resolve => {
     setTimeout(() => {
       resolve();
     }, timeout);
@@ -111,7 +102,11 @@ function removeSpecialCharacters(str: string): string {
   return str.replace(/[^0-9/-]/g, '');
 }
 
-async function fetchTransactionsForAccount(page: Page, startDate: Moment, accountId: string): Promise<TransactionsAccount> {
+async function fetchTransactionsForAccount(
+  page: Page,
+  startDate: Moment,
+  accountId: string,
+): Promise<TransactionsAccount> {
   // DEVELOPER NOTICE the account number received from the server is being altered at
   // runtime for some accounts after 1-2 seconds so we need to hang the process for a short while.
   await hangProcess(4000);
@@ -123,19 +118,14 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
 
   await waitUntilElementFound(page, 'input[formcontrolname="txtInputFrom"]', true);
 
-  await fillInput(
-    page,
-    'input[formcontrolname="txtInputFrom"]',
-    startDate.format(DATE_FORMAT),
-  );
+  await fillInput(page, 'input[formcontrolname="txtInputFrom"]', startDate.format(DATE_FORMAT));
 
   // we must blur the from control otherwise the search will use the previous value
   await page.focus("button[aria-label='סנן']");
 
   await clickButton(page, "button[aria-label='סנן']");
-  const finalResponse = await page.waitForResponse((response) => {
-    return response.url() === FILTERED_TRANSACTIONS_URL &&
-      response.request().method() === 'POST';
+  const finalResponse = await page.waitForResponse(response => {
+    return response.url() === FILTERED_TRANSACTIONS_URL && response.request().method() === 'POST';
   });
 
   const responseJson: any = await finalResponse.json();
@@ -150,10 +140,7 @@ async function fetchTransactionsForAccount(page: Page, startDate: Moment, accoun
 
   const pendingTxns = extractTransactionsFromPage(pendingTransactions, TransactionStatuses.Pending);
   const completedTxns = extractTransactionsFromPage(transactions, TransactionStatuses.Completed);
-  const txns = [
-    ...pendingTxns,
-    ...completedTxns,
-  ];
+  const txns = [...pendingTxns, ...completedTxns];
 
   return {
     accountNumber,
@@ -169,7 +156,9 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
   // runtime for some accounts after 1-2 seconds so we need to hang the process for a short while.
   await hangProcess(4000);
 
-  const accountsIds = await page.evaluate(() => Array.from(document.querySelectorAll('app-masked-number-combo span.display-number-li'), (e) => e.textContent)) as string[];
+  const accountsIds = (await page.evaluate(() =>
+    Array.from(document.querySelectorAll('app-masked-number-combo span.display-number-li'), e => e.textContent),
+  )) as string[];
 
   // due to a bug, the altered value might include undesired signs like & that should be removed
 
@@ -195,7 +184,7 @@ async function navigateToLogin(page: Page): Promise<void> {
   debug('wait for homepage to click on login button');
   await waitUntilElementFound(page, loginButtonSelector);
   debug('navigate to login page');
-  const loginUrl = await pageEval(page, loginButtonSelector, null, (element) => {
+  const loginUrl = await pageEval(page, loginButtonSelector, null, element => {
     return (element as any).href;
   });
   debug(`navigating to page (${loginUrl})`);
@@ -219,7 +208,7 @@ async function waitForPostLogin(page: Page): Promise<void> {
   ]);
 }
 
-type ScraperSpecificCredentials = { username: string, password: string };
+type ScraperSpecificCredentials = { username: string; password: string };
 
 class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   getLoginOptions(credentials: ScraperSpecificCredentials) {

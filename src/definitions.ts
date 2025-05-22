@@ -86,13 +86,7 @@ export const SCRAPERS = {
   },
   [CompanyTypes.oneZero]: {
     name: 'One Zero',
-    loginFields: [
-      'email',
-      PASSWORD_FIELD,
-      'otpCodeRetriever',
-      'phoneNumber',
-      'otpLongTermToken',
-    ],
+    loginFields: ['email', PASSWORD_FIELD, 'otpCodeRetriever', 'phoneNumber', 'otpLongTermToken'],
   },
   [CompanyTypes.behatsdaa]: {
     name: 'Behatsdaa',

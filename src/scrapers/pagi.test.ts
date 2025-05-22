@@ -3,7 +3,6 @@ import { exportTransactions, extendAsyncTimeout, getTestsConfig, maybeTestCompan
 import { LoginResults } from './base-scraper-with-browser';
 import PagiScraper from './pagi';
 
-
 const COMPANY_ID = 'pagi'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
 
@@ -17,20 +16,23 @@ describe('Pagi legacy scraper', () => {
     expect(SCRAPERS.pagi.loginFields).toContain('password');
   });
 
-  maybeTestCompanyAPI(COMPANY_ID, (config) => config.companyAPI.invalidPassword)('should fail on invalid user/password"', async () => {
-    const options = {
-      ...testsConfig.options,
-      companyId: COMPANY_ID,
-    };
+  maybeTestCompanyAPI(COMPANY_ID, config => config.companyAPI.invalidPassword)(
+    'should fail on invalid user/password"',
+    async () => {
+      const options = {
+        ...testsConfig.options,
+        companyId: COMPANY_ID,
+      };
 
-    const scraper = new PagiScraper(options);
+      const scraper = new PagiScraper(options);
 
-    const result = await scraper.scrape({ username: 'e10s12', password: '3f3ss3d' });
+      const result = await scraper.scrape({ username: 'e10s12', password: '3f3ss3d' });
 
-    expect(result).toBeDefined();
-    expect(result.success).toBeFalsy();
-    expect(result.errorType).toBe(LoginResults.InvalidPassword);
-  });
+      expect(result).toBeDefined();
+      expect(result.success).toBeFalsy();
+      expect(result.errorType).toBe(LoginResults.InvalidPassword);
+    },
+  );
 
   maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions"', async () => {
     const options = {

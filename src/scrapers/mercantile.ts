@@ -1,6 +1,6 @@
 import DiscountScraper from './discount';
 
-type ScraperSpecificCredentials = { id: string, password: string, num: string };
+type ScraperSpecificCredentials = { id: string; password: string; num: string };
 class MercantileScraper extends DiscountScraper {
   getLoginOptions(credentials: ScraperSpecificCredentials) {
     return {

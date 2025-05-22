@@ -1,7 +1,5 @@
 import { CompanyTypes, SCRAPERS } from '../definitions';
-import {
-  exportTransactions, extendAsyncTimeout, getTestsConfig, maybeTestCompanyAPI,
-} from '../tests/tests-utils';
+import { exportTransactions, extendAsyncTimeout, getTestsConfig, maybeTestCompanyAPI } from '../tests/tests-utils';
 import { LoginResults } from './base-scraper-with-browser';
 import BehatsdaaScraper from './behatsdaa';
 
@@ -18,18 +16,21 @@ describe('Behatsdaa scraper', () => {
     expect(SCRAPERS[CompanyTypes.behatsdaa].loginFields).toContain('password');
   });
 
-  maybeTestCompanyAPI(CompanyTypes.behatsdaa, (config) => config.companyAPI.invalidPassword)('should fail on invalid user/password"', async () => {
-    const scraper = new BehatsdaaScraper({
-      ...testsConfig.options,
-      companyId: CompanyTypes.behatsdaa,
-    });
+  maybeTestCompanyAPI(CompanyTypes.behatsdaa, config => config.companyAPI.invalidPassword)(
+    'should fail on invalid user/password"',
+    async () => {
+      const scraper = new BehatsdaaScraper({
+        ...testsConfig.options,
+        companyId: CompanyTypes.behatsdaa,
+      });
 
-    const result = await scraper.scrape({ id: 'foofoofoo', password: 'barbarbar' });
+      const result = await scraper.scrape({ id: 'foofoofoo', password: 'barbarbar' });
 
-    expect(result).toBeDefined();
-    expect(result.success).toBeFalsy();
-    expect(result.errorType).toBe(LoginResults.InvalidPassword);
-  });
+      expect(result).toBeDefined();
+      expect(result.success).toBeFalsy();
+      expect(result.errorType).toBe(LoginResults.InvalidPassword);
+    },
+  );
 
   maybeTestCompanyAPI(CompanyTypes.behatsdaa)('should scrape transactions', async () => {
     const scraper = new BehatsdaaScraper({

@@ -2,15 +2,14 @@ import moment from 'moment';
 import { type Frame, type HTTPRequest, type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import {
-  pageEvalAll, waitUntilElementDisappear, waitUntilElementFound, waitUntilIframeFound,
+  pageEvalAll,
+  waitUntilElementDisappear,
+  waitUntilElementFound,
+  waitUntilIframeFound,
 } from '../helpers/elements-interactions';
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { waitForUrl } from '../helpers/navigation';
-import {
-  type Transaction,
-  TransactionStatuses, TransactionTypes,
-  type TransactionsAccount,
-} from '../transactions';
+import { type Transaction, TransactionStatuses, TransactionTypes, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
 
@@ -106,15 +105,14 @@ function createDataFromRequest(request: HTTPRequest, optionsStartDate: Date) {
 
 function createHeadersFromRequest(request: HTTPRequest) {
   return {
-    'mizrahixsrftoken': request.headers().mizrahixsrftoken,
+    mizrahixsrftoken: request.headers().mizrahixsrftoken,
     'Content-Type': request.headers()['content-type'],
   };
 }
 
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
-  return txns.map((row) => {
-    const txnDate = moment(row.MC02PeulaTaaEZ, moment.HTML5_FMT.DATETIME_LOCAL_SECONDS)
-      .toISOString();
+  return txns.map(row => {
+    const txnDate = moment(row.MC02PeulaTaaEZ, moment.HTML5_FMT.DATETIME_LOCAL_SECONDS).toISOString();
 
     return {
       type: TransactionTypes.Normal,
@@ -131,11 +129,11 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
 }
 
 async function extractPendingTransactions(page: Frame): Promise<Transaction[]> {
-  const pendingTxn = await pageEvalAll(page, 'tr.rgRow', [], (trs) => {
-    return trs.map((tr) => Array.from(tr.querySelectorAll('td'), (td: HTMLTableDataCellElement) => td.textContent || ''));
+  const pendingTxn = await pageEvalAll(page, 'tr.rgRow', [], trs => {
+    return trs.map(tr => Array.from(tr.querySelectorAll('td'), (td: HTMLTableDataCellElement) => td.textContent || ''));
   });
 
-  return pendingTxn.map((txn) => {
+  return pendingTxn.map(txn => {
     const date = moment(txn[0], 'DD/MM/YY').toISOString();
     const amount = parseInt(txn[3], 10);
     return {
@@ -159,7 +157,7 @@ async function postLogin(page: Page) {
   ]);
 }
 
-type ScraperSpecificCredentials = { username: string, password: string };
+type ScraperSpecificCredentials = { username: string; password: string };
 
 class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   getLoginOptions(credentials: ScraperSpecificCredentials) {
@@ -174,7 +172,7 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
   }
 
   async fetchData() {
-    await this.page.$eval('#dropdownBasic, .item', (el) => (el as HTMLElement).click());
+    await this.page.$eval('#dropdownBasic, .item', el => (el as HTMLElement).click());
 
     const numOfAccounts = (await this.page.$$(accountDropDownItemSelector)).length;
 
@@ -183,11 +181,11 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
       for (let i = 0; i < numOfAccounts; i += 1) {
         if (i > 0) {
-          await this.page.$eval('#dropdownBasic, .item', (el) => (el as HTMLElement).click());
+          await this.page.$eval('#dropdownBasic, .item', el => (el as HTMLElement).click());
         }
 
-        await this.page.$eval(`${accountDropDownItemSelector}:nth-child(${i + 1})`, (el) => (el as HTMLElement).click());
-        results.push((await this.fetchAccount()));
+        await this.page.$eval(`${accountDropDownItemSelector}:nth-child(${i + 1})`, el => (el as HTMLElement).click());
+        results.push(await this.fetchAccount());
       }
 
       return {
@@ -204,9 +202,11 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
   }
 
   private async getPendingTransactions(): Promise<Transaction[]> {
-    await this.page.$eval(`a[href*="${PENDING_TRANSACTIONS_PAGE}"]`, (el) => (el as HTMLElement).click());
-    const frame = await waitUntilIframeFound(this.page, (f) => f.url().includes(PENDING_TRANSACTIONS_IFRAME));
-    const isPending = await waitUntilElementFound(frame, pendingTrxIdentifierId).then(() => true).catch(() => false);
+    await this.page.$eval(`a[href*="${PENDING_TRANSACTIONS_PAGE}"]`, el => (el as HTMLElement).click());
+    const frame = await waitUntilIframeFound(this.page, f => f.url().includes(PENDING_TRANSACTIONS_IFRAME));
+    const isPending = await waitUntilElementFound(frame, pendingTrxIdentifierId)
+      .then(() => true)
+      .catch(() => false);
     if (!isPending) {
       return [];
     }
@@ -217,35 +217,39 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
   private async fetchAccount() {
     await this.page.waitForSelector(`a[href*="${OSH_PAGE}"]`);
-    await this.page.$eval(`a[href*="${OSH_PAGE}"]`, (el) => (el as HTMLElement).click());
+    await this.page.$eval(`a[href*="${OSH_PAGE}"]`, el => (el as HTMLElement).click());
     await waitUntilElementFound(this.page, `a[href*="${TRANSACTIONS_PAGE}"]`);
-    await this.page.$eval(`a[href*="${TRANSACTIONS_PAGE}"]`, (el) => (el as HTMLElement).click());
+    await this.page.$eval(`a[href*="${TRANSACTIONS_PAGE}"]`, el => (el as HTMLElement).click());
 
     const accountNumberElement = await this.page.$('#dropdownBasic b span');
     const accountNumberHandle = await accountNumberElement?.getProperty('title');
-    const accountNumber = ((await accountNumberHandle?.jsonValue()) as string);
+    const accountNumber = (await accountNumberHandle?.jsonValue()) as string;
     if (!accountNumber) {
       throw new Error('Account number not found');
     }
 
-    const response = await Promise.any(TRANSACTIONS_REQUEST_URLS.map(async (url) => {
-      const request = await this.page.waitForRequest(url);
-      const data = createDataFromRequest(request, this.options.startDate);
-      const headers = createHeadersFromRequest(request);
+    const response = await Promise.any(
+      TRANSACTIONS_REQUEST_URLS.map(async url => {
+        const request = await this.page.waitForRequest(url);
+        const data = createDataFromRequest(request, this.options.startDate);
+        const headers = createHeadersFromRequest(request);
 
-      return fetchPostWithinPage<ScrapedTransactionsResult>(this.page, url, data, headers);
-    }));
+        return fetchPostWithinPage<ScrapedTransactionsResult>(this.page, url, data, headers);
+      }),
+    );
 
     if (!response || response.header.success === false) {
-      throw new Error(`Error fetching transaction. Response message: ${response ? response.header.messages[0].text : ''}`);
+      throw new Error(
+        `Error fetching transaction. Response message: ${response ? response.header.messages[0].text : ''}`,
+      );
     }
 
-    const relevantRows = response.body.table.rows.filter((row) => row.RecTypeSpecified);
+    const relevantRows = response.body.table.rows.filter(row => row.RecTypeSpecified);
     const oshTxn = convertTransactions(relevantRows);
 
     // workaround for a bug which the bank's API returns transactions before the requested start date
     const startMoment = getStartMoment(this.options.startDate);
-    const oshTxnAfterStartDate = oshTxn.filter((txn) => moment(txn.date).isSameOrAfter(startMoment));
+    const oshTxnAfterStartDate = oshTxn.filter(txn => moment(txn.date).isSameOrAfter(startMoment));
 
     const pendingTxn = await this.getPendingTransactions();
     const allTxn = oshTxnAfterStartDate.concat(pendingTxn);

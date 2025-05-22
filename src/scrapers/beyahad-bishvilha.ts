@@ -2,7 +2,8 @@ import moment from 'moment';
 import { type Page } from 'puppeteer';
 import {
   DOLLAR_CURRENCY,
-  DOLLAR_CURRENCY_SYMBOL, EURO_CURRENCY,
+  DOLLAR_CURRENCY_SYMBOL,
+  EURO_CURRENCY,
   EURO_CURRENCY_SYMBOL,
   SHEKEL_CURRENCY,
   SHEKEL_CURRENCY_SYMBOL,
@@ -56,7 +57,7 @@ function getAmountData(amountStr: string) {
 
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   debug(`convert ${txns.length} raw transactions to official Transaction structure`);
-  return txns.map((txn) => {
+  return txns.map(txn => {
     const chargedAmountTuple = getAmountData(txn.chargedAmount || '');
     const txnProcessedDate = moment(txn.date, DATE_FORMAT);
 
@@ -85,40 +86,48 @@ async function fetchTransactions(page: Page, options: ScraperOptions) {
   const startDate = options.startDate || defaultStartMoment.toDate();
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-  const accountNumber = await pageEval(page, '.wallet-details div:nth-of-type(2)', null, (element) => {
+  const accountNumber = await pageEval(page, '.wallet-details div:nth-of-type(2)', null, element => {
     return (element as any).innerText.replace('מספר כרטיס ', '');
   });
 
-  const balance = await pageEval(page, '.wallet-details div:nth-of-type(4) > span:nth-of-type(2)', null, (element) => {
+  const balance = await pageEval(page, '.wallet-details div:nth-of-type(4) > span:nth-of-type(2)', null, element => {
     return (element as any).innerText;
   });
 
   debug('fetch raw transactions from page');
 
-  const rawTransactions: (ScrapedTransaction | null)[] = await pageEvalAll<(ScrapedTransaction | null)[]>(page, '.transaction-container, .transaction-component-container', [], (items) => {
-    return (items).map((el) => {
-      const columns: NodeListOf<HTMLSpanElement> = el.querySelectorAll('.transaction-item > span');
-      if (columns.length === 7) {
-        return {
-          date: columns[0].innerText,
-          identifier: columns[1].innerText,
-          description: columns[3].innerText,
-          type: columns[5].innerText,
-          chargedAmount: columns[6].innerText,
-        };
-      }
-      return null;
-    });
-  });
+  const rawTransactions: (ScrapedTransaction | null)[] = await pageEvalAll<(ScrapedTransaction | null)[]>(
+    page,
+    '.transaction-container, .transaction-component-container',
+    [],
+    items => {
+      return items.map(el => {
+        const columns: NodeListOf<HTMLSpanElement> = el.querySelectorAll('.transaction-item > span');
+        if (columns.length === 7) {
+          return {
+            date: columns[0].innerText,
+            identifier: columns[1].innerText,
+            description: columns[3].innerText,
+            type: columns[5].innerText,
+            chargedAmount: columns[6].innerText,
+          };
+        }
+        return null;
+      });
+    },
+  );
   debug(`fetched ${rawTransactions.length} raw transactions from page`);
 
-  const accountTransactions = convertTransactions(rawTransactions.filter((item) => !!item) as ScrapedTransaction[]);
+  const accountTransactions = convertTransactions(rawTransactions.filter(item => !!item) as ScrapedTransaction[]);
 
   debug('filer out old transactions');
-  const txns = (options.outputData?.enableTransactionsFilterByDate ?? true) ?
-    filterOldTransactions(accountTransactions, startMoment, false) :
-    accountTransactions;
-  debug(`found ${txns.length} valid transactions out of ${accountTransactions.length} transactions for account ending with ${accountNumber.substring(accountNumber.length - 2)}`);
+  const txns =
+    (options.outputData?.enableTransactionsFilterByDate ?? true)
+      ? filterOldTransactions(accountTransactions, startMoment, false)
+      : accountTransactions;
+  debug(
+    `found ${txns.length} valid transactions out of ${accountTransactions.length} transactions for account ending with ${accountNumber.substring(accountNumber.length - 2)}`,
+  );
 
   return {
     accountNumber,
@@ -143,10 +152,10 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
   ];
 }
 
-type ScraperSpecificCredentials = { id: string, password: string };
+type ScraperSpecificCredentials = { id: string; password: string };
 
 class BeyahadBishvilhaScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
-  protected getViewPort(): { width: number, height: number } {
+  protected getViewPort(): { width: number; height: number } {
     return {
       width: 1500,
       height: 800,

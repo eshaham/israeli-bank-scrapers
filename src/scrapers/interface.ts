@@ -6,18 +6,21 @@ import { type ErrorResult, type ScraperErrorTypes } from './errors';
 // TODO: Remove this type when the scraper 'factory' will return concrete scraper types
 // Instead of a generic interface (which in turn uses this type)
 export type ScraperCredentials =
-    { userCode: string, password: string } |
-    { username: string, password: string } |
-    { id: string, password: string } |
-    { id: string, password: string, num: string } |
-    { id: string, password: string, card6Digits: string } |
-    { username: string, nationalID: string, password: string } |
-    ({ email: string, password: string } & ({
-      otpCodeRetriever: () => Promise<string>;
-      phoneNumber: string;
-    } | {
-      otpLongTermToken: string;
-    }));
+  | { userCode: string; password: string }
+  | { username: string; password: string }
+  | { id: string; password: string }
+  | { id: string; password: string; num: string }
+  | { id: string; password: string; card6Digits: string }
+  | { username: string; nationalID: string; password: string }
+  | ({ email: string; password: string } & (
+      | {
+          otpCodeRetriever: () => Promise<string>;
+          phoneNumber: string;
+        }
+      | {
+          otpLongTermToken: string;
+        }
+    ));
 
 export interface FutureDebit {
   amount: number;
@@ -82,10 +85,7 @@ interface DefaultBrowserOptions {
   prepareBrowser?: (browser: Browser) => Promise<void>;
 }
 
-type ScraperBrowserOptions =
-  | ExternalBrowserOptions
-  | ExternalBrowserContextOptions
-  | DefaultBrowserOptions;
+type ScraperBrowserOptions = ExternalBrowserOptions | ExternalBrowserContextOptions | DefaultBrowserOptions;
 
 export type ScraperOptions = ScraperBrowserOptions & {
   /**
@@ -164,14 +164,18 @@ export interface Scraper<TCredentials extends ScraperCredentials> {
   getLongTermTwoFactorToken(otpCode: string): Promise<ScraperGetLongTermTwoFactorTokenResult>;
 }
 
-export type ScraperTwoFactorAuthTriggerResult = ErrorResult | {
-  success: true;
-};
+export type ScraperTwoFactorAuthTriggerResult =
+  | ErrorResult
+  | {
+      success: true;
+    };
 
-export type ScraperGetLongTermTwoFactorTokenResult = ErrorResult | {
-  success: true;
-  longTermTwoFactorAuthToken: string;
-};
+export type ScraperGetLongTermTwoFactorTokenResult =
+  | ErrorResult
+  | {
+      success: true;
+      longTermTwoFactorAuthToken: string;
+    };
 
 export interface ScraperLoginResult {
   success: boolean;

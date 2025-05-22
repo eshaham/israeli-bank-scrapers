@@ -2,14 +2,12 @@
 // https://jestjs.io/docs/en/configuration.html
 /** @type {import('jest').Config} */
 const config = {
-  preset: 'ts-jest/presets/js-with-babel',
+  preset: 'ts-jest',
   clearMocks: true,
   coverageDirectory: 'coverage',
   rootDir: './src',
   transform: {
-    '^.+\\.ts$': ['ts-jest', {
-      babelConfig: true,
-    }],
+    '^.+\\.ts$': ['ts-jest'],
   },
   setupFilesAfterEnv: [
     './tests/jest-setup.ts',
