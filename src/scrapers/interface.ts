@@ -143,7 +143,7 @@ export type ScraperOptions = ScraperBrowserOptions & {
 
   /**
    * Adjust the viewport size of the browser page.
-   * If not set, the default viewport size will be used.
+   * If not set, the default viewport size of 1024x768 will be used.
    */
   viewportSize?: {
     width: number;
