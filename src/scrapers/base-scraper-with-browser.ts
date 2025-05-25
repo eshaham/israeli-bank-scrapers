@@ -193,9 +193,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     }
 
     if (!response) {
-      throw new Error(
-        `Error while trying to navigate to url ${url}, response is undefined`,
-      );
+      throw new Error(`Error while trying to navigate to url ${url}, response is undefined`);
     }
 
     if (!response.ok()) {
@@ -204,7 +202,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
         debug(`Failed to navigate to url ${url}, status code: ${status}, retrying ${retries} more times`);
         await this.navigateTo(url, waitUntil, retries - 1);
       } else {
-        throw new Error( `Failed to navigate to url ${url}, status code: ${status}`);
+        throw new Error(`Failed to navigate to url ${url}, status code: ${status}`);
       }
     }
   }
