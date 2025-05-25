@@ -140,6 +140,20 @@ export type ScraperOptions = ScraperBrowserOptions & {
    * Please note: It will take more time to finish the process.
    */
   additionalTransactionInformation?: boolean;
+
+  /**
+   * Adjust the viewport size of the browser page.
+   * If not set, the default viewport size of 1024x768 will be used.
+   */
+  viewportSize?: {
+    width: number;
+    height: number;
+  };
+
+  /**
+   * The number of times to retry the navigation in case of a failure (default 0)
+   */
+  navigationRetryCount?: number;
 };
 
 export interface OutputDataOptions {
