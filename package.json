@@ -21,7 +21,7 @@
     "build": "npm run lint && npm run clean && npm run build:js",
     "build:js": "tsc --project tsconfig.build.json",
     "postbuild": "rimraf lib/tests",
-    "prepare:core": "git reset --hard && node utils/prepare-israeli-bank-scrapers-core.js && npm i --package-lock-only && npm ci && npm run lint -- --fix && npm run build",
+    "prepare:core": "git reset --hard && node utils/prepare-israeli-bank-scrapers-core.js && npm i --package-lock-only && npm ci && npm run lint:fix && npm run build",
     "prepare:default": "git reset --hard && npm ci && npm run build",
     "reset": "git reset --hard && npm ci"
   },
