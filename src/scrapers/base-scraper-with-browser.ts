@@ -80,17 +80,17 @@ function createGeneralError(): ScraperScrapingResult {
 class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends BaseScraper<TCredentials> {
   private cleanups: Array<() => Promise<void>> = [];
 
+  private defaultViewportSize = {
+    width: 1024,
+    height: 768,
+  };
+
   // NOTICE - it is discouraged to use bang (!) in general. It is used here because
   // all the classes that inherit from this base assume is it mandatory.
   protected page!: Page;
 
   protected getViewPort() {
-    return (
-      this.options.viewportSize ?? {
-        width: 1024,
-        height: 768,
-      }
-    );
+    return this.options.viewportSize ?? this.defaultViewportSize;
   }
 
   async initialize() {
@@ -201,11 +201,12 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     }
 
     if (!response.ok()) {
+      const status = response.status();
       if (retries > 0) {
-        debug(`Failed to navigate to url ${url}, status code: ${response.status()}, retrying ${retries} more times`);
+        debug(`Failed to navigate to url ${url}, status code: ${status}, retrying ${retries} more times`);
         await this.navigateTo(url, waitUntil, retries - 1);
       } else {
-        throw new Error( `Failed to navigate to url ${url}, status code: ${response.status()}`);
+        throw new Error( `Failed to navigate to url ${url}, status code: ${status}`);
       }
     }
   }

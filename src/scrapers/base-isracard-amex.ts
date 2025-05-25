@@ -21,7 +21,7 @@ import {
 import { BaseScraperWithBrowser } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
 import { type ScraperOptions, type ScraperScrapingResult } from './interface';
-import { maskHeadlessUserAgent } from '../helpers/browser';
+import { interceptionPriorities, maskHeadlessUserAgent } from '../helpers/browser';
 
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';
@@ -350,9 +350,9 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
     this.page.on('request', (request) => {
       if (request.url().includes('detector-dom.min.js')) {
         debug('force abort for request do download detector-dom.min.js resource');
-        void request.abort(undefined, 1000);
+        void request.abort(undefined, interceptionPriorities.abort);
       } else {
-        void request.continue(undefined, 10);
+        void request.continue(undefined, interceptionPriorities.continue);
       }
     });
 
