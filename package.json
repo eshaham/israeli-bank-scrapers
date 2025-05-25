@@ -13,7 +13,7 @@
     "test": "jest",
     "test:ci": "ncp src/tests/.tests-config.tpl.js src/tests/.tests-config.js && npm run test",
     "lint": "eslint src --ext .ts && npm run format:check",
-    "lint:fix": "npm run lint -- --fix && npm run format",
+    "lint:fix": "eslint src --ext .ts --fix && npm run format",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
     "type-check": "tsc --noEmit",
