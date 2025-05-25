@@ -4,9 +4,7 @@ import { type Page } from 'puppeteer';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { fetchGetWithinPage } from '../helpers/fetch';
 import { waitForNavigation } from '../helpers/navigation';
-import {
-  type Transaction, TransactionStatuses, TransactionTypes,
-} from '../transactions';
+import { type Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
 import { type ScraperOptions, type ScraperScrapingResult } from './interface';
@@ -37,7 +35,7 @@ interface ScrapedTransactionData {
   CurrentAccountLastTransactions?: {
     OperationEntry: ScrapedTransaction[];
     CurrentAccountInfo: CurrentAccountInfo;
-    FutureTransactionsBlock:{
+    FutureTransactionsBlock: {
       FutureTransactionEntry: ScrapedTransaction[];
     };
   };
@@ -47,7 +45,7 @@ function convertTransactions(txns: ScrapedTransaction[], txnStatus: TransactionS
   if (!txns) {
     return [];
   }
-  return txns.map((txn) => {
+  return txns.map(txn => {
     return {
       type: TransactionTypes.Normal,
       identifier: txn.OperationNumber,
@@ -84,8 +82,7 @@ async function fetchAccountData(page: Page, options: ScraperOptions): Promise<Sc
   const startDateStr = startMoment.format(DATE_FORMAT);
   const txnsUrl = `${apiSiteUrl}/lastTransactions/${accountNumber}/Date?IsCategoryDescCode=True&IsTransactionDetails=True&IsEventNames=True&IsFutureTransactionFlag=True&FromDate=${startDateStr}`;
   const txnsResult = await fetchGetWithinPage<ScrapedTransactionData>(page, txnsUrl);
-  if (!txnsResult || txnsResult.Error ||
-    !txnsResult.CurrentAccountLastTransactions) {
+  if (!txnsResult || txnsResult.Error || !txnsResult.CurrentAccountLastTransactions) {
     return {
       success: false,
       errorType: ScraperErrorTypes.Generic,
@@ -97,16 +94,21 @@ async function fetchAccountData(page: Page, options: ScraperOptions): Promise<Sc
     txnsResult.CurrentAccountLastTransactions.OperationEntry,
     TransactionStatuses.Completed,
   );
-  const rawFutureTxns = _.get(txnsResult, 'CurrentAccountLastTransactions.FutureTransactionsBlock.FutureTransactionEntry') as ScrapedTransaction[];
+  const rawFutureTxns = _.get(
+    txnsResult,
+    'CurrentAccountLastTransactions.FutureTransactionsBlock.FutureTransactionEntry',
+  ) as ScrapedTransaction[];
   const pendingTxns = convertTransactions(rawFutureTxns, TransactionStatuses.Pending);
 
   const accountData = {
     success: true,
-    accounts: [{
-      accountNumber,
-      balance: txnsResult.CurrentAccountLastTransactions.CurrentAccountInfo.AccountBalance,
-      txns: [...completedTxns, ...pendingTxns],
-    }],
+    accounts: [
+      {
+        accountNumber,
+        balance: txnsResult.CurrentAccountLastTransactions.CurrentAccountInfo.AccountBalance,
+        txns: [...completedTxns, ...pendingTxns],
+      },
+    ],
   };
 
   return accountData;
@@ -136,7 +138,7 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
   ];
 }
 
-type ScraperSpecificCredentials = { id: string, password: string, num: string };
+type ScraperSpecificCredentials = { id: string; password: string; num: string };
 
 class DiscountScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   getLoginOptions(credentials: ScraperSpecificCredentials) {

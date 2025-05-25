@@ -1,7 +1,5 @@
 import BeinleumiScraper from './beinleumi';
-import {
-  maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
-} from '../tests/tests-utils';
+import { maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions } from '../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
 import { LoginResults } from './base-scraper-with-browser';
 
@@ -19,20 +17,23 @@ describe('Beinleumi', () => {
     expect(SCRAPERS.beinleumi.loginFields).toContain('password');
   });
 
-  maybeTestCompanyAPI(COMPANY_ID, (config) => config.companyAPI.invalidPassword)('should fail on invalid user/password', async () => {
-    const options = {
-      ...testsConfig.options,
-      companyId: COMPANY_ID,
-    };
+  maybeTestCompanyAPI(COMPANY_ID, config => config.companyAPI.invalidPassword)(
+    'should fail on invalid user/password',
+    async () => {
+      const options = {
+        ...testsConfig.options,
+        companyId: COMPANY_ID,
+      };
 
-    const scraper = new BeinleumiScraper(options);
+      const scraper = new BeinleumiScraper(options);
 
-    const result = await scraper.scrape({ username: 'e10s12', password: '3f3ss3d' });
+      const result = await scraper.scrape({ username: 'e10s12', password: '3f3ss3d' });
 
-    expect(result).toBeDefined();
-    expect(result.success).toBeFalsy();
-    expect(result.errorType).toBe(LoginResults.InvalidPassword);
-  });
+      expect(result).toBeDefined();
+      expect(result.success).toBeFalsy();
+      expect(result.errorType).toBe(LoginResults.InvalidPassword);
+    },
+  );
 
   maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions"', async () => {
     const options = {

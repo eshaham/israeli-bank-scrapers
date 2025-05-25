@@ -11,12 +11,7 @@ import {
   waitUntilElementFound,
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
-import {
-  TransactionStatuses,
-  TransactionTypes,
-  type Transaction,
-  type TransactionsAccount,
-} from '../transactions';
+import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 
 const BASE_URL = 'https://hb.unionbank.co.il';
@@ -69,7 +64,7 @@ function getTxnAmount(txn: ScrapedTransaction) {
 }
 
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
-  return txns.map((txn) => {
+  return txns.map(txn => {
     const convertedDate = moment(txn.date, DATE_FORMAT).toISOString();
     const convertedAmount = getTxnAmount(txn);
     return {
@@ -87,7 +82,7 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   });
 }
 
-type TransactionsTr = { id: string, innerTds: TransactionsTrTds };
+type TransactionsTr = { id: string; innerTds: TransactionsTrTds };
 type TransactionTableHeaders = Record<string, number>;
 type TransactionsTrTds = string[];
 
@@ -111,7 +106,11 @@ function getTransactionCredit(tds: TransactionsTrTds, txnsTableHeaders: Transact
   return (tds[txnsTableHeaders[CREDIT_HEADER]] || '').trim();
 }
 
-function extractTransactionDetails(txnRow: TransactionsTr, txnsTableHeaders: TransactionTableHeaders, txnStatus: TransactionStatuses): ScrapedTransaction {
+function extractTransactionDetails(
+  txnRow: TransactionsTr,
+  txnsTableHeaders: TransactionTableHeaders,
+  txnStatus: TransactionStatuses,
+): ScrapedTransaction {
   const tds = txnRow.innerTds;
   return {
     status: txnStatus,
@@ -134,7 +133,12 @@ function editLastTransactionDesc(txnRow: TransactionsTr, lastTxn: ScrapedTransac
   return lastTxn;
 }
 
-function handleTransactionRow(txns: ScrapedTransaction[], txnsTableHeaders: TransactionTableHeaders, txnRow: TransactionsTr, txnType: TransactionStatuses) {
+function handleTransactionRow(
+  txns: ScrapedTransaction[],
+  txnsTableHeaders: TransactionTableHeaders,
+  txnRow: TransactionsTr,
+  txnType: TransactionStatuses,
+) {
   if (isExpandedDescRow(txnRow)) {
     const lastTransaction = txns.pop();
     if (lastTransaction) {
@@ -149,7 +153,7 @@ function handleTransactionRow(txns: ScrapedTransaction[], txnsTableHeaders: Tran
 
 async function getTransactionsTableHeaders(page: Page, tableTypeId: string) {
   const headersMap: Record<string, any> = [];
-  const headersObjs = await pageEvalAll(page, `#WorkSpaceBox #${tableTypeId} tr[class='header'] th`, null, (ths) => {
+  const headersObjs = await pageEvalAll(page, `#WorkSpaceBox #${tableTypeId} tr[class='header'] th`, null, ths => {
     return ths.map((th, index) => ({
       text: (th as HTMLElement).innerText.trim(),
       index,
@@ -162,16 +166,25 @@ async function getTransactionsTableHeaders(page: Page, tableTypeId: string) {
   return headersMap;
 }
 
-async function extractTransactionsFromTable(page: Page, tableTypeId: string, txnType: TransactionStatuses): Promise<ScrapedTransaction[]> {
+async function extractTransactionsFromTable(
+  page: Page,
+  tableTypeId: string,
+  txnType: TransactionStatuses,
+): Promise<ScrapedTransaction[]> {
   const txns: ScrapedTransaction[] = [];
   const transactionsTableHeaders = await getTransactionsTableHeaders(page, tableTypeId);
 
-  const transactionsRows = await pageEvalAll<TransactionsTr[]>(page, `#WorkSpaceBox #${tableTypeId} tr[class]:not([class='header'])`, [], (trs) => {
-    return (trs as HTMLElement[]).map((tr) => ({
-      id: (tr).getAttribute('id') || '',
-      innerTds: Array.from(tr.getElementsByTagName('td')).map((td) => (td as HTMLElement).innerText),
-    }));
-  });
+  const transactionsRows = await pageEvalAll<TransactionsTr[]>(
+    page,
+    `#WorkSpaceBox #${tableTypeId} tr[class]:not([class='header'])`,
+    [],
+    trs => {
+      return (trs as HTMLElement[]).map(tr => ({
+        id: tr.getAttribute('id') || '',
+        innerTds: Array.from(tr.getElementsByTagName('td')).map(td => (td as HTMLElement).innerText),
+      }));
+    },
+  );
 
   for (const txnRow of transactionsRows) {
     handleTransactionRow(txns, transactionsTableHeaders, txnRow, txnType);
@@ -182,7 +195,7 @@ async function extractTransactionsFromTable(page: Page, tableTypeId: string, txn
 async function isNoTransactionInDateRangeError(page: Page) {
   const hasErrorInfoElement = await elementPresentOnPage(page, `.${ERROR_MESSAGE_CLASS}`);
   if (hasErrorInfoElement) {
-    const errorText = await page.$eval(`.${ERROR_MESSAGE_CLASS}`, (errorElement) => {
+    const errorText = await page.$eval(`.${ERROR_MESSAGE_CLASS}`, errorElement => {
       return (errorElement as HTMLElement).innerText;
     });
     return errorText.trim() === NO_TRANSACTION_IN_DATE_RANGE_TEXT;
@@ -200,17 +213,13 @@ async function chooseAccount(page: Page, accountId: string) {
 async function searchByDates(page: Page, startDate: Moment) {
   await dropdownSelect(page, 'select#ddlTransactionPeriod', '004');
   await waitUntilElementFound(page, 'select#ddlTransactionPeriod');
-  await fillInput(
-    page,
-    'input#dtFromDate_textBox',
-    startDate.format(DATE_FORMAT),
-  );
+  await fillInput(page, 'input#dtFromDate_textBox', startDate.format(DATE_FORMAT));
   await clickButton(page, 'input#btnDisplayDates');
   await waitForNavigation(page);
 }
 
 async function getAccountNumber(page: Page) {
-  const selectedSnifAccount = await page.$eval('#ddlAccounts_m_ddl option[selected="selected"]', (option) => {
+  const selectedSnifAccount = await page.$eval('#ddlAccounts_m_ddl option[selected="selected"]', option => {
     return (option as HTMLElement).innerText;
   });
 
@@ -225,14 +234,17 @@ async function expandTransactionsTable(page: Page) {
 }
 
 async function scrapeTransactionsFromTable(page: Page): Promise<Transaction[]> {
-  const pendingTxns = await extractTransactionsFromTable(page, PENDING_TRANSACTIONS_TABLE_ID,
-    TransactionStatuses.Pending);
-  const completedTxns = await extractTransactionsFromTable(page, COMPLETED_TRANSACTIONS_TABLE_ID,
-    TransactionStatuses.Completed);
-  const txns = [
-    ...pendingTxns,
-    ...completedTxns,
-  ];
+  const pendingTxns = await extractTransactionsFromTable(
+    page,
+    PENDING_TRANSACTIONS_TABLE_ID,
+    TransactionStatuses.Pending,
+  );
+  const completedTxns = await extractTransactionsFromTable(
+    page,
+    COMPLETED_TRANSACTIONS_TABLE_ID,
+    TransactionStatuses.Completed,
+  );
+  const txns = [...pendingTxns, ...completedTxns];
   return convertTransactions(txns);
 }
 
@@ -266,7 +278,8 @@ async function fetchAccounts(page: Page, startDate: Moment) {
   const accounts: TransactionsAccount[] = [];
   const accountsList = await dropdownElements(page, ACCOUNTS_DROPDOWN_SELECTOR);
   for (const account of accountsList) {
-    if (account.value !== '-1') { // Skip "All accounts" option
+    if (account.value !== '-1') {
+      // Skip "All accounts" option
       const accountData = await fetchAccountData(page, startDate, account.value);
       accounts.push(accountData);
     }
@@ -275,13 +288,10 @@ async function fetchAccounts(page: Page, startDate: Moment) {
 }
 
 async function waitForPostLogin(page: Page) {
-  return Promise.race([
-    waitUntilElementFound(page, '#signoff', true),
-    waitUntilElementFound(page, '#restore', true),
-  ]);
+  return Promise.race([waitUntilElementFound(page, '#signoff', true), waitUntilElementFound(page, '#restore', true)]);
 }
 
-type ScraperSpecificCredentials = { username: string, password: string };
+type ScraperSpecificCredentials = { username: string; password: string };
 
 class UnionBankScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   getLoginOptions(credentials: ScraperSpecificCredentials) {

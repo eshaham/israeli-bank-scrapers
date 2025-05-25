@@ -14,9 +14,7 @@ enum LoginBaseResults {
   UnknownError = 'UNKNOWN_ERROR',
 }
 
-const {
-  Timeout, Generic, General, ...rest
-} = ScraperErrorTypes;
+const { Timeout, Generic, General, ...rest } = ScraperErrorTypes;
 export const LoginResults = {
   ...rest,
   ...LoginBaseResults,
@@ -34,7 +32,7 @@ export type PossibleLoginResults = {
 export interface LoginOptions {
   loginUrl: string;
   checkReadiness?: () => Promise<void>;
-  fields: { selector: string, value: string }[];
+  fields: { selector: string; value: string }[];
   submitButtonSelector: string | (() => Promise<void>);
   preAction?: () => Promise<Frame | void>;
   postAction?: () => Promise<void>;
@@ -126,7 +124,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
       height: viewport.height,
     });
 
-    this.page.on('requestfailed', (request) => {
+    this.page.on('requestfailed', request => {
       debug('Request failed: %s %s', request.failure()?.errorText, request.url());
     });
   }
@@ -195,9 +193,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     }
 
     if (!response) {
-      throw new Error(
-        `Error while trying to navigate to url ${url}, response is undefined`,
-      );
+      throw new Error(`Error while trying to navigate to url ${url}, response is undefined`);
     }
 
     if (!response.ok()) {
@@ -206,7 +202,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
         debug(`Failed to navigate to url ${url}, status code: ${status}, retrying ${retries} more times`);
         await this.navigateTo(url, waitUntil, retries - 1);
       } else {
-        throw new Error( `Failed to navigate to url ${url}, status code: ${status}`);
+        throw new Error(`Failed to navigate to url ${url}, status code: ${status}`);
       }
     }
   }
@@ -216,7 +212,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     throw new Error(`getLoginOptions() is not created in ${this.options.companyId}`);
   }
 
-  async fillInputs(pageOrFrame: Page | Frame, fields: { selector: string, value: string }[]): Promise<void> {
+  async fillInputs(pageOrFrame: Page | Frame, fields: { selector: string; value: string }[]): Promise<void> {
     const modified = [...fields];
     const input = modified.shift();
 
@@ -295,7 +291,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
       });
     }
 
-    await Promise.all(this.cleanups.reverse().map((cleanup) => cleanup()));
+    await Promise.all(this.cleanups.reverse().map(cleanup => cleanup()));
     this.cleanups = [];
   }
 
@@ -310,9 +306,9 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
         return {
           success: false,
           errorType:
-            loginResult === LoginResults.InvalidPassword ?
-              ScraperErrorTypes.InvalidPassword :
-              ScraperErrorTypes.General,
+            loginResult === LoginResults.InvalidPassword
+              ? ScraperErrorTypes.InvalidPassword
+              : ScraperErrorTypes.General,
           errorMessage: `Login failed with ${loginResult} error`,
         };
       case LoginResults.ChangePassword:
