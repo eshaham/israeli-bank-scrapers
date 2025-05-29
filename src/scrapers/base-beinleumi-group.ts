@@ -299,9 +299,9 @@ export async function waitForPostLogin(page: Page) {
 }
 
 async function fetchAccountData(page: Page | Frame, startDate: Moment) {
-  await searchByDates(page, startDate);
   const accountNumber = await getAccountNumber(page);
   const balance = await getCurrentBalance(page);
+  await searchByDates(page, startDate);
   const txns = await getAccountTransactions(page);
 
   return {
@@ -311,14 +311,101 @@ async function fetchAccountData(page: Page | Frame, startDate: Moment) {
   };
 }
 
-async function getAccountIdsBySelector(page: Page): Promise<string[]> {
-  const accountsIds = await page.evaluate(() => {
+async function getAccountIdsOldUI(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
     const selectElement = document.getElementById('account_num_select');
     const options = selectElement ? selectElement.querySelectorAll('option') : [];
     if (!options) return [];
     return Array.from(options, option => option.value);
   });
+}
+
+/**
+ * Ensures the account dropdown is open, then returns the available account labels.
+ *
+ * This method:
+ * - Checks if the dropdown is already open.
+ * - If not open, clicks the account selector to open it.
+ * - Waits for the dropdown to render.
+ * - Extracts and returns the list of available account labels.
+ *
+ * @param page Puppeteer Page object.
+ * @returns An array of available account labels (e.g., ["127 | XXXX1", "127 | XXXX2"]).
+ */
+export async function clickAccountSelectorGetAccountIds(page: Page): Promise<string[]> {
+  const accountSelector = 'div.current-account'; // Direct selector to clickable element
+  const dropdownPanelSelector = 'div.mat-mdc-autocomplete-panel.account-select-dd'; // The dropdown list box
+  const optionSelector = 'mat-option .mdc-list-item__primary-text'; // Account option labels
+
+  // Check if dropdown is already open
+  const dropdownVisible = await page
+    .$eval(dropdownPanelSelector, el => {
+      return el && window.getComputedStyle(el).display !== 'none' && el.offsetParent !== null;
+    })
+    .catch(() => false); // catch if dropdown is not in the DOM yet
+
+  if (!dropdownVisible) {
+    await page.waitForSelector(accountSelector, { visible: true, timeout: 10000 });
+
+    // Click the account selector to open the dropdown
+    await clickButton(page, accountSelector);
+
+    // Wait for the dropdown to open
+    await page.waitForSelector(dropdownPanelSelector, { visible: true, timeout: 10000 });
+  }
+
+  // Extract account labels from the dropdown options
+  const accountLabels = await page.$$eval(optionSelector, options => {
+    return options.map(option => option.textContent?.trim() || '').filter(label => label !== '');
+  });
+
+  return accountLabels;
+}
+
+async function getAccountIdsBothUIs(page: Page): Promise<string[]> {
+  let accountsIds: string[] = await clickAccountSelectorGetAccountIds(page);
+  if (accountsIds.length === 0) {
+    accountsIds = await getAccountIdsOldUI(page);
+  }
   return accountsIds;
+}
+
+/**
+ * Selects an account from the dropdown based on the provided account label.
+ *
+ * This method:
+ * - Clicks the account selector button to open the dropdown.
+ * - Retrieves the list of available account labels.
+ * - Checks if the provided account label exists in the list.
+ * - Finds and clicks the matching account option if found.
+ *
+ * @param page Puppeteer Page object.
+ * @param accountLabel The text of the account to select (e.g., "127 | XXXXX").
+ * @returns True if the account option was found and clicked; false otherwise.
+ */
+export async function selectAccountFromDropdown(page: Page, accountLabel: string): Promise<boolean> {
+  // Call clickAccountSelector to get the available accounts and open the dropdown
+  const availableAccounts = await clickAccountSelectorGetAccountIds(page);
+
+  // Check if the account label exists in the available accounts
+  if (!availableAccounts.includes(accountLabel)) {
+    return false;
+  }
+
+  // Locate the DOM elements representing account options
+  const optionSelector = 'mat-option .mdc-list-item__primary-text';
+  const accountOptions = await page.$$(optionSelector);
+
+  // Find and click the option matching the accountLabel
+  for (const option of accountOptions) {
+    const text = await page.evaluate(el => el.textContent?.trim(), option);
+    if (text === accountLabel) {
+      await option.click();
+      return true;
+    }
+  }
+
+  return false;
 }
 
 async function getTransactionsFrame(page: Page): Promise<Frame | null> {
@@ -336,9 +423,13 @@ async function getTransactionsFrame(page: Page): Promise<Frame | null> {
   return null;
 }
 
-async function selectAccount(page: Page, accountId: string) {
-  await page.select('#account_num_select', accountId);
-  await waitUntilElementFound(page, '#account_num_select', true);
+async function selectAccountBothUIs(page: Page, accountId: string): Promise<void> {
+  const accountSelected = await selectAccountFromDropdown(page, accountId);
+  if (!accountSelected) {
+    // Old UI format
+    await page.select('#account_num_select', accountId);
+    await waitUntilElementFound(page, '#account_num_select', true);
+  }
 }
 
 async function fetchAccountDataBothUIs(page: Page, startDate: Moment) {
@@ -351,17 +442,17 @@ async function fetchAccountDataBothUIs(page: Page, startDate: Moment) {
 }
 
 async function fetchAccounts(page: Page, startDate: Moment): Promise<TransactionsAccount[]> {
-  const accountsIds = await getAccountIdsBySelector(page);
+  const accountsIds = await getAccountIdsBothUIs(page);
 
-  if (accountsIds.length <= 1) {
+  if (accountsIds.length === 0) {
+    // In case accountsIds could no be parsed just return the transactions of the currently selected account
     const accountData = await fetchAccountDataBothUIs(page, startDate);
     return [accountData];
   }
 
   const accounts: TransactionsAccount[] = [];
   for (const accountId of accountsIds) {
-    await selectAccount(page, accountId);
-
+    await selectAccountBothUIs(page, accountId);
     const accountData = await fetchAccountDataBothUIs(page, startDate);
     accounts.push(accountData);
   }
