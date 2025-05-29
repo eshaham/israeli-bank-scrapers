@@ -329,37 +329,46 @@ async function getAccountIdsOldUI(page: Page): Promise<string[]> {
  * - Waits for the dropdown to render.
  * - Extracts and returns the list of available account labels.
  *
+ * Graceful handling:
+ * - If any error occurs (e.g., selectors not found, timing issues, UI version changes),
+ *   the function returns an empty list.
+ *
  * @param page Puppeteer Page object.
- * @returns An array of available account labels (e.g., ["127 | XXXX1", "127 | XXXX2"]).
+ * @returns An array of available account labels (e.g., ["127 | XXXX1", "127 | XXXX2"]),
+ *          or an empty array if something goes wrong.
  */
 export async function clickAccountSelectorGetAccountIds(page: Page): Promise<string[]> {
-  const accountSelector = 'div.current-account'; // Direct selector to clickable element
-  const dropdownPanelSelector = 'div.mat-mdc-autocomplete-panel.account-select-dd'; // The dropdown list box
-  const optionSelector = 'mat-option .mdc-list-item__primary-text'; // Account option labels
+  try {
+    const accountSelector = 'div.current-account'; // Direct selector to clickable element
+    const dropdownPanelSelector = 'div.mat-mdc-autocomplete-panel.account-select-dd'; // The dropdown list box
+    const optionSelector = 'mat-option .mdc-list-item__primary-text'; // Account option labels
 
-  // Check if dropdown is already open
-  const dropdownVisible = await page
-    .$eval(dropdownPanelSelector, el => {
-      return el && window.getComputedStyle(el).display !== 'none' && el.offsetParent !== null;
-    })
-    .catch(() => false); // catch if dropdown is not in the DOM yet
+    // Check if dropdown is already open
+    const dropdownVisible = await page
+      .$eval(dropdownPanelSelector, el => {
+        return el && window.getComputedStyle(el).display !== 'none' && el.offsetParent !== null;
+      })
+      .catch(() => false); // catch if dropdown is not in the DOM yet
 
-  if (!dropdownVisible) {
-    await page.waitForSelector(accountSelector, { visible: true, timeout: 10000 });
+    if (!dropdownVisible) {
+      await page.waitForSelector(accountSelector, { visible: true, timeout: 10000 });
 
-    // Click the account selector to open the dropdown
-    await clickButton(page, accountSelector);
+      // Click the account selector to open the dropdown
+      await clickButton(page, accountSelector);
 
-    // Wait for the dropdown to open
-    await page.waitForSelector(dropdownPanelSelector, { visible: true, timeout: 10000 });
+      // Wait for the dropdown to open
+      await page.waitForSelector(dropdownPanelSelector, { visible: true, timeout: 10000 });
+    }
+
+    // Extract account labels from the dropdown options
+    const accountLabels = await page.$$eval(optionSelector, options => {
+      return options.map(option => option.textContent?.trim() || '').filter(label => label !== '');
+    });
+
+    return accountLabels;
+  } catch (error) {
+    return []; // Graceful fallback
   }
-
-  // Extract account labels from the dropdown options
-  const accountLabels = await page.$$eval(optionSelector, options => {
-    return options.map(option => option.textContent?.trim() || '').filter(label => label !== '');
-  });
-
-  return accountLabels;
 }
 
 async function getAccountIdsBothUIs(page: Page): Promise<string[]> {
