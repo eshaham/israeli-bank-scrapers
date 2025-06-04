@@ -401,15 +401,20 @@ export async function selectAccountFromDropdown(page: Page, accountLabel: string
     return false;
   }
 
-  // Locate the DOM elements representing account options
+  // Wait for the dropdown options to be rendered
   const optionSelector = 'mat-option .mdc-list-item__primary-text';
+  await page.waitForSelector(optionSelector, { timeout: 3000 });
+
+  // Query all matching options
   const accountOptions = await page.$$(optionSelector);
 
   // Find and click the option matching the accountLabel
   for (const option of accountOptions) {
     const text = await page.evaluate(el => el.textContent?.trim(), option);
+
     if (text === accountLabel) {
-      await option.click();
+      const optionHandle = await option.evaluateHandle(el => el as HTMLElement);
+      await page.evaluate((el: HTMLElement) => el.click(), optionHandle);
       return true;
     }
   }
