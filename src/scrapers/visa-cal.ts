@@ -16,8 +16,7 @@ const TRANSACTIONS_REQUEST_ENDPOINT =
   'https://api.cal-online.co.il/Transactions/api/transactionsDetails/getCardTransactionsDetails';
 const PENDING_TRANSACTIONS_REQUEST_ENDPOINT =
   'https://api.cal-online.co.il/Transactions/api/approvals/getClearanceRequests';
-const SSO_AUTHORIZATION_REQUEST_ENDPOINT =
-  'https://connect.cal-online.co.il/col-rest/calconnect/authentication/SSO';
+const SSO_AUTHORIZATION_REQUEST_ENDPOINT = 'https://connect.cal-online.co.il/col-rest/calconnect/authentication/SSO';
 
 const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו שגויים';
 
@@ -306,8 +305,8 @@ type ScraperSpecificCredentials = { username: string; password: string };
 class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   private authorization: string | undefined = undefined;
 
-  private authRequestPromise: Promise<HTTPRequest> | null = null;
-  
+  private authRequestPromise: Promise<HTTPRequest | undefined> | undefined;
+
   openLoginPopup = async () => {
     debug('open login popup, wait until login button available');
     await waitUntilElementFound(this.page, '#ccLoginDesktopBtn', true);
@@ -340,9 +339,12 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
   async getAuthorizationHeader() {
     if (!this.authorization) {
-      const authModule = await getFromSessionStorage<{ auth: { calConnectToken: string | null } }>(this.page, 'auth-module');
-      if (authModule.auth.calConnectToken) {
-          return `CALAuthScheme ${authModule.auth.calConnectToken}`;
+      const authModule = await getFromSessionStorage<{ auth: { calConnectToken: string | null } }>(
+        this.page,
+        'auth-module',
+      );
+      if (authModule?.auth.calConnectToken) {
+        return `CALAuthScheme ${authModule.auth.calConnectToken}`;
       }
       throw new Error('could not retrieve authorization header');
     }
@@ -369,11 +371,11 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
   getLoginOptions(credentials: ScraperSpecificCredentials): LoginOptions {
     this.authRequestPromise = this.page
-        .waitForRequest(SSO_AUTHORIZATION_REQUEST_ENDPOINT, { timeout: 10_000 })
-        .catch(e => {
-            debug('error while waiting for the token request', e);
-            return undefined;
-        });
+      .waitForRequest(SSO_AUTHORIZATION_REQUEST_ENDPOINT, { timeout: 10_000 })
+      .catch(e => {
+        debug('error while waiting for the token request', e);
+        return undefined;
+      });
     return {
       loginUrl: `${LOGIN_URL}`,
       fields: createLoginFields(credentials),
