@@ -1,4 +1,4 @@
-import puppeteer, { type Frame, type GoToOptions, type Page, type PuppeteerLifeCycleEvent } from 'puppeteer';
+import puppeteer, { type Frame, type Page, type PuppeteerLifeCycleEvent } from 'puppeteer';
 import { ScraperProgressTypes } from '../definitions';
 import { getDebug } from '../helpers/debug';
 import { clickButton, fillInput, waitUntilElementFound } from '../helpers/elements-interactions';
@@ -7,10 +7,6 @@ import { BaseScraper } from './base-scraper';
 import { ScraperErrorTypes } from './errors';
 import { type ScraperCredentials, type ScraperScrapingResult } from './interface';
 
-const VIEWPORT_WIDTH = 1024;
-const VIEWPORT_HEIGHT = 768;
-const OK_STATUS = 200;
-
 const debug = getDebug('base-scraper-with-browser');
 
 enum LoginBaseResults {
@@ -18,9 +14,7 @@ enum LoginBaseResults {
   UnknownError = 'UNKNOWN_ERROR',
 }
 
-const {
-  Timeout, Generic, General, ...rest
-} = ScraperErrorTypes;
+const { Timeout, Generic, General, ...rest } = ScraperErrorTypes;
 export const LoginResults = {
   ...rest,
   ...LoginBaseResults,
@@ -38,7 +32,7 @@ export type PossibleLoginResults = {
 export interface LoginOptions {
   loginUrl: string;
   checkReadiness?: () => Promise<void>;
-  fields: { selector: string, value: string }[];
+  fields: { selector: string; value: string }[];
   submitButtonSelector: string | (() => Promise<void>);
   preAction?: () => Promise<Frame | void>;
   postAction?: () => Promise<void>;
@@ -84,15 +78,17 @@ function createGeneralError(): ScraperScrapingResult {
 class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends BaseScraper<TCredentials> {
   private cleanups: Array<() => Promise<void>> = [];
 
+  private defaultViewportSize = {
+    width: 1024,
+    height: 768,
+  };
+
   // NOTICE - it is discouraged to use bang (!) in general. It is used here because
   // all the classes that inherit from this base assume is it mandatory.
   protected page!: Page;
 
   protected getViewPort() {
-    return {
-      width: VIEWPORT_WIDTH,
-      height: VIEWPORT_HEIGHT,
-    };
+    return this.options.viewportSize ?? this.defaultViewportSize;
   }
 
   async initialize() {
@@ -128,7 +124,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
       height: viewport.height,
     });
 
-    this.page.on('requestfailed', (request) => {
+    this.page.on('requestfailed', request => {
       debug('Request failed: %s %s', request.failure()?.errorText, request.url());
     });
   }
@@ -186,22 +182,28 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
 
   async navigateTo(
     url: string,
-    page?: Page,
-    timeout?: number,
     waitUntil: PuppeteerLifeCycleEvent | undefined = 'load',
+    retries = this.options.navigationRetryCount ?? 0,
   ): Promise<void> {
-    const pageToUse = page || this.page;
-
-    if (!pageToUse) {
+    const response = await this.page?.goto(url, { waitUntil });
+    if (response === null) {
+      // note: response will be null when navigating to same url while changing the hash part.
+      // the condition below will always accept null as valid result.
       return;
     }
 
-    const options: GoToOptions = { ...(timeout === null ? null : { timeout }), waitUntil };
-    const response = await pageToUse.goto(url, options);
+    if (!response) {
+      throw new Error(`Error while trying to navigate to url ${url}, response is undefined`);
+    }
 
-    // note: response will be null when navigating to same url while changing the hash part. the condition below will always accept null as valid result.
-    if (response !== null && (response === undefined || response.status() !== OK_STATUS)) {
-      throw new Error(`Error while trying to navigate to url ${url}`);
+    if (!response.ok()) {
+      const status = response.status();
+      if (retries > 0) {
+        debug(`Failed to navigate to url ${url}, status code: ${status}, retrying ${retries} more times`);
+        await this.navigateTo(url, waitUntil, retries - 1);
+      } else {
+        throw new Error(`Failed to navigate to url ${url}, status code: ${status}`);
+      }
     }
   }
 
@@ -210,7 +212,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     throw new Error(`getLoginOptions() is not created in ${this.options.companyId}`);
   }
 
-  async fillInputs(pageOrFrame: Page | Frame, fields: { selector: string, value: string }[]): Promise<void> {
+  async fillInputs(pageOrFrame: Page | Frame, fields: { selector: string; value: string }[]): Promise<void> {
     const modified = [...fields];
     const input = modified.shift();
 
@@ -237,7 +239,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     }
 
     debug('navigate to login url');
-    await this.navigateTo(loginOptions.loginUrl, undefined, undefined, loginOptions.waitUntil);
+    await this.navigateTo(loginOptions.loginUrl, loginOptions.waitUntil);
     if (loginOptions.checkReadiness) {
       debug("execute 'checkReadiness' interceptor provided in login options");
       await loginOptions.checkReadiness();
@@ -289,7 +291,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
       });
     }
 
-    await Promise.all(this.cleanups.reverse().map((cleanup) => cleanup()));
+    await Promise.all(this.cleanups.reverse().map(cleanup => cleanup()));
     this.cleanups = [];
   }
 
@@ -304,9 +306,9 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
         return {
           success: false,
           errorType:
-            loginResult === LoginResults.InvalidPassword ?
-              ScraperErrorTypes.InvalidPassword :
-              ScraperErrorTypes.General,
+            loginResult === LoginResults.InvalidPassword
+              ? ScraperErrorTypes.InvalidPassword
+              : ScraperErrorTypes.General,
           errorMessage: `Login failed with ${loginResult} error`,
         };
       case LoginResults.ChangePassword:
