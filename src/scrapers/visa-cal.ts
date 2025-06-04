@@ -299,7 +299,7 @@ type ScraperSpecificCredentials = { username: string, password: string };
 class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   private authorization: string | undefined = undefined;
 
-  private requestPromise: Promise<HTTPRequest> | null = null;
+  private authRequestPromise: Promise<HTTPRequest> | null = null;
   
   openLoginPopup = async () => {
     debug('open login popup, wait until login button available');
@@ -331,8 +331,12 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     return initData?.result.cards.map(({ cardUniqueId, last4Digits }) => ({ cardUniqueId, last4Digits }));
   }
 
-  getAuthorizationHeader() {
+  async getAuthorizationHeader() {
     if (!this.authorization) {
+      const authModule = await getFromSessionStorage<{ auth: { calConnectToken: string | null } }>(this.page, 'auth-module');
+      if (authModule.auth.calConnectToken) {
+          `CALAuthScheme ${authModule.auth.calConnectToken}`;
+      }
       throw new Error('could not retrieve authorization header');
     }
     return this.authorization;
@@ -357,7 +361,12 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
   }
 
   getLoginOptions(credentials: ScraperSpecificCredentials): LoginOptions {
-    this.requestPromise = this.page.waitForRequest(SSO_AUTHORIZATION_REQUEST_ENDPOINT);
+    this.authRequestPromise = this.page
+        .waitForRequest(SSO_AUTHORIZATION_REQUEST_ENDPOINT, { timeout: 10_000 })
+        .catch(e => {
+            debug("error while waiting for the token request", e);
+            return undefined;
+        });
     return {
       loginUrl: `${LOGIN_URL}`,
       fields: createLoginFields(credentials),
@@ -372,7 +381,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
           if (currentUrl.endsWith('site-tutorial')) {
             await clickButton(this.page, 'button.btn-close');
           }
-          const request = await this.requestPromise;
+          const request = await this.authRequestPromise;
           this.authorization = request?.headers()?.authorization;
         } catch (e) {
           const currentUrl = await getCurrentUrl(this.page);
@@ -392,7 +401,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
     debug(`fetch transactions starting ${startMoment.format()}`);
 
-    const Authorization = this.getAuthorizationHeader();
+    const Authorization = await this.getAuthorizationHeader();
     const cards = await this.getCards();
     const xSiteId = await this.getXSiteId();
     const futureMonthsToScrape = this.options.futureMonthsToScrape ?? 1;
