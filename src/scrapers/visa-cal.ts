@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { type Frame, type Page } from 'puppeteer';
+import { type HTTPRequest, type Frame, type Page } from 'puppeteer';
 import { getDebug } from '../helpers/debug';
 import { clickButton, elementPresentOnPage, pageEval, waitUntilElementFound } from '../helpers/elements-interactions';
 import { fetchPostWithinPage } from '../helpers/fetch';
@@ -16,6 +16,7 @@ const TRANSACTIONS_REQUEST_ENDPOINT =
   'https://api.cal-online.co.il/Transactions/api/transactionsDetails/getCardTransactionsDetails';
 const PENDING_TRANSACTIONS_REQUEST_ENDPOINT =
   'https://api.cal-online.co.il/Transactions/api/approvals/getClearanceRequests';
+const SSO_AUTHORIZATION_REQUEST_ENDPOINT = 'https://connect.cal-online.co.il/col-rest/calconnect/authentication/SSO';
 
 const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו שגויים';
 
@@ -302,6 +303,10 @@ function convertParsedDataToTransactions(
 type ScraperSpecificCredentials = { username: string; password: string };
 
 class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
+  private authorization: string | undefined = undefined;
+
+  private authRequestPromise: Promise<HTTPRequest | undefined> | undefined;
+
   openLoginPopup = async () => {
     debug('open login popup, wait until login button available');
     await waitUntilElementFound(this.page, '#ccLoginDesktopBtn', true);
@@ -333,11 +338,17 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
   }
 
   async getAuthorizationHeader() {
-    const authModule = await getFromSessionStorage<{ auth: { calConnectToken: string } }>(this.page, 'auth-module');
-    if (!authModule) {
-      throw new Error("could not find 'auth-module' in session storage");
+    if (!this.authorization) {
+      const authModule = await getFromSessionStorage<{ auth: { calConnectToken: string | null } }>(
+        this.page,
+        'auth-module',
+      );
+      if (authModule?.auth.calConnectToken) {
+        return `CALAuthScheme ${authModule.auth.calConnectToken}`;
+      }
+      throw new Error('could not retrieve authorization header');
     }
-    return `CALAuthScheme ${authModule.auth.calConnectToken}`;
+    return this.authorization;
   }
 
   async getXSiteId() {
@@ -359,6 +370,12 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
   }
 
   getLoginOptions(credentials: ScraperSpecificCredentials): LoginOptions {
+    this.authRequestPromise = this.page
+      .waitForRequest(SSO_AUTHORIZATION_REQUEST_ENDPOINT, { timeout: 10_000 })
+      .catch(e => {
+        debug('error while waiting for the token request', e);
+        return undefined;
+      });
     return {
       loginUrl: `${LOGIN_URL}`,
       fields: createLoginFields(credentials),
@@ -373,6 +390,8 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
           if (currentUrl.endsWith('site-tutorial')) {
             await clickButton(this.page, 'button.btn-close');
           }
+          const request = await this.authRequestPromise;
+          this.authorization = request?.headers()?.authorization;
         } catch (e) {
           const currentUrl = await getCurrentUrl(this.page);
           if (currentUrl.endsWith('dashboard')) return;
