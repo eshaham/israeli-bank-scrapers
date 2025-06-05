@@ -31,6 +31,7 @@ const PENDING_TRANSACTIONS_TABLE = 'table#dataTable023';
 const NEXT_PAGE_LINK = 'a#Npage.paging';
 const CURRENT_BALANCE = '.main_balance';
 const IFRAME_NAME = 'iframe-old-pages';
+const ELEMENT_RENDER_TIMEOUT_MS = 10000;
 
 type TransactionsColsTypes = Record<string, number>;
 type TransactionsTrTds = string[];
@@ -214,7 +215,10 @@ async function searchByDates(page: Page | Frame, startDate: Moment) {
   await waitForNavigation(page);
 }
 
-async function getAccountNumber(page: Page | Frame) {
+async function getAccountNumber(page: Page | Frame): Promise<string> {
+  // Wait until the account number element is present in the DOM
+  await waitUntilElementFound(page, ACCOUNTS_NUMBER, true, ELEMENT_RENDER_TIMEOUT_MS);
+
   const selectedSnifAccount = await page.$eval(ACCOUNTS_NUMBER, option => {
     return (option as HTMLElement).innerText;
   });
@@ -278,14 +282,15 @@ async function getAccountTransactions(page: Page | Frame) {
   return txns;
 }
 
-async function getCurrentBalance(page: Page | Frame) {
-  const balanceElement = await page.$(CURRENT_BALANCE);
-  if (!balanceElement) {
-    return undefined;
-  }
-  const balanceStr = await balanceElement.evaluate(option => {
-    return (option as HTMLElement).innerText;
+async function getCurrentBalance(page: Page | Frame): Promise<number | undefined> {
+  // Wait for the balance element to appear and be visible
+  await waitUntilElementFound(page, CURRENT_BALANCE, true, ELEMENT_RENDER_TIMEOUT_MS);
+
+  // Extract text content
+  const balanceStr = await page.$eval(CURRENT_BALANCE, el => {
+    return (el as HTMLElement).innerText;
   });
+
   return getAmountData(balanceStr);
 }
 
@@ -351,13 +356,13 @@ export async function clickAccountSelectorGetAccountIds(page: Page): Promise<str
       .catch(() => false); // catch if dropdown is not in the DOM yet
 
     if (!dropdownVisible) {
-      await page.waitForSelector(accountSelector, { visible: true, timeout: 10000 });
+      await waitUntilElementFound(page, accountSelector, true, ELEMENT_RENDER_TIMEOUT_MS);
 
       // Click the account selector to open the dropdown
       await clickButton(page, accountSelector);
 
       // Wait for the dropdown to open
-      await page.waitForSelector(dropdownPanelSelector, { visible: true, timeout: 10000 });
+      await waitUntilElementFound(page, dropdownPanelSelector, true, ELEMENT_RENDER_TIMEOUT_MS);
     }
 
     // Extract account labels from the dropdown options
@@ -403,7 +408,7 @@ export async function selectAccountFromDropdown(page: Page, accountLabel: string
 
   // Wait for the dropdown options to be rendered
   const optionSelector = 'mat-option .mdc-list-item__primary-text';
-  await page.waitForSelector(optionSelector, { timeout: 3000 });
+  await waitUntilElementFound(page, optionSelector, true, ELEMENT_RENDER_TIMEOUT_MS);
 
   // Query all matching options
   const accountOptions = await page.$$(optionSelector);
