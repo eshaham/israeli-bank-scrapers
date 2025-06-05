@@ -5,8 +5,8 @@ export async function waitForNavigation(pageOrFrame: Page | Frame, options?: Wai
   await pageOrFrame.waitForNavigation(options);
 }
 
-export async function waitForNavigationAndDomLoad(page: Page) {
-  await waitForNavigation(page, { waitUntil: 'domcontentloaded' });
+export async function waitForNavigationAndDomLoad(pageOrFrame: Page | Frame) {
+  await waitForNavigation(pageOrFrame, { waitUntil: 'domcontentloaded' });
 }
 
 export function getCurrentUrl(pageOrFrame: Page | Frame, clientSide = false) {
