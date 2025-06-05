@@ -8,7 +8,7 @@ import {
   pageEvalAll,
   waitUntilElementFound,
 } from '../helpers/elements-interactions';
-import { waitForNavigation } from '../helpers/navigation';
+import { waitForNavigation, waitForNavigationAndDomLoad } from '../helpers/navigation';
 import { sleep } from '../helpers/waiting';
 import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
@@ -50,6 +50,7 @@ export function getPossibleLoginResults(): PossibleLoginResults {
   const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [
     /fibi.*accountSummary/, // New UI pattern
+    /Resources\/PortalNG\/shell/, // New UI pattern
     /FibiMenu\/Online/, // Old UI pattern
   ];
   urls[LoginResults.InvalidPassword] = [/FibiMenu\/Marketing\/Private\/Home/];
@@ -211,7 +212,7 @@ async function searchByDates(page: Page | Frame, startDate: Moment) {
   await fillInput(page, 'input#fromDate', startDate.format(DATE_FORMAT));
   await clickButton(page, `button[class*=${CLOSE_SEARCH_BY_DATES_BUTTON_CLASS}]`);
   await clickButton(page, `input[value=${SHOW_SEARCH_BY_DATES_BUTTON_VALUE}]`);
-  await waitForNavigation(page);
+  await waitForNavigationAndDomLoad(page);
 }
 
 async function getAccountNumber(page: Page | Frame) {
