@@ -409,6 +409,7 @@ These are the projects known to be using this module:
 - [Firefly iii Importer](https://github.com/itairaz1/israeli-bank-firefly-importer) - A tool to import your banks data into [Firefly iii](https://www.firefly-iii.org/), a free and open source financial manager.
 - [Actual Budget Importer](https://github.com/tomerh2001/israeli-banks-actual-budget-importer) - A tool to import your banks data into [Actual Budget](https://actualbudget.com/), a free and open source financial manager.
 - [Clarify](https://github.com/tomyweiss/clarify-expences) - A full-stack personal finance app for tracking income and expenses.
+- [Asher MCP](https://github.com/shlomiuziel/asher-mcp) - Scrape & access your financial data with LLM using the Model Context Protocol.
 
 Built something interesting you want to share here? [Let me know](https://goo.gl/forms/5Fb9JAjvzMIpmzqo2).
 
