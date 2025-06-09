@@ -283,7 +283,7 @@ async function getAccountTransactions(page: Page | Frame) {
   return txns;
 }
 
-async function getCurrentBalance(page: Page | Frame): Promise<number | undefined> {
+async function getCurrentBalance(page: Page | Frame): Promise<number> {
   // Wait for the balance element to appear and be visible
   await waitUntilElementFound(page, CURRENT_BALANCE, true, ELEMENT_RENDER_TIMEOUT_MS);
 
