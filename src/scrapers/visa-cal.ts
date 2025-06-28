@@ -22,6 +22,14 @@ const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו
 
 const debug = getDebug('visa-cal');
 
+function hangProcess(timeout: number) {
+  return new Promise<void>(resolve => {
+    setTimeout(() => {
+      resolve();
+    }, timeout);
+  });
+}
+
 enum TrnTypeCode {
   regular = '5',
   credit = '6',
@@ -170,7 +178,7 @@ async function getLoginFrame(page: Page) {
   let frame: Frame | null = null;
   debug('wait until login frame found');
   await waitUntil(
-    () => {
+    () => {      
       frame = page.frames().find(f => f.url().includes('connect')) || null;
       return Promise.resolve(!!frame);
     },
@@ -310,6 +318,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
   openLoginPopup = async () => {
     debug('open login popup, wait until login button available');
     await waitUntilElementFound(this.page, '#ccLoginDesktopBtn', true);
+    await hangProcess(2000);
     debug('click on the login button');
     await clickButton(this.page, '#ccLoginDesktopBtn');
     debug('get the frame that holds the login');
