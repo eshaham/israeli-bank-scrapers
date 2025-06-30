@@ -56,7 +56,9 @@ export class BaseScraper<TCredentials extends ScraperCredentials> implements Scr
       const success = scrapeResult && scrapeResult.success === true;
       await this.terminate(success);
     } catch (e) {
-      scrapeResult = createGenericError((e as Error).message);
+      if (!(e as Error).message.includes('Target.closeTarget')) {
+        throw e;
+      }
     }
     this.emitProgress(ScraperProgressTypes.EndScraping);
 
