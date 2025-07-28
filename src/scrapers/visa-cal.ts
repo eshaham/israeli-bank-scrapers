@@ -411,9 +411,9 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
     debug(`fetch transactions starting ${startMoment.format()}`);
 
-    const Authorization = await this.getAuthorizationHeader();
     const cards = await this.getCards();
     const xSiteId = await this.getXSiteId();
+    const Authorization = await this.getAuthorizationHeader();
     const futureMonthsToScrape = this.options.futureMonthsToScrape ?? 1;
 
     const accounts = await Promise.all(
