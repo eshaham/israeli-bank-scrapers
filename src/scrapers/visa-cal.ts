@@ -339,15 +339,19 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
   async getAuthorizationHeader() {
     if (!this.authorization) {
-      const authModule = await getFromSessionStorage<{ auth: { calConnectToken: string | null } }>(
-        this.page,
-        'auth-module',
+      const initData = await waitUntil(
+        () => getFromSessionStorage<{ auth: { calConnectToken: string | null } }>(this.page, 'auth-module'),
+        'get authorization header in session storage',
+        10000,
+        1000,
       );
-      if (authModule?.auth.calConnectToken) {
-        return `CALAuthScheme ${authModule.auth.calConnectToken}`;
+      if (!initData?.auth.calConnectToken) {
+        console.log(initData?.auth.calConnectToken);
+        throw new Error('could not retrieve authorization header');
       }
-      throw new Error('could not retrieve authorization header');
+      return `CALAuthScheme ${initData.auth.calConnectToken}`;
     }
+
     return this.authorization;
   }
 
@@ -411,9 +415,12 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
     debug(`fetch transactions starting ${startMoment.format()}`);
 
-    const cards = await this.getCards();
-    const xSiteId = await this.getXSiteId();
-    const Authorization = await this.getAuthorizationHeader();
+    const [cards, xSiteId, Authorization] = await Promise.all([
+      this.getCards(),
+      this.getXSiteId(),
+      this.getAuthorizationHeader(),
+    ]);
+
     const futureMonthsToScrape = this.options.futureMonthsToScrape ?? 1;
 
     const accounts = await Promise.all(
