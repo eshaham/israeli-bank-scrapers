@@ -276,7 +276,7 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
             symbol: item.Symbol,
             amount: parseFloat(item.Amount),
             value: parseFloat(item.Value),
-            currency: item.Currency || SHEKEL_CURRENCY,
+            currency: SHEKEL_CURRENCY,
           };
 
           investments.push(investment);
