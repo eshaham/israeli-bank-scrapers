@@ -14,6 +14,7 @@ const BASE_URL = 'https://hb2.bankleumi.co.il';
 const LOGIN_URL = 'https://www.leumi.co.il/';
 const TRANSACTIONS_URL = `${BASE_URL}/eBanking/SO/SPA.aspx#/ts/BusinessAccountTrx?WidgetPar=1`;
 const FILTERED_TRANSACTIONS_URL = `${BASE_URL}/ChannelWCF/Broker.svc/ProcessRequest?moduleName=UC_SO_27_GetBusinessAccountTrx`;
+const LEUMI_TRADING_URL = `${BASE_URL}/lti/lti-app/home`;
 
 const DATE_FORMAT = 'DD.MM.YY';
 const ACCOUNT_BLOCKED_MSG = 'המנוי חסום';
@@ -283,7 +284,7 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
 
       });
 
-    await this.navigateTo("https://hb2.bankleumi.co.il/lti/lti-app/home");
+    await this.navigateTo(LEUMI_TRADING_URL);
 
     await this.page.waitForSelector('currentStockInfoShort', { visible: true });
 
