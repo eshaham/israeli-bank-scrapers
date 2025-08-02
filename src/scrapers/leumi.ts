@@ -5,6 +5,7 @@ import { getDebug } from '../helpers/debug';
 import { clickButton, fillInput, pageEval, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
+import { type Investment } from '../investments';
 import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
 import { type ScraperScrapingResult } from './interface';
 
@@ -231,11 +232,62 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
     await this.navigateTo(TRANSACTIONS_URL);
 
     const accounts = await fetchTransactions(this.page, startMoment);
+    const investments = await this.fetchInvestments();
 
     return {
       success: true,
       accounts,
+      investments,
     };
+  }
+
+  async fetchInvestments(): Promise<Investment[]> {
+    
+    await this.page.setRequestInterception(true);
+    
+    this.page.on('request', request => {
+        request.continue();
+    });
+
+    let investments: Investment[] = [];
+
+    this.page.on('response', async response => {
+        // You can filter responses based on criteria like URL, method, or resource type.
+        // For XHR requests, check if the resource type is 'xhr' or 'fetch'.
+        if (response.request().resourceType() !== 'xhr' && response.request().resourceType() !== 'fetch') {
+          return;
+        }
+
+        if (!response.url().includes('Statement')) {
+          return;
+        }
+
+        const data = await response.json();
+        debug('Investment data received:', data);
+
+        const userStatement = data?.data.UserStatement?.DataSource;
+        debug('User statement:', userStatement);
+        
+        for (const item of userStatement) {
+          const investment: Investment = {
+            paperId: item.PaperId,
+            paperName: item.PaperName,
+            symbol: item.Symbol,
+            amount: parseFloat(item.Amount),
+            value: parseFloat(item.Value),
+            currency: item.Currency || SHEKEL_CURRENCY,
+          };
+
+          investments.push(investment);
+        }
+
+      });
+
+    await this.navigateTo("https://hb2.bankleumi.co.il/lti/lti-app/home");
+
+    await this.page.waitForSelector('currentStockInfoShort', { visible: true });
+
+    return investments;
   }
 }
 

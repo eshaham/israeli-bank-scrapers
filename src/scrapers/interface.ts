@@ -2,6 +2,7 @@ import { type BrowserContext, type Browser, type Page } from 'puppeteer';
 import { type CompanyTypes, type ScraperProgressTypes } from '../definitions';
 import { type TransactionsAccount } from '../transactions';
 import { type ErrorResult, type ScraperErrorTypes } from './errors';
+import { type Investment } from '../investments';
 
 // TODO: Remove this type when the scraper 'factory' will return concrete scraper types
 // Instead of a generic interface (which in turn uses this type)
@@ -169,6 +170,7 @@ export interface ScraperScrapingResult {
   futureDebits?: FutureDebit[];
   errorType?: ScraperErrorTypes;
   errorMessage?: string; // only on success=false
+  investments?: Investment[];
 }
 
 export interface Scraper<TCredentials extends ScraperCredentials> {
