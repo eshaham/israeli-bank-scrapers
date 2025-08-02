@@ -20,7 +20,11 @@ const INVALID_PASSWORD_MSG = 'אחד או יותר מפרטי ההזדהות ש�
 
 function getPossibleLoginResults() {
   const urls: LoginOptions['possibleResults'] = {
-    [LoginResults.Success]: [/ebanking\/SO\/SPA.aspx/i],
+    [LoginResults.Success]: [
+      /ebanking\/SO\/SPA.aspx/i,
+      /staticcontent\/digitalfront\/he/i,
+      /staticcontent\/gate-keeper\/he/i,
+    ],
     [LoginResults.InvalidPassword]: [
       async options => {
         if (!options || !options.page) {
@@ -78,7 +82,6 @@ function extractTransactionsFromPage(transactions: any[], status: TransactionSta
       originalAmount: rawTransaction.Amount,
     };
 
-    console.log(`Transaction: ${JSON.stringify(newTransaction)}`);
     return newTransaction;
   });
 
@@ -151,116 +154,15 @@ async function fetchTransactionsForAccount(
 }
 
 async function fetchTransactions(page: Page, startDate: Moment): Promise<TransactionsAccount[]> {
-  console.log('=== FETCHTRANSACTIONS DEBUG ===');
   const accounts: TransactionsAccount[] = [];
 
   // DEVELOPER NOTICE the account number received from the server is being altered at
   // runtime for some accounts after 1-2 seconds so we need to hang the process for a short while.
-  console.log('Waiting 4 seconds for account elements to stabilize...');
   await hangProcess(4000);
 
-  console.log('Current URL in fetchTransactions:', page.url());
-  console.log('Looking for account selector: app-masked-number-combo span.display-number-li');
-
-  let accountsIds: string[] = [];
-  try {
-    console.log('Trying original selector: app-masked-number-combo span.display-number-li');
-    accountsIds = (await page.evaluate(() =>
-      Array.from(document.querySelectorAll('app-masked-number-combo span.display-number-li'), e => e.textContent),
-    )) as string[];
-    console.log('Original selector found account IDs:', accountsIds);
-
-    if (accountsIds.length === 0) {
-      console.log('Original selector failed, trying alternative selectors for new website...');
-
-      // Try various selectors that might contain account numbers in the new website
-      const selectors = [
-        '[data-tid="account-selector-number"] span[aria-hidden="true"]', // New Leumi website specific selector
-        '[data-tid*="account"] span[aria-hidden="true"]',
-        '[data-tid*="account-selector"] span',
-        'div[data-tid*="account"] span',
-        'span[class*="account"]',
-        'span[class*="number"]',
-        'div[class*="account"]',
-        'div[class*="number"]',
-        '[data-testid*="account"]',
-        '[data-testid*="number"]',
-        'span:contains("/")', // Account numbers often contain slashes
-        'div:contains("/")',
-      ];
-
-      for (const selector of selectors) {
-        console.log(`Trying selector: ${selector}`);
-        try {
-          const results = await page.evaluate(sel => {
-            if (sel.includes(':contains')) {
-              // Handle :contains pseudo-selector manually
-              const elements = Array.from(document.querySelectorAll(sel.split(':contains')[0]));
-              const containsText = sel.match(/contains\("([^"]+)"\)/)?.[1];
-              return elements
-                .filter(el => el.textContent && containsText && el.textContent.includes(containsText))
-                .map(el => el.textContent!.trim())
-                .filter(text => text && text.length > 0);
-            } else {
-              return Array.from(document.querySelectorAll(sel), e => e.textContent?.trim()).filter(
-                text => text && text.length > 0,
-              ) as string[];
-            }
-          }, selector);
-
-          if (results.length > 0) {
-            console.log(`Selector ${selector} found results:`, results);
-            // Filter for account-like patterns (containing digits and possibly slashes/dashes)
-            const accountLike = results.filter(
-              (text): text is string => text != null && /\d/.test(text) && text.length >= 4,
-            );
-            if (accountLike.length > 0) {
-              accountsIds = accountLike;
-              console.log(`Using account IDs from ${selector}:`, accountsIds);
-              break;
-            }
-          }
-        } catch (selectorError: any) {
-          console.log(`Selector ${selector} failed:`, selectorError.message);
-        }
-      }
-
-      // If still no accounts found, try a more general approach
-      if (accountsIds.length === 0) {
-        console.log('All specific selectors failed, trying general text content search...');
-        accountsIds = await page.evaluate(() => {
-          const allElements = Array.from(document.querySelectorAll('*'));
-          const accountPatterns: string[] = [];
-
-          for (const el of allElements) {
-            const text = el.textContent?.trim();
-            if (text && text.length > 4 && text.length < 20) {
-              // Look for patterns like: 123/456789, 12-3456-789, etc.
-              if (/^\d+[-\/]\d+/.test(text) || /^\d{4,}$/.test(text)) {
-                accountPatterns.push(text);
-              }
-            }
-          }
-
-          // Remove duplicates and return unique account-like patterns
-          return [...new Set(accountPatterns)].slice(0, 5); // Limit to 5 to avoid too many false positives
-        });
-
-        console.log('General search found potential account patterns:', accountsIds);
-      }
-    }
-
-    if (accountsIds.length === 0) {
-      console.log('No account selectors worked. The new website might require different navigation.');
-      // Return a default account to continue with transaction extraction attempt
-      accountsIds = ['DEFAULT-ACCOUNT'];
-      console.log('Using default account to continue processing');
-    }
-  } catch (error: any) {
-    console.log('Error extracting account IDs:', error.message);
-    console.log('This suggests the DOM structure has changed in the new Leumi website.');
-    throw error;
-  }
+  const accountsIds = (await page.evaluate(() =>
+    Array.from(document.querySelectorAll('app-masked-number-combo span.display-number-li'), e => e.textContent),
+  )) as string[];
 
   // due to a bug, the altered value might include undesired signs like & that should be removed
 
@@ -302,12 +204,29 @@ async function navigateToLogin(page: Page): Promise<void> {
 }
 
 async function waitForPostLogin(page: Page): Promise<void> {
+  debug('Waiting for post-login navigation...');
+
+  // Use URL-based detection instead of problematic XPath
   await Promise.race([
+    // Wait for successful navigation to Leumi's authenticated pages
+    page.waitForFunction(
+      () => {
+        const url = window.location.href;
+        return (
+          url.includes('/ebanking/SO/SPA.aspx') ||
+          url.includes('/staticcontent/digitalfront/he') ||
+          url.includes('/staticcontent/gate-keeper/he')
+        );
+      },
+      { timeout: 60000 },
+    ),
+    // Still check for error elements, but use more reliable selectors
     waitUntilElementFound(page, 'a[title="דלג לחשבון"]', true, 60000),
     waitUntilElementFound(page, 'div.main-content', false, 60000),
-    page.waitForSelector(`xpath//div[contains(string(),"${INVALID_PASSWORD_MSG}")]`),
-    waitUntilElementFound(page, 'form[action="/changepassword"]', true, 60000), // not sure if they kept this one
+    waitUntilElementFound(page, 'form[action="/changepassword"]', true, 60000),
   ]);
+
+  debug('Post-login navigation completed, current URL: %s', page.url());
 }
 
 type ScraperSpecificCredentials = { username: string; password: string };
@@ -329,6 +248,10 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
     const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(minimumStartMoment, moment(startDate));
+
+    // Wait for login session to be fully established
+    debug('Waiting for login session to stabilize...');
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
     await this.navigateTo(TRANSACTIONS_URL);
 
