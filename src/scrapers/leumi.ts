@@ -243,46 +243,52 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   }
 
   async fetchInvestments(): Promise<Investment[]> {
-    
     await this.page.setRequestInterception(true);
-    
+
     this.page.on('request', request => {
-        request.continue();
+      request.continue().catch(error => {
+        debug('Error continuing request:', error);
+      });
     });
 
-    let investments: Investment[] = [];
+    const investments: Investment[] = [];
 
-    this.page.on('response', async response => {
-        // You can filter responses based on criteria like URL, method, or resource type.
-        // For XHR requests, check if the resource type is 'xhr' or 'fetch'.
-        if (response.request().resourceType() !== 'xhr' && response.request().resourceType() !== 'fetch') {
-          return;
-        }
+    this.page.on('response', response => {
+      // You can filter responses based on criteria like URL, method, or resource type.
+      // For XHR requests, check if the resource type is 'xhr' or 'fetch'.
+      if (response.request().resourceType() !== 'xhr' && response.request().resourceType() !== 'fetch') {
+        return;
+      }
 
-        if (!response.url().includes('Statement')) {
-          return;
-        }
+      if (!response.url().includes('Statement')) {
+        return;
+      }
 
-        const data = await response.json();
-        debug('Investment data received:', data);
+      response
+        .json()
+        .then(data => {
+          debug('Investment data received:', data);
 
-        const userStatement = data?.data.UserStatement?.DataSource;
-        debug('User statement:', userStatement);
-        
-        for (const item of userStatement) {
-          const investment: Investment = {
-            paperId: item.PaperId,
-            paperName: item.PaperName,
-            symbol: item.Symbol,
-            amount: parseFloat(item.Amount),
-            value: parseFloat(item.Value),
-            currency: SHEKEL_CURRENCY,
-          };
+          const userStatement = data?.data.UserStatement?.DataSource;
+          debug('User statement:', userStatement);
 
-          investments.push(investment);
-        }
+          for (const item of userStatement) {
+            const investment: Investment = {
+              paperId: item.PaperId,
+              paperName: item.PaperName,
+              symbol: item.Symbol,
+              amount: parseFloat(item.Amount),
+              value: parseFloat(item.Value),
+              currency: SHEKEL_CURRENCY,
+            };
 
-      });
+            investments.push(investment);
+          }
+        })
+        .catch(error => {
+          debug('Error parsing response JSON:', error);
+        });
+    });
 
     await this.navigateTo(LEUMI_TRADING_URL);
 
