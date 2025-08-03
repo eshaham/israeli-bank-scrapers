@@ -75,6 +75,14 @@ function createGeneralError(): ScraperScrapingResult {
   };
 }
 
+async function safeCleanup(cleanup: () => Promise<void>) {
+  try {
+    await cleanup();
+  } catch (e) {
+    debug(`Cleanup function failed: ${(e as Error).message}`);
+  }
+}
+
 class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends BaseScraper<TCredentials> {
   private cleanups: Array<() => Promise<void>> = [];
 
@@ -291,7 +299,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
       });
     }
 
-    await Promise.all(this.cleanups.reverse().map(cleanup => cleanup()));
+    await Promise.all(this.cleanups.reverse().map(safeCleanup));
     this.cleanups = [];
   }
 
