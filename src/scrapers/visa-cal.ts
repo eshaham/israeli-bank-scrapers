@@ -339,19 +339,17 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
   async getAuthorizationHeader() {
     if (!this.authorization) {
-      const initData = await waitUntil(
+      const authModule = await waitUntil(
         () => getFromSessionStorage<{ auth: { calConnectToken: string | null } }>(this.page, 'auth-module'),
         'get authorization header in session storage',
         10000,
         1000,
       );
-      if (!initData?.auth.calConnectToken) {
-        console.log(initData?.auth.calConnectToken);
-        throw new Error('could not retrieve authorization header');
+      if (authModule?.auth.calConnectToken) {
+        return `CALAuthScheme ${authModule.auth.calConnectToken}`;
       }
-      return `CALAuthScheme ${initData.auth.calConnectToken}`;
+      throw new Error('could not retrieve authorization header');
     }
-
     return this.authorization;
   }
 
