@@ -178,7 +178,7 @@ async function getLoginFrame(page: Page) {
   let frame: Frame | null = null;
   debug('wait until login frame found');
   await waitUntil(
-    () => {      
+    () => {
       frame = page.frames().find(f => f.url().includes('connect')) || null;
       return Promise.resolve(!!frame);
     },
