@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "esnext",
+    "target": "es2022",
     "module": "commonjs",
     "allowJs": false,
     "skipLibCheck": true,
@@ -11,14 +11,16 @@
     "noImplicitAny": true,
     "resolveJsonModule": true,
     "noImplicitThis": true,
-     "noUnusedLocals": true,
-     "noUnusedParameters": true,
-     "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "inlineSourceMap": true,
+    "inlineSources": true
   },
   "include": ["src/**/*",".eslintrc.js","jest.config.js"],
   "exclude": ["node_modules"]

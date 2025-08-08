@@ -2,20 +2,15 @@ import moment, { type Moment } from 'moment';
 import { type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import {
-  clickButton, elementPresentOnPage,
-  pageEvalAll, waitUntilElementDisappear, waitUntilElementFound,
+  clickButton,
+  elementPresentOnPage,
+  pageEvalAll,
+  waitUntilElementDisappear,
+  waitUntilElementFound,
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
-import {
-  TransactionStatuses, TransactionTypes,
-  type Transaction,
-  type TransactionsAccount,
-} from '../transactions';
-import {
-  BaseScraperWithBrowser,
-  LoginResults,
-  type PossibleLoginResults,
-} from './base-scraper-with-browser';
+import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
+import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 
 const LOGIN_URL = 'https://login.yahav.co.il/login/';
 const BASE_URL = 'https://digital.yahav.co.il/BaNCSDigitalUI/app/index.html#/';
@@ -45,16 +40,18 @@ interface ScrapedTransaction {
 function getPossibleLoginResults(page: Page): PossibleLoginResults {
   // checkout file `base-scraper-with-browser.ts` for available result types
   const urls: PossibleLoginResults = {};
-  urls[LoginResults.Success] = [
-    `${BASE_WELCOME_URL}`,
+  urls[LoginResults.Success] = [`${BASE_WELCOME_URL}`];
+  urls[LoginResults.InvalidPassword] = [
+    async () => {
+      return elementPresentOnPage(page, `${INVALID_DETAILS_SELECTOR}`);
+    },
   ];
-  urls[LoginResults.InvalidPassword] = [async () => {
-    return elementPresentOnPage(page, `${INVALID_DETAILS_SELECTOR}`);
-  }];
 
-  urls[LoginResults.ChangePassword] = [async () => {
-    return elementPresentOnPage(page, `${CHANGE_PASSWORD_OLD_PASS}`);
-  }];
+  urls[LoginResults.ChangePassword] = [
+    async () => {
+      return elementPresentOnPage(page, `${CHANGE_PASSWORD_OLD_PASS}`);
+    },
+  ];
 
   return urls;
 }
@@ -64,11 +61,13 @@ async function getAccountID(page: Page): Promise<string> {
     const selectedSnifAccount = await page.$eval(ACCOUNT_ID_SELECTOR, (element: Element) => {
       return element.textContent as string;
     });
-    
+
     return selectedSnifAccount;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to retrieve account ID. Possible outdated selector '${ACCOUNT_ID_SELECTOR}: ${errorMessage}`);
+    throw new Error(
+      `Failed to retrieve account ID. Possible outdated selector '${ACCOUNT_ID_SELECTOR}: ${errorMessage}`,
+    );
   }
 }
 
@@ -83,10 +82,10 @@ function getTxnAmount(txn: ScrapedTransaction) {
   return (Number.isNaN(credit) ? 0 : credit) - (Number.isNaN(debit) ? 0 : debit);
 }
 
-type TransactionsTr = { id: string, innerDivs: string[] };
+type TransactionsTr = { id: string; innerDivs: string[] };
 
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
-  return txns.map((txn) => {
+  return txns.map(txn => {
     const convertedDate = moment(txn.date, DATE_FORMAT).toISOString();
     const convertedAmount = getTxnAmount(txn);
     return {
@@ -128,12 +127,17 @@ async function getAccountTransactions(page: Page): Promise<Transaction[]> {
   await waitUntilElementFound(page, '.under-line-txn-table-header', true);
 
   const txns: ScrapedTransaction[] = [];
-  const transactionsDivs = await pageEvalAll<TransactionsTr[]>(page, '.list-item-holder .entire-content-ctr', [], (divs) => {
-    return (divs as HTMLElement[]).map((div) => ({
-      id: (div).getAttribute('id') || '',
-      innerDivs: Array.from(div.getElementsByTagName('div')).map((el) => (el as HTMLElement).innerText),
-    }));
-  });
+  const transactionsDivs = await pageEvalAll<TransactionsTr[]>(
+    page,
+    '.list-item-holder .entire-content-ctr',
+    [],
+    divs => {
+      return (divs as HTMLElement[]).map(div => ({
+        id: div.getAttribute('id') || '',
+        innerDivs: Array.from(div.getElementsByTagName('div')).map(el => (el as HTMLElement).innerText),
+      }));
+    },
+  );
 
   for (const txnRow of transactionsDivs) {
     handleTransactionRow(txns, txnRow);
@@ -150,7 +154,8 @@ async function searchByDates(page: Page, startDate: Moment) {
   const startDateYear = startDate.format('Y');
 
   // Open the calendar date picker
-  const dateFromPick = 'div.date-options-cell:nth-child(7) > date-picker:nth-child(1) > div:nth-child(1) > span:nth-child(2)';
+  const dateFromPick =
+    'div.date-options-cell:nth-child(7) > date-picker:nth-child(1) > div:nth-child(1) > span:nth-child(2)';
   await waitUntilElementFound(page, dateFromPick, true);
   await clickButton(page, dateFromPick);
 
@@ -172,7 +177,7 @@ async function searchByDates(page: Page, startDate: Moment) {
   // Select year from a 12 year grid.
   for (let i = 1; i < 13; i += 1) {
     const selector = `.pmu-years > div:nth-child(${i})`;
-    const year = await page.$eval(selector, (y) => {
+    const year = await page.$eval(selector, y => {
       return (y as HTMLElement).innerText;
     });
     if (startDateYear === year) {
@@ -193,7 +198,7 @@ async function searchByDates(page: Page, startDate: Moment) {
   // Let's check everything just in case...
   for (let i = 1; i < 42; i += 1) {
     const selector = `.pmu-days > div:nth-child(${i})`;
-    const day = await page.$eval(selector, (d) => {
+    const day = await page.$eval(selector, d => {
       return (d as HTMLElement).innerText;
     });
 
@@ -251,7 +256,7 @@ async function redirectOrDialog(page: Page) {
   await waitUntilElementDisappear(page, '.loading-bar-spinner');
 }
 
-type ScraperSpecificCredentials = { username: string, password: string, nationalID: string };
+type ScraperSpecificCredentials = { username: string; password: string; nationalID: string };
 
 class YahavScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   getLoginOptions(credentials: ScraperSpecificCredentials) {

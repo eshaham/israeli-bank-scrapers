@@ -10,8 +10,10 @@ import {
 import { BaseScraper } from './base-scraper';
 import { ScraperErrorTypes, createGenericError } from './errors';
 import {
-  type ScraperGetLongTermTwoFactorTokenResult, type ScraperLoginResult,
-  type ScraperScrapingResult, type ScraperTwoFactorAuthTriggerResult,
+  type ScraperGetLongTermTwoFactorTokenResult,
+  type ScraperLoginResult,
+  type ScraperScrapingResult,
+  type ScraperTwoFactorAuthTriggerResult,
 } from './interface';
 import { GET_CUSTOMER, GET_MOVEMENTS } from './one-zero-queries';
 
@@ -76,18 +78,21 @@ type Movement = {
   valueDate: string;
 };
 
-type QueryPagination = { hasMore: boolean, cursor: string };
+type QueryPagination = { hasMore: boolean; cursor: string };
 
 const IDENTITY_SERVER_URL = 'https://identity.tfd-bank.com/v1/';
 
 const GRAPHQL_API_URL = 'https://mobile.tfd-bank.com/mobile-graph/graphql';
 
-type ScraperSpecificCredentials = { email: string, password: string } & ({
-  otpCodeRetriever: () => Promise<string>;
-  phoneNumber: string;
-} | {
-  otpLongTermToken: string;
-});
+type ScraperSpecificCredentials = { email: string; password: string } & (
+  | {
+      otpCodeRetriever: () => Promise<string>;
+      phoneNumber: string;
+    }
+  | {
+      otpLongTermToken: string;
+    }
+);
 
 export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentials> {
   private otpContext?: string;
@@ -96,7 +101,9 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
 
   async triggerTwoFactorAuth(phoneNumber: string): Promise<ScraperTwoFactorAuthTriggerResult> {
     if (!phoneNumber.startsWith('+')) {
-      return createGenericError('A full international phone number starting with + and a three digit country code is required');
+      return createGenericError(
+        'A full international phone number starting with + and a three digit country code is required',
+      );
     }
 
     debug('Fetching device token');
@@ -105,7 +112,9 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
       os: 'Android',
     });
 
-    const { resultData: { deviceToken } } = deviceTokenResponse;
+    const {
+      resultData: { deviceToken },
+    } = deviceTokenResponse;
 
     debug(`Sending OTP to phone number ${phoneNumber}`);
 
@@ -115,7 +124,9 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
       otpChannel: 'SMS_OTP',
     });
 
-    const { resultData: { otpContext } } = otpPrepareResponse;
+    const {
+      resultData: { otpContext },
+    } = otpPrepareResponse;
 
     this.otpContext = otpContext;
 
@@ -135,7 +146,9 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
       otpCode,
     });
 
-    const { resultData: { otpToken } } = otpVerifyResponse;
+    const {
+      resultData: { otpToken },
+    } = otpVerifyResponse;
     return { success: true, longTermTwoFactorAuthToken: otpToken };
   }
 
@@ -178,8 +191,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
     return { success: true, longTermTwoFactorAuthToken: otpTokenResult.longTermTwoFactorAuthToken };
   }
 
-  async login(credentials: ScraperSpecificCredentials):
-  Promise<ScraperLoginResult> {
+  async login(credentials: ScraperSpecificCredentials): Promise<ScraperLoginResult> {
     const otpTokenResult = await this.resolveOtpToken(credentials);
     if (!otpTokenResult.success) {
       return otpTokenResult;
@@ -193,7 +205,9 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
       pinCode: '',
     });
 
-    const { resultData: { idToken } } = getIdTokenResponse;
+    const {
+      resultData: { idToken },
+    } = getIdTokenResponse;
 
     debug('Requesting session token');
 
@@ -202,7 +216,9 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
       pass: credentials.password,
     });
 
-    const { resultData: { accessToken } } = getSessionTokenResponse;
+    const {
+      resultData: { accessToken },
+    } = getSessionTokenResponse;
 
     this.accessToken = accessToken;
 
@@ -220,21 +236,22 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
 
     while (!movements.length || new Date(movements[0].movementTimestamp) >= startDate) {
       debug(`Fetching transactions for account ${portfolio.portfolioNum}...`);
-      const { movements: { movements: newMovements, pagination } }:
-      { movements: { movements: Movement[], pagination: QueryPagination } } =
-          await fetchGraphql(
-            GRAPHQL_API_URL,
-            GET_MOVEMENTS, {
-              portfolioId: portfolio.portfolioId,
-              accountId: account.accountId,
-              language: 'HEBREW',
-              pagination: {
-                cursor,
-                limit: 50,
-              },
-            },
-            { authorization: `Bearer ${this.accessToken}` },
-          );
+      const {
+        movements: { movements: newMovements, pagination },
+      }: { movements: { movements: Movement[]; pagination: QueryPagination } } = await fetchGraphql(
+        GRAPHQL_API_URL,
+        GET_MOVEMENTS,
+        {
+          portfolioId: portfolio.portfolioId,
+          accountId: account.accountId,
+          language: 'HEBREW',
+          pagination: {
+            cursor,
+            limit: 50,
+          },
+        },
+        { authorization: `Bearer ${this.accessToken}` },
+      );
 
       movements.unshift(...newMovements);
       cursor = pagination.cursor;
@@ -245,25 +262,25 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
 
     movements.sort((x, y) => new Date(x.movementTimestamp).valueOf() - new Date(y.movementTimestamp).valueOf());
 
-    const matchingMovements = movements.filter((movement) => new Date(movement.movementTimestamp) >= startDate);
+    const matchingMovements = movements.filter(movement => new Date(movement.movementTimestamp) >= startDate);
     return {
       accountNumber: portfolio.portfolioNum,
       balance: !movements.length ? 0 : parseFloat(movements[movements.length - 1].runningBalance),
       txns: matchingMovements.map((movement): ScrapingTransaction => {
-        const hasInstallments = movement.transaction?.enrichment?.recurrences?.some((x) => x.isRecurrent);
+        const hasInstallments = movement.transaction?.enrichment?.recurrences?.some(x => x.isRecurrent);
         const modifier = movement.creditDebit === 'DEBIT' ? -1 : 1;
-        return ({
+        return {
           identifier: movement.movementId,
           date: movement.valueDate,
-          chargedAmount: (+movement.movementAmount) * modifier,
+          chargedAmount: +movement.movementAmount * modifier,
           chargedCurrency: movement.movementCurrency,
-          originalAmount: (+movement.movementAmount) * modifier,
+          originalAmount: +movement.movementAmount * modifier,
           originalCurrency: movement.movementCurrency,
           description: this.sanitizeHebrew(movement.description),
           processedDate: movement.movementTimestamp,
           status: TransactionStatuses.Completed,
           type: hasInstallments ? TransactionTypes.Installments : TransactionTypes.Normal,
-        });
+        };
       }),
     };
   }
@@ -279,17 +296,16 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
 
     const plainString = text.replace(/\u202d/gi, '').trim();
     const hebrewSubStringsRanges = [...plainString.matchAll(HEBREW_WORDS_REGEX)];
-    const rangesToReverse = hebrewSubStringsRanges.map((str) => (
-      { start: str.index!, end: str.index! + str[0].length }));
+    const rangesToReverse = hebrewSubStringsRanges.map(str => ({ start: str.index!, end: str.index! + str[0].length }));
     const out = [];
     let index = 0;
 
     for (const { start, end } of rangesToReverse) {
       out.push(...plainString.substring(index, start));
-      index += (start - index);
+      index += start - index;
       const reversed = [...plainString.substring(start, end)].reverse();
       out.push(...reversed);
-      index += (end - start);
+      index += end - start;
     }
 
     out.push(...plainString.substring(index, plainString.length));
@@ -307,14 +323,19 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
     debug('Fetching account list');
-    const result = await fetchGraphql<{ customer: Customer[] }>(GRAPHQL_API_URL, GET_CUSTOMER, {}, { authorization: `Bearer ${this.accessToken}` });
-    const portfolios = result.customer.flatMap((customer) => (customer.portfolios || []));
+    const result = await fetchGraphql<{ customer: Customer[] }>(
+      GRAPHQL_API_URL,
+      GET_CUSTOMER,
+      {},
+      { authorization: `Bearer ${this.accessToken}` },
+    );
+    const portfolios = result.customer.flatMap(customer => customer.portfolios || []);
 
     return {
       success: true,
-      accounts: await Promise.all(portfolios.map(
-        (portfolio) => this.fetchPortfolioMovements(portfolio, startMoment.toDate()),
-      )),
+      accounts: await Promise.all(
+        portfolios.map(portfolio => this.fetchPortfolioMovements(portfolio, startMoment.toDate())),
+      ),
     };
   }
 }

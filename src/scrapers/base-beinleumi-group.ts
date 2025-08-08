@@ -1,5 +1,5 @@
 import moment, { type Moment } from 'moment';
-import { type Page } from 'puppeteer';
+import { type Frame, type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY, SHEKEL_CURRENCY_SYMBOL } from '../constants';
 import {
   clickButton,
@@ -10,11 +10,7 @@ import {
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { sleep } from '../helpers/waiting';
-import {
-  TransactionStatuses, TransactionTypes,
-  type Transaction,
-  type TransactionsAccount,
-} from '../transactions';
+import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
@@ -25,7 +21,7 @@ const DESCRIPTION_COLUMN_CLASS_COMPLETED = 'reference wrap_normal';
 const DESCRIPTION_COLUMN_CLASS_PENDING = 'details wrap_normal';
 const REFERENCE_COLUMN_CLASS = 'details';
 const DEBIT_COLUMN_CLASS = 'debit';
-const CREDIT_COLUMN_CLASS = 'credit'; 
+const CREDIT_COLUMN_CLASS = 'credit';
 const ERROR_MESSAGE_CLASS = 'NO_DATA';
 const ACCOUNTS_NUMBER = 'div.fibi_account span.acc_num';
 const CLOSE_SEARCH_BY_DATES_BUTTON_CLASS = 'ui-datepicker-close';
@@ -34,6 +30,8 @@ const COMPLETED_TRANSACTIONS_TABLE = 'table#dataTable077';
 const PENDING_TRANSACTIONS_TABLE = 'table#dataTable023';
 const NEXT_PAGE_LINK = 'a#Npage.paging';
 const CURRENT_BALANCE = '.main_balance';
+const IFRAME_NAME = 'iframe-old-pages';
+const ELEMENT_RENDER_TIMEOUT_MS = 10000;
 
 type TransactionsColsTypes = Record<string, number>;
 type TransactionsTrTds = string[];
@@ -51,7 +49,11 @@ interface ScrapedTransaction {
 
 export function getPossibleLoginResults(): PossibleLoginResults {
   const urls: PossibleLoginResults = {};
-  urls[LoginResults.Success] = [/FibiMenu\/Online/];
+  urls[LoginResults.Success] = [
+    /fibi.*accountSummary/, // New UI pattern
+    /Resources\/PortalNG\/shell/, // New UI pattern
+    /FibiMenu\/Online/, // Old UI pattern
+  ];
   urls[LoginResults.InvalidPassword] = [/FibiMenu\/Marketing\/Private\/Home/];
   return urls;
 }
@@ -94,14 +96,22 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   });
 }
 
-function getTransactionDate(tds: TransactionsTrTds, transactionType: string, transactionsColsTypes: TransactionsColsTypes) {
+function getTransactionDate(
+  tds: TransactionsTrTds,
+  transactionType: string,
+  transactionsColsTypes: TransactionsColsTypes,
+) {
   if (transactionType === 'completed') {
     return (tds[transactionsColsTypes[DATE_COLUMN_CLASS_COMPLETED]] || '').trim();
   }
   return (tds[transactionsColsTypes[DATE_COLUMN_CLASS_PENDING]] || '').trim();
 }
 
-function getTransactionDescription(tds: TransactionsTrTds, transactionType: string, transactionsColsTypes: TransactionsColsTypes) {
+function getTransactionDescription(
+  tds: TransactionsTrTds,
+  transactionType: string,
+  transactionsColsTypes: TransactionsColsTypes,
+) {
   if (transactionType === 'completed') {
     return (tds[transactionsColsTypes[DESCRIPTION_COLUMN_CLASS_COMPLETED]] || '').trim();
   }
@@ -120,7 +130,11 @@ function getTransactionCredit(tds: TransactionsTrTds, transactionsColsTypes: Tra
   return (tds[transactionsColsTypes[CREDIT_COLUMN_CLASS]] || '').trim();
 }
 
-function extractTransactionDetails(txnRow: TransactionsTr, transactionStatus: TransactionStatuses, transactionsColsTypes: TransactionsColsTypes): ScrapedTransaction {
+function extractTransactionDetails(
+  txnRow: TransactionsTr,
+  transactionStatus: TransactionStatuses,
+  transactionsColsTypes: TransactionsColsTypes,
+): ScrapedTransaction {
   const tds = txnRow.innerTds;
   const item = {
     status: transactionStatus,
@@ -134,9 +148,12 @@ function extractTransactionDetails(txnRow: TransactionsTr, transactionStatus: Tr
   return item;
 }
 
-async function getTransactionsColsTypeClasses(page: Page, tableLocator: string): Promise<TransactionsColsTypes> {
+async function getTransactionsColsTypeClasses(
+  page: Page | Frame,
+  tableLocator: string,
+): Promise<TransactionsColsTypes> {
   const result: TransactionsColsTypes = {};
-  const typeClassesObjs = await pageEvalAll(page, `${tableLocator} tbody tr:first-of-type td`, null, (tds) => {
+  const typeClassesObjs = await pageEvalAll(page, `${tableLocator} tbody tr:first-of-type td`, null, tds => {
     return tds.map((td, index) => ({
       colClass: td.getAttribute('class'),
       index,
@@ -151,20 +168,25 @@ async function getTransactionsColsTypeClasses(page: Page, tableLocator: string):
   return result;
 }
 
-function extractTransaction(txns: ScrapedTransaction[], transactionStatus: TransactionStatuses, txnRow: TransactionsTr, transactionsColsTypes: TransactionsColsTypes) {
+function extractTransaction(
+  txns: ScrapedTransaction[],
+  transactionStatus: TransactionStatuses,
+  txnRow: TransactionsTr,
+  transactionsColsTypes: TransactionsColsTypes,
+) {
   const txn = extractTransactionDetails(txnRow, transactionStatus, transactionsColsTypes);
   if (txn.date !== '') {
     txns.push(txn);
   }
 }
 
-async function extractTransactions(page: Page, tableLocator: string, transactionStatus: TransactionStatuses) {
+async function extractTransactions(page: Page | Frame, tableLocator: string, transactionStatus: TransactionStatuses) {
   const txns: ScrapedTransaction[] = [];
   const transactionsColsTypes = await getTransactionsColsTypeClasses(page, tableLocator);
 
-  const transactionsRows = await pageEvalAll<TransactionsTr[]>(page, `${tableLocator} tbody tr`, [], (trs) => {
-    return trs.map((tr) => ({
-      innerTds: Array.from(tr.getElementsByTagName('td')).map((td) => td.innerText),
+  const transactionsRows = await pageEvalAll<TransactionsTr[]>(page, `${tableLocator} tbody tr`, [], trs => {
+    return trs.map(tr => ({
+      innerTds: Array.from(tr.getElementsByTagName('td')).map(td => td.innerText),
     }));
   });
 
@@ -174,10 +196,10 @@ async function extractTransactions(page: Page, tableLocator: string, transaction
   return txns;
 }
 
-async function isNoTransactionInDateRangeError(page: Page) {
+async function isNoTransactionInDateRangeError(page: Page | Frame) {
   const hasErrorInfoElement = await elementPresentOnPage(page, `.${ERROR_MESSAGE_CLASS}`);
   if (hasErrorInfoElement) {
-    const errorText = await page.$eval(`.${ERROR_MESSAGE_CLASS}`, (errorElement) => {
+    const errorText = await page.$eval(`.${ERROR_MESSAGE_CLASS}`, errorElement => {
       return (errorElement as HTMLElement).innerText;
     });
     return errorText.trim() === NO_TRANSACTION_IN_DATE_RANGE_TEXT;
@@ -185,39 +207,43 @@ async function isNoTransactionInDateRangeError(page: Page) {
   return false;
 }
 
-async function searchByDates(page: Page, startDate: Moment) {
+async function searchByDates(page: Page | Frame, startDate: Moment) {
   await clickButton(page, 'a#tabHeader4');
   await waitUntilElementFound(page, 'div#fibi_dates');
-  await fillInput(
-    page,
-    'input#fromDate',
-    startDate.format(DATE_FORMAT),
-  );
+  await fillInput(page, 'input#fromDate', startDate.format(DATE_FORMAT));
   await clickButton(page, `button[class*=${CLOSE_SEARCH_BY_DATES_BUTTON_CLASS}]`);
   await clickButton(page, `input[value=${SHOW_SEARCH_BY_DATES_BUTTON_VALUE}]`);
   await waitForNavigation(page);
 }
 
-async function getAccountNumber(page: Page) {
-  const selectedSnifAccount = await page.$eval(ACCOUNTS_NUMBER, (option) => {
+async function getAccountNumber(page: Page | Frame): Promise<string> {
+  // Wait until the account number element is present in the DOM
+  await waitUntilElementFound(page, ACCOUNTS_NUMBER, true, ELEMENT_RENDER_TIMEOUT_MS);
+
+  const selectedSnifAccount = await page.$eval(ACCOUNTS_NUMBER, option => {
     return (option as HTMLElement).innerText;
   });
 
   return selectedSnifAccount.replace('/', '_').trim();
 }
 
-async function checkIfHasNextPage(page: Page) {
+async function checkIfHasNextPage(page: Page | Frame) {
   return elementPresentOnPage(page, NEXT_PAGE_LINK);
 }
 
-async function navigateToNextPage(page: Page) {
+async function navigateToNextPage(page: Page | Frame) {
   await clickButton(page, NEXT_PAGE_LINK);
   await waitForNavigation(page);
 }
 
 /* Couldn't reproduce scenario with multiple pages of pending transactions - Should support if exists such case.
    needToPaginate is false if scraping pending transactions */
-async function scrapeTransactions(page: Page, tableLocator: string, transactionStatus: TransactionStatuses, needToPaginate: boolean) {
+async function scrapeTransactions(
+  page: Page | Frame,
+  tableLocator: string,
+  transactionStatus: TransactionStatuses,
+  needToPaginate: boolean,
+) {
   const txns = [];
   let hasNextPage = false;
 
@@ -235,9 +261,9 @@ async function scrapeTransactions(page: Page, tableLocator: string, transactionS
   return convertTransactions(txns);
 }
 
-async function getAccountTransactions(page: Page) {
+async function getAccountTransactions(page: Page | Frame) {
   await Promise.race([
-    waitUntilElementFound(page, 'div[id*=\'divTable\']', false),
+    waitUntilElementFound(page, "div[id*='divTable']", false),
     waitUntilElementFound(page, `.${ERROR_MESSAGE_CLASS}`, false),
   ]);
 
@@ -246,35 +272,42 @@ async function getAccountTransactions(page: Page) {
     return [];
   }
 
-  const pendingTxns = await scrapeTransactions(page, PENDING_TRANSACTIONS_TABLE,
-    TransactionStatuses.Pending, false);
-  const completedTxns = await scrapeTransactions(page, COMPLETED_TRANSACTIONS_TABLE,
-    TransactionStatuses.Completed, true);
-  const txns = [
-    ...pendingTxns,
-    ...completedTxns,
-  ];
+  const pendingTxns = await scrapeTransactions(page, PENDING_TRANSACTIONS_TABLE, TransactionStatuses.Pending, false);
+  const completedTxns = await scrapeTransactions(
+    page,
+    COMPLETED_TRANSACTIONS_TABLE,
+    TransactionStatuses.Completed,
+    true,
+  );
+  const txns = [...pendingTxns, ...completedTxns];
   return txns;
 }
 
-async function getCurrentBalance(page: Page) {
-  const balanceStr = await page.$eval(CURRENT_BALANCE, (option) => {
-    return (option as HTMLElement).innerText;
+async function getCurrentBalance(page: Page | Frame): Promise<number> {
+  // Wait for the balance element to appear and be visible
+  await waitUntilElementFound(page, CURRENT_BALANCE, true, ELEMENT_RENDER_TIMEOUT_MS);
+
+  // Extract text content
+  const balanceStr = await page.$eval(CURRENT_BALANCE, el => {
+    return (el as HTMLElement).innerText;
   });
+
   return getAmountData(balanceStr);
 }
 
 export async function waitForPostLogin(page: Page) {
   return Promise.race([
-    waitUntilElementFound(page, '#matafLogoutLink', true),
-    waitUntilElementFound(page, '#validationMsg', true),
+    waitUntilElementFound(page, '#card-header', true), // New UI
+    waitUntilElementFound(page, '#account_num', true), // New UI
+    waitUntilElementFound(page, '#matafLogoutLink', true), // Old UI
+    waitUntilElementFound(page, '#validationMsg', true), // Old UI
   ]);
 }
 
-async function fetchAccountData(page: Page, startDate: Moment) {
-  await searchByDates(page, startDate);
+async function fetchAccountData(page: Page | Frame, startDate: Moment) {
   const accountNumber = await getAccountNumber(page);
   const balance = await getCurrentBalance(page);
+  await searchByDates(page, startDate);
   const txns = await getAccountTransactions(page);
 
   return {
@@ -284,34 +317,170 @@ async function fetchAccountData(page: Page, startDate: Moment) {
   };
 }
 
-async function getAccountIdsBySelector(page: Page): Promise<string[]> {
-  const accountsIds = await page.evaluate(() => {
+async function getAccountIdsOldUI(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
     const selectElement = document.getElementById('account_num_select');
     const options = selectElement ? selectElement.querySelectorAll('option') : [];
     if (!options) return [];
-    return Array.from(options, (option) => option.value);
+    return Array.from(options, option => option.value);
   });
+}
+
+/**
+ * Ensures the account dropdown is open, then returns the available account labels.
+ *
+ * This method:
+ * - Checks if the dropdown is already open.
+ * - If not open, clicks the account selector to open it.
+ * - Waits for the dropdown to render.
+ * - Extracts and returns the list of available account labels.
+ *
+ * Graceful handling:
+ * - If any error occurs (e.g., selectors not found, timing issues, UI version changes),
+ *   the function returns an empty list.
+ *
+ * @param page Puppeteer Page object.
+ * @returns An array of available account labels (e.g., ["127 | XXXX1", "127 | XXXX2"]),
+ *          or an empty array if something goes wrong.
+ */
+export async function clickAccountSelectorGetAccountIds(page: Page): Promise<string[]> {
+  try {
+    const accountSelector = 'div.current-account'; // Direct selector to clickable element
+    const dropdownPanelSelector = 'div.mat-mdc-autocomplete-panel.account-select-dd'; // The dropdown list box
+    const optionSelector = 'mat-option .mdc-list-item__primary-text'; // Account option labels
+
+    // Check if dropdown is already open
+    const dropdownVisible = await page
+      .$eval(dropdownPanelSelector, el => {
+        return el && window.getComputedStyle(el).display !== 'none' && el.offsetParent !== null;
+      })
+      .catch(() => false); // catch if dropdown is not in the DOM yet
+
+    if (!dropdownVisible) {
+      await waitUntilElementFound(page, accountSelector, true, ELEMENT_RENDER_TIMEOUT_MS);
+
+      // Click the account selector to open the dropdown
+      await clickButton(page, accountSelector);
+
+      // Wait for the dropdown to open
+      await waitUntilElementFound(page, dropdownPanelSelector, true, ELEMENT_RENDER_TIMEOUT_MS);
+    }
+
+    // Extract account labels from the dropdown options
+    const accountLabels = await page.$$eval(optionSelector, options => {
+      return options.map(option => option.textContent?.trim() || '').filter(label => label !== '');
+    });
+
+    return accountLabels;
+  } catch (error) {
+    return []; // Graceful fallback
+  }
+}
+
+async function getAccountIdsBothUIs(page: Page): Promise<string[]> {
+  let accountsIds: string[] = await clickAccountSelectorGetAccountIds(page);
+  if (accountsIds.length === 0) {
+    accountsIds = await getAccountIdsOldUI(page);
+  }
   return accountsIds;
 }
 
-async function fetchAccounts(page: Page, startDate: Moment) {
-  const accounts: TransactionsAccount[] = [];
-  const accountsIds = await getAccountIdsBySelector(page);
-  if (accountsIds.length <= 1) {
-    const accountData = await fetchAccountData(page, startDate);
-    accounts.push(accountData);
-  } else {
-    for (const accountId of accountsIds) {
-      await page.select('#account_num_select', accountId);
-      await waitUntilElementFound(page, '#account_num_select', true);
-      const accountData = await fetchAccountData(page, startDate);
-      accounts.push(accountData);
+/**
+ * Selects an account from the dropdown based on the provided account label.
+ *
+ * This method:
+ * - Clicks the account selector button to open the dropdown.
+ * - Retrieves the list of available account labels.
+ * - Checks if the provided account label exists in the list.
+ * - Finds and clicks the matching account option if found.
+ *
+ * @param page Puppeteer Page object.
+ * @param accountLabel The text of the account to select (e.g., "127 | XXXXX").
+ * @returns True if the account option was found and clicked; false otherwise.
+ */
+export async function selectAccountFromDropdown(page: Page, accountLabel: string): Promise<boolean> {
+  // Call clickAccountSelector to get the available accounts and open the dropdown
+  const availableAccounts = await clickAccountSelectorGetAccountIds(page);
+
+  // Check if the account label exists in the available accounts
+  if (!availableAccounts.includes(accountLabel)) {
+    return false;
+  }
+
+  // Wait for the dropdown options to be rendered
+  const optionSelector = 'mat-option .mdc-list-item__primary-text';
+  await waitUntilElementFound(page, optionSelector, true, ELEMENT_RENDER_TIMEOUT_MS);
+
+  // Query all matching options
+  const accountOptions = await page.$$(optionSelector);
+
+  // Find and click the option matching the accountLabel
+  for (const option of accountOptions) {
+    const text = await page.evaluate(el => el.textContent?.trim(), option);
+
+    if (text === accountLabel) {
+      const optionHandle = await option.evaluateHandle(el => el as HTMLElement);
+      await page.evaluate((el: HTMLElement) => el.click(), optionHandle);
+      return true;
     }
   }
+
+  return false;
+}
+
+async function getTransactionsFrame(page: Page): Promise<Frame | null> {
+  // Try a few times to find the iframe, as it might not be immediately available
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await sleep(2000);
+    const frames = page.frames();
+    const targetFrame = frames.find(f => f.name() === IFRAME_NAME);
+
+    if (targetFrame) {
+      return targetFrame;
+    }
+  }
+
+  return null;
+}
+
+async function selectAccountBothUIs(page: Page, accountId: string): Promise<void> {
+  const accountSelected = await selectAccountFromDropdown(page, accountId);
+  if (!accountSelected) {
+    // Old UI format
+    await page.select('#account_num_select', accountId);
+    await waitUntilElementFound(page, '#account_num_select', true);
+  }
+}
+
+async function fetchAccountDataBothUIs(page: Page, startDate: Moment) {
+  // Try to get the iframe for the new UI
+  const frame = await getTransactionsFrame(page);
+
+  // Use the frame if available (new UI), otherwise use the page directly (old UI)
+  const targetPage = frame || page;
+  return fetchAccountData(targetPage, startDate);
+}
+
+async function fetchAccounts(page: Page, startDate: Moment): Promise<TransactionsAccount[]> {
+  const accountsIds = await getAccountIdsBothUIs(page);
+
+  if (accountsIds.length === 0) {
+    // In case accountsIds could no be parsed just return the transactions of the currently selected account
+    const accountData = await fetchAccountDataBothUIs(page, startDate);
+    return [accountData];
+  }
+
+  const accounts: TransactionsAccount[] = [];
+  for (const accountId of accountsIds) {
+    await selectAccountBothUIs(page, accountId);
+    const accountData = await fetchAccountDataBothUIs(page, startDate);
+    accounts.push(accountData);
+  }
+
   return accounts;
 }
 
-type ScraperSpecificCredentials = { username: string, password: string };
+type ScraperSpecificCredentials = { username: string; password: string };
 
 class BeinleumiGroupBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   BASE_URL = '';
@@ -337,8 +506,9 @@ class BeinleumiGroupBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCr
 
   async fetchData() {
     const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
+    const startMomentLimit = moment({ year: 1600 });
     const startDate = this.options.startDate || defaultStartMoment.toDate();
-    const startMoment = moment.max(defaultStartMoment, moment(startDate));
+    const startMoment = moment.max(startMomentLimit, moment(startDate));
 
     await this.navigateTo(this.TRANSACTIONS_URL);
 

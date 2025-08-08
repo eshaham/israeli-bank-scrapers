@@ -1,5 +1,5 @@
-Israeli Bank Scrapers - Get closer to your own data!
-========
+# Israeli Bank Scrapers - Get closer to your own data!
+
 <img src="./logo.png" width="100" height="100" alt="Logo" align="left" />
 
 [![NPM](https://nodei.co/npm/israeli-bank-scrapers.png)](https://nodei.co/npm/israeli-bank-scrapers/)
@@ -130,7 +130,55 @@ The return value is a list of scraper metadata:
 }
 ```
 
+## Advanced options
+
+### ExternalBrowserOptions
+
+This option allows you to provide an externally created browser instance. You can get a browser directly from puppeteer via `puppeteer.launch()`.  
+Note that for backwards compatibility, the browser will be closed by the library after the scraper finishes unless `skipCloseBrowser` is set to true.
+
+Example:
+
+```typescript
+import puppeteer from 'puppeteer';
+import { CompanyTypes, createScraper } from 'israeli-bank-scrapers';
+
+const browser = await puppeteer.launch();
+const options = {
+  companyId: CompanyTypes.leumi,
+  startDate: new Date('2020-05-01'),
+  browser,
+  skipCloseBrowser: true, // Or false [default] if you want it to auto-close
+};
+const scraper = createScraper(options);
+const scrapeResult = await scraper.scrape({ username: 'vr29485', password: 'sometingsomething' });
+await browser.close(); // Or not if `skipCloseBrowser` is false
+```
+
+### ExternalBrowserContextOptions
+
+This option allows you to provide a [browser context](https://pptr.dev/api/puppeteer.browsercontext). This is useful if you don't want to share cookies with other scrapers (i.e. multiple parallel runs of the same scraper with different users) without creating a new browser for each scraper.
+
+Example:
+
+```typescript
+import puppeteer from 'puppeteer';
+import { CompanyTypes, createScraper } from 'israeli-bank-scrapers';
+
+const browser = await puppeteer.launch();
+const browserContext = await browser.createBrowserContext();
+const options = {
+  companyId: CompanyTypes.leumi,
+  startDate: new Date('2020-05-01'),
+  browserContext
+};
+const scraper = createScraper(options);
+const scrapeResult = await scraper.scrape({ username: 'vr29485', password: 'sometingsomething' });
+await browser.close();
+```
+
 ## Two-Factor Authentication Scrapers
+
 Some companies require two-factor authentication, and as such the scraper cannot be fully automated. When using the relevant scrapers, you have two options:
 1. Provide an async callback that knows how to retrieve real time secrets like OTP codes.
 2. When supported by the scraper - provide a "long term token". These are usually available if the financial provider only requires Two-Factor authentication periodically, and not on every login. You can retrieve your long term token from the relevant credit/banking app using reverse engineering and a MITM proxy, or use helper functions that are provided by some Two-Factor Auth scrapers (e.g. OneZero).
@@ -355,11 +403,13 @@ const credentials = {
 # Known projects
 These are the projects known to be using this module:
 - [Israeli YNAB updater](https://github.com/eshaham/israeli-ynab-updater) - A command line tool for exporting banks data to CSVs, formatted specifically for [YNAB](https://www.youneedabudget.com)
-- [Israel Finance Telegram Bot](https://github.com/GuyLewin/israel-finance-telegram-bot) - A simple telegram bot that sends notifications about new transactions and interacts with them
 - [Caspion](https://github.com/brafdlog/caspion) - An app for automatically sending transactions from Israeli banks and credit cards to budget tracking apps
 - [Finance Notifier](https://github.com/LiranBri/finance-notifier) - A simple script with the ability to send custom financial alerts to multiple contacts and platforms
 - [Moneyman](https://github.com/daniel-hauser/moneyman) - Automatically save transactions from all major Israeli banks and credit card companies, using GitHub actions (or a self hosted docker image)
 - [Firefly iii Importer](https://github.com/itairaz1/israeli-bank-firefly-importer) - A tool to import your banks data into [Firefly iii](https://www.firefly-iii.org/), a free and open source financial manager.
+- [Actual Budget Importer](https://github.com/tomerh2001/israeli-banks-actual-budget-importer) - A tool to import your banks data into [Actual Budget](https://actualbudget.com/), a free and open source financial manager.
+- [Clarify](https://github.com/tomyweiss/clarify-expences) - A full-stack personal finance app for tracking income and expenses.
+- [Asher MCP](https://github.com/shlomiuziel/asher-mcp) - Scrape & access your financial data with LLM using the Model Context Protocol.
 
 Built something interesting you want to share here? [Let me know](https://goo.gl/forms/5Fb9JAjvzMIpmzqo2).
 

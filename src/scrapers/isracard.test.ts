@@ -1,7 +1,5 @@
 import IsracardScraper from './isracard';
-import {
-  maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions,
-} from '../tests/tests-utils';
+import { maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions } from '../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
 import { LoginResults } from './base-scraper-with-browser';
 
@@ -20,20 +18,23 @@ describe('Isracard legacy scraper', () => {
     expect(SCRAPERS.isracard.loginFields).toContain('password');
   });
 
-  maybeTestCompanyAPI(COMPANY_ID, (config) => config.companyAPI.invalidPassword)('should fail on invalid user/password"', async () => {
-    const options = {
-      ...testsConfig.options,
-      companyId: COMPANY_ID,
-    };
+  maybeTestCompanyAPI(COMPANY_ID, config => config.companyAPI.invalidPassword)(
+    'should fail on invalid user/password"',
+    async () => {
+      const options = {
+        ...testsConfig.options,
+        companyId: COMPANY_ID,
+      };
 
-    const scraper = new IsracardScraper(options);
+      const scraper = new IsracardScraper(options);
 
-    const result = await scraper.scrape({ id: 'e10s12', password: '3f3ss3d', card6Digits: '123456' });
+      const result = await scraper.scrape({ id: 'e10s12', password: '3f3ss3d', card6Digits: '123456' });
 
-    expect(result).toBeDefined();
-    expect(result.success).toBeFalsy();
-    expect(result.errorType).toBe(LoginResults.InvalidPassword);
-  });
+      expect(result).toBeDefined();
+      expect(result.success).toBeFalsy();
+      expect(result.errorType).toBe(LoginResults.InvalidPassword);
+    },
+  );
 
   maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions"', async () => {
     const options = {
