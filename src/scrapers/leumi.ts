@@ -1,11 +1,11 @@
 import moment, { type Moment } from 'moment';
-import { type Page } from 'puppeteer';
+import { type HTTPResponse, type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import { getDebug } from '../helpers/debug';
 import { clickButton, fillInput, pageEval, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
-import { type Investment } from '../investments';
+import { type Investment, type Portfolio } from '../investments';
 import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
 import { type ScraperScrapingResult } from './interface';
 
@@ -14,7 +14,7 @@ const BASE_URL = 'https://hb2.bankleumi.co.il';
 const LOGIN_URL = 'https://www.leumi.co.il/';
 const TRANSACTIONS_URL = `${BASE_URL}/eBanking/SO/SPA.aspx#/ts/BusinessAccountTrx?WidgetPar=1`;
 const FILTERED_TRANSACTIONS_URL = `${BASE_URL}/ChannelWCF/Broker.svc/ProcessRequest?moduleName=UC_SO_27_GetBusinessAccountTrx`;
-const LEUMI_TRADING_URL = `${BASE_URL}/lti/lti-app/home`;
+const LEUMI_TRADING_URL = `${BASE_URL}/lti/lti-app/trade/portfolio`;
 
 const DATE_FORMAT = 'DD.MM.YY';
 const ACCOUNT_BLOCKED_MSG = 'המנוי חסום';
@@ -212,6 +212,57 @@ async function waitForPostLogin(page: Page): Promise<void> {
 
 type ScraperSpecificCredentials = { username: string; password: string };
 
+function extractPortfolios(response: HTTPResponse, portfolios: Portfolio[]) {
+  response
+    .json()
+    .then(data => {
+      debug('Portfolio data received:', data);
+
+      const portfoliosData = data?.data.user?.Portfolios;
+      debug('Portfolios:', portfoliosData);
+
+      for (const item of portfoliosData) {
+        const portfolio: Portfolio = {
+          portfolioId: item.PortfolioId,
+          portfolioName: item.PortfolioName,
+          investments: [],
+        };
+
+        portfolios.push(portfolio);
+      }
+    })
+    .catch(error => {
+      debug('Error parsing response JSON:', error);
+    });
+}
+
+function extractPortfolioInvestments(response: HTTPResponse, investments: Investment[]) {
+  response
+    .json()
+    .then(data => {
+      debug('Investment data received:', data);
+
+      const userStatement = data?.data.UserStatement?.DataSource;
+      debug('User statement:', userStatement);
+
+      for (const item of userStatement) {
+        const investment: Investment = {
+          paperId: item.PaperId,
+          paperName: item.PaperName,
+          symbol: item.Symbol,
+          amount: parseFloat(item.Amount),
+          value: parseFloat(item.Value),
+          currency: SHEKEL_CURRENCY,
+        };
+
+        investments.push(investment);
+      }
+    })
+    .catch(error => {
+      debug('Error parsing response JSON:', error);
+    });
+}
+
 class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   getLoginOptions(credentials: ScraperSpecificCredentials) {
     return {
@@ -238,11 +289,11 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
     return {
       success: true,
       accounts,
-      investments,
+      portfolios: investments,
     };
   }
 
-  async fetchInvestments(): Promise<Investment[]> {
+  async fetchInvestments(): Promise<Portfolio[]> {
     await this.page.setRequestInterception(true);
 
     this.page.on('request', request => {
@@ -252,6 +303,7 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
     });
 
     const investments: Investment[] = [];
+    const portfolios: Portfolio[] = [];
 
     this.page.on('response', response => {
       // You can filter responses based on criteria like URL, method, or resource type.
@@ -260,41 +312,27 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
         return;
       }
 
-      if (!response.url().includes('Statement')) {
+      if (response.url().includes('Statement')) {
+        extractPortfolioInvestments(response, investments);
         return;
       }
 
-      response
-        .json()
-        .then(data => {
-          debug('Investment data received:', data);
+      if (response.url().includes('lti-app/api/config')) {
+        extractPortfolios(response, portfolios);
+        return;
+      }
 
-          const userStatement = data?.data.UserStatement?.DataSource;
-          debug('User statement:', userStatement);
-
-          for (const item of userStatement) {
-            const investment: Investment = {
-              paperId: item.PaperId,
-              paperName: item.PaperName,
-              symbol: item.Symbol,
-              amount: parseFloat(item.Amount),
-              value: parseFloat(item.Value),
-              currency: SHEKEL_CURRENCY,
-            };
-
-            investments.push(investment);
-          }
-        })
-        .catch(error => {
-          debug('Error parsing response JSON:', error);
-        });
+      return;
     });
 
     await this.navigateTo(LEUMI_TRADING_URL);
 
-    await this.page.waitForSelector('currentStockInfoShort', { visible: true });
+    await this.page.waitForSelector('.portfolio-tbl-sticky-native', { visible: true });
+    await hangProcess(5000); // Wait for the investments data to load
 
-    return investments;
+    portfolios[0].investments = investments;
+
+    return portfolios;
   }
 }
 
