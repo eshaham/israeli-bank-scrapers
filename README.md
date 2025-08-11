@@ -130,6 +130,19 @@ The return value is a list of scraper metadata:
 }
 ```
 
+# Investment Portfolio Support 📈
+
+Some scrapers now support retrieving **investment portfolio data** in addition to traditional banking transactions. This includes current holdings, historical transactions, and comprehensive investment information.
+
+See the [Investment Portfolio Documentation](./PORTFOLIOS.md) for detailed information about:
+- Supported banks and features
+- Data structures and interfaces  
+- Usage examples and portfolio analysis
+- Complete API reference
+
+**Currently supported:**
+- ✅ **Leumi Bank** - Complete portfolio and transaction history support
+
 ## Advanced options
 
 ### ExternalBrowserOptions
