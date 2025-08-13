@@ -82,6 +82,7 @@ async function pageEvalAll<R>(
 ): Promise<R> {
   let result = defaultResult;
   try {
+    await page.waitForFunction(() => document.readyState === 'complete');
     result = await page.$$eval(selector, callback, ...args);
   } catch (e) {
     // TODO temporary workaround to puppeteer@1.5.0 which breaks $$eval bevahvior until they will release a new version.
@@ -102,6 +103,7 @@ async function pageEval<R>(
 ): Promise<R> {
   let result = defaultResult;
   try {
+    await pageOrFrame.waitForFunction(() => document.readyState === 'complete');
     result = await pageOrFrame.$eval(selector, callback, ...args);
   } catch (e) {
     // TODO temporary workaround to puppeteer@1.5.0 which breaks $$eval bevahvior until they will release a new version.
