@@ -79,7 +79,7 @@ async function safeCleanup(cleanup: () => Promise<void>) {
   try {
     await cleanup();
   } catch (e) {
-    debug('Cleanup function failed', e);
+    debug(`Cleanup function failed: ${(e as Error).message}`);
   }
 }
 
