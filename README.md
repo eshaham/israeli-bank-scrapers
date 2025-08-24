@@ -177,6 +177,24 @@ const scrapeResult = await scraper.scrape({ username: 'vr29485', password: 'some
 await browser.close();
 ```
 
+### futureMonthsToScrape Option
+
+The `futureMonthsToScrape` option controls how many future months of transactions to fetch beyond the current month. This is particularly important for credit card providers that show pending transactions in future billing cycles.
+
+- **Default**: 1 (next month only)
+- **Critical for shotef+30/60**: When using deferred billing options like shotef+30 or shotef+60, transactions may appear in billing cycles 1-2 months in the future. Setting `futureMonthsToScrape: 2` ensures these transactions are captured.
+
+**Example:**
+```javascript
+const options = {
+  companyId: CompanyTypes.isracard,
+  startDate: new Date('2025-05-01'),
+  futureMonthsToScrape: 2, // Capture transactions from next 2 billing cycles
+};
+```
+
+**Supported by:** Isracard, Amex, Max (Leumi Card), and Visa Cal scrapers.
+
 ## Two-Factor Authentication Scrapers
 
 Some companies require two-factor authentication, and as such the scraper cannot be fully automated. When using the relevant scrapers, you have two options:
@@ -348,6 +366,8 @@ const credentials = {
 ```
 This scraper supports fetching transaction from up to one year.
 
+**Note:** This scraper supports the `futureMonthsToScrape` option. For shotef+30/60 deferred billing, use `futureMonthsToScrape: 2` to capture transactions that appear in future billing cycles.
+
 ## Max scraper (Formerly Leumi-Card)
 This scraper expects the following credentials object:
 ```node
@@ -357,6 +377,8 @@ const credentials = {
 };
 ```
 This scraper supports fetching transaction from up to one year.
+
+**Note:** This scraper supports the `futureMonthsToScrape` option. For shotef+30/60 deferred billing, use `futureMonthsToScrape: 2` to capture transactions that appear in future billing cycles.
 
 ## Isracard scraper
 This scraper expects the following credentials object:
@@ -369,6 +391,8 @@ const credentials = {
 ```
 This scraper supports fetching transaction from up to one year.
 
+**Note:** This scraper supports the `futureMonthsToScrape` option. For shotef+30/60 deferred billing, use `futureMonthsToScrape: 2` to capture transactions that appear in future billing cycles.
+
 ## Amex scraper
 This scraper expects the following credentials object:
 ```node
@@ -379,6 +403,8 @@ const credentials = {
 };
 ```
 This scraper supports fetching transaction from up to one year.
+
+**Note:** This scraper supports the `futureMonthsToScrape` option. For shotef+30/60 deferred billing, use `futureMonthsToScrape: 2` to capture transactions that appear in future billing cycles.
 
 ## Yahav
 This scraper expects the following credentials object:
