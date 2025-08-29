@@ -75,6 +75,14 @@ function createGeneralError(): ScraperScrapingResult {
   };
 }
 
+async function safeCleanup(cleanup: () => Promise<void>) {
+  try {
+    await cleanup();
+  } catch (e) {
+    debug(`Cleanup function failed: ${(e as Error).message}`);
+  }
+}
+
 class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends BaseScraper<TCredentials> {
   private cleanups: Array<() => Promise<void>> = [];
 
@@ -294,21 +302,6 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
       });
     }
 
-    for (const [i, cleanup] of this.cleanups.reverse().entries()) {
-      try {
-        debug(`[TERMINATE] Running cleanup #${i}`);
-        await cleanup();
-        debug(`[TERMINATE] Cleanup #${i} finished successfully`);
-      } catch (err) {
-        debug(`[TERMINATE] Cleanup #${i} failed:`, err);
-        const errorObj = err as Error;
-        if (errorObj && errorObj.message && errorObj.message.includes('No target with given id found')) {
-          debug(`[TERMINATE] Suppressing Puppeteer closeTarget error for cleanup #${i}`);
-        } else {
-          throw err;
-        }
-      }
-    }
     this.cleanups = [];
   }
 
