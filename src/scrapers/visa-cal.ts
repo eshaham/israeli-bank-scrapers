@@ -339,13 +339,21 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
   async getAuthorizationHeader() {
     if (!this.authorization) {
+      debug('fetching authorization header');
       const authModule = await waitUntil(
-        () => getFromSessionStorage<{ auth: { calConnectToken: string | null } }>(this.page, 'auth-module'),
-        'get authorization header in session storage',
-        10000,
+        async () => {
+          const result = await getFromSessionStorage<{ auth: { calConnectToken: string | null } }>(
+            this.page,
+            'auth-module',
+          );
+          return result && result.auth && result.auth.calConnectToken !== null ? result : null;
+        },
+        'get authorization header with valid token in session storage',
         1000,
+        50,
       );
-      if (authModule?.auth.calConnectToken) {
+
+      if (authModule && authModule.auth.calConnectToken !== null) {
         return `CALAuthScheme ${authModule.auth.calConnectToken}`;
       }
       throw new Error('could not retrieve authorization header');
@@ -478,7 +486,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
         const transactions = convertParsedDataToTransactions(allMonthsData, pendingData);
 
-        debug('filer out old transactions');
+        debug('filter out old transactions');
         const txns =
           (this.options.outputData?.enableTransactionsFilterByDate ?? true)
             ? filterOldTransactions(transactions, moment(startDate), this.options.combineInstallments || false)
