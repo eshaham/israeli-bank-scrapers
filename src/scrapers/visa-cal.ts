@@ -339,11 +339,21 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
   async getAuthorizationHeader() {
     if (!this.authorization) {
-      const authModule = await getFromSessionStorage<{ auth: { calConnectToken: string | null } }>(
-        this.page,
-        'auth-module',
+      debug('fetching authorization header');
+      const authModule = await waitUntil(
+        async () => {
+          const result = await getFromSessionStorage<{ auth: { calConnectToken: string | null } }>(
+            this.page,
+            'auth-module',
+          );
+          return result && result.auth && result.auth.calConnectToken !== null ? result : null;
+        },
+        'get authorization header with valid token in session storage',
+        1000,
+        50,
       );
-      if (authModule?.auth.calConnectToken) {
+
+      if (authModule && authModule.auth.calConnectToken !== null) {
         return `CALAuthScheme ${authModule.auth.calConnectToken}`;
       }
       throw new Error('could not retrieve authorization header');
@@ -411,9 +421,12 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
     debug(`fetch transactions starting ${startMoment.format()}`);
 
-    const Authorization = await this.getAuthorizationHeader();
-    const cards = await this.getCards();
-    const xSiteId = await this.getXSiteId();
+    const [cards, xSiteId, Authorization] = await Promise.all([
+      this.getCards(),
+      this.getXSiteId(),
+      this.getAuthorizationHeader(),
+    ]);
+
     const futureMonthsToScrape = this.options.futureMonthsToScrape ?? 1;
 
     const accounts = await Promise.all(
@@ -473,7 +486,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
         const transactions = convertParsedDataToTransactions(allMonthsData, pendingData);
 
-        debug('filer out old transactions');
+        debug('filter out old transactions');
         const txns =
           (this.options.outputData?.enableTransactionsFilterByDate ?? true)
             ? filterOldTransactions(transactions, moment(startDate), this.options.combineInstallments || false)
