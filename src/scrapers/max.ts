@@ -1,4 +1,3 @@
-import buildUrl from 'build-url';
 import moment, { type Moment } from 'moment';
 import { type Page } from 'puppeteer';
 import { DOLLAR_CURRENCY, EURO_CURRENCY, SHEKEL_CURRENCY } from '../constants';
@@ -95,9 +94,13 @@ function getTransactionsUrl(monthMoment: Moment) {
    * cardIndex: -1 for all cards under the account
    * all other query params are static, beside the date which changes for request per month
    */
-  return buildUrl(BASE_API_ACTIONS_URL, {
-    path: `/api/registered/transactionDetails/getTransactionsAndGraphs?filterData={"userIndex":-1,"cardIndex":-1,"monthView":true,"date":"${date}","dates":{"startDate":"0","endDate":"0"},"bankAccount":{"bankAccountIndex":-1,"cards":null}}&firstCallCardIndex=-1`,
-  });
+  const url = new URL(`${BASE_API_ACTIONS_URL}/api/registered/transactionDetails/getTransactionsAndGraphs`);
+  url.searchParams.set(
+    'filterData',
+    `{"userIndex":-1,"cardIndex":-1,"monthView":true,"date":"${date}","dates":{"startDate":"0","endDate":"0"},"bankAccount":{"bankAccountIndex":-1,"cards":null}}`,
+  );
+  url.searchParams.set('firstCallCardIndex', '-1');
+  return url.toString();
 }
 
 interface FetchCategoryResult {
