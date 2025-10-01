@@ -92,12 +92,6 @@ function hangProcess(timeout: number) {
   });
 }
 
-async function clickByXPath(page: Page, xpath: string): Promise<void> {
-  await page.waitForSelector(xpath, { timeout: 30000, visible: true });
-  const elm = await page.$$(xpath);
-  await elm[0].click();
-}
-
 function removeSpecialCharacters(str: string): string {
   return str.replace(/[^0-9/-]/g, '');
 }
@@ -166,14 +160,51 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
     throw new Error('Failed to extract or parse the account number');
   }
 
-  for (const accountId of accountsIds) {
-    if (accountsIds.length > 1) {
-      // get list of accounts and check accountId
-      await clickByXPath(page, 'xpath///*[contains(@class, "number") and contains(@class, "combo-inner")]');
-      await clickByXPath(page, `xpath///span[contains(text(), '${accountId}')]`);
-    }
+  debug(`Found ${accountsIds.length} account(s)`);
 
-    accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(accountId)));
+  // Process the first account (always visible by default)
+  const firstAccountId = accountsIds[0];
+  debug(`Processing account 1/${accountsIds.length}: ${firstAccountId}`);
+  accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(firstAccountId)));
+
+  // If there are multiple accounts, try to switch and process them
+  // Note: Account switching might fail if Leumi's UI has changed
+  if (accountsIds.length > 1) {
+    debug(`Attempting to process ${accountsIds.length - 1} additional account(s)`);
+    for (let i = 1; i < accountsIds.length; i++) {
+      const accountId = accountsIds[i];
+      try {
+        debug(`Processing account ${i + 1}/${accountsIds.length}: ${accountId}`);
+
+        // Try to switch accounts - this may fail with new UI
+        debug('Opening account dropdown');
+        await page.click('app-masked-number-combo .combo-inner');
+        await hangProcess(1000);
+
+        // Try multiple selector strategies
+        const clicked = await page.evaluate((index) => {
+          // Try to find and click the account by index
+          const accountElements = document.querySelectorAll('app-masked-number-combo span.display-number-li');
+          if (accountElements[index]) {
+            (accountElements[index] as HTMLElement).click();
+            return true;
+          }
+          return false;
+        }, i);
+
+        if (!clicked) {
+          debug(`Could not find account element at index ${i}, skipping`);
+          continue;
+        }
+
+        await hangProcess(2000);
+        accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(accountId)));
+      } catch (error) {
+        debug(`Failed to process account ${i + 1}: ${(error as Error).message}`);
+        debug('Skipping this account and continuing with others');
+        // Continue to next account instead of failing completely
+      }
+    }
   }
 
   return accounts;
