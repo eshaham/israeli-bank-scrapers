@@ -182,7 +182,7 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
         await hangProcess(1000);
 
         // Try multiple selector strategies
-        const clicked = await page.evaluate((index) => {
+        const clicked = await page.evaluate(index => {
           // Try to find and click the account by index
           const accountElements = document.querySelectorAll('app-masked-number-combo span.display-number-li');
           if (accountElements[index]) {
