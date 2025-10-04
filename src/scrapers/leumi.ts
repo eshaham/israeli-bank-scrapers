@@ -200,6 +200,24 @@ async function navigateToLogin(page: Page): Promise<void> {
 }
 
 async function waitForPostLogin(page: Page): Promise<void> {
+  // Handle the new modal that appears after login
+  debug('Checking for login modal...');
+
+  try {
+    // Wait a bit for the modal to appear
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Try to find and click the modal button
+    const modalButton = await page.waitForSelector('#f3ac5286-8b3d-1bff-cca8-105a2e34e114', { timeout: 5000 });
+    if (modalButton) {
+      debug('Found login modal, clicking to dismiss');
+      await modalButton.click();
+      debug('Modal dismissed successfully');
+    }
+  } catch (error) {
+    debug('No modal found or modal already dismissed:', error instanceof Error ? error.message : String(error));
+  }
+
   await Promise.race([
     waitUntilElementFound(page, 'a[title="דלג לחשבון"]', true, 60000),
     waitUntilElementFound(page, 'div.main-content', false, 60000),
