@@ -12,6 +12,9 @@ import { waitForUrl } from '../helpers/navigation';
 import { type Transaction, TransactionStatuses, TransactionTypes, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
+import { getDebug } from '../helpers/debug';
+
+const debug = getDebug('mizrahi');
 
 interface ScrapedTransaction {
   RecTypeSpecified: boolean;
@@ -246,6 +249,12 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
     const relevantRows = response.body.table.rows.filter(row => row.RecTypeSpecified);
     const oshTxn = convertTransactions(relevantRows);
+
+    const completedWithoutIdentifier = oshTxn.filter(tx => !tx.identifier);
+    debug(`Found ${completedWithoutIdentifier.length} transactions without identifier. Marking them as pending.`);
+    completedWithoutIdentifier.forEach(tx => {
+      tx.status = TransactionStatuses.Pending;
+    });
 
     // workaround for a bug which the bank's API returns transactions before the requested start date
     const startMoment = getStartMoment(this.options.startDate);
