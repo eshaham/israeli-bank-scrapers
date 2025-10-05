@@ -250,11 +250,13 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     const relevantRows = response.body.table.rows.filter(row => row.RecTypeSpecified);
     const oshTxn = convertTransactions(relevantRows);
 
-    const completedWithoutIdentifier = oshTxn.filter(tx => !tx.identifier);
-    debug(`Found ${completedWithoutIdentifier.length} transactions without identifier. Marking them as pending.`);
-    completedWithoutIdentifier.forEach(tx => {
-      tx.status = TransactionStatuses.Pending;
-    });
+    if (this.options.optInFeatures?.includes('mizrahi:pendingIfNoIdentifier')) {
+      const completedWithoutIdentifier = oshTxn.filter(tx => !tx.identifier);
+      debug(`Found ${completedWithoutIdentifier.length} transactions without identifier. Marking them as pending.`);
+      completedWithoutIdentifier.forEach(tx => {
+        tx.status = TransactionStatuses.Pending;
+      });
+    }
 
     // workaround for a bug which the bank's API returns transactions before the requested start date
     const startMoment = getStartMoment(this.options.startDate);
