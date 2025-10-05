@@ -1,5 +1,5 @@
 import fs from 'fs';
-import * as json2csv from 'json2csv';
+import { Parser } from '@json2csv/plainjs';
 import moment from 'moment';
 import path from 'path';
 import { type TransactionsAccount } from '../transactions';
@@ -95,7 +95,8 @@ export function exportTransactions(fileName: string, accounts: TransactionsAccou
     ];
   }
 
-  const csv = json2csv.parse(data, { withBOM: true });
+  const parser = new Parser({ withBOM: true });
+  const csv = parser.parse(data);
   const filePath = `${path.join(config.companyAPI.excelFilesDist, fileName)}.csv`;
   fs.writeFileSync(filePath, csv);
 }
