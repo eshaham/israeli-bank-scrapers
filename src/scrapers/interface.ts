@@ -22,6 +22,8 @@ export type ScraperCredentials =
         }
     ));
 
+export type OptInFeatures = 'mizrahi:pendingIfNoIdentifier';
+
 export interface FutureDebit {
   amount: number;
   amountCurrency: string;
@@ -154,6 +156,11 @@ export type ScraperOptions = ScraperBrowserOptions & {
    * The number of times to retry the navigation in case of a failure (default 0)
    */
   navigationRetryCount?: number;
+
+  /**
+   * Opt-in features for the scrapers, allowing safe rollout of new breaking changes.
+   */
+  optInFeatures?: Array<OptInFeatures>;
 };
 
 export interface OutputDataOptions {
