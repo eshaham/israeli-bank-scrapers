@@ -2,7 +2,7 @@ import moment from 'moment';
 import { type HTTPRequest, type Frame, type Page } from 'puppeteer';
 import { getDebug } from '../helpers/debug';
 import { clickButton, elementPresentOnPage, pageEval, waitUntilElementFound } from '../helpers/elements-interactions';
-import { fetchPostWithinPage } from '../helpers/fetch';
+import { fetchPost } from '../helpers/fetch';
 import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { getFromSessionStorage } from '../helpers/storage';
 import { filterOldTransactions } from '../helpers/transactions';
@@ -437,10 +437,11 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         const allMonthsData: CardTransactionDetails[] = [];
 
         debug(`fetch pending transactions for card ${card.cardUniqueId}`);
-        let pendingData = await fetchPostWithinPage<CardPendingTransactionDetails | CardTransactionDetailsError>(
-          this.page,
+        let pendingData = await fetchPost(
           PENDING_TRANSACTIONS_REQUEST_ENDPOINT,
-          { cardUniqueIDArray: [card.cardUniqueId] },
+          {
+            cardUniqueIDArray: [card.cardUniqueId],
+          },
           {
             Authorization,
             'X-Site-Id': xSiteId,
@@ -451,10 +452,13 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         debug(`fetch completed transactions for card ${card.cardUniqueId}`);
         for (let i = 0; i <= months; i += 1) {
           const month = finalMonthToFetchMoment.clone().subtract(i, 'months');
-          const monthData = await fetchPostWithinPage<CardTransactionDetails | CardTransactionDetailsError>(
-            this.page,
+          const monthData = await await fetchPost(
             TRANSACTIONS_REQUEST_ENDPOINT,
-            { cardUniqueId: card.cardUniqueId, month: month.format('M'), year: month.format('YYYY') },
+            {
+              cardUniqueId: card.cardUniqueId,
+              month: month.format('M'),
+              year: month.format('YYYY'),
+            },
             {
               Authorization,
               'X-Site-Id': xSiteId,
