@@ -439,9 +439,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         debug(`fetch pending transactions for card ${card.cardUniqueId}`);
         let pendingData = await fetchPost(
           PENDING_TRANSACTIONS_REQUEST_ENDPOINT,
-          {
-            cardUniqueIDArray: [card.cardUniqueId],
-          },
+          { cardUniqueIDArray: [card.cardUniqueId] },
           {
             Authorization,
             'X-Site-Id': xSiteId,
@@ -454,11 +452,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
           const month = finalMonthToFetchMoment.clone().subtract(i, 'months');
           const monthData = await await fetchPost(
             TRANSACTIONS_REQUEST_ENDPOINT,
-            {
-              cardUniqueId: card.cardUniqueId,
-              month: month.format('M'),
-              year: month.format('YYYY'),
-            },
+            { cardUniqueId: card.cardUniqueId,month: month.format('M'), year: month.format('YYYY') },
             {
               Authorization,
               'X-Site-Id': xSiteId,
