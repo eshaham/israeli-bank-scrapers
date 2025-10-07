@@ -8,7 +8,7 @@ import getAllMonthMoments from '../helpers/dates';
 import { getDebug } from '../helpers/debug';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import { filterOldTransactions, fixInstallments } from '../helpers/transactions';
-import { runSerial } from '../helpers/waiting';
+import { runSerial, sleep } from '../helpers/waiting';
 import {
   TransactionStatuses,
   TransactionTypes,
@@ -405,6 +405,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
 
     await this.navigateTo(`${this.baseUrl}/personalarea/Login`);
 
+    await sleep(1000);
     this.emitProgress(ScraperProgressTypes.LoggingIn);
 
     const validateUrl = `${this.servicesUrl}?reqName=ValidateIdData`;
