@@ -205,7 +205,7 @@ async function waitForPostLogin(page: Page): Promise<void> {
 
   try {
     // Wait a bit for the modal to appear
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await sleep (2000);
 
     // Try to find and click the modal button
     const modalButton = await page.waitForSelector('#f3ac5286-8b3d-1bff-cca8-105a2e34e114', { timeout: 5000 });
