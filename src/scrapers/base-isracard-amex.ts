@@ -12,7 +12,7 @@ import getAllMonthMoments from '../helpers/dates';
 import { getDebug } from '../helpers/debug';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import { filterOldTransactions, fixInstallments } from '../helpers/transactions';
-import { runSerial } from '../helpers/waiting';
+import { runSerial, sleep } from '../helpers/waiting';
 import {
   TransactionStatuses, TransactionTypes,
   type Transaction, type TransactionInstallments,
@@ -345,12 +345,6 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
   }
 
   async login(credentials: ScraperSpecificCredentials): Promise<ScraperScrapingResult> {
-    // Helper for random human-like delays
-    const randomDelay = async (min = 500, max = 1500) => {
-      const ms = Math.floor(Math.random() * (max - min + 1)) + min;
-      return new Promise(resolve => setTimeout(resolve, ms));
-    };
-
     await this.page.setRequestInterception(true);
     this.page.on('request', (request) => {
       if (request.url().includes('detector-dom.min.js')) {
@@ -364,9 +358,8 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
     debug('navigate to login page');
     await this.navigateTo(`${this.baseUrl}/personalarea/Login`);
 
-    await randomDelay();
+    await sleep(1000);
     this.emitProgress(ScraperProgressTypes.LoggingIn);
-    await randomDelay();
 
     const validateUrl = `${this.servicesUrl}?reqName=ValidateIdData`;
     const validateRequest = {
