@@ -267,13 +267,8 @@ function convertParsedDataToTransactions(
 
     const date = moment(transaction.trnPurchaseDate);
 
-    let chargedAmount = isPending(transaction) ? transaction.trnAmt * -1 : transaction.amtBeforeConvAndIndex * -1;
-    let originalAmount = transaction.trnAmt * -1;
-
-    if (transaction.trnTypeCode === TrnTypeCode.credit) {
-      chargedAmount = isPending(transaction) ? transaction.trnAmt : transaction.amtBeforeConvAndIndex;
-      originalAmount = transaction.trnAmt;
-    }
+    const chargedAmount = (isPending(transaction) ? transaction.trnAmt : transaction.amtBeforeConvAndIndex) * -1;
+    const originalAmount = transaction.trnAmt * (transaction.trnTypeCode === TrnTypeCode.credit ? 1 : -1);
 
     const result: Transaction = {
       identifier: !isPending(transaction) ? transaction.trnIntId : undefined,
