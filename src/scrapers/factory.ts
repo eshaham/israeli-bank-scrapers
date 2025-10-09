@@ -4,6 +4,7 @@ import AmexScraper from './amex';
 import BehatsdaaScraper from './behatsdaa';
 import BeinleumiScraper from './beinleumi';
 import BeyahadBishvilhaScraper from './beyahad-bishvilha';
+import BitsofGoldScraper from './bitsofgold';
 import DiscountScraper from './discount';
 import HapoalimScraper from './hapoalim';
 import { type Scraper, type ScraperCredentials, type ScraperOptions } from './interface';
@@ -58,6 +59,8 @@ export default function createScraper(options: ScraperOptions): Scraper<ScraperC
       return new BehatsdaaScraper(options);
     case CompanyTypes.pagi:
       return new PagiScraper(options);
+    case CompanyTypes.bitsofgold:
+      return new BitsofGoldScraper(options);
     default:
       return assertNever(options.companyId, `unknown company id ${options.companyId}`);
   }
