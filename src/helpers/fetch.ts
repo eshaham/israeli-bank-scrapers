@@ -1,5 +1,7 @@
 import nodeFetch from 'node-fetch';
 import { type Page } from 'puppeteer';
+import { randomDelay } from './waiting';
+import { randomMouseMove } from './anti-automation-detection';
 
 const JSON_CONTENT_TYPE = 'application/json';
 
@@ -51,48 +53,25 @@ export async function fetchGraphql<TResult>(
   return result.data as Promise<TResult>;
 }
 
-export function fetchGetWithinPage<TResult>(page: Page, url: string): Promise<TResult | null> {
-  return page.evaluate(innerUrl => {
-    return new Promise<TResult | null>((resolve, reject) => {
-      fetch(innerUrl, {
-        credentials: 'include',
-      })
-        .then(result => {
-          if (result.status === 204) {
-            resolve(null);
-          } else {
-            resolve(result.json());
-          }
-        })
-        .catch(e => {
-          reject(e);
-        });
-    });
-  }, url);
-}
+export function fetchGetWithinPage<TResult>(page: Page, url: string, withRandomDelay: boolean = false, withMouseMove: boolean = false): Promise<TResult | null> {
+  let promise: Promise<void> = Promise.resolve();
 
-export function fetchPostWithinPage<TResult>(
-  page: Page,
-  url: string,
-  data: Record<string, any>,
-  extraHeaders: Record<string, any> = {},
-): Promise<TResult | null> {
-  return page.evaluate(
-    (innerUrl: string, innerData: Record<string, any>, innerExtraHeaders: Record<string, any>) => {
+  if (withRandomDelay) {
+    promise = promise.then(() => randomDelay()).then(() => void 0);
+  }
+
+  if (withMouseMove) {
+    promise = promise.then(() => randomMouseMove(page));
+  }
+
+  return promise.then(() =>
+    page.evaluate(innerUrl => {
       return new Promise<TResult | null>((resolve, reject) => {
         fetch(innerUrl, {
-          method: 'POST',
-          body: JSON.stringify(innerData),
           credentials: 'include',
-          // eslint-disable-next-line prefer-object-spread
-          headers: Object.assign(
-            { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-            innerExtraHeaders,
-          ),
         })
           .then(result => {
             if (result.status === 204) {
-              // No content response
               resolve(null);
             } else {
               resolve(result.json());
@@ -102,9 +81,53 @@ export function fetchPostWithinPage<TResult>(
             reject(e);
           });
       });
-    },
-    url,
-    data,
-    extraHeaders,
+    }, url)
+  );
+}
+
+export function fetchPostWithinPage<TResult>(
+  page: Page,
+  url: string,
+  data: Record<string, any>,
+  extraHeaders: Record<string, any> = {},
+  withRandomDelay: boolean = false,
+): Promise<TResult | null> {
+  let promise: Promise<void> = Promise.resolve();
+
+  if (withRandomDelay) {
+    promise = promise.then(() => randomDelay()).then(() => void 0);
+  }
+
+  return promise.then(() =>
+    page.evaluate(
+      (innerUrl: string, innerData: Record<string, any>, innerExtraHeaders: Record<string, any>) => {
+        return new Promise<TResult | null>((resolve, reject) => {
+          fetch(innerUrl, {
+            method: 'POST',
+            body: JSON.stringify(innerData),
+            credentials: 'include',
+            // eslint-disable-next-line prefer-object-spread
+            headers: Object.assign(
+              { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+              innerExtraHeaders,
+            ),
+          })
+            .then(result => {
+              if (result.status === 204) {
+                // No content response
+                resolve(null);
+              } else {
+                resolve(result.json());
+              }
+            })
+            .catch(e => {
+              reject(e);
+            });
+        });
+      },
+      url,
+      data,
+      extraHeaders,
+    )
   );
 }
