@@ -53,7 +53,12 @@ export async function fetchGraphql<TResult>(
   return result.data as Promise<TResult>;
 }
 
-export function fetchGetWithinPage<TResult>(page: Page, url: string, withRandomDelay: boolean = false, withMouseMove: boolean = false): Promise<TResult | null> {
+export function fetchGetWithinPage<TResult>(
+  page: Page,
+  url: string,
+  withRandomDelay: boolean = false,
+  withMouseMove: boolean = false,
+): Promise<TResult | null> {
   let promise: Promise<void> = Promise.resolve();
 
   if (withRandomDelay) {
@@ -81,7 +86,7 @@ export function fetchGetWithinPage<TResult>(page: Page, url: string, withRandomD
             reject(e);
           });
       });
-    }, url)
+    }, url),
   );
 }
 
@@ -128,6 +133,6 @@ export function fetchPostWithinPage<TResult>(
       url,
       data,
       extraHeaders,
-    )
+    ),
   );
 }
