@@ -338,9 +338,9 @@ async function fetchAllTransactions(
   const futureMonthsToScrape = options.futureMonthsToScrape ?? 1;
   const allMonths = getAllMonthMoments(startMoment, futureMonthsToScrape);
   const results: ScrapedAccountsWithIndex[] = await runSerial(
-    allMonths.map(monthMoment => () =>
-      fetchTransactions(page, options, companyServiceOptions, startMoment, monthMoment)
-    )
+    allMonths.map(
+      monthMoment => () => fetchTransactions(page, options, companyServiceOptions, startMoment, monthMoment),
+    ),
   );
 
   const finalResult = options.additionalTransactionInformation
@@ -416,7 +416,13 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
       checkLevel: '1',
       companyCode: this.companyCode,
     };
-    const validateResult = await fetchPostWithinPage<ScrapedLoginValidation>(this.page, validateUrl, validateRequest, {}, true);
+    const validateResult = await fetchPostWithinPage<ScrapedLoginValidation>(
+      this.page,
+      validateUrl,
+      validateRequest,
+      {},
+      true,
+    );
     if (
       !validateResult ||
       !validateResult.Header ||
