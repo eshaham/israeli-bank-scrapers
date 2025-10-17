@@ -337,10 +337,10 @@ async function fetchAllTransactions(
 ) {
   const futureMonthsToScrape = options.futureMonthsToScrape ?? 1;
   const allMonths = getAllMonthMoments(startMoment, futureMonthsToScrape);
-  const results: ScrapedAccountsWithIndex[] = await Promise.all(
-    allMonths.map(async monthMoment => {
-      return fetchTransactions(page, options, companyServiceOptions, startMoment, monthMoment);
-    }),
+  const results: ScrapedAccountsWithIndex[] = await runSerial(
+    allMonths.map(monthMoment => () =>
+      fetchTransactions(page, options, companyServiceOptions, startMoment, monthMoment)
+    )
   );
 
   const finalResult = options.additionalTransactionInformation
