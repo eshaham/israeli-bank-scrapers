@@ -100,10 +100,45 @@ async function fetchTransactionsForAccount(
   page: Page,
   startDate: Moment,
   accountId: string,
+  accountIndex: number = 0,
 ): Promise<TransactionsAccount> {
   // DEVELOPER NOTICE the account number received from the server is being altered at
   // runtime for some accounts after 1-2 seconds so we need to hang the process for a short while.
   await hangProcess(4000);
+
+  // Enable request interception to modify the AccountIndex in API requests
+  await page.setRequestInterception(true);
+
+  const requestHandler = (request: any) => {
+    if (request.url() === FILTERED_TRANSACTIONS_URL && request.method() === 'POST') {
+      try {
+        const rawPostData = request.postData();
+        if (rawPostData) {
+          const postData = JSON.parse(rawPostData);
+          if (postData && postData.reqObj) {
+            const reqObj = JSON.parse(postData.reqObj);
+            reqObj.AccountIndex = accountIndex;
+            postData.reqObj = JSON.stringify(reqObj);
+
+            request.continue({
+              method: 'POST',
+              postData: JSON.stringify(postData),
+              headers: {
+                ...request.headers(),
+                'Content-Type': 'application/json',
+              },
+            });
+            return;
+          }
+        }
+      } catch (error) {
+        debug(`Failed to modify request: ${(error as Error).message}`);
+      }
+    }
+    request.continue();
+  };
+
+  page.on('request', requestHandler);
 
   await waitUntilElementFound(page, 'button[title="חיפוש מתקדם"]', true);
   await clickButton(page, 'button[title="חיפוש מתקדם"]');
@@ -123,6 +158,10 @@ async function fetchTransactionsForAccount(
   });
 
   const responseJson: any = await finalResponse.json();
+
+  // Clean up request interception
+  page.off('request', requestHandler);
+  await page.setRequestInterception(false);
 
   const accountNumber = accountId.replace('/', '_').replace(/[^\d-_]/g, '');
 
@@ -162,48 +201,34 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
 
   debug(`Found ${accountsIds.length} account(s)`);
 
-  // Process the first account (always visible by default)
-  const firstAccountId = accountsIds[0];
-  debug(`Processing account 1/${accountsIds.length}: ${firstAccountId}`);
-  accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(firstAccountId)));
+  // Process all accounts - use REVERSE order for AccountIndex since the dropdown order
+  // doesn't match the API's AccountIndex order (dropdown is reversed)
+  for (let i = 0; i < accountsIds.length; i++) {
+    const accountId = accountsIds[i];
+    try {
+      debug(`Processing account ${i + 1}/${accountsIds.length}: ${accountId}`);
 
-  // If there are multiple accounts, try to switch and process them
-  // Note: Account switching might fail if Leumi's UI has changed
-  if (accountsIds.length > 1) {
-    debug(`Attempting to process ${accountsIds.length - 1} additional account(s)`);
-    for (let i = 1; i < accountsIds.length; i++) {
-      const accountId = accountsIds[i];
-      try {
-        debug(`Processing account ${i + 1}/${accountsIds.length}: ${accountId}`);
-
-        // Try to switch accounts - this may fail with new UI
-        debug('Opening account dropdown');
-        await page.click('app-masked-number-combo .combo-inner');
-        await hangProcess(1000);
-
-        // Try multiple selector strategies
-        const clicked = await page.evaluate(index => {
-          // Try to find and click the account by index
-          const accountElements = document.querySelectorAll('app-masked-number-combo span.display-number-li');
-          if (accountElements[index]) {
-            (accountElements[index] as HTMLElement).click();
-            return true;
-          }
-          return false;
-        }, i);
-
-        if (!clicked) {
-          debug(`Could not find account element at index ${i}, skipping`);
-          continue;
-        }
-
-        await hangProcess(2000);
-        accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(accountId)));
-      } catch (error) {
-        debug(`Failed to process account ${i + 1}: ${(error as Error).message}`);
-        debug('Skipping this account and continuing with others');
-        // Continue to next account instead of failing completely
+      if (i > 0) {
+        // Navigate to transactions page for subsequent accounts
+        await page.goto(TRANSACTIONS_URL, { waitUntil: 'networkidle2' });
+        await hangProcess(3000);
       }
+
+      // Use reverse index: if dropdown shows [A, B], AccountIndex 0 fetches B and AccountIndex 1 fetches A
+      const apiAccountIndex = accountsIds.length - 1 - i;
+
+      // Fetch transactions
+      const accountData = await fetchTransactionsForAccount(
+        page,
+        startDate,
+        removeSpecialCharacters(accountId),
+        apiAccountIndex,
+      );
+
+      accounts.push(accountData);
+    } catch (error) {
+      debug(`Failed to process account ${i + 1}: ${(error as Error).message}`);
+      debug('Skipping this account and continuing with others');
     }
   }
 
