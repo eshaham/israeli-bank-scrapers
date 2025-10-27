@@ -22,7 +22,10 @@ export type ScraperCredentials =
         }
     ));
 
-export type OptInFeatures = 'mizrahi:pendingIfNoIdentifier' | 'mizrahi:pendingIfHasGenericDescription';
+export type OptInFeatures =
+  | 'mizrahi:pendingIfNoIdentifier'
+  | 'mizrahi:pendingIfHasGenericDescription'
+  | 'mizrahi:pendingIfTodayTransaction';
 
 export interface FutureDebit {
   amount: number;

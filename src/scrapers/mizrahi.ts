@@ -22,6 +22,7 @@ interface ScrapedTransaction {
   MC02SchumEZ: number;
   MC02AsmahtaMekoritEZ: string;
   MC02TnuaTeurEZ: string;
+  IsTodayTransaction: boolean;
 }
 
 interface ScrapedTransactionsResult {
@@ -113,7 +114,7 @@ function createHeadersFromRequest(request: HTTPRequest) {
   };
 }
 
-function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
+function convertTransactions(txns: ScrapedTransaction[], pendingIfTodayTransaction: boolean): Transaction[] {
   return txns.map(row => {
     const txnDate = moment(row.MC02PeulaTaaEZ, moment.HTML5_FMT.DATETIME_LOCAL_SECONDS).toISOString();
 
@@ -126,7 +127,10 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
       originalCurrency: SHEKEL_CURRENCY,
       chargedAmount: row.MC02SchumEZ,
       description: row.MC02TnuaTeurEZ,
-      status: TransactionStatuses.Completed,
+      status:
+        pendingIfTodayTransaction && row.IsTodayTransaction
+          ? TransactionStatuses.Pending
+          : TransactionStatuses.Completed,
     };
   });
 }
@@ -248,7 +252,10 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     }
 
     const relevantRows = response.body.table.rows.filter(row => row.RecTypeSpecified);
-    const oshTxn = convertTransactions(relevantRows);
+    const oshTxn = convertTransactions(
+      relevantRows,
+      this.options.optInFeatures?.includes('mizrahi:pendingIfTodayTransaction'),
+    );
 
     if (this.options.optInFeatures?.includes('mizrahi:pendingIfNoIdentifier')) {
       const completedWithoutIdentifier = oshTxn.filter(tx => !tx.identifier);
