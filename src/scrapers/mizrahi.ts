@@ -258,6 +258,17 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
       });
     }
 
+    if (this.options.optInFeatures?.includes('mizrahi:pendingIfHasGenericDescription')) {
+      const genericDescriptions = ['העברת יומן לבנק זר מסניף זר'];
+      const completedWithGenericDescription = oshTxn.filter(tx => genericDescriptions.includes(tx.description));
+      debug(
+        `Found ${completedWithGenericDescription.length} transactions with generic description. Marking them as pending.`,
+      );
+      completedWithGenericDescription.forEach(tx => {
+        tx.status = TransactionStatuses.Pending;
+      });
+    }
+
     // workaround for a bug which the bank's API returns transactions before the requested start date
     const startMoment = getStartMoment(this.options.startDate);
     const oshTxnAfterStartDate = oshTxn.filter(txn => moment(txn.date).isSameOrAfter(startMoment));
