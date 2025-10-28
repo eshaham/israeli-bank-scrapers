@@ -114,7 +114,7 @@ function createHeadersFromRequest(request: HTTPRequest) {
   };
 }
 
-function convertTransactions(txns: ScrapedTransaction[], pendingIfTodayTransaction: boolean): Transaction[] {
+function convertTransactions(txns: ScrapedTransaction[], pendingIfTodayTransaction: boolean = false): Transaction[] {
   return txns.map(row => {
     const txnDate = moment(row.MC02PeulaTaaEZ, moment.HTML5_FMT.DATETIME_LOCAL_SECONDS).toISOString();
 
@@ -257,24 +257,11 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
       this.options.optInFeatures?.includes('mizrahi:pendingIfTodayTransaction'),
     );
 
-    if (this.options.optInFeatures?.includes('mizrahi:pendingIfNoIdentifier')) {
-      const completedWithoutIdentifier = oshTxn.filter(tx => !tx.identifier);
-      debug(`Found ${completedWithoutIdentifier.length} transactions without identifier. Marking them as pending.`);
-      completedWithoutIdentifier.forEach(tx => {
-        tx.status = TransactionStatuses.Pending;
+    oshTxn
+      .filter(txn => this.shouldMarkAsPending(txn))
+      .forEach(txn => {
+        txn.status = TransactionStatuses.Pending;
       });
-    }
-
-    if (this.options.optInFeatures?.includes('mizrahi:pendingIfHasGenericDescription')) {
-      const genericDescriptions = ['העברת יומן לבנק זר מסניף זר'];
-      const completedWithGenericDescription = oshTxn.filter(tx => genericDescriptions.includes(tx.description));
-      debug(
-        `Found ${completedWithGenericDescription.length} transactions with generic description. Marking them as pending.`,
-      );
-      completedWithGenericDescription.forEach(tx => {
-        tx.status = TransactionStatuses.Pending;
-      });
-    }
 
     // workaround for a bug which the bank's API returns transactions before the requested start date
     const startMoment = getStartMoment(this.options.startDate);
@@ -288,6 +275,24 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
       txns: allTxn,
       balance: +response.body.fields?.Yitra,
     };
+  }
+
+  private shouldMarkAsPending(txn: Transaction): boolean {
+    if (this.options.optInFeatures?.includes('mizrahi:pendingIfNoIdentifier') && !txn.identifier) {
+      debug(`Marking transaction '${txn.description}' as pending due to no identifier.`);
+      return true;
+    }
+
+    const genericDescriptions = ['העברת יומן לבנק זר מסניף זר'];
+    if (
+      this.options.optInFeatures?.includes('mizrahi:pendingIfHasGenericDescription') &&
+      genericDescriptions.includes(txn.description)
+    ) {
+      debug(`Marking transaction '${txn.description}' as pending due to generic description.`);
+      return true;
+    }
+
+    return false;
   }
 }
 
