@@ -1,6 +1,7 @@
 import nodeFetch from 'node-fetch';
 import { type Page } from 'puppeteer';
-import fightBotDetection, { type BotFightingOptions } from './anti-automation-detection';
+import fightBotDetection from './anti-automation-detection';
+import { type BotFightingOptions } from '../scrapers/interface';
 
 const JSON_CONTENT_TYPE = 'application/json';
 
