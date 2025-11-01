@@ -1,7 +1,6 @@
 import nodeFetch from 'node-fetch';
 import { type Page } from 'puppeteer';
-import { randomDelay } from './waiting';
-import { randomMouseMove } from './anti-automation-detection';
+import fightBotDetection, { type BotFightingOptions } from './anti-automation-detection';
 
 const JSON_CONTENT_TYPE = 'application/json';
 
@@ -53,20 +52,15 @@ export async function fetchGraphql<TResult>(
   return result.data as Promise<TResult>;
 }
 
-export function fetchGetWithinPage<TResult>(
+export async function fetchGetWithinPage<TResult>(
   page: Page,
   url: string,
-  withRandomDelay: boolean = false,
-  withMouseMove: boolean = false,
+  botFightingOptions?: BotFightingOptions,
 ): Promise<TResult | null> {
   let promise: Promise<void> = Promise.resolve();
 
-  if (withRandomDelay) {
-    promise = promise.then(() => randomDelay()).then(() => void 0);
-  }
-
-  if (withMouseMove) {
-    promise = promise.then(() => randomMouseMove(page));
+  if (botFightingOptions) {
+    promise = promise.then(() => fightBotDetection(page, botFightingOptions));
   }
 
   return promise.then(() =>
@@ -90,17 +84,17 @@ export function fetchGetWithinPage<TResult>(
   );
 }
 
-export function fetchPostWithinPage<TResult>(
+export async function fetchPostWithinPage<TResult>(
   page: Page,
   url: string,
   data: Record<string, any>,
   extraHeaders: Record<string, any> = {},
-  withRandomDelay: boolean = false,
+  botFightingOptions?: BotFightingOptions,
 ): Promise<TResult | null> {
   let promise: Promise<void> = Promise.resolve();
 
-  if (withRandomDelay) {
-    promise = promise.then(() => randomDelay()).then(() => void 0);
+  if (botFightingOptions) {
+    promise = promise.then(() => fightBotDetection(page, botFightingOptions));
   }
 
   return promise.then(() =>
