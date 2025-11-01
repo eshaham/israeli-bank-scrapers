@@ -9,6 +9,7 @@ import { getDebug } from '../helpers/debug';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import { filterOldTransactions, fixInstallments } from '../helpers/transactions';
 import { runSerial } from '../helpers/waiting';
+import { type BotFightingOptions } from '../helpers/anti-automation-detection';
 import {
   TransactionStatuses,
   TransactionTypes,
@@ -116,9 +117,9 @@ function getAccountsUrl(servicesUrl: string, monthMoment: Moment) {
   });
 }
 
-async function fetchAccounts(page: Page, servicesUrl: string, monthMoment: Moment): Promise<ScrapedAccount[]> {
+async function fetchAccounts(page: Page, servicesUrl: string, monthMoment: Moment, botFightingOptions?: BotFightingOptions): Promise<ScrapedAccount[]> {
   const dataUrl = getAccountsUrl(servicesUrl, monthMoment);
-  const dataResult = await fetchGetWithinPage<ScrapedAccountsWithinPageResponse>(page, dataUrl, true, true);
+  const dataResult = await fetchGetWithinPage<ScrapedAccountsWithinPageResponse>(page, dataUrl, botFightingOptions);
   if (dataResult && _.get(dataResult, 'Header.Status') === '1' && dataResult.DashboardMonthBean) {
     const { cardsCharges } = dataResult.DashboardMonthBean;
     if (cardsCharges) {
@@ -213,10 +214,11 @@ async function fetchTransactions(
   companyServiceOptions: CompanyServiceOptions,
   startMoment: Moment,
   monthMoment: Moment,
+  botFightingOptions?: BotFightingOptions,
 ): Promise<ScrapedAccountsWithIndex> {
-  const accounts = await fetchAccounts(page, companyServiceOptions.servicesUrl, monthMoment);
+  const accounts = await fetchAccounts(page, companyServiceOptions.servicesUrl, monthMoment, botFightingOptions);
   const dataUrl = getTransactionsUrl(companyServiceOptions.servicesUrl, monthMoment);
-  const dataResult = await fetchGetWithinPage<ScrapedTransactionData>(page, dataUrl, true, true);
+  const dataResult = await fetchGetWithinPage<ScrapedTransactionData>(page, dataUrl, botFightingOptions);
   if (dataResult && _.get(dataResult, 'Header.Status') === '1' && dataResult.CardsTransactionsListBean) {
     const accountTxns: ScrapedAccountsWithIndex = {};
     accounts.forEach(account => {
@@ -272,15 +274,17 @@ function getTransactionExtraDetails(
     },
   });
 }
+
 async function getExtraScrapTransaction(
   page: Page,
   options: CompanyServiceOptions,
   month: Moment,
   accountIndex: number,
   transaction: Transaction,
+  botFightingOptions?: BotFightingOptions,
 ): Promise<Transaction> {
   const dataUrl = getTransactionExtraDetails(options.servicesUrl, month, accountIndex, transaction);
-  const data = await fetchGetWithinPage<ScrapedTransactionData>(page, dataUrl, true, true);
+  const data = await fetchGetWithinPage<ScrapedTransactionData>(page, dataUrl, botFightingOptions);
 
   if (!data) {
     return transaction;
@@ -298,9 +302,10 @@ function getExtraScrapTransactions(
   page: Page,
   options: CompanyServiceOptions,
   month: moment.Moment,
+  botFightingOptions?: BotFightingOptions,
 ): Promise<Transaction[]> {
   const promises = accountWithIndex.txns.map(t =>
-    getExtraScrapTransaction(page, options, month, accountWithIndex.index, t),
+    getExtraScrapTransaction(page, options, month, accountWithIndex.index, t, botFightingOptions),
   );
   return Promise.all(promises);
 }
@@ -310,10 +315,11 @@ async function getExtraScrapAccount(
   options: CompanyServiceOptions,
   accountMap: ScrapedAccountsWithIndex,
   month: moment.Moment,
+  botFightingOptions?: BotFightingOptions,
 ): Promise<ScrapedAccountsWithIndex> {
   const promises = Object.keys(accountMap).map(async a => ({
     ...accountMap[a],
-    txns: await getExtraScrapTransactions(accountMap[a], page, options, month),
+    txns: await getExtraScrapTransactions(accountMap[a], page, options, month, botFightingOptions),
   }));
   const accounts = await Promise.all(promises);
   return accounts.reduce((m, x) => ({ ...m, [x.accountNumber]: x }), {});
@@ -324,8 +330,9 @@ function getExtraScrap(
   page: Page,
   options: CompanyServiceOptions,
   allMonths: moment.Moment[],
+  botFightingOptions?: BotFightingOptions,
 ): Promise<ScrapedAccountsWithIndex[]> {
-  const actions = accountsWithIndex.map((a, i) => () => getExtraScrapAccount(page, options, a, allMonths[i]));
+  const actions = accountsWithIndex.map((a, i) => () => getExtraScrapAccount(page, options, a, allMonths[i], botFightingOptions));
   return runSerial(actions);
 }
 
@@ -334,17 +341,18 @@ async function fetchAllTransactions(
   options: ScraperOptions,
   companyServiceOptions: CompanyServiceOptions,
   startMoment: Moment,
+  botFightingOptions?: BotFightingOptions,
 ) {
   const futureMonthsToScrape = options.futureMonthsToScrape ?? 1;
   const allMonths = getAllMonthMoments(startMoment, futureMonthsToScrape);
   const results: ScrapedAccountsWithIndex[] = await runSerial(
     allMonths.map(
-      monthMoment => () => fetchTransactions(page, options, companyServiceOptions, startMoment, monthMoment),
+      monthMoment => () => fetchTransactions(page, options, companyServiceOptions, startMoment, monthMoment, botFightingOptions),
     ),
   );
 
   const finalResult = options.additionalTransactionInformation
-    ? await getExtraScrap(results, page, companyServiceOptions, allMonths)
+    ? await getExtraScrap(results, page, companyServiceOptions, allMonths, botFightingOptions)
     : results;
 
   const combinedTxns: Record<string, Transaction[]> = {};
@@ -421,7 +429,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
       validateUrl,
       validateRequest,
       {},
-      true,
+      this.options.botFightingOptions,
     );
     if (
       !validateResult ||
@@ -446,7 +454,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
         countryCode: COUNTRY_CODE,
         idType: ID_TYPE,
       };
-      const loginResult = await fetchPostWithinPage<{ status: string }>(this.page, loginUrl, request, {}, true);
+      const loginResult = await fetchPostWithinPage<{ status: string }>(this.page, loginUrl, request, {}, this.options.botFightingOptions);
       debug(`user login with status '${loginResult?.status}'`);
 
       if (loginResult && loginResult.status === '1') {
@@ -497,6 +505,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
         companyCode: this.companyCode,
       },
       startMoment,
+      this.options.botFightingOptions,
     );
   }
 }
