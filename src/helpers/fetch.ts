@@ -58,31 +58,14 @@ export async function fetchGetWithinPage<TResult>(
   url: string,
   botFightingOptions?: BotFightingOptions,
 ): Promise<TResult | null> {
-  let promise: Promise<void> = Promise.resolve();
-
   if (botFightingOptions) {
-    promise = promise.then(() => fightBotDetection(page, botFightingOptions));
+    await fightBotDetection(page, botFightingOptions);
   }
-
-  return promise.then(() =>
-    page.evaluate(innerUrl => {
-      return new Promise<TResult | null>((resolve, reject) => {
-        fetch(innerUrl, {
-          credentials: 'include',
-        })
-          .then(result => {
-            if (result.status === 204) {
-              resolve(null);
-            } else {
-              resolve(result.json());
-            }
-          })
-          .catch(e => {
-            reject(e);
-          });
-      });
-    }, url),
-  );
+  return page.evaluate(async (innerUrl: string) => {
+    const response = await fetch(innerUrl, { credentials: 'include' });
+    if (response.status === 204) return null;
+    return response.json();
+  }, url);
 }
 
 export async function fetchPostWithinPage<TResult>(
@@ -92,42 +75,25 @@ export async function fetchPostWithinPage<TResult>(
   extraHeaders: Record<string, any> = {},
   botFightingOptions?: BotFightingOptions,
 ): Promise<TResult | null> {
-  let promise: Promise<void> = Promise.resolve();
-
   if (botFightingOptions) {
-    promise = promise.then(() => fightBotDetection(page, botFightingOptions));
+    await fightBotDetection(page, botFightingOptions);
   }
-
-  return promise.then(() =>
-    page.evaluate(
-      (innerUrl: string, innerData: Record<string, any>, innerExtraHeaders: Record<string, any>) => {
-        return new Promise<TResult | null>((resolve, reject) => {
-          fetch(innerUrl, {
-            method: 'POST',
-            body: JSON.stringify(innerData),
-            credentials: 'include',
-            // eslint-disable-next-line prefer-object-spread
-            headers: Object.assign(
-              { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-              innerExtraHeaders,
-            ),
-          })
-            .then(result => {
-              if (result.status === 204) {
-                // No content response
-                resolve(null);
-              } else {
-                resolve(result.json());
-              }
-            })
-            .catch(e => {
-              reject(e);
-            });
-        });
-      },
-      url,
-      data,
-      extraHeaders,
-    ),
+  return page.evaluate(
+    async (innerUrl: string, innerData: Record<string, any>, innerExtraHeaders: Record<string, any>) => {
+      const response = await fetch(innerUrl, {
+        method: 'POST',
+        body: JSON.stringify(innerData),
+        credentials: 'include',
+        headers: Object.assign(
+          { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+          innerExtraHeaders,
+        ),
+      });
+      if (response.status === 204) return null;
+      return response.json();
+    },
+    url,
+    data,
+    extraHeaders,
   );
 }
