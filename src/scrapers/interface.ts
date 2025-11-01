@@ -2,7 +2,6 @@ import { type BrowserContext, type Browser, type Page } from 'puppeteer';
 import { type CompanyTypes, type ScraperProgressTypes } from '../definitions';
 import { type TransactionsAccount } from '../transactions';
 import { type ErrorResult, type ScraperErrorTypes } from './errors';
-import { type BotFightingOptions } from '../helpers/anti-automation-detection';
 
 // TODO: Remove this type when the scraper 'factory' will return concrete scraper types
 // Instead of a generic interface (which in turn uses this type)
@@ -28,6 +27,21 @@ export interface FutureDebit {
   amountCurrency: string;
   chargeDate?: string;
   bankAccountNumber?: string;
+}
+
+export interface BotFightingOptions {
+  /**
+   * if true, introduce random delays when performing web actions to mimic human behavior.
+   * This might heavily slow down the scraping process - use with care.
+   * currently only supported within base-isracard-amex scraper
+   */
+  withRandomDelay?: boolean;
+
+  /**
+   * if true, perform random mouse movements on the page to mimic human behavior.
+   * currently only supported within base-isracard-amex scraper
+   */
+  withMouseMove?: boolean;
 }
 
 interface ExternalBrowserOptions {

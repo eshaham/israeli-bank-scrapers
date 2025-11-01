@@ -9,7 +9,6 @@ import { getDebug } from '../helpers/debug';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import { filterOldTransactions, fixInstallments } from '../helpers/transactions';
 import { runSerial } from '../helpers/waiting';
-import { type BotFightingOptions } from '../helpers/anti-automation-detection';
 import {
   TransactionStatuses,
   TransactionTypes,
@@ -19,7 +18,7 @@ import {
 } from '../transactions';
 import { BaseScraperWithBrowser } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
-import { type ScraperOptions, type ScraperScrapingResult } from './interface';
+import { type ScraperOptions, type ScraperScrapingResult, type BotFightingOptions } from './interface';
 import { interceptionPriorities, maskHeadlessUserAgent } from '../helpers/browser';
 
 const COUNTRY_CODE = '212';

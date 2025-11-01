@@ -1,10 +1,6 @@
 import { type Page } from 'puppeteer';
 import { randomDelay } from './waiting';
-
-export type BotFightingOptions = {
-  withRandomDelay?: boolean;
-  withMouseMove?: boolean;
-};
+import { type BotFightingOptions } from '../scrapers/interface';
 
 export function randomMouseMove(page: Page): Promise<void> {
   const viewport = page.viewport();
@@ -17,8 +13,11 @@ export function randomMouseMove(page: Page): Promise<void> {
 
 export default async function fightBotDetection(
   page: Page,
-  { withRandomDelay = false, withMouseMove = false }: BotFightingOptions = {},
+  options: BotFightingOptions,
 ): Promise<void> {
+  const withRandomDelay = options?.withRandomDelay ?? false;
+  const withMouseMove = options?.withMouseMove ?? false;
+
   if (withRandomDelay) {
     await randomDelay();
   }
