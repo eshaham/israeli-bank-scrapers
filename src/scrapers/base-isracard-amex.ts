@@ -116,7 +116,12 @@ function getAccountsUrl(servicesUrl: string, monthMoment: Moment) {
   });
 }
 
-async function fetchAccounts(page: Page, servicesUrl: string, monthMoment: Moment, botFightingOptions?: BotFightingOptions): Promise<ScrapedAccount[]> {
+async function fetchAccounts(
+  page: Page,
+  servicesUrl: string,
+  monthMoment: Moment,
+  botFightingOptions?: BotFightingOptions,
+): Promise<ScrapedAccount[]> {
   const dataUrl = getAccountsUrl(servicesUrl, monthMoment);
   const dataResult = await fetchGetWithinPage<ScrapedAccountsWithinPageResponse>(page, dataUrl, botFightingOptions);
   if (dataResult && _.get(dataResult, 'Header.Status') === '1' && dataResult.DashboardMonthBean) {
@@ -331,7 +336,9 @@ function getExtraScrap(
   allMonths: moment.Moment[],
   botFightingOptions?: BotFightingOptions,
 ): Promise<ScrapedAccountsWithIndex[]> {
-  const actions = accountsWithIndex.map((a, i) => () => getExtraScrapAccount(page, options, a, allMonths[i], botFightingOptions));
+  const actions = accountsWithIndex.map(
+    (a, i) => () => getExtraScrapAccount(page, options, a, allMonths[i], botFightingOptions),
+  );
   return runSerial(actions);
 }
 
@@ -346,7 +353,8 @@ async function fetchAllTransactions(
   const allMonths = getAllMonthMoments(startMoment, futureMonthsToScrape);
   const results: ScrapedAccountsWithIndex[] = await runSerial(
     allMonths.map(
-      monthMoment => () => fetchTransactions(page, options, companyServiceOptions, startMoment, monthMoment, botFightingOptions),
+      monthMoment => () =>
+        fetchTransactions(page, options, companyServiceOptions, startMoment, monthMoment, botFightingOptions),
     ),
   );
 
@@ -453,7 +461,13 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
         countryCode: COUNTRY_CODE,
         idType: ID_TYPE,
       };
-      const loginResult = await fetchPostWithinPage<{ status: string }>(this.page, loginUrl, request, {}, this.options.botFightingOptions);
+      const loginResult = await fetchPostWithinPage<{ status: string }>(
+        this.page,
+        loginUrl,
+        request,
+        {},
+        this.options.botFightingOptions,
+      );
       debug(`user login with status '${loginResult?.status}'`);
 
       if (loginResult && loginResult.status === '1') {
