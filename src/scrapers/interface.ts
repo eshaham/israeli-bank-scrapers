@@ -2,6 +2,7 @@ import { type BrowserContext, type Browser, type Page } from 'puppeteer';
 import { type CompanyTypes, type ScraperProgressTypes } from '../definitions';
 import { type TransactionsAccount } from '../transactions';
 import { type ErrorResult, type ScraperErrorTypes } from './errors';
+import { type BotFightingOptions } from '../helpers/anti-automation-detection';
 
 // TODO: Remove this type when the scraper 'factory' will return concrete scraper types
 // Instead of a generic interface (which in turn uses this type)
@@ -154,6 +155,11 @@ export type ScraperOptions = ScraperBrowserOptions & {
    * The number of times to retry the navigation in case of a failure (default 0)
    */
   navigationRetryCount?: number;
+
+  /**
+   * Options to help fight anti-automation detection mechanisms
+   */
+  botFightingOptions?: BotFightingOptions;
 };
 
 export interface OutputDataOptions {
