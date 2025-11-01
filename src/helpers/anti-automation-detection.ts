@@ -11,10 +11,7 @@ export function randomMouseMove(page: Page): Promise<void> {
   return page.mouse.move(x, y);
 }
 
-export default async function fightBotDetection(
-  page: Page,
-  options: BotFightingOptions,
-): Promise<void> {
+export default async function fightBotDetection(page: Page, options: BotFightingOptions): Promise<void> {
   const withRandomDelay = options?.withRandomDelay ?? false;
   const withMouseMove = options?.withMouseMove ?? false;
 
