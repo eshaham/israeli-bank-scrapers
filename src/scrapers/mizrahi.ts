@@ -66,6 +66,7 @@ const accountDropDownItemSelector = '#AccountPicker .item';
 const pendingTrxIdentifierId = '#ctl00_ContentPlaceHolder2_panel1';
 const checkingAccountTabHebrewName = 'עובר ושב';
 const checkingAccountTabEnglishName = 'Checking Account';
+const genericDescriptions = ['העברת יומן לבנק זר מסניף זר'];
 
 function createLoginFields(credentials: ScraperSpecificCredentials) {
   return [
@@ -283,7 +284,6 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
       return true;
     }
 
-    const genericDescriptions = ['העברת יומן לבנק זר מסניף זר'];
     if (
       this.options.optInFeatures?.includes('mizrahi:pendingIfHasGenericDescription') &&
       genericDescriptions.includes(txn.description)
