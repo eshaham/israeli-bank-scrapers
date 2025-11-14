@@ -297,7 +297,7 @@ async function getCurrentBalance(page: Page | Frame): Promise<number> {
 
 export async function waitForPostLogin(page: Page) {
   return Promise.race([
-    waitUntilElementFound(page, '#card-header', true), // New UI
+    waitUntilElementFound(page, '#card-header', false), // New UI
     waitUntilElementFound(page, '#account_num', true), // New UI
     waitUntilElementFound(page, '#matafLogoutLink', true), // Old UI
     waitUntilElementFound(page, '#validationMsg', true), // Old UI
