@@ -75,14 +75,6 @@ function createGeneralError(): ScraperScrapingResult {
   };
 }
 
-async function safeCleanup(cleanup: () => Promise<void>) {
-  try {
-    await cleanup();
-  } catch (e) {
-    debug(`Cleanup function failed: ${(e as Error).message}`);
-  }
-}
-
 class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends BaseScraper<TCredentials> {
   private cleanups: Array<() => Promise<void>> = [];
 
@@ -282,6 +274,8 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
 
     debug('check login result');
     const current = await getCurrentUrl(this.page, true);
+    debug(`[LOGIN DEBUG] Current URL after login: ${current}`);
+    debug('[LOGIN DEBUG] Checking against possible results');
     const loginResult = await getKeyByValue(loginOptions.possibleResults, current, this.page);
     debug(`handle login results ${loginResult}`);
     return this.handleLoginResult(loginResult);
@@ -299,7 +293,14 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
       });
     }
 
-    await Promise.all(this.cleanups.reverse().map(safeCleanup));
+    for (const cleanup of this.cleanups.reverse()) {
+      try {
+        await cleanup();
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        debug(`Cleanup function failed: ${message}`);
+      }
+    }
     this.cleanups = [];
   }
 
