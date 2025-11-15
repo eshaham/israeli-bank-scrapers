@@ -20,6 +20,7 @@ import { BaseScraperWithBrowser } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
 import { type ScraperOptions, type ScraperScrapingResult } from './interface';
 import { interceptionPriorities, maskHeadlessUserAgent } from '../helpers/browser';
+import { clickButton, waitUntilElementFound } from '../helpers/elements-interactions';
 
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';
@@ -406,6 +407,12 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
     await this.navigateTo(`${this.baseUrl}/personalarea/Login`);
 
     this.emitProgress(ScraperProgressTypes.LoggingIn);
+
+    await waitUntilElementFound(this.page, '#flip', true);
+    debug('click on the "Enter with password" button');
+    await clickButton(this.page, '#flip');
+    debug('Wait for the panel to visually flip');
+    await waitUntilElementFound(this.page, '#otpLoginPwd', true);
 
     const validateUrl = `${this.servicesUrl}?reqName=ValidateIdData`;
     const validateRequest = {
