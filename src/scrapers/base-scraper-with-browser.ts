@@ -282,7 +282,10 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
 
     debug('check login result');
     const current = await getCurrentUrl(this.page, true);
+    debug(`[LOGIN DEBUG] Current URL after login: ${current}`);
+    debug('[LOGIN DEBUG] Checking against possible results:', loginOptions.possibleResults);
     const loginResult = await getKeyByValue(loginOptions.possibleResults, current, this.page);
+    debug(`[LOGIN DEBUG] Matched login result: ${loginResult}`);
     debug(`handle login results ${loginResult}`);
     return this.handleLoginResult(loginResult);
   }
@@ -299,7 +302,6 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
       });
     }
 
-    await Promise.all(this.cleanups.reverse().map(safeCleanup));
     this.cleanups = [];
   }
 
