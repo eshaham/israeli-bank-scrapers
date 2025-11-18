@@ -4,6 +4,9 @@ import { SCRAPERS } from '../definitions';
 import { ISO_DATE_REGEX } from '../constants';
 import { LoginResults } from './base-scraper-with-browser';
 import { type TransactionsAccount } from '../transactions';
+import debug from 'debug';
+
+debug.enable('israeli-bank-scrapers:mizrahi');
 
 const COMPANY_ID = 'mizrahi'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
