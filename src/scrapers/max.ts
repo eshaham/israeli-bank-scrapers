@@ -42,7 +42,7 @@ export interface ScrapedTransaction {
 const BASE_API_ACTIONS_URL = 'https://onlinelcapi.max.co.il';
 const BASE_WELCOME_URL = 'https://www.max.co.il';
 
-const LOGIN_URL = `${BASE_WELCOME_URL}/homepage/welcome`;
+const LOGIN_URL = `${BASE_WELCOME_URL}/login`;
 const PASSWORD_EXPIRED_URL = `${BASE_WELCOME_URL}/renew-password`;
 const SUCCESS_URL = `${BASE_WELCOME_URL}/homepage/personal`;
 
