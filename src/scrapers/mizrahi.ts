@@ -129,24 +129,26 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
 }
 
 async function extractPendingTransactions(page: Frame): Promise<Transaction[]> {
-  const pendingTxn = await pageEvalAll(page, 'tr.rgRow', [], trs => {
-    return trs.map(tr => Array.from(tr.querySelectorAll('td'), (td: HTMLTableDataCellElement) => td.textContent || ''));
+  const pendingTxn = await pageEvalAll(page, 'tr.rgRow, tr.rgAltRow', [], trs => {
+    return trs.map(tr => Array.from(tr.querySelectorAll('td'), td => td.textContent || ''));
   });
 
-  return pendingTxn.map(txn => {
-    const date = moment(txn[0], 'DD/MM/YY').toISOString();
-    const amount = parseInt(txn[3], 10);
-    return {
-      type: TransactionTypes.Normal,
-      date,
-      processedDate: date,
-      originalAmount: amount,
-      originalCurrency: SHEKEL_CURRENCY,
-      chargedAmount: amount,
-      description: txn[1],
-      status: TransactionStatuses.Pending,
-    };
-  });
+  return pendingTxn
+    .map(txn => {
+      const date = moment(txn[0], 'DD/MM/YY').toISOString();
+      const amount = parseInt(txn[3], 10);
+      return {
+        type: TransactionTypes.Normal,
+        date,
+        processedDate: date,
+        originalAmount: amount,
+        originalCurrency: SHEKEL_CURRENCY,
+        chargedAmount: amount,
+        description: txn[1],
+        status: TransactionStatuses.Pending,
+      };
+    })
+    .filter(txn => txn.date);
 }
 
 async function postLogin(page: Page) {
