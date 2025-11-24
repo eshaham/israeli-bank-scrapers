@@ -52,9 +52,9 @@ const CHANGE_PASSWORD_URL = /https:\/\/www\.mizrahi-tefahot\.co\.il\/login\/inde
 const DATE_FORMAT = 'DD/MM/YYYY';
 const MAX_ROWS_PER_REQUEST = 10000000000;
 
-const usernameSelector = '#emailDesktopHeb';
-const passwordSelector = '#passwordIDDesktopHEB';
-const submitButtonSelector = '.form-desktop button';
+const usernameSelector = '#userNumberDesktopHeb';
+const passwordSelector = '#passwordDesktopHeb';
+const submitButtonSelector = 'button.btn.btn-primary';
 const invalidPasswordSelector = 'a[href*="https://sc.mizrahi-tefahot.co.il/SCServices/SC/P010.aspx"]';
 const afterLoginSelector = '#dropdownBasic';
 const loginSpinnerSelector = 'div.ngx-overlay.loading-foreground';
