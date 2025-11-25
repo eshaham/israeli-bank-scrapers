@@ -1,5 +1,7 @@
 import nodeFetch from 'node-fetch';
 import { type Page } from 'puppeteer';
+import fightBotDetection from './anti-automation-detection';
+import { type BotFightingOptions } from '../scrapers/interface';
 
 const JSON_CONTENT_TYPE = 'application/json';
 
@@ -51,57 +53,44 @@ export async function fetchGraphql<TResult>(
   return result.data as Promise<TResult>;
 }
 
-export function fetchGetWithinPage<TResult>(page: Page, url: string): Promise<TResult | null> {
-  return page.evaluate(innerUrl => {
-    return new Promise<TResult | null>((resolve, reject) => {
-      fetch(innerUrl, {
-        credentials: 'include',
-      })
-        .then(result => {
-          if (result.status === 204) {
-            resolve(null);
-          } else {
-            resolve(result.json());
-          }
-        })
-        .catch(e => {
-          reject(e);
-        });
-    });
+export async function fetchGetWithinPage<TResult>(
+  page: Page,
+  url: string,
+  botFightingOptions?: BotFightingOptions,
+): Promise<TResult | null> {
+  if (botFightingOptions) {
+    await fightBotDetection(page, botFightingOptions);
+  }
+  return page.evaluate(async (innerUrl: string) => {
+    const response = await fetch(innerUrl, { credentials: 'include' });
+    if (response.status === 204) return null;
+    return response.json();
   }, url);
 }
 
-export function fetchPostWithinPage<TResult>(
+export async function fetchPostWithinPage<TResult>(
   page: Page,
   url: string,
   data: Record<string, any>,
   extraHeaders: Record<string, any> = {},
+  botFightingOptions?: BotFightingOptions,
 ): Promise<TResult | null> {
+  if (botFightingOptions) {
+    await fightBotDetection(page, botFightingOptions);
+  }
   return page.evaluate(
-    (innerUrl: string, innerData: Record<string, any>, innerExtraHeaders: Record<string, any>) => {
-      return new Promise<TResult | null>((resolve, reject) => {
-        fetch(innerUrl, {
-          method: 'POST',
-          body: JSON.stringify(innerData),
-          credentials: 'include',
-          // eslint-disable-next-line prefer-object-spread
-          headers: Object.assign(
-            { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-            innerExtraHeaders,
-          ),
-        })
-          .then(result => {
-            if (result.status === 204) {
-              // No content response
-              resolve(null);
-            } else {
-              resolve(result.json());
-            }
-          })
-          .catch(e => {
-            reject(e);
-          });
+    async (innerUrl: string, innerData: Record<string, any>, innerExtraHeaders: Record<string, any>) => {
+      const response = await fetch(innerUrl, {
+        method: 'POST',
+        body: JSON.stringify(innerData),
+        credentials: 'include',
+        headers: Object.assign(
+          { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+          innerExtraHeaders,
+        ),
       });
+      if (response.status === 204) return null;
+      return response.json();
     },
     url,
     data,

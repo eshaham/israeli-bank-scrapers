@@ -29,6 +29,21 @@ export interface FutureDebit {
   bankAccountNumber?: string;
 }
 
+export interface BotFightingOptions {
+  /**
+   * if true, introduce random delays when performing web actions to mimic human behavior.
+   * This might heavily slow down the scraping process - use with care.
+   * currently only supported within base-isracard-amex scraper
+   */
+  withRandomDelay?: boolean;
+
+  /**
+   * if true, perform random mouse movements on the page to mimic human behavior.
+   * currently only supported within base-isracard-amex scraper
+   */
+  withMouseMove?: boolean;
+}
+
 interface ExternalBrowserOptions {
   /**
    * An externally created browser instance.
@@ -154,6 +169,11 @@ export type ScraperOptions = ScraperBrowserOptions & {
    * The number of times to retry the navigation in case of a failure (default 0)
    */
   navigationRetryCount?: number;
+
+  /**
+   * Options to help fight anti-automation detection mechanisms
+   */
+  botFightingOptions?: BotFightingOptions;
 };
 
 export interface OutputDataOptions {
