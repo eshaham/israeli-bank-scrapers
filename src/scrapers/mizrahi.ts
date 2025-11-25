@@ -222,24 +222,28 @@ async function convertTransactions(
 }
 
 async function extractPendingTransactions(page: Frame): Promise<Transaction[]> {
-  const pendingTxn = await pageEvalAll(page, 'tr.rgRow', [], trs => {
-    return trs.map(tr => Array.from(tr.querySelectorAll('td'), (td: HTMLTableDataCellElement) => td.textContent || ''));
+  const pendingTxn = await pageEvalAll(page, 'tr.rgRow, tr.rgAltRow', [], trs => {
+    return trs.map(tr => Array.from(tr.querySelectorAll('td'), td => td.textContent || ''));
   });
 
-  return pendingTxn.map(txn => {
-    const date = moment(txn[0], 'DD/MM/YY').toISOString();
-    const amount = parseInt(txn[3], 10);
-    return {
+  return pendingTxn
+    .map(([dateStr, description, incomeAmountStr, amountStr]) => ({
+      date: moment(dateStr, 'DD/MM/YY').toISOString(),
+      amount: parseInt(amountStr, 10),
+      description,
+      incomeAmountStr, // TODO: handle incomeAmountStr once we know the sign of it
+    }))
+    .filter(txn => txn.date)
+    .map(({ date, description, amount }) => ({
       type: TransactionTypes.Normal,
       date,
       processedDate: date,
       originalAmount: amount,
       originalCurrency: SHEKEL_CURRENCY,
       chargedAmount: amount,
-      description: txn[1],
+      description,
       status: TransactionStatuses.Pending,
-    };
-  });
+    }));
 }
 
 async function postLogin(page: Page) {
