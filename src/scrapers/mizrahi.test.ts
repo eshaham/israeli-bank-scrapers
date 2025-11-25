@@ -5,6 +5,7 @@ import { ISO_DATE_REGEX } from '../constants';
 import { LoginResults } from './base-scraper-with-browser';
 import { type TransactionsAccount } from '../transactions';
 import debug from 'debug';
+import { type ScraperOptions } from './interface';
 
 debug.enable('israeli-bank-scrapers:mizrahi');
 
@@ -41,8 +42,13 @@ describe('Mizrahi scraper', () => {
   );
 
   maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions', async () => {
-    const options = {
+    const options: ScraperOptions = {
       ...testsConfig.options,
+      optInFeatures: [
+        'mizrahi:pendingIfHasGenericDescription',
+        'mizrahi:pendingIfHasGenericDescriptionWithDate',
+        'mizrahi:pendingIfTodayTransaction',
+      ],
       companyId: COMPANY_ID,
     };
 
