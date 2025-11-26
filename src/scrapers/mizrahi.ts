@@ -235,7 +235,7 @@ async function extractPendingTransactions(page: Frame): Promise<Transaction[]> {
   return pendingTxn
     .map(([dateStr, description, incomeAmountStr, amountStr]) => ({
       date: moment(dateStr, 'DD/MM/YY').toISOString(),
-      amount: parseInt(amountStr, 10),
+      amount: parseFloat(amountStr.replaceAll(',', '')),
       description,
       incomeAmountStr, // TODO: handle incomeAmountStr once we know the sign of it
     }))
