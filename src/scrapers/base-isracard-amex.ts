@@ -289,6 +289,7 @@ async function getExtraScrapAccount(
 ): Promise<ScrapedAccountsWithIndex> {
   const accounts = await Promise.all(
     Object.values(accountMap).map(async account => {
+      debug(`get extra scrap for ${account.accountNumber} with ${account.txns.length} transactions`, month);
       const updatedTxns = await Promise.all(
         account.txns.map(t => getExtraScrapTransaction(page, options, month, account.index, t)),
       );
