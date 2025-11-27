@@ -287,21 +287,23 @@ async function getExtraScrapAccount(
   accountMap: ScrapedAccountsWithIndex,
   month: moment.Moment,
 ): Promise<ScrapedAccountsWithIndex> {
-  const accounts = await Promise.all(
-    Object.values(accountMap).map(async account => {
-      debug(`get extra scrap for ${account.accountNumber} with ${account.txns.length} transactions`, month);
+  const accounts: ScrapedAccountsWithIndex[string][] = [];
+  for (const account of Object.values(accountMap)) {
+    debug(
+      `get extra scrap for ${account.accountNumber} with ${account.txns.length} transactions`,
+      month.format('YYYY-MM'),
+    );
+    const txns: Transaction[] = [];
+    for (const txnsChunk of _.chunk(account.txns, 10)) {
+      debug(`processing chunk of ${txnsChunk.length} transactions for account ${account.accountNumber}`);
+      const updatedTxns = await Promise.all(
+        txnsChunk.map(t => getExtraScrapTransaction(page, options, month, account.index, t)),
+      );
+      txns.push(...updatedTxns);
+    }
+    accounts.push({ ...account, txns });
+  }
 
-      const txns: Transaction[] = [];
-      for (const txnsChunk of _.chunk(account.txns, 10)) {
-        debug(`processing chunk of ${txnsChunk.length} transactions for account ${account.accountNumber}`);
-        txns.push(
-          ...(await Promise.all(txnsChunk.map(t => getExtraScrapTransaction(page, options, month, account.index, t)))),
-        );
-      }
-
-      return { ...account, txns };
-    }),
-  );
   return accounts.reduce((m, x) => ({ ...m, [x.accountNumber]: x }), {});
 }
 
