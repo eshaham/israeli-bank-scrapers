@@ -293,29 +293,23 @@ async function getExtraScrapTransaction(
   };
 }
 
-function getExtraScrapTransactions(
-  accountWithIndex: TransactionsAccount & { index: number },
-  page: Page,
-  options: CompanyServiceOptions,
-  month: moment.Moment,
-): Promise<Transaction[]> {
-  const promises = accountWithIndex.txns.map(t =>
-    getExtraScrapTransaction(page, options, month, accountWithIndex.index, t),
-  );
-  return Promise.all(promises);
-}
-
 async function getExtraScrapAccount(
   page: Page,
   options: CompanyServiceOptions,
   accountMap: ScrapedAccountsWithIndex,
   month: moment.Moment,
 ): Promise<ScrapedAccountsWithIndex> {
-  const promises = Object.keys(accountMap).map(async a => ({
-    ...accountMap[a],
-    txns: await getExtraScrapTransactions(accountMap[a], page, options, month),
-  }));
-  const accounts = await Promise.all(promises);
+  const accounts = await Promise.all(
+    Object.values(accountMap).map(async account => {
+      const updatedTxns = await Promise.all(
+        account.txns.map(t => getExtraScrapTransaction(page, options, month, account.index, t)),
+      );
+      return {
+        ...account,
+        txns: updatedTxns,
+      };
+    }),
+  );
   return accounts.reduce((m, x) => ({ ...m, [x.accountNumber]: x }), {});
 }
 
