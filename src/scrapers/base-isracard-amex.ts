@@ -256,22 +256,6 @@ async function fetchTransactions(
   return {};
 }
 
-function getTransactionExtraDetails(
-  servicesUrl: string,
-  month: Moment,
-  accountIndex: number,
-  transaction: Transaction,
-): string {
-  const moedChiuv = month.format('MMYYYY');
-  return buildUrl(servicesUrl, {
-    queryParams: {
-      reqName: 'PirteyIska_204',
-      CardIndex: accountIndex.toString(),
-      shovarRatz: transaction.identifier!.toString(),
-      moedChiuv,
-    },
-  });
-}
 async function getExtraScrapTransaction(
   page: Page,
   options: CompanyServiceOptions,
@@ -279,9 +263,13 @@ async function getExtraScrapTransaction(
   accountIndex: number,
   transaction: Transaction,
 ): Promise<Transaction> {
-  const dataUrl = getTransactionExtraDetails(options.servicesUrl, month, accountIndex, transaction);
-  const data = await fetchGetWithinPage<ScrapedTransactionData>(page, dataUrl);
+  const url = new URL(options.servicesUrl);
+  url.searchParams.set('reqName', 'PirteyIska_204');
+  url.searchParams.set('CardIndex', String(accountIndex));
+  url.searchParams.set('shovarRatz', String(transaction.identifier));
+  url.searchParams.set('moedChiuv', month.format('MMYYYY'));
 
+  const data = await fetchGetWithinPage<ScrapedTransactionData>(page, url.toString());
   if (!data) {
     return transaction;
   }
