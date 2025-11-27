@@ -290,13 +290,16 @@ async function getExtraScrapAccount(
   const accounts = await Promise.all(
     Object.values(accountMap).map(async account => {
       debug(`get extra scrap for ${account.accountNumber} with ${account.txns.length} transactions`, month);
-      const updatedTxns = await Promise.all(
-        account.txns.map(t => getExtraScrapTransaction(page, options, month, account.index, t)),
-      );
-      return {
-        ...account,
-        txns: updatedTxns,
-      };
+
+      const txns: Transaction[] = [];
+      for (const txnsChunk of _.chunk(account.txns, 10)) {
+        debug(`processing chunk of ${txnsChunk.length} transactions for account ${account.accountNumber}`);
+        txns.push(
+          ...(await Promise.all(txnsChunk.map(t => getExtraScrapTransaction(page, options, month, account.index, t)))),
+        );
+      }
+
+      return { ...account, txns };
     }),
   );
   return accounts.reduce((m, x) => ({ ...m, [x.accountNumber]: x }), {});
