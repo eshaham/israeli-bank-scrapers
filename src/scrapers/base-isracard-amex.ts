@@ -8,7 +8,7 @@ import getAllMonthMoments from '../helpers/dates';
 import { getDebug } from '../helpers/debug';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import { filterOldTransactions, fixInstallments } from '../helpers/transactions';
-import { runSerial } from '../helpers/waiting';
+import { runSerial, sleep } from '../helpers/waiting';
 import {
   TransactionStatuses,
   TransactionTypes,
@@ -217,6 +217,7 @@ async function fetchTransactions(
 ): Promise<ScrapedAccountsWithIndex> {
   const accounts = await fetchAccounts(page, companyServiceOptions.servicesUrl, monthMoment);
   const dataUrl = getTransactionsUrl(companyServiceOptions.servicesUrl, monthMoment);
+  await sleep(1500);
   const dataResult = await fetchGetWithinPage<ScrapedTransactionData>(page, dataUrl);
   debug(`fetching transactions from ${dataUrl} for month ${monthMoment.format('YYYY-MM')}`);
   if (dataResult && _.get(dataResult, 'Header.Status') === '1' && dataResult.CardsTransactionsListBean) {
@@ -302,6 +303,7 @@ async function getExtraScrapAccount(
       const updatedTxns = await Promise.all(
         txnsChunk.map(t => getExtraScrapTransaction(page, options, month, account.index, t)),
       );
+      await sleep(1000);
       txns.push(...updatedTxns);
     }
     accounts.push({ ...account, txns });
@@ -327,8 +329,8 @@ async function fetchAllTransactions(
 ) {
   const futureMonthsToScrape = options.futureMonthsToScrape ?? 1;
   const allMonths = getAllMonthMoments(startMoment, futureMonthsToScrape);
-  const results: ScrapedAccountsWithIndex[] = await Promise.all(
-    allMonths.map(async monthMoment => {
+  const results: ScrapedAccountsWithIndex[] = await runSerial(
+    allMonths.map(monthMoment => () => {
       return fetchTransactions(page, options, companyServiceOptions, startMoment, monthMoment);
     }),
   );
@@ -431,7 +433,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
         countryCode: COUNTRY_CODE,
         idType: ID_TYPE,
       };
-debug('user login started');
+      debug('user login started');
       const loginResult = await fetchPostWithinPage<{ status: string }>(this.page, loginUrl, request);
       debug(`user login with status '${loginResult?.status}'`, loginResult);
 
