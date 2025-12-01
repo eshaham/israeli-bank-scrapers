@@ -266,7 +266,7 @@ async function getExtraScrapTransaction(
   accountIndex: number,
   transaction: Transaction,
 ): Promise<Transaction> {
-  const url = new URL(servicesUrl);
+  const url = new URL(options.servicesUrl);
   url.searchParams.set('reqName', 'PirteyIska_204');
   url.searchParams.set('CardIndex', accountIndex.toString());
   url.searchParams.set('shovarRatz', transaction.identifier!.toString());
