@@ -22,8 +22,7 @@ import { type ScraperOptions, type ScraperScrapingResult } from './interface';
 import { interceptionPriorities, maskHeadlessUserAgent } from '../helpers/browser';
 
 const RATE_LIMIT = {
-  SLEEP_BETWEEN_ACCOUNTS: 1000,
-  SLEEP_BETWEEN_TRANSACTIONS: 1000,
+  SLEEP_BETWEEN: 1000,
   TRANSACTIONS_BATCH_SIZE: 10,
 } as const;
 
@@ -223,9 +222,9 @@ async function fetchTransactions(
 ): Promise<ScrapedAccountsWithIndex> {
   const accounts = await fetchAccounts(page, companyServiceOptions.servicesUrl, monthMoment);
   const dataUrl = getTransactionsUrl(companyServiceOptions.servicesUrl, monthMoment);
-  await sleep(RATE_LIMIT.SLEEP_BETWEEN_ACCOUNTS);
-  const dataResult = await fetchGetWithinPage<ScrapedTransactionData>(page, dataUrl);
+  await sleep(RATE_LIMIT.SLEEP_BETWEEN);
   debug(`fetching transactions from ${dataUrl} for month ${monthMoment.format('YYYY-MM')}`);
+  const dataResult = await fetchGetWithinPage<ScrapedTransactionData>(page, dataUrl);
   if (dataResult && _.get(dataResult, 'Header.Status') === '1' && dataResult.CardsTransactionsListBean) {
     const accountTxns: ScrapedAccountsWithIndex = {};
     accounts.forEach(account => {
@@ -272,14 +271,17 @@ async function getExtraScrapTransaction(
   accountIndex: number,
   transaction: Transaction,
 ): Promise<Transaction> {
-  const url = new URL(options.servicesUrl);
-  url.searchParams.set('reqName', 'PirteyIska_204');
-  url.searchParams.set('CardIndex', String(accountIndex));
-  url.searchParams.set('shovarRatz', String(transaction.identifier));
-  url.searchParams.set('moedChiuv', month.format('MMYYYY'));
+  const url = buildUrl(options.servicesUrl, {
+    queryParams: {
+      reqName: 'PirteyIska_204',
+      CardIndex: String(accountIndex),
+      shovarRatz: String(transaction.identifier),
+      moedChiuv: month.format('MMYYYY'),
+    },
+  });
 
   debug(`fetching extra scrap for transaction ${transaction.identifier} for month ${month.format('YYYY-MM')}`);
-  const data = await fetchGetWithinPage<ScrapedTransactionData>(page, url.toString());
+  const data = await fetchGetWithinPage<ScrapedTransactionData>(page, url);
   if (!data) {
     return transaction;
   }
@@ -309,7 +311,7 @@ async function getExtraScrapAccount(
       const updatedTxns = await Promise.all(
         txnsChunk.map(t => getExtraScrapTransaction(page, options, month, account.index, t)),
       );
-      await sleep(RATE_LIMIT.SLEEP_BETWEEN_TRANSACTIONS);
+      await sleep(RATE_LIMIT.SLEEP_BETWEEN);
       txns.push(...updatedTxns);
     }
     accounts.push({ ...account, txns });
