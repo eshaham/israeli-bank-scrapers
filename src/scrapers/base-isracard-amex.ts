@@ -118,6 +118,7 @@ function getAccountsUrl(servicesUrl: string, monthMoment: Moment) {
 
 async function fetchAccounts(page: Page, servicesUrl: string, monthMoment: Moment): Promise<ScrapedAccount[]> {
   const dataUrl = getAccountsUrl(servicesUrl, monthMoment);
+  debug(`fetching accounts from ${dataUrl}`);
   const dataResult = await fetchGetWithinPage<ScrapedAccountsWithinPageResponse>(page, dataUrl);
   if (dataResult && _.get(dataResult, 'Header.Status') === '1' && dataResult.DashboardMonthBean) {
     const { cardsCharges } = dataResult.DashboardMonthBean;
@@ -217,6 +218,7 @@ async function fetchTransactions(
   const accounts = await fetchAccounts(page, companyServiceOptions.servicesUrl, monthMoment);
   const dataUrl = getTransactionsUrl(companyServiceOptions.servicesUrl, monthMoment);
   const dataResult = await fetchGetWithinPage<ScrapedTransactionData>(page, dataUrl);
+  debug(`fetching transactions from ${dataUrl} for month ${monthMoment.format('YYYY-MM')}`);
   if (dataResult && _.get(dataResult, 'Header.Status') === '1' && dataResult.CardsTransactionsListBean) {
     const accountTxns: ScrapedAccountsWithIndex = {};
     accounts.forEach(account => {
@@ -269,6 +271,7 @@ async function getExtraScrapTransaction(
   url.searchParams.set('shovarRatz', String(transaction.identifier));
   url.searchParams.set('moedChiuv', month.format('MMYYYY'));
 
+  debug(`fetching extra scrap for transaction ${transaction.identifier} for month ${month.format('YYYY-MM')}`);
   const data = await fetchGetWithinPage<ScrapedTransactionData>(page, url.toString());
   if (!data) {
     return transaction;
@@ -313,8 +316,7 @@ function getExtraScrap(
   options: CompanyServiceOptions,
   allMonths: moment.Moment[],
 ): Promise<ScrapedAccountsWithIndex[]> {
-  const actions = accountsWithIndex.map((a, i) => () => getExtraScrapAccount(page, options, a, allMonths[i]));
-  return runSerial(actions);
+  return runSerial(accountsWithIndex.map((a, i) => () => getExtraScrapAccount(page, options, a, allMonths[i])));
 }
 
 async function fetchAllTransactions(
@@ -404,6 +406,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
       checkLevel: '1',
       companyCode: this.companyCode,
     };
+    debug('logging in with validate request');
     const validateResult = await fetchPostWithinPage<ScrapedLoginValidation>(this.page, validateUrl, validateRequest);
     if (
       !validateResult ||
@@ -428,8 +431,9 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
         countryCode: COUNTRY_CODE,
         idType: ID_TYPE,
       };
+debug('user login started');
       const loginResult = await fetchPostWithinPage<{ status: string }>(this.page, loginUrl, request);
-      debug(`user login with status '${loginResult?.status}'`);
+      debug(`user login with status '${loginResult?.status}'`, loginResult);
 
       if (loginResult && loginResult.status === '1') {
         this.emitProgress(ScraperProgressTypes.LoginSuccess);
