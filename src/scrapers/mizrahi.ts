@@ -22,6 +22,7 @@ interface ScrapedTransaction {
   MC02SchumEZ: number;
   MC02AsmahtaMekoritEZ: string;
   MC02TnuaTeurEZ: string;
+  IsTodayTransaction: boolean;
   MC02ErehTaaEZ: string;
   MC02ShowDetailsEZ?: string;
   MC02KodGoremEZ: any;
@@ -98,6 +99,7 @@ const accountDropDownItemSelector = '#AccountPicker .item';
 const pendingTrxIdentifierId = '#ctl00_ContentPlaceHolder2_panel1';
 const checkingAccountTabHebrewName = 'עובר ושב';
 const checkingAccountTabEnglishName = 'Checking Account';
+const genericDescriptions = ['העברת יומן לבנק זר מסניף זר'];
 
 function createLoginFields(credentials: ScraperSpecificCredentials) {
   return [
@@ -198,6 +200,7 @@ function createHeadersFromRequest(request: HTTPRequest) {
 async function convertTransactions(
   txns: ScrapedTransaction[],
   getMoreDetails: (row: ScrapedTransaction) => Promise<MoreDetails>,
+  pendingIfTodayTransaction: boolean = false,
 ): Promise<Transaction[]> {
   return Promise.all(
     txns.map(async row => {
@@ -215,7 +218,10 @@ async function convertTransactions(
         chargedAmount: row.MC02SchumEZ,
         description: row.MC02TnuaTeurEZ,
         memo: moreDetails?.memo,
-        status: TransactionStatuses.Completed,
+        status:
+          pendingIfTodayTransaction && row.IsTodayTransaction
+            ? TransactionStatuses.Pending
+            : TransactionStatuses.Completed,
       };
     }),
   );
@@ -347,7 +353,14 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
       this.options.additionalTransactionInformation
         ? row => getExtraTransactionDetails(this.page, row, apiHeaders)
         : () => Promise.resolve({ entries: {}, memo: undefined }),
+      this.options.optInFeatures?.includes('mizrahi:pendingIfTodayTransaction'),
     );
+
+    oshTxn
+      .filter(txn => this.shouldMarkAsPending(txn))
+      .forEach(txn => {
+        txn.status = TransactionStatuses.Pending;
+      });
 
     // workaround for a bug which the bank's API returns transactions before the requested start date
     const startMoment = getStartMoment(this.options.startDate);
@@ -361,6 +374,23 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
       txns: allTxn,
       balance: +response.body.fields?.Yitra,
     };
+  }
+
+  private shouldMarkAsPending(txn: Transaction): boolean {
+    if (this.options.optInFeatures?.includes('mizrahi:pendingIfNoIdentifier') && !txn.identifier) {
+      debug(`Marking transaction '${txn.description}' as pending due to no identifier.`);
+      return true;
+    }
+
+    if (
+      this.options.optInFeatures?.includes('mizrahi:pendingIfHasGenericDescription') &&
+      genericDescriptions.includes(txn.description)
+    ) {
+      debug(`Marking transaction '${txn.description}' as pending due to generic description.`);
+      return true;
+    }
+
+    return false;
   }
 }
 
