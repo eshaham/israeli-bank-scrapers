@@ -1,4 +1,3 @@
-import buildUrl from 'build-url';
 import _ from 'lodash';
 import moment, { type Moment } from 'moment';
 import { type Page } from 'puppeteer';
@@ -111,14 +110,12 @@ interface ScrapedTransactionData {
 
 function getAccountsUrl(servicesUrl: string, monthMoment: Moment) {
   const billingDate = monthMoment.format('YYYY-MM-DD');
-  return buildUrl(servicesUrl, {
-    queryParams: {
-      reqName: 'DashboardMonth',
-      actionCode: '0',
-      billingDate,
-      format: 'Json',
-    },
-  });
+  const url = new URL(servicesUrl);
+  url.searchParams.set('reqName', 'DashboardMonth');
+  url.searchParams.set('actionCode', '0');
+  url.searchParams.set('billingDate', billingDate);
+  url.searchParams.set('format', 'Json');
+  return url.toString();
 }
 
 async function fetchAccounts(page: Page, servicesUrl: string, monthMoment: Moment): Promise<ScrapedAccount[]> {
@@ -144,14 +141,12 @@ function getTransactionsUrl(servicesUrl: string, monthMoment: Moment) {
   const month = monthMoment.month() + 1;
   const year = monthMoment.year();
   const monthStr = month < 10 ? `0${month}` : month.toString();
-  return buildUrl(servicesUrl, {
-    queryParams: {
-      reqName: 'CardsTransactionsList',
-      month: monthStr,
-      year: `${year}`,
-      requiredDate: 'N',
-    },
-  });
+  const url = new URL(servicesUrl);
+  url.searchParams.set('reqName', 'CardsTransactionsList');
+  url.searchParams.set('month', monthStr);
+  url.searchParams.set('year', `${year}`);
+  url.searchParams.set('requiredDate', 'N');
+  return url.toString();
 }
 
 function convertCurrency(currencyStr: string) {
@@ -271,17 +266,14 @@ async function getExtraScrapTransaction(
   accountIndex: number,
   transaction: Transaction,
 ): Promise<Transaction> {
-  const url = buildUrl(options.servicesUrl, {
-    queryParams: {
-      reqName: 'PirteyIska_204',
-      CardIndex: String(accountIndex),
-      shovarRatz: String(transaction.identifier),
-      moedChiuv: month.format('MMYYYY'),
-    },
-  });
+  const url = new URL(servicesUrl);
+  url.searchParams.set('reqName', 'PirteyIska_204');
+  url.searchParams.set('CardIndex', accountIndex.toString());
+  url.searchParams.set('shovarRatz', transaction.identifier!.toString());
+  url.searchParams.set('moedChiuv', month.format('MMYYYY'));
 
   debug(`fetching extra scrap for transaction ${transaction.identifier} for month ${month.format('YYYY-MM')}`);
-  const data = await fetchGetWithinPage<ScrapedTransactionData>(page, url);
+  const data = await fetchGetWithinPage<ScrapedTransactionData>(page, url.toString());
   if (!data) {
     return transaction;
   }
