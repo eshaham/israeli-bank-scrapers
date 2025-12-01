@@ -312,12 +312,19 @@ async function getExtraScrapAccount(
   return accounts.reduce((m, x) => ({ ...m, [x.accountNumber]: x }), {});
 }
 
-function getExtraScrap(
+async function getAdditionalTransactionInformation(
+  scraperOptions: ScraperOptions,
   accountsWithIndex: ScrapedAccountsWithIndex[],
   page: Page,
   options: CompanyServiceOptions,
   allMonths: moment.Moment[],
 ): Promise<ScrapedAccountsWithIndex[]> {
+  if (
+    !scraperOptions.additionalTransactionInformation ||
+    scraperOptions.optInFeatures?.includes('isracard-amex:skipAdditionalTransactionInformation')
+  ) {
+    return accountsWithIndex;
+  }
   return runSerial(accountsWithIndex.map((a, i) => () => getExtraScrapAccount(page, options, a, allMonths[i])));
 }
 
@@ -335,10 +342,13 @@ async function fetchAllTransactions(
     }),
   );
 
-  const finalResult = options.additionalTransactionInformation
-    ? await getExtraScrap(results, page, companyServiceOptions, allMonths)
-    : results;
-
+  const finalResult = await getAdditionalTransactionInformation(
+    options,
+    results,
+    page,
+    companyServiceOptions,
+    allMonths,
+  );
   const combinedTxns: Record<string, Transaction[]> = {};
 
   finalResult.forEach(result => {
