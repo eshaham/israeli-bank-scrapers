@@ -21,6 +21,12 @@ import { ScraperErrorTypes } from './errors';
 import { type ScraperOptions, type ScraperScrapingResult } from './interface';
 import { interceptionPriorities, maskHeadlessUserAgent } from '../helpers/browser';
 
+const RATE_LIMIT = {
+  SLEEP_BETWEEN_ACCOUNTS: 1000,
+  SLEEP_BETWEEN_TRANSACTIONS: 1000,
+  TRANSACTIONS_BATCH_SIZE: 10,
+} as const;
+
 const COUNTRY_CODE = '212';
 const ID_TYPE = '1';
 const INSTALLMENTS_KEYWORD = 'תשלום';
@@ -217,7 +223,7 @@ async function fetchTransactions(
 ): Promise<ScrapedAccountsWithIndex> {
   const accounts = await fetchAccounts(page, companyServiceOptions.servicesUrl, monthMoment);
   const dataUrl = getTransactionsUrl(companyServiceOptions.servicesUrl, monthMoment);
-  await sleep(1500);
+  await sleep(RATE_LIMIT.SLEEP_BETWEEN_ACCOUNTS);
   const dataResult = await fetchGetWithinPage<ScrapedTransactionData>(page, dataUrl);
   debug(`fetching transactions from ${dataUrl} for month ${monthMoment.format('YYYY-MM')}`);
   if (dataResult && _.get(dataResult, 'Header.Status') === '1' && dataResult.CardsTransactionsListBean) {
@@ -298,12 +304,12 @@ async function getExtraScrapAccount(
       month.format('YYYY-MM'),
     );
     const txns: Transaction[] = [];
-    for (const txnsChunk of _.chunk(account.txns, 10)) {
+    for (const txnsChunk of _.chunk(account.txns, RATE_LIMIT.TRANSACTIONS_BATCH_SIZE)) {
       debug(`processing chunk of ${txnsChunk.length} transactions for account ${account.accountNumber}`);
       const updatedTxns = await Promise.all(
         txnsChunk.map(t => getExtraScrapTransaction(page, options, month, account.index, t)),
       );
-      await sleep(1000);
+      await sleep(RATE_LIMIT.SLEEP_BETWEEN_TRANSACTIONS);
       txns.push(...updatedTxns);
     }
     accounts.push({ ...account, txns });
