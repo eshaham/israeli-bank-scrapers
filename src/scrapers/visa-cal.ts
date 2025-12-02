@@ -312,7 +312,7 @@ function convertParsedDataToTransactions(
 type ScraperSpecificCredentials = { username: string; password: string };
 
 class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
-  private authorization: string | null | undefined = undefined;
+  private authorization: string | undefined = undefined;
 
   private authRequestPromise: Promise<HTTPRequest | undefined> | undefined;
 
