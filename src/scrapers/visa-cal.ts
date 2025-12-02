@@ -341,17 +341,17 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
             this.page,
             'auth-module',
           );
-          return result && result.auth && result.auth.calConnectToken !== null ? result : null;
+          return result?.auth?.calConnectToken && String(result.auth.calConnectToken).trim() ? result : null;
         },
         'get authorization header with valid token in session storage',
-        1000,
+        10_000,
         50,
       );
 
-      if (authModule && authModule.auth.calConnectToken !== null) {
+      if (authModule) {
         return `CALAuthScheme ${authModule.auth.calConnectToken}`;
       }
-      throw new Error('could not retrieve authorization header');
+      throw new Error('could not retrieve authorization header' + JSON.stringify(authModule));
     }
     return this.authorization;
   }
@@ -396,7 +396,10 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
             await clickButton(this.page, 'button.btn-close');
           }
           const request = await this.authRequestPromise;
-          this.authorization = request?.headers()?.authorization;
+          const authorization = request?.headers()?.authorization;
+          if (authorization && String(authorization).trim()) {
+            this.authorization = authorization;
+          }
         } catch (e) {
           const currentUrl = await getCurrentUrl(this.page);
           if (currentUrl.endsWith('dashboard')) return;
