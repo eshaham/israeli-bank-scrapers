@@ -155,7 +155,7 @@ interface AuthModule {
 }
 
 function isAuthModule(result: any): result is AuthModule {
-  return result?.auth?.calConnectToken && String(result.auth.calConnectToken).trim();
+  return Boolean(result?.auth?.calConnectToken && String(result.auth.calConnectToken).trim());
 }
 
 function authModuleOrUndefined(result: any): AuthModule | undefined {
@@ -400,7 +400,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
             await clickButton(this.page, 'button.btn-close');
           }
           const request = await this.authRequestPromise;
-          this.authorization = authModuleOrUndefined(request?.headers()?.authorization)?.auth.calConnectToken;
+          this.authorization = String(request?.headers().authorization || '').trim();
         } catch (e) {
           const currentUrl = await getCurrentUrl(this.page);
           if (currentUrl.endsWith('dashboard')) return;
