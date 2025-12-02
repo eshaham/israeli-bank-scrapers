@@ -21,8 +21,14 @@ function timeoutPromise<T>(ms: number, promise: Promise<T>, description: string)
 /**
  * Wait until a promise resolves with a truthy value or reject after a timeout
  */
-export function waitUntil<T>(asyncTest: () => Promise<T>, description = '', timeout = 10000, interval = 100) {
-  const promise = new Promise<T>((resolve, reject) => {
+export function waitUntil<T>(
+  asyncTest: () => Promise<T>,
+  description = '',
+  timeout = 10000,
+  interval = 100,
+): Promise<NonNullable<T>> {
+  // TODO: Make the type even better by requiring T to not be false/0/''
+  const promise = new Promise<NonNullable<T>>((resolve, reject) => {
     function wait() {
       asyncTest()
         .then(value => {

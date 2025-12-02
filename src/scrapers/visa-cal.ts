@@ -148,6 +148,20 @@ interface CardPendingTransactionDetails extends CardTransactionDetailsError {
   statusTitle: string;
 }
 
+interface AuthModule {
+  auth: {
+    calConnectToken: string | null;
+  };
+}
+
+function isAuthModule(result: any): result is AuthModule {
+  return result?.auth?.calConnectToken && String(result.auth.calConnectToken).trim();
+}
+
+function authModuleOrUndefined(result: any): AuthModule | undefined {
+  return isAuthModule(result) ? result : undefined;
+}
+
 function isPending(
   transaction: ScrapedTransaction | ScrapedPendingTransaction,
 ): transaction is ScrapedPendingTransaction {
@@ -298,7 +312,7 @@ function convertParsedDataToTransactions(
 type ScraperSpecificCredentials = { username: string; password: string };
 
 class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
-  private authorization: string | undefined = undefined;
+  private authorization: string | null | undefined = undefined;
 
   private authRequestPromise: Promise<HTTPRequest | undefined> | undefined;
 
@@ -336,22 +350,12 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     if (!this.authorization) {
       debug('fetching authorization header');
       const authModule = await waitUntil(
-        async () => {
-          const result = await getFromSessionStorage<{ auth: { calConnectToken: string | null } }>(
-            this.page,
-            'auth-module',
-          );
-          return result?.auth?.calConnectToken && String(result.auth.calConnectToken).trim() ? result : null;
-        },
+        async () => authModuleOrUndefined(await getFromSessionStorage<AuthModule>(this.page, 'auth-module')),
         'get authorization header with valid token in session storage',
         10_000,
         50,
       );
-
-      if (authModule) {
-        return `CALAuthScheme ${authModule.auth.calConnectToken}`;
-      }
-      throw new Error('could not retrieve authorization header' + JSON.stringify(authModule));
+      return `CALAuthScheme ${authModule.auth.calConnectToken}`;
     }
     return this.authorization;
   }
@@ -396,10 +400,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
             await clickButton(this.page, 'button.btn-close');
           }
           const request = await this.authRequestPromise;
-          const authorization = request?.headers()?.authorization;
-          if (authorization && String(authorization).trim()) {
-            this.authorization = authorization;
-          }
+          this.authorization = authModuleOrUndefined(request?.headers()?.authorization)?.auth.calConnectToken;
         } catch (e) {
           const currentUrl = await getCurrentUrl(this.page);
           if (currentUrl.endsWith('dashboard')) return;
