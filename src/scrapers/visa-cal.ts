@@ -444,13 +444,14 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
             Authorization,
             'X-Site-Id': xSiteId,
             'Content-Type': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',        
-            'Origin': 'https://www.cal-online.co.il',
-            'Referer': 'https://www.cal-online.co.il/',
+            'User-Agent':
+              'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
+            Origin: 'https://www.cal-online.co.il',
+            Referer: 'https://www.cal-online.co.il/',
             'Accept-Language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
             'Sec-Fetch-Site': 'same-site',
             'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Dest': 'empty'
+            'Sec-Fetch-Dest': 'empty',
           },
         );
 
@@ -464,13 +465,14 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
               Authorization,
               'X-Site-Id': xSiteId,
               'Content-Type': 'application/json',
-              'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',        
-              'Origin': 'https://www.cal-online.co.il',
-              'Referer': 'https://www.cal-online.co.il/',
+              'User-Agent':
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
+              Origin: 'https://www.cal-online.co.il',
+              Referer: 'https://www.cal-online.co.il/',
               'Accept-Language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
               'Sec-Fetch-Site': 'same-site',
               'Sec-Fetch-Mode': 'cors',
-              'Sec-Fetch-Dest': 'empty'
+              'Sec-Fetch-Dest': 'empty',
             },
           );
 
