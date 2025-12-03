@@ -178,6 +178,13 @@ const scrapeResult = await scraper.scrape({ username: 'vr29485', password: 'some
 await browser.close();
 ```
 
+### OptIn Features
+
+Some scrapers support opt-in features that can be enabled by passing the `optInFeatures` option when creating the scraper.
+Opt in features are usually used for breaking changes that are not enabled by default to avoid breaking existing users.
+
+See the [OptInFeatures](https://github.com/eshaham/israeli-bank-scrapers/blob/master/src/scrapers/interface.ts#:~:text=export-,type%20OptInFeatures) interface for available features.
+
 ## Two-Factor Authentication Scrapers
 
 Some companies require two-factor authentication, and as such the scraper cannot be fully automated. When using the relevant scrapers, you have two options:
