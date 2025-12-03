@@ -1,3 +1,5 @@
+import type { Falsy } from 'utility-types';
+
 export class TimeoutError extends Error {}
 
 export const SECOND = 1000;
@@ -26,8 +28,7 @@ export function waitUntil<T>(
   description = '',
   timeout = 10000,
   interval = 100,
-): Promise<NonNullable<T>> {
-  // TODO: Make the type even better by requiring T to not be false/0/''
+): T extends Falsy ? never : Promise<NonNullable<T>> {
   const promise = new Promise<NonNullable<T>>((resolve, reject) => {
     function wait() {
       asyncTest()
@@ -44,7 +45,7 @@ export function waitUntil<T>(
     }
     wait();
   });
-  return timeoutPromise(timeout, promise, description);
+  return timeoutPromise(timeout, promise, description) as T extends Falsy ? never : Promise<NonNullable<T>>;
 }
 
 export function raceTimeout(ms: number, promise: Promise<any>) {
