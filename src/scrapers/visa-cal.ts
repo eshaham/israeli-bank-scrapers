@@ -12,7 +12,6 @@ import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-
 import { type ScraperScrapingResult } from './interface';
 
 const apiHeaders = {
- 'Content-Type': 'application/json',
   'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
   Origin: 'https://www.cal-online.co.il',
   Referer: 'https://www.cal-online.co.il/',
