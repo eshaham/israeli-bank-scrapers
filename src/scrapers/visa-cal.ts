@@ -448,7 +448,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
             Authorization,
             'X-Site-Id': xSiteId,
             'Content-Type': 'application/json',
-           ...apiHeaders,
+            ...apiHeaders,
           },
         );
 
@@ -462,7 +462,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
               Authorization,
               'X-Site-Id': xSiteId,
               'Content-Type': 'application/json',
-             ...apiHeaders, 
+              ...apiHeaders, 
             },
           );
 
