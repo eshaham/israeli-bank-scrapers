@@ -158,6 +158,20 @@ interface CardPendingTransactionDetails extends CardTransactionDetailsError {
   statusTitle: string;
 }
 
+interface AuthModule {
+  auth: {
+    calConnectToken: string | null;
+  };
+}
+
+function isAuthModule(result: any): result is AuthModule {
+  return Boolean(result?.auth?.calConnectToken && String(result.auth.calConnectToken).trim());
+}
+
+function authModuleOrUndefined(result: any): AuthModule | undefined {
+  return isAuthModule(result) ? result : undefined;
+}
+
 function isPending(
   transaction: ScrapedTransaction | ScrapedPendingTransaction,
 ): transaction is ScrapedPendingTransaction {
@@ -346,22 +360,12 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     if (!this.authorization) {
       debug('fetching authorization header');
       const authModule = await waitUntil(
-        async () => {
-          const result = await getFromSessionStorage<{ auth: { calConnectToken: string | null } }>(
-            this.page,
-            'auth-module',
-          );
-          return result && result.auth && result.auth.calConnectToken !== null ? result : null;
-        },
+        async () => authModuleOrUndefined(await getFromSessionStorage<AuthModule>(this.page, 'auth-module')),
         'get authorization header with valid token in session storage',
-        1000,
+        10_000,
         50,
       );
-
-      if (authModule && authModule.auth.calConnectToken !== null) {
-        return `CALAuthScheme ${authModule.auth.calConnectToken}`;
-      }
-      throw new Error('could not retrieve authorization header');
+      return `CALAuthScheme ${authModule.auth.calConnectToken}`;
     }
     return this.authorization;
   }
@@ -406,7 +410,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
             await clickButton(this.page, 'button.btn-close');
           }
           const request = await this.authRequestPromise;
-          this.authorization = request?.headers()?.authorization;
+          this.authorization = String(request?.headers().authorization || '').trim();
         } catch (e) {
           const currentUrl = await getCurrentUrl(this.page);
           if (currentUrl.endsWith('dashboard')) return;
