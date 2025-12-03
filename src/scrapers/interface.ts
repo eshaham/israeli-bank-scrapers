@@ -23,6 +23,7 @@ export type ScraperCredentials =
     ));
 
 export type OptInFeatures =
+  | 'isracard-amex:skipAdditionalTransactionInformation'
   | 'mizrahi:pendingIfNoIdentifier'
   | 'mizrahi:pendingIfHasGenericDescription'
   | 'mizrahi:pendingIfTodayTransaction';
