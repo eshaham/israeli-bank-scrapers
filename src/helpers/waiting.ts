@@ -4,6 +4,8 @@ export class TimeoutError extends Error {}
 
 export const SECOND = 1000;
 
+type WaitUntilReturn<T> = T extends Falsy ? never : Promise<NonNullable<T>>;
+
 function timeoutPromise<T>(ms: number, promise: Promise<T>, description: string): Promise<T> {
   const timeout = new Promise((_, reject) => {
     const id = setTimeout(() => {
@@ -28,7 +30,7 @@ export function waitUntil<T>(
   description = '',
   timeout = 10000,
   interval = 100,
-): T extends Falsy ? never : Promise<NonNullable<T>> {
+): WaitUntilReturn<T> {
   const promise = new Promise<NonNullable<T>>((resolve, reject) => {
     function wait() {
       asyncTest()
@@ -45,7 +47,7 @@ export function waitUntil<T>(
     }
     wait();
   });
-  return timeoutPromise(timeout, promise, description) as T extends Falsy ? never : Promise<NonNullable<T>>;
+  return timeoutPromise(timeout, promise, description) as WaitUntilReturn<T>;
 }
 
 export function raceTimeout(ms: number, promise: Promise<any>) {
