@@ -85,9 +85,7 @@ async function fetchAccountData(page: Page, options: ScraperOptions): Promise<Sc
 
   const startDateStr = startMoment.format(DATE_FORMAT);
 
-  const accounts: string[] = accountInfo.UserAccountsData.UserAccounts.map(
-    acc => acc.NewAccountInfo.AccountID,
-  );
+  const accounts: string[] = accountInfo.UserAccountsData.UserAccounts.map(acc => acc.NewAccountInfo.AccountID);
   const accountsData: Array<{ accountNumber: string; balance: number; txns: Transaction[] }> = [];
   const accountErrors: string[] = [];
 
@@ -110,10 +108,7 @@ async function fetchAccountData(page: Page, options: ScraperOptions): Promise<Sc
       TransactionStatuses.Completed,
     );
 
-    const rawFutureTxns = _.get(
-      currentAccountLastTransactions,
-      'FutureTransactionsBlock.FutureTransactionEntry',
-    );
+    const rawFutureTxns = _.get(currentAccountLastTransactions, 'FutureTransactionsBlock.FutureTransactionEntry');
     const accountPendingTxns = convertTransactions(rawFutureTxns, TransactionStatuses.Pending);
 
     accountsData.push({
@@ -128,8 +123,7 @@ async function fetchAccountData(page: Page, options: ScraperOptions): Promise<Sc
     return {
       success: false,
       errorType: ScraperErrorTypes.Generic,
-      errorMessage:
-        accountErrors.join('; '),
+      errorMessage: accountErrors.join('; '),
     };
   }
 
