@@ -113,7 +113,7 @@ async function fetchAccountData(page: Page, options: ScraperOptions): Promise<Sc
     const rawFutureTxns = _.get(
       currentAccountLastTransactions,
       'FutureTransactionsBlock.FutureTransactionEntry',
-    ) as ScrapedTransaction[];
+    );
     const accountPendingTxns = convertTransactions(rawFutureTxns, TransactionStatuses.Pending);
 
     accountsData.push({
