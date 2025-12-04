@@ -85,35 +85,52 @@ async function fetchAccountData(page: Page, options: ScraperOptions): Promise<Sc
 
   const startDateStr = startMoment.format(DATE_FORMAT);
 
-  const accounts: string[] = accountInfo.UserAccountsData.UserAccounts.map(acc => acc.NewAccountInfo.AccountID);
+  const accounts: string[] = accountInfo.UserAccountsData.UserAccounts.map(
+    acc => acc.NewAccountInfo.AccountID,
+  );
   const accountsData: Array<{ accountNumber: string; balance: number; txns: Transaction[] }> = [];
+  const accountErrors: string[] = [];
 
   for (const accountNumber of accounts) {
     const txnsUrl = `${apiSiteUrl}/lastTransactions/${accountNumber}/Date?IsCategoryDescCode=True&IsTransactionDetails=True&IsEventNames=True&IsFutureTransactionFlag=True&FromDate=${startDateStr}`;
     const txnsResult = await fetchGetWithinPage<ScrapedTransactionData>(page, txnsUrl);
+
+    // If the API returns an explicit error, remember it and skip this account
     if (!txnsResult || txnsResult.Error || !txnsResult.CurrentAccountLastTransactions) {
-      return {
-        success: false,
-        errorType: ScraperErrorTypes.Generic,
-        errorMessage: txnsResult && txnsResult.Error ? txnsResult.Error.MsgText : 'unknown error',
-      };
+      accountErrors.push(
+        txnsResult && txnsResult.Error ? `account ${accountNumber}: ${txnsResult.Error.MsgText}` : 'unknown error',
+      );
+      continue;
     }
 
+    const currentAccountLastTransactions = txnsResult.CurrentAccountLastTransactions;
+
     const accountCompletedTxns = convertTransactions(
-      txnsResult.CurrentAccountLastTransactions.OperationEntry,
+      currentAccountLastTransactions.OperationEntry,
       TransactionStatuses.Completed,
     );
+
     const rawFutureTxns = _.get(
-      txnsResult,
-      'CurrentAccountLastTransactions.FutureTransactionsBlock.FutureTransactionEntry',
+      currentAccountLastTransactions,
+      'FutureTransactionsBlock.FutureTransactionEntry',
     ) as ScrapedTransaction[];
     const accountPendingTxns = convertTransactions(rawFutureTxns, TransactionStatuses.Pending);
 
     accountsData.push({
       accountNumber,
-      balance: txnsResult.CurrentAccountLastTransactions.CurrentAccountInfo.AccountBalance,
+      balance: currentAccountLastTransactions.CurrentAccountInfo.AccountBalance,
       txns: [...accountCompletedTxns, ...accountPendingTxns],
     });
+  }
+
+  // If we failed all accounts and have no data, surface an error
+  if (accountErrors.length === accounts.length) {
+    return {
+      success: false,
+      errorType: ScraperErrorTypes.Generic,
+      errorMessage:
+        accountErrors.join('; '),
+    };
   }
 
   const accountData = {
