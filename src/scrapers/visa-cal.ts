@@ -10,6 +10,7 @@ import { waitUntil } from '../helpers/waiting';
 import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
 import { type ScraperScrapingResult } from './interface';
+import _ from 'lodash';
 
 const apiHeaders = {
   'User-Agent':
@@ -24,6 +25,8 @@ const apiHeaders = {
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_REQUEST_ENDPOINT =
   'https://api.cal-online.co.il/Transactions/api/transactionsDetails/getCardTransactionsDetails';
+const FRAMES_REQUEST_ENDPOINT =
+  'https://api.cal-online.co.il/Frames/api/Frames/GetFrameStatus';
 const PENDING_TRANSACTIONS_REQUEST_ENDPOINT =
   'https://api.cal-online.co.il/Transactions/api/approvals/getClearanceRequests';
 const SSO_AUTHORIZATION_REQUEST_ENDPOINT = 'https://connect.cal-online.co.il/col-rest/calconnect/authentication/SSO';
@@ -437,12 +440,26 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
     const futureMonthsToScrape = this.options.futureMonthsToScrape ?? 1;
 
+    debug(`fetch frames (misgarot) of cards`);
+    const frames = await fetchPost(
+      FRAMES_REQUEST_ENDPOINT,
+      { cardsForFrameData: cards.map(({ cardUniqueId }) => ({ cardUniqueId })) },
+      {
+        Authorization,
+        'X-Site-Id': xSiteId,
+        'Content-Type': 'application/json',
+        ...apiHeaders,
+        Origin: 'https://digital-web.cal-online.co.il',
+        Referer: 'https://digital-web.cal-online.co.il/',
+      },
+    );
+
     const accounts = await Promise.all(
       cards.map(async card => {
         const finalMonthToFetchMoment = moment().add(futureMonthsToScrape, 'month');
         const months = finalMonthToFetchMoment.diff(startMoment, 'months');
-
         const allMonthsData: CardTransactionDetails[] = [];
+        const frame = _.find(frames.result.bankIssuedCards.cardLevelFrames, { cardUniqueId: card.cardUniqueId });
 
         debug(`fetch pending transactions for card ${card.cardUniqueId}`);
         let pendingData = await fetchPost(
@@ -457,7 +474,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         );
 
         debug(`fetch completed transactions for card ${card.cardUniqueId}`);
-        for (let i = 0; i <= months; i += 1) {
+        for (let i = 0; i <= months; i++) {
           const month = finalMonthToFetchMoment.clone().subtract(i, 'months');
           const monthData = await fetchPost(
             TRANSACTIONS_REQUEST_ENDPOINT,
@@ -502,6 +519,8 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
         return {
           txns,
+          frame,
+          balance: -frame?.nextTotalDebit,
           accountNumber: card.last4Digits,
         } as TransactionsAccount;
       }),
