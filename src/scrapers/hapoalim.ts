@@ -348,24 +348,19 @@ async function getSavingsAccounts(baseUrl: string, page: Page, accountNumber: st
   const accounts: TransactionsAccount[] = [];
 
   for (const wrapper of savingsData.depositsWrapperData) {
-    const totalBalance = wrapper.revaluatedAmount || wrapper.amount;
+    // Create a separate account for each individual deposit
+    for (const deposit of wrapper.data) {
+      const balance = deposit.revaluedTotalAmount || deposit.principalAmount;
+      const savingsAccountNumber = `${accountNumber}-${deposit.depositSerialId}`;
 
-    // For savings accounts, we create one account per wrapper with the total balance
-    // Individual deposits don't have transaction history, just balance snapshots
-    const savingsAccountNumber = `${accountNumber}-SAVINGS`;
-
-    // Check if we already added this account (in case of multiple deposits)
-    const existingAccount = accounts.find(acc => acc.accountNumber === savingsAccountNumber);
-
-    if (existingAccount) {
-      // Add to existing balance
-      existingAccount.balance = (existingAccount.balance || 0) + totalBalance;
-    } else {
       accounts.push({
         accountNumber: savingsAccountNumber,
-        balance: totalBalance,
+        savingsAccount: true,
+        balance,
         txns: [], // Savings accounts typically don't have transaction history in the same way
       });
+
+      debug('Added savings account %s with balance %s', savingsAccountNumber, balance);
     }
   }
 
