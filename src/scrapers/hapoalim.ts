@@ -63,6 +63,54 @@ type BalanceAndCreditLimit = {
   withdrawalBalance: number;
 };
 
+interface ForexTransaction {
+  executingDate: number;
+  valueDate: number;
+  activityDescription: string;
+  eventAmount: number;
+  currentBalance: number;
+  referenceNumber?: number;
+  eventDetails?: string;
+  eventActivityTypeCode: number;
+  currencySwiftCode: string;
+  recordSerialNumber?: number;
+}
+
+interface ForexCurrencyData {
+  currencyCode: number;
+  currencySwiftCode: string;
+  currencySwiftDescription: string;
+  currentBalance: number;
+  transactions: ForexTransaction[];
+  detailedAccountTypeCode: number;
+}
+
+interface ForexAccountData {
+  balancesAndLimitsDataList: ForexCurrencyData[];
+}
+
+interface SavingsDeposit {
+  principalAmount: number;
+  revaluedTotalAmount: number;
+  depositSerialId: number;
+  productFreeText?: string;
+  shortProductName?: string;
+  formattedAgreementOpeningDate?: string;
+  formattedEndExitDate?: string;
+  nominalInterest?: number;
+  detailedAccountTypeCode: number;
+}
+
+interface SavingsWrapper {
+  data: SavingsDeposit[];
+  amount: number;
+  revaluatedAmount: number;
+}
+
+interface SavingsAccountData {
+  depositsWrapperData: SavingsWrapper[];
+}
+
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map(txn => {
     const isOutbound = txn.eventActivityTypeCode === 2;
@@ -102,6 +150,34 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
       chargedAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
       description: txn.activityDescription || '',
       status: txn.serialNumber === 0 ? TransactionStatuses.Pending : TransactionStatuses.Completed,
+      memo,
+    };
+
+    return result;
+  });
+}
+
+function convertForexTransactions(txns: ForexTransaction[], currency: string): Transaction[] {
+  return txns.map(txn => {
+    const isOutbound = txn.eventActivityTypeCode === 2;
+    const dateStr = txn.executingDate.toString(); // Date transaction was executed
+    const valueDateStr = txn.valueDate.toString(); // Date value was actually added to account
+
+    let memo = '';
+    if (txn.eventDetails) {
+      memo = txn.eventDetails;
+    }
+
+    const result: Transaction = {
+      type: TransactionTypes.Normal,
+      identifier: txn.referenceNumber || txn.recordSerialNumber,
+      date: moment(valueDateStr, DATE_FORMAT).toISOString(),
+      processedDate: moment(dateStr, DATE_FORMAT).toISOString(),
+      originalAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
+      originalCurrency: currency,
+      chargedAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
+      description: txn.activityDescription || '',
+      status: TransactionStatuses.Completed,
       memo,
     };
 
@@ -189,6 +265,113 @@ async function getAccountBalance(apiSiteUrl: string, page: Page, accountNumber: 
   return balanceAndCreditLimit?.currentBalance;
 }
 
+async function getForexAccounts(
+  baseUrl: string,
+  page: Page,
+  accountNumber: string,
+  startDate: string,
+  endDate: string,
+): Promise<TransactionsAccount[]> {
+  debug('========== FETCHING FOREX ACCOUNTS ==========');
+  debug('Account: %s, Date range: %s to %s', accountNumber, startDate, endDate);
+
+  const accounts: TransactionsAccount[] = [];
+
+  const currency = { code: 19, swift: 'ILS' };
+  try {
+    const detailedAccountTypeCode = 142; // For foreign currency accounts
+    const forexUrl = `${baseUrl}/ServerServices/foreign-currency/transactions?accountId=${accountNumber}&type=business&retrievalStartDate=${startDate}&retrievalEndDate=${endDate}&currencyCodeList=${currency.code}&detailedAccountTypeCodeList=${detailedAccountTypeCode}&view=details&lang=he`;
+    debug('Trying forex %s', forexUrl);
+
+    const forexData = await fetchGetWithinPage<ForexAccountData>(page, forexUrl, true); // ignoreErrors = true
+
+    if (forexData && forexData.balancesAndLimitsDataList && forexData.balancesAndLimitsDataList.length > 0) {
+      debug('✓ Found forex data');
+
+      for (const currencyData of forexData.balancesAndLimitsDataList) {
+        const currencySwiftCode = currencyData.currencySwiftCode || currency.swift;
+        const transactionCount = currencyData.transactions?.length || 0;
+
+        // Get balance from the most recent transaction's currentBalance field
+        // If no transactions, fall back to currencyData.currentBalance
+        let balance = currencyData.currentBalance;
+        if (transactionCount > 0 && currencyData.transactions) {
+          balance = currencyData.transactions[0].currentBalance;
+          debug('  - Using balance from most recent transaction: %s', balance);
+        }
+
+        debug('  - Currency: %s, Balance: %s, Transactions: %d', currencySwiftCode, balance, transactionCount);
+
+        // Log transaction dates for debugging
+        if (transactionCount > 0) {
+          const txnDates = currencyData.transactions?.map(t => t.executingDate).join(', ') || '';
+          debug('    Transaction dates: %s', txnDates);
+        }
+
+        // Only add if there's actually a balance or transactions
+        if (balance !== 0 || transactionCount > 0) {
+          const txns = convertForexTransactions(currencyData.transactions || [], currencySwiftCode);
+          const forexAccountNumber = `${accountNumber}-${currencySwiftCode}`;
+
+          accounts.push({
+            accountNumber: forexAccountNumber,
+            balance,
+            txns,
+          });
+
+          debug('  ✓ Added forex account: %s with %d transactions', forexAccountNumber, txns.length);
+        } else {
+          debug('  - Skipping %s (zero balance and no transactions)', currencySwiftCode);
+        }
+      }
+    } else {
+      debug('  - No forex data found');
+    }
+  } catch (error) {
+    debug('  - Error fetching forex: %s', error);
+    // Continue trying other currencies
+  }
+
+  debug('Returning %d forex accounts', accounts.length);
+  return accounts;
+}
+
+async function getSavingsAccounts(baseUrl: string, page: Page, accountNumber: string): Promise<TransactionsAccount[]> {
+  const savingsUrl = `${baseUrl}/ServerServices/deposits-and-savings/deposits?accountId=${accountNumber}&view=details&lang=he`;
+  const savingsData = await fetchGetWithinPage<SavingsAccountData>(page, savingsUrl);
+
+  if (!savingsData || !savingsData.depositsWrapperData || savingsData.depositsWrapperData.length === 0) {
+    debug('No savings accounts found for account %s', accountNumber);
+    return [];
+  }
+
+  const accounts: TransactionsAccount[] = [];
+
+  for (const wrapper of savingsData.depositsWrapperData) {
+    const totalBalance = wrapper.revaluatedAmount || wrapper.amount;
+
+    // For savings accounts, we create one account per wrapper with the total balance
+    // Individual deposits don't have transaction history, just balance snapshots
+    const savingsAccountNumber = `${accountNumber}-SAVINGS`;
+
+    // Check if we already added this account (in case of multiple deposits)
+    const existingAccount = accounts.find(acc => acc.accountNumber === savingsAccountNumber);
+
+    if (existingAccount) {
+      // Add to existing balance
+      existingAccount.balance = (existingAccount.balance || 0) + totalBalance;
+    } else {
+      accounts.push({
+        accountNumber: savingsAccountNumber,
+        balance: totalBalance,
+        txns: [], // Savings accounts typically don't have transaction history in the same way
+      });
+    }
+  }
+
+  return accounts;
+}
+
 async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOptions) {
   const restContext = await getRestContext(page);
   const apiSiteUrl = `${baseUrl}/${restContext}`;
@@ -229,11 +412,30 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOpt
       additionalTransactionInformation,
     );
 
+    // Add regular checking account
     accounts.push({
       accountNumber,
       balance,
       txns,
     });
+
+    // Fetch forex accounts for this account number
+    try {
+      const forexAccounts = await getForexAccounts(baseUrl, page, accountNumber, startDateStr, endDateStr);
+      accounts.push(...forexAccounts);
+      debug('Added %d forex accounts to results', forexAccounts.length);
+    } catch (error) {
+      debug('Error fetching forex accounts for %s: %s', accountNumber, error);
+    }
+
+    // Fetch savings accounts for this account number
+    try {
+      const savingsAccounts = await getSavingsAccounts(baseUrl, page, accountNumber);
+      accounts.push(...savingsAccounts);
+      debug('Added %d savings accounts to results', savingsAccounts.length);
+    } catch (error) {
+      debug('Error fetching savings accounts for %s: %s', accountNumber, error);
+    }
   }
 
   const accountData = {
