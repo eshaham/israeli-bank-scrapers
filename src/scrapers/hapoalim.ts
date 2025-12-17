@@ -316,6 +316,7 @@ async function getForexAccounts(
           accounts.push({
             accountNumber: forexAccountNumber,
             balance,
+            currency: currencySwiftCode,
             txns,
           });
 
