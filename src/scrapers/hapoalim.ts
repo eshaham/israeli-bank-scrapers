@@ -209,31 +209,31 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOpt
   const accounts: TransactionsAccount[] = [];
 
   for (const account of accountsInfo) {
+    debug('getting information for account %s', account.accountNumber);
     let balance: number | undefined;
     const accountNumber = `${account.bankNumber}-${account.branchNumber}-${account.accountNumber}`;
 
     const isActiveAccount = account.accountClosingReasonCode === 0;
     if (isActiveAccount) {
       balance = await getAccountBalance(apiSiteUrl, page, accountNumber);
+      const txns = await getAccountTransactions(
+        baseUrl,
+        apiSiteUrl,
+        page,
+        accountNumber,
+        startDateStr,
+        endDateStr,
+        additionalTransactionInformation,
+      );
+
+      accounts.push({
+        accountNumber,
+        balance,
+        txns,
+      });
     } else {
-      debug('Skipping balance for a closed account, balance will be undefined');
+      debug('Skipping scraping for a closed account, balance will be undefined');
     }
-
-    const txns = await getAccountTransactions(
-      baseUrl,
-      apiSiteUrl,
-      page,
-      accountNumber,
-      startDateStr,
-      endDateStr,
-      additionalTransactionInformation,
-    );
-
-    accounts.push({
-      accountNumber,
-      balance,
-      txns,
-    });
   }
 
   const accountData = {
