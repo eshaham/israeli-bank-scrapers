@@ -123,7 +123,7 @@ interface InvestmentSecurityBalance {
   BaseRate?: number;
   LastRate?: number;
   BaseRateChangePercentage?: number;
-  OnlineNV?: number;
+  OnlineNV: number;
   OnlineVL: number;
   OnlineNisVL?: number;
   ProfitLoss?: number;
@@ -531,6 +531,7 @@ async function getInvestmentAccounts(
         securities.push({
           name: meta?.EngName || '',
           symbol: meta?.EngSymbol || '',
+          volume: securityBalance.OnlineNV,
           value: securityBalance.OnlineVL,
           currency: securityBalance.CurrencyCode || meta?.CurrencyCode || SHEKEL_CURRENCY,
           changePercentage: securityBalance.BaseRateChangePercentage,
@@ -541,8 +542,7 @@ async function getInvestmentAccounts(
       debug('  - Balance: %s %s, Securities: %d', balance, currency, securities.length);
 
       if (balance !== 0 || securities.length > 0) {
-        const investmentAccountNumber = `${account.bankNumber}-${account.accountNumber}-investment`;
-
+        const investmentAccountNumber = `${account.bankNumber}-${account.branchNumber}-${account.accountNumber}-investment`;
         accounts.push({
           accountNumber: investmentAccountNumber,
           balance,
