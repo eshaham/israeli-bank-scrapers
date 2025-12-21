@@ -1,11 +1,18 @@
 import moment from 'moment';
 import { type Page } from 'puppeteer';
 import { v4 as uuid4 } from 'uuid';
+import { SHEKEL_CURRENCY } from '../constants';
 import { getDebug } from '../helpers/debug';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntil } from '../helpers/waiting';
-import { type Transaction, TransactionStatuses, TransactionTypes, type TransactionsAccount } from '../transactions';
+import {
+  type Transaction,
+  TransactionStatuses,
+  TransactionTypes,
+  type TransactionsAccount,
+  type Security,
+} from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { type ScraperOptions } from './interface';
 
@@ -111,6 +118,50 @@ interface SavingsAccountData {
   depositsWrapperData: SavingsWrapper[];
 }
 
+interface InvestmentSecurityBalance {
+  EquityNumber: string;
+  BaseRate?: number;
+  LastRate?: number;
+  BaseRateChangePercentage?: number;
+  OnlineNV?: number;
+  OnlineVL: number;
+  OnlineNisVL?: number;
+  ProfitLoss?: number;
+  CurrencyCode?: string;
+}
+
+interface InvestmentSecurityMeta {
+  '-Key': string;
+  EngName?: string;
+  EngSymbol?: string;
+  HebName?: string;
+  HebSymbol?: string;
+  Symbol?: string;
+  ItemType?: string;
+  StockType?: string;
+  IsForeign?: boolean;
+  CurrencyCode?: string;
+  Exchange?: string;
+  EquityType?: number;
+  EquitySubType?: number;
+}
+
+interface InvestmentAccountData {
+  View?: {
+    Account?: {
+      OnlineValue?: number;
+      OnlineCash?: number;
+      CurrencyCode?: string;
+      AccountPosition?: {
+        Balance?: InvestmentSecurityBalance[];
+      };
+    };
+    Meta?: {
+      Security?: InvestmentSecurityMeta[];
+    };
+  };
+}
+
 function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
   return txns.map(txn => {
     const isOutbound = txn.eventActivityTypeCode === 2;
@@ -146,7 +197,7 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
       date: moment(txn.eventDate, DATE_FORMAT).toISOString(),
       processedDate: moment(txn.valueDate, DATE_FORMAT).toISOString(),
       originalAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
-      originalCurrency: 'ILS',
+      originalCurrency: SHEKEL_CURRENCY,
       chargedAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
       description: txn.activityDescription || '',
       status: txn.serialNumber === 0 ? TransactionStatuses.Pending : TransactionStatuses.Completed,
@@ -277,7 +328,7 @@ async function getForexAccounts(
 
   const accounts: TransactionsAccount[] = [];
 
-  const currency = { code: 19, swift: 'ILS' };
+  const currency = { code: 19, swift: SHEKEL_CURRENCY };
   try {
     const detailedAccountTypeCode = 142; // For foreign currency accounts
     const forexUrl = `${baseUrl}/ServerServices/foreign-currency/transactions?accountId=${accountNumber}&type=business&retrievalStartDate=${startDate}&retrievalEndDate=${endDate}&currencyCodeList=${currency.code}&detailedAccountTypeCodeList=${detailedAccountTypeCode}&view=details&lang=he`;
@@ -368,6 +419,167 @@ async function getSavingsAccounts(baseUrl: string, page: Page, accountNumber: st
   return accounts;
 }
 
+async function getInvestmentAccounts(
+  baseUrl: string,
+  page: Page,
+  account: { bankNumber: string; branchNumber: string; accountNumber: string },
+): Promise<TransactionsAccount[]> {
+  debug('========== FETCHING INVESTMENT ACCOUNTS ==========');
+  const accounts: TransactionsAccount[] = [];
+  const accountNumber = `${account.branchNumber}-${account.accountNumber}`; // Don't include bankNumber here because investment API doesn't use it
+
+  // Set up request interception to capture session headers
+  let capturedSession: string | null = null;
+  let capturedCsession: string | null = null;
+
+  const requestHandler = (request: any) => {
+    try {
+      const headers = request.headers();
+      if (headers.session && !capturedSession) {
+        capturedSession = headers.session;
+        debug('  - Captured session from network request');
+      }
+      if (headers.csession && !capturedCsession) {
+        capturedCsession = headers.csession;
+        debug('  - Captured csession from network request');
+      }
+      request.continue();
+    } catch (e) {
+      debug('  - Error in request handler: %s', e);
+      // Try to continue anyway
+      try {
+        request.continue();
+      } catch (continueError) {
+        // Ignore if already handled
+      }
+    }
+  };
+
+  try {
+    // Navigate to mytrade section to establish session
+    const mytradeUrl = `${baseUrl}/mytrade/app`;
+    debug('Navigating to mytrade section: %s', mytradeUrl);
+
+    await page.setRequestInterception(true);
+    page.on('request', requestHandler);
+
+    await page.goto(mytradeUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+    // Wait longer for the page to fully load and establish session
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    // Now turn off request interception before we make API calls
+    page.off('request', requestHandler);
+    await page.setRequestInterception(false);
+
+    debug('Mytrade page loaded, session established');
+
+    const fields =
+      'EngName,EngSymbol,HebName,HebSymbol,Symbol,ExpirationDate,ItemType,StockType,IsEtf,IsForeign,CurrencyCode,Exchange,CreationEquityNum,EquityType,ContractType,AllowedOrderDirection,EquitySubType';
+    const investmentUrl = `${baseUrl}/ServerServices/mytrade/api/v2/json2/account/view?account=${accountNumber}&fields=${fields}`;
+    debug('Trying investment account URL: %s', investmentUrl);
+
+    // Get XSRF token and session data from cookies
+    const cookies = await page.cookies();
+    const XSRFCookie = cookies.find(cookie => cookie.name === 'XSRF-TOKEN');
+
+    // Use captured session or fallback to generated ones
+    const sessionId = capturedSession || uuid4();
+    const csession = capturedCsession || Math.random().toString();
+
+    const headers: Record<string, any> = {
+      'Content-Type': 'application/json; charset=utf-8',
+      csession,
+      session: sessionId,
+      Referer: mytradeUrl,
+    };
+    if (XSRFCookie != null) {
+      headers['X-XSRF-TOKEN'] = XSRFCookie.value;
+      debug('  - Using XSRF token: %s', XSRFCookie.value.substring(0, 10) + '...');
+    }
+
+    debug('  - Request headers: csession=%s, session=%s', csession, sessionId);
+
+    const investmentData = await fetchPostWithinPage<InvestmentAccountData>(page, investmentUrl, {}, headers);
+
+    debug('  - Response received: %s', investmentData ? 'YES' : 'NO');
+    if (investmentData) {
+      debug('  - Response has View: %s', investmentData.View ? 'YES' : 'NO');
+      debug('  - Response has View.Account: %s', investmentData.View?.Account ? 'YES' : 'NO');
+    }
+
+    if (investmentData?.View?.Account) {
+      debug('✓ Found investment account data');
+
+      const accountData = investmentData.View.Account;
+      const balance = accountData.OnlineValue || 0;
+      const currency = accountData.CurrencyCode || SHEKEL_CURRENCY;
+
+      // Get securities from the balance array
+      const securities: Security[] = [];
+      const balances = accountData.AccountPosition?.Balance || [];
+      const metaSecurities = investmentData.View.Meta?.Security || [];
+
+      // Create a map of security metadata for easy lookup
+      const metaMap = new Map<string, InvestmentSecurityMeta>();
+      for (const meta of metaSecurities) {
+        metaMap.set(meta['-Key'], meta);
+      }
+
+      for (const securityBalance of balances) {
+        const meta = metaMap.get(securityBalance.EquityNumber);
+
+        securities.push({
+          name: meta?.EngName || '',
+          symbol: meta?.EngSymbol || '',
+          value: securityBalance.OnlineVL,
+          currency: securityBalance.CurrencyCode || meta?.CurrencyCode || SHEKEL_CURRENCY,
+          changePercentage: securityBalance.BaseRateChangePercentage,
+          profitLoss: securityBalance.ProfitLoss,
+        });
+      }
+
+      debug('  - Balance: %s %s, Securities: %d', balance, currency, securities.length);
+
+      if (balance !== 0 || securities.length > 0) {
+        const investmentAccountNumber = `${account.bankNumber}-${account.accountNumber}-investment`;
+
+        accounts.push({
+          accountNumber: investmentAccountNumber,
+          balance,
+          currency,
+          savingsAccount: true,
+          txns: [],
+          securities,
+        });
+
+        debug('  ✓ Added investment account: %s with %d securities', investmentAccountNumber, securities.length);
+      } else {
+        debug('  - Skipping (zero balance and no securities)');
+      }
+    } else {
+      debug('  - No investment account data found');
+    }
+  } catch (error) {
+    debug('  - Error fetching investment account: %s', error);
+    // Log more details about the error
+    if (error instanceof Error) {
+      debug('    Error message: %s', error.message);
+      debug('    Error stack: %s', error.stack);
+    }
+  } finally {
+    // Clean up request interception (in case it wasn't already done)
+    try {
+      page.off('request', requestHandler);
+      await page.setRequestInterception(false);
+    } catch (e) {
+      // Ignore cleanup errors
+    }
+  }
+
+  debug('Returning %d investment accounts', accounts.length);
+  return accounts;
+}
+
 async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOptions) {
   const restContext = await getRestContext(page);
   const apiSiteUrl = `${baseUrl}/${restContext}`;
@@ -431,6 +643,15 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOpt
       debug('Added %d savings accounts to results', savingsAccounts.length);
     } catch (error) {
       debug('Error fetching savings accounts for %s: %s', accountNumber, error);
+    }
+
+    // Fetch investment accounts for this account number
+    try {
+      const investmentAccounts = await getInvestmentAccounts(baseUrl, page, account);
+      accounts.push(...investmentAccounts);
+      debug('Added %d investment accounts to results', investmentAccounts.length);
+    } catch (error) {
+      debug('Error fetching investment accounts for %s: %s', accountNumber, error);
     }
   }
 

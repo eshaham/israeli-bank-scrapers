@@ -4,6 +4,7 @@ export interface TransactionsAccount {
   currency?: string;
   savingsAccount?: boolean;
   txns: Transaction[];
+  securities?: Security[];
 }
 
 export enum TransactionTypes {
@@ -51,4 +52,13 @@ export interface Transaction {
   status: TransactionStatuses;
   installments?: TransactionInstallments;
   category?: string;
+}
+
+export interface Security {
+  name?: string;
+  symbol: string;
+  value: number;
+  currency?: string;
+  changePercentage?: number;
+  profitLoss?: number;
 }
