@@ -57,6 +57,7 @@ export interface Transaction {
 export interface Security {
   name?: string;
   symbol: string;
+  volume: number;
   value: number;
   currency?: string;
   changePercentage?: number;
