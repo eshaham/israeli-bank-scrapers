@@ -70,6 +70,14 @@ export async function fetchGetWithinPage<TResult>(
       );
     }
   }, url);
+
+  // Check for automation blocking
+  if (status === 429 || (result && (result.includes('Block Automation') || result.includes('bot detection')))) {
+    throw new Error(
+      `Automation detected and blocked by server. Status: ${status}, URL: ${url}. The site is actively blocking automated access. Consider: 1) Using showBrowser:true, 2) Adding longer delays, 3) Using residential proxies, 4) Running at different times of day`,
+    );
+  }
+
   if (result !== null) {
     try {
       return JSON.parse(result);
@@ -104,23 +112,35 @@ export async function fetchPostWithinPage<TResult>(
         ),
       });
       if (response.status === 204) {
-        return null;
+        return [null, response.status] as const;
       }
-      return response.text();
+      return [await response.text(), response.status] as const;
     },
     url,
     data,
     extraHeaders,
   );
 
+  const [resultText, status] = result;
+
+  // Check for automation blocking
+  if (
+    status === 429 ||
+    (resultText && (resultText.includes('Block Automation') || resultText.includes('bot detection')))
+  ) {
+    throw new Error(
+      `Automation detected and blocked by server. Status: ${status}, URL: ${url}. Your IP may be temporarily rate-limited from recent scraping attempts. Wait 10-15 minutes before trying again. Consider: 1) Waiting between scraping sessions, 2) Using residential proxies, 3) Running at different times of day`,
+    );
+  }
+
   try {
-    if (result !== null) {
-      return JSON.parse(result);
+    if (resultText !== null) {
+      return JSON.parse(resultText);
     }
   } catch (e) {
     if (!ignoreErrors) {
       throw new Error(
-        `fetchPostWithinPage parse error: ${e instanceof Error ? `${e.message}\n${e.stack}` : String(e)}, url: ${url}, data: ${JSON.stringify(data)}, extraHeaders: ${JSON.stringify(extraHeaders)}, result: ${result}`,
+        `fetchPostWithinPage parse error: ${e instanceof Error ? `${e.message}\n${e.stack}` : String(e)}, url: ${url}, data: ${JSON.stringify(data)}, extraHeaders: ${JSON.stringify(extraHeaders)}, result: ${resultText}`,
       );
     }
   }
