@@ -15,8 +15,8 @@ import _ from 'lodash';
 const apiHeaders = {
   'User-Agent':
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
-  Origin: 'https://www.cal-online.co.il',
-  Referer: 'https://www.cal-online.co.il/',
+  Origin: 'https://digital-web.cal-online.co.il',
+  Referer: 'https://digital-web.cal-online.co.il',
   'Accept-Language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
   'Sec-Fetch-Site': 'same-site',
   'Sec-Fetch-Mode': 'cors',
@@ -449,8 +449,6 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         'X-Site-Id': xSiteId,
         'Content-Type': 'application/json',
         ...apiHeaders,
-        Origin: 'https://digital-web.cal-online.co.il',
-        Referer: 'https://digital-web.cal-online.co.il/',
       },
     );
 
@@ -519,7 +517,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
         return {
           txns,
-          balance: _.isNumber(frame?.nextTotalDebit) ? -frame?.nextTotalDebit : undefined,
+          balance: -frame?.nextTotalDebit,
           accountNumber: card.last4Digits,
         } as TransactionsAccount;
       }),
