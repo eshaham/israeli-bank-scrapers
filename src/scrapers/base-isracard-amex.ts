@@ -21,7 +21,7 @@ import { type ScraperOptions, type ScraperScrapingResult } from './interface';
 import { interceptionPriorities, maskHeadlessUserAgent, randomDelay } from '../helpers/browser';
 
 const RATE_LIMIT = {
-  SLEEP_BETWEEN: 2500, // Sweet spot: 2.5-3s delays
+  SLEEP_BETWEEN: 2500, // Sweet spot: 2.5s base delay (randomized up to 3s)
   TRANSACTIONS_BATCH_SIZE: 10,
 } as const;
 
@@ -119,13 +119,13 @@ function getAccountsUrl(servicesUrl: string, monthMoment: Moment) {
 }
 
 async function fetchAccounts(page: Page, servicesUrl: string, monthMoment: Moment): Promise<ScrapedAccount[]> {
-  const startTime = Date.now();
+  const startTime = performance.now();
   const dataUrl = getAccountsUrl(servicesUrl, monthMoment);
 
   debug(`fetching accounts for ${monthMoment.format('YYYY-MM')} from ${dataUrl}`);
   await randomDelay(RATE_LIMIT.SLEEP_BETWEEN, RATE_LIMIT.SLEEP_BETWEEN + 500);
   const dataResult = await fetchGetWithinPage<ScrapedAccountsWithinPageResponse>(page, dataUrl);
-  debug(`Fetch for ${monthMoment.format('YYYY-MM')} completed in ${Date.now() - startTime}ms`);
+  debug(`Fetch for ${monthMoment.format('YYYY-MM')} completed in ${performance.now() - startTime}ms`);
 
   if (dataResult && _.get(dataResult, 'Header.Status') === '1' && dataResult.DashboardMonthBean) {
     const { cardsCharges } = dataResult.DashboardMonthBean;
@@ -220,14 +220,14 @@ async function fetchTransactions(
   startMoment: Moment,
   monthMoment: Moment,
 ): Promise<ScrapedAccountsWithIndex> {
-  const startTime = Date.now();
+  const startTime = performance.now();
   const accounts = await fetchAccounts(page, companyServiceOptions.servicesUrl, monthMoment);
   const dataUrl = getTransactionsUrl(companyServiceOptions.servicesUrl, monthMoment);
 
   debug(`fetching transactions for ${monthMoment.format('YYYY-MM')} from ${dataUrl}`);
   await randomDelay(RATE_LIMIT.SLEEP_BETWEEN, RATE_LIMIT.SLEEP_BETWEEN + 500);
   const dataResult = await fetchGetWithinPage<ScrapedTransactionData>(page, dataUrl);
-  debug(`Fetch for ${monthMoment.format('YYYY-MM')} completed in ${Date.now() - startTime}ms`);
+  debug(`Fetch for ${monthMoment.format('YYYY-MM')} completed in ${performance.now() - startTime}ms`);
 
   if (dataResult && _.get(dataResult, 'Header.Status') === '1' && dataResult.CardsTransactionsListBean) {
     const accountTxns: ScrapedAccountsWithIndex = {};
@@ -343,7 +343,7 @@ async function fetchAllTransactions(
   companyServiceOptions: CompanyServiceOptions,
   startMoment: Moment,
 ) {
-  const fetchStartTime = Date.now();
+  const fetchStartTime = performance.now();
   const futureMonthsToScrape = options.futureMonthsToScrape ?? 1;
   const allMonths = getAllMonthMoments(startMoment, futureMonthsToScrape);
   debug(`Fetching transactions for ${allMonths.length} months`);
@@ -382,7 +382,7 @@ async function fetchAllTransactions(
     };
   });
 
-  debug(`fetchAllTransactions completed in ${Date.now() - fetchStartTime}ms`);
+  debug(`fetchAllTransactions completed in ${performance.now() - fetchStartTime}ms`);
 
   return {
     success: true,
@@ -407,7 +407,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
   }
 
   async login(credentials: ScraperSpecificCredentials): Promise<ScraperScrapingResult> {
-    const loginStartTime = Date.now();
+    const loginStartTime = performance.now();
     await this.page.setRequestInterception(true);
     this.page.on('request', request => {
       if (request.url().includes('detector-dom.min.js')) {
@@ -464,7 +464,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
 
       if (loginResult && loginResult.status === '1') {
         this.emitProgress(ScraperProgressTypes.LoginSuccess);
-        debug(`Login completed in ${Date.now() - loginStartTime}ms`);
+        debug(`Login completed in ${performance.now() - loginStartTime}ms`);
         return { success: true };
       }
 
