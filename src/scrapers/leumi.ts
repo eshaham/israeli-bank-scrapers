@@ -3,6 +3,7 @@ import { type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import { getDebug } from '../helpers/debug';
 import { clickButton, fillInput, pageEval, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
+import { fetchGetWithinPage } from '../helpers/fetch';
 import { getRawTransaction } from '../helpers/transactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
@@ -19,6 +20,42 @@ const DATE_FORMAT = 'DD.MM.YY';
 const ACCOUNT_BLOCKED_MSG = 'המנוי חסום';
 const INVALID_PASSWORD_MSG = 'אחד או יותר מפרטי ההזדהות שמסרת שגויים. ניתן לנסות שוב';
 const CHANGE_PASSWORD_MODAL_SELECTOR = 'form input[name="newPwd"]';
+
+interface SavingsDepositItem {
+  index: string;
+  depositId: string;
+  depositIndex: number;
+  depositSourceId: string;
+  type: number;
+  displayName: string;
+  productName: string;
+  friendlyAccountName: string;
+  deepLink: string;
+  isForeclosed: boolean;
+  asOfDate: string;
+  createDate: string;
+  exitPointDate: string;
+  currentBalance: number;
+  initialAmount: number | null;
+  installmentsSavingFlag: boolean;
+  marginRate: string;
+  productInterestType: string | null;
+  productLinkageType: string | null;
+  sourceSystem: string;
+  depositNumber: string;
+  relatedAccountNumber: string;
+  withdrawalRequestText: string | null;
+  WithdrawalAvailableFrequency: string | null;
+  depositOperationsItems: any[];
+}
+
+interface SavingsAccountData {
+  totalDepositsAndSavingsBalance: number;
+  previousBusinessDayDate: string;
+  depositsAndSavingsItems: SavingsDepositItem[];
+  operationsItemsTotal: string;
+  operationsListItems: any[];
+}
 
 function getPossibleLoginResults() {
   const urls: LoginOptions['possibleResults'] = {
@@ -167,6 +204,50 @@ async function fetchTransactionsForAccount(
   };
 }
 
+async function getSavingsAccounts(page: Page, accountId: string): Promise<TransactionsAccount[]> {
+  debug('========== FETCHING SAVINGS ACCOUNTS ==========');
+  debug('Account: %s', accountId);
+
+  const accounts: TransactionsAccount[] = [];
+
+  try {
+    const savingsUrl = `${BASE_URL}/uiapiproxy/v1/digital-retails/mobile/accounts/1/Deposits?operationList=true`;
+    debug('Trying savings URL: %s', savingsUrl);
+
+    const savingsData = await fetchGetWithinPage<SavingsAccountData>(page, savingsUrl);
+    if (!savingsData || !savingsData.depositsAndSavingsItems || savingsData.depositsAndSavingsItems.length === 0) {
+      debug('No savings accounts found for account %s', accountId);
+      return [];
+    }
+    debug('✓ Found %d savings deposits', savingsData.depositsAndSavingsItems.length);
+
+    // Create a separate account for each individual deposit
+    for (const deposit of savingsData.depositsAndSavingsItems) {
+      const balance = deposit.currentBalance;
+      const savingsAccountNumber = `${accountId}-${deposit.depositId}`;
+
+      accounts.push({
+        accountNumber: savingsAccountNumber,
+        savingsAccount: true,
+        balance,
+        txns: [],
+      });
+
+      debug(
+        'Added savings account %s with balance %s (product: %s)',
+        savingsAccountNumber,
+        balance,
+        deposit.productName,
+      );
+    }
+  } catch (error) {
+    debug('  - Error fetching savings accounts: %s', error);
+  }
+
+  debug('Returning %d savings accounts', accounts.length);
+  return accounts;
+}
+
 async function fetchTransactions(
   page: Page,
   startDate: Moment,
@@ -252,7 +333,20 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
 
     await this.navigateTo(TRANSACTIONS_URL);
 
+    // Fetch regular accounts
     const accounts = await fetchTransactions(this.page, startMoment, this.options);
+
+    // Fetch savings accounts for each regular account
+    const regularAccountCount = accounts.length;
+    for (let i = 0; i < regularAccountCount; i++) {
+      try {
+        const savingsAccounts = await getSavingsAccounts(this.page, accounts[i].accountNumber);
+        accounts.push(...savingsAccounts);
+        debug('Added %d savings accounts to results', savingsAccounts.length);
+      } catch (error) {
+        debug('Error fetching savings accounts for %s: %s', accounts[i].accountNumber, error);
+      }
+    }
 
     return {
       success: true,

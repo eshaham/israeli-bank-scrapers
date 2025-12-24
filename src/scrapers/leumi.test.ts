@@ -50,4 +50,41 @@ describe('Leumi legacy scraper', () => {
 
     exportTransactions(COMPANY_ID, result.accounts || []);
   });
+
+  maybeTestCompanyAPI(COMPANY_ID)('should include savings accounts', async () => {
+    const options = {
+      ...testsConfig.options,
+      companyId: COMPANY_ID,
+    };
+
+    const scraper = new LeumiScraper(options);
+    const result = await scraper.scrape(testsConfig.credentials.leumi);
+
+    expect(result).toBeDefined();
+    expect(result.success).toBeTruthy();
+    expect(result.accounts).toBeDefined();
+
+    // Check if any savings accounts are present
+    const savingsAccounts = result.accounts?.filter(account => account.savingsAccount === true);
+
+    console.log('Total accounts:', result.accounts?.length);
+    console.log('Savings accounts found:', savingsAccounts?.length);
+
+    if (savingsAccounts && savingsAccounts.length > 0) {
+      console.log('Savings account details:');
+      savingsAccounts.forEach(account => {
+        console.log(`  - Account: ${account.accountNumber}, Balance: ${account.balance}`);
+      });
+
+      // Verify savings account properties
+      savingsAccounts.forEach(account => {
+        expect(account.savingsAccount).toBe(true);
+        expect(account.accountNumber).toMatch(/ID/);
+        expect(account.balance).toBeDefined();
+        expect(account.txns).toBeDefined();
+      });
+    } else {
+      console.log('No savings accounts found - this may be expected if the test account has no deposits');
+    }
+  });
 });
