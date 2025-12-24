@@ -72,7 +72,10 @@ export async function fetchGetWithinPage<TResult>(
   }, url);
 
   // Check for automation blocking
-  if (status === 429 || (result && (result.toLowerCase().includes('block automation') || result.toLowerCase().includes('bot detection')))) {
+  if (
+    status === 429 ||
+    (result && (result.toLowerCase().includes('block automation') || result.toLowerCase().includes('bot detection')))
+  ) {
     throw new Error(
       `Automation detected and blocked by server. Status: ${status}, URL: ${url}. The site is actively blocking automated access. Consider: 1) Using showBrowser:true, 2) Adding longer delays, 3) Using residential proxies, 4) Running at different times of day`,
     );
