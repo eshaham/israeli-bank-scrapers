@@ -78,10 +78,10 @@
     "core-js": "^3.1.4",
     "debug": "^4.3.2",
     "lodash": "^4.17.10",
-    "moment": "^2.30.1",
+    "moment": "^2.22.2",
     "moment-timezone": "^0.5.37",
     "node-fetch": "^2.2.0",
-    "puppeteer": "^22.15.0",
+    "puppeteer": "22.15.0",
     "utility-types": "^3.11.0",
     "uuid": "^9.0.1"
   },
