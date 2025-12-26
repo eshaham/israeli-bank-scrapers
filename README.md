@@ -33,6 +33,7 @@ Currently only the following banks are supported:
 - Beyhad Bishvilha - [ביחד בשבילך](https://www.hist.org.il/) (thanks [@esakal](https://github.com/esakal))
 - OneZero (Experimental) (thanks [@orzarchi](https://github.com/orzarchi))
 - Behatsdaa - [בהצדעה](behatsdaa.org.il) (thanks [@daniel-hauser](https://github.com/daniel-hauser))
+- Jerusalem - [ירושלים](bankjerusalem.co.il) (thanks to the [Finanshl](https://github.com/Finanshl) Team)
 
 # Prerequisites
 To use this you will need to have [Node.js](https://nodejs.org) >= 16.x installed.
