@@ -17,19 +17,22 @@ describe('Bank Jerusalem scraper', () => {
     expect(SCRAPERS.jerusalem.loginFields).toContain('password');
   });
 
-  test('should fail on invalid user/password', async () => {
-    const options = {
-      ...testsConfig.options,
-      companyId: COMPANY_ID,
-    };
+  maybeTestCompanyAPI(COMPANY_ID, config => config.companyAPI.invalidPassword)(
+    'should fail on invalid user/password"',
+    async () => {
+      const options = {
+        ...testsConfig.options,
+        companyId: COMPANY_ID,
+        showBrowser: false,
+      };
 
-    const scraper = new JerusalemScraper(options);
+      const scraper = new JerusalemScraper(options);
 
-    const result = await scraper.scrape({ username: 'invalid', password: 'invalid123' });
+      const result = await scraper.scrape({ username: 'invalid', password: 'invalid123' });
 
-    expect(result).toBeDefined();
-    expect(result.success).toBeFalsy();
-    expect(result.errorType).toBe(LoginResults.InvalidPassword);
+      expect(result).toBeDefined();
+      expect(result.success).toBeFalsy();
+      expect(result.errorType).toBe(LoginResults.InvalidPassword);
   });
 
   maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions', async () => {
