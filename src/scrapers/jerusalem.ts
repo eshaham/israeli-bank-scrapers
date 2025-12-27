@@ -404,14 +404,19 @@ class JerusalemScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials
 
     // Create browser with puppeteer-extra (stealth plugin is already applied)
     const { timeout, args, executablePath, showBrowser } = this.options as any;
-    debug(`launch a stealth browser with headless mode = ${!showBrowser}`);
 
-    // Essential launch arguments for anti-bot measures and CI/CD
-    const requiredArgs = ['--no-sandbox', '--disable-setuid-sandbox'];
+    // Force headless in CI environments (no DISPLAY variable)
+    const isCI = !process.env.DISPLAY && process.platform === 'linux';
+    const headless = isCI ? true : !showBrowser;
+
+    debug(`launch a stealth browser with headless mode = ${headless}`);
+
+    // Essential launch arguments for CI/CD environments
+    const requiredArgs = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'];
     const launchArgs = args ? [...requiredArgs, ...args] : requiredArgs;
 
     const browser = await puppeteerExtra.launch({
-      headless: !showBrowser,
+      headless,
       executablePath,
       args: launchArgs,
       timeout,
