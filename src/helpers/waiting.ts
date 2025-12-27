@@ -63,3 +63,11 @@ export function runSerial<T>(actions: (() => Promise<T>)[]): Promise<T[]> {
 export function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+/**
+ * Add random human-like delay
+ */
+export function randomDelay(min: number = 500, max: number = 2000): Promise<void> {
+  const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+  return new Promise(resolve => setTimeout(resolve, delay));
+}
