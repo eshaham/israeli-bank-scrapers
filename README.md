@@ -7,6 +7,7 @@
 [![npm version](https://badge.fury.io/js/israeli-bank-scrapers.svg)](https://badge.fury.io/js/israeli-bank-scrapers)
 [![dependencies Status](https://david-dm.org/eshaham/israeli-bank-scrapers/status.svg)](https://david-dm.org/eshaham/israeli-bank-scrapers)
 [![devDependencies Status](https://david-dm.org/eshaham/israeli-bank-scrapers/dev-status.svg)](https://david-dm.org/eshaham/israeli-bank-scrapers?type=dev)
+[![Discord](https://img.shields.io/discord/924617301209260103?logo=discord)](https://discord.gg/2UvGM7aX4p)
 
 > Important!
 > 
@@ -189,6 +190,13 @@ const scraper = createScraper(options);
 const scrapeResult = await scraper.scrape({ username: 'vr29485', password: 'sometingsomething' });
 await browser.close();
 ```
+
+### OptIn Features
+
+Some scrapers support opt-in features that can be enabled by passing the `optInFeatures` option when creating the scraper.
+Opt in features are usually used for breaking changes that are not enabled by default to avoid breaking existing users.
+
+See the [OptInFeatures](https://github.com/eshaham/israeli-bank-scrapers/blob/master/src/scrapers/interface.ts#:~:text=export-,type%20OptInFeatures) interface for available features.
 
 ## Two-Factor Authentication Scrapers
 

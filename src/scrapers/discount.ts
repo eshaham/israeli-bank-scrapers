@@ -27,6 +27,11 @@ interface CurrentAccountInfo {
 interface ScrapedAccountData {
   UserAccountsData: {
     DefaultAccountNumber: string;
+    UserAccounts: Array<{
+      NewAccountInfo: {
+        AccountID: string;
+      };
+    }>;
   };
 }
 
@@ -73,42 +78,47 @@ async function fetchAccountData(page: Page, options: ScraperOptions): Promise<Sc
       errorMessage: 'failed to get account data',
     };
   }
-  const accountNumber = accountInfo.UserAccountsData.DefaultAccountNumber;
 
   const defaultStartMoment = moment().subtract(1, 'years').add(2, 'day');
   const startDate = options.startDate || defaultStartMoment.toDate();
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
   const startDateStr = startMoment.format(DATE_FORMAT);
-  const txnsUrl = `${apiSiteUrl}/lastTransactions/${accountNumber}/Date?IsCategoryDescCode=True&IsTransactionDetails=True&IsEventNames=True&IsFutureTransactionFlag=True&FromDate=${startDateStr}`;
-  const txnsResult = await fetchGetWithinPage<ScrapedTransactionData>(page, txnsUrl);
-  if (!txnsResult || txnsResult.Error || !txnsResult.CurrentAccountLastTransactions) {
-    return {
-      success: false,
-      errorType: ScraperErrorTypes.Generic,
-      errorMessage: txnsResult && txnsResult.Error ? txnsResult.Error.MsgText : 'unknown error',
-    };
-  }
 
-  const completedTxns = convertTransactions(
-    txnsResult.CurrentAccountLastTransactions.OperationEntry,
-    TransactionStatuses.Completed,
-  );
-  const rawFutureTxns = _.get(
-    txnsResult,
-    'CurrentAccountLastTransactions.FutureTransactionsBlock.FutureTransactionEntry',
-  ) as ScrapedTransaction[];
-  const pendingTxns = convertTransactions(rawFutureTxns, TransactionStatuses.Pending);
+  const accounts: string[] = accountInfo.UserAccountsData.UserAccounts.map(acc => acc.NewAccountInfo.AccountID);
+  const accountsData: Array<{ accountNumber: string; balance: number; txns: Transaction[] }> = [];
+
+  for (const accountNumber of accounts) {
+    const txnsUrl = `${apiSiteUrl}/lastTransactions/${accountNumber}/Date?IsCategoryDescCode=True&IsTransactionDetails=True&IsEventNames=True&IsFutureTransactionFlag=True&FromDate=${startDateStr}`;
+    const txnsResult = await fetchGetWithinPage<ScrapedTransactionData>(page, txnsUrl);
+    if (!txnsResult || txnsResult.Error || !txnsResult.CurrentAccountLastTransactions) {
+      return {
+        success: false,
+        errorType: ScraperErrorTypes.Generic,
+        errorMessage: txnsResult && txnsResult.Error ? txnsResult.Error.MsgText : 'unknown error',
+      };
+    }
+
+    const accountCompletedTxns = convertTransactions(
+      txnsResult.CurrentAccountLastTransactions.OperationEntry,
+      TransactionStatuses.Completed,
+    );
+    const rawFutureTxns = _.get(
+      txnsResult,
+      'CurrentAccountLastTransactions.FutureTransactionsBlock.FutureTransactionEntry',
+    ) as ScrapedTransaction[];
+    const accountPendingTxns = convertTransactions(rawFutureTxns, TransactionStatuses.Pending);
+
+    accountsData.push({
+      accountNumber,
+      balance: txnsResult.CurrentAccountLastTransactions.CurrentAccountInfo.AccountBalance,
+      txns: [...accountCompletedTxns, ...accountPendingTxns],
+    });
+  }
 
   const accountData = {
     success: true,
-    accounts: [
-      {
-        accountNumber,
-        balance: txnsResult.CurrentAccountLastTransactions.CurrentAccountInfo.AccountBalance,
-        txns: [...completedTxns, ...pendingTxns],
-      },
-    ],
+    accounts: accountsData,
   };
 
   return accountData;
@@ -124,7 +134,10 @@ async function navigateOrErrorLabel(page: Page) {
 
 function getPossibleLoginResults(): PossibleLoginResults {
   const urls: PossibleLoginResults = {};
-  urls[LoginResults.Success] = [`${BASE_URL}/apollo/retail/#/MY_ACCOUNT_HOMEPAGE`];
+  urls[LoginResults.Success] = [
+    `${BASE_URL}/apollo/retail/#/MY_ACCOUNT_HOMEPAGE`,
+    `${BASE_URL}/apollo/retail2/#/MY_ACCOUNT_HOMEPAGE`,
+  ];
   urls[LoginResults.InvalidPassword] = [`${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/LOGIN_PAGE`];
   urls[LoginResults.ChangePassword] = [`${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/PWD_RENEW`];
   return urls;
