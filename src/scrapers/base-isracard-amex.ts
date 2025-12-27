@@ -3,11 +3,12 @@ import moment, { type Moment } from 'moment';
 import { type Page } from 'puppeteer';
 import { ALT_SHEKEL_CURRENCY, SHEKEL_CURRENCY, SHEKEL_CURRENCY_KEYWORD } from '../constants';
 import { ScraperProgressTypes } from '../definitions';
+import { interceptionPriorities, maskHeadlessUserAgent } from '../helpers/browser';
 import getAllMonthMoments from '../helpers/dates';
 import { getDebug } from '../helpers/debug';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import { filterOldTransactions, fixInstallments } from '../helpers/transactions';
-import { runSerial, sleep } from '../helpers/waiting';
+import { randomDelay, runSerial, sleep } from '../helpers/waiting';
 import {
   TransactionStatuses,
   TransactionTypes,
@@ -18,7 +19,6 @@ import {
 import { BaseScraperWithBrowser } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
 import { type ScraperOptions, type ScraperScrapingResult } from './interface';
-import { interceptionPriorities, maskHeadlessUserAgent, randomDelay } from '../helpers/browser';
 
 const RATE_LIMIT = {
   SLEEP_BETWEEN: 2500, // Sweet spot: 2.5s base delay (randomized up to 3s)

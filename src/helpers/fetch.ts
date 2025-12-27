@@ -10,6 +10,14 @@ function getJsonHeaders() {
   };
 }
 
+function assertAutomationNotBlocked(status: number, responseText: string | null, url: string) {
+  if (status === 429 || (responseText && /block automation|bot detection/i.test(responseText))) {
+    throw new Error(
+      `Automation detected and blocked by server. Status: ${status}, URL: ${url}. The site is actively blocking automated access. Consider: 1) Using showBrowser:true, 2) Adding longer delays, 3) Using residential proxies, 4) Running at different times of day`,
+    );
+  }
+}
+
 export async function fetchGet<TResult>(url: string, extraHeaders: Record<string, any>): Promise<TResult> {
   let headers = getJsonHeaders();
   if (extraHeaders) {
@@ -71,14 +79,8 @@ export async function fetchGetWithinPage<TResult>(
     }
   }, url);
 
-  // Check for automation blocking
-  if (
-    status === 429 ||
-    (result && (result.toLowerCase().includes('block automation') || result.toLowerCase().includes('bot detection')))
-  ) {
-    throw new Error(
-      `Automation detected and blocked by server. Status: ${status}, URL: ${url}. The site is actively blocking automated access. Consider: 1) Using showBrowser:true, 2) Adding longer delays, 3) Using residential proxies, 4) Running at different times of day`,
-    );
+  if (!ignoreErrors) {
+    assertAutomationNotBlocked(status, result, url);
   }
 
   if (result !== null) {
@@ -126,14 +128,8 @@ export async function fetchPostWithinPage<TResult>(
 
   const [resultText, status] = result;
 
-  // Check for automation blocking
-  if (
-    status === 429 ||
-    (resultText && (resultText.includes('Block Automation') || resultText.includes('bot detection')))
-  ) {
-    throw new Error(
-      `Automation detected and blocked by server. Status: ${status}, URL: ${url}. Your IP may be temporarily rate-limited from recent scraping attempts. Wait 10-15 minutes before trying again. Consider: 1) Waiting between scraping sessions, 2) Using residential proxies, 3) Running at different times of day`,
-    );
+  if (!ignoreErrors) {
+    assertAutomationNotBlocked(status, resultText, url);
   }
 
   try {
