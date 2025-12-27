@@ -1,5 +1,5 @@
 import moment, { type Moment } from 'moment';
-import { type Browser, type Page } from 'puppeteer';
+import { type Page } from 'puppeteer';
 // @ts-ignore - puppeteer-extra doesn't have types
 import puppeteerExtra from 'puppeteer-extra';
 // @ts-ignore - puppeteer-extra-plugin-stealth doesn't have types
@@ -409,7 +409,7 @@ class JerusalemScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials
     // Essential launch arguments - test if stealth plugin alone is enough
     const launchArgs = args || [];
 
-    const browser: Browser = await puppeteerExtra.launch({
+    const browser = await puppeteerExtra.launch({
       headless: !showBrowser,
       executablePath,
       args: launchArgs,
@@ -417,7 +417,7 @@ class JerusalemScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials
     });
 
     debug('create a new stealth browser page');
-    this.page = await browser.newPage();
+    this.page = (await browser.newPage()) as any;
 
     // Clean up browser on terminate
     const cleanup = async () => {
