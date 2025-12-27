@@ -33,7 +33,8 @@ describe('Bank Jerusalem scraper', () => {
       expect(result).toBeDefined();
       expect(result.success).toBeFalsy();
       expect(result.errorType).toBe(LoginResults.InvalidPassword);
-  });
+    },
+  );
 
   maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions', async () => {
     const options = {
