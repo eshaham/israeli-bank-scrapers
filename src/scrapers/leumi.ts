@@ -170,10 +170,12 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
     if (accountsIds.length > 1) {
       // get list of accounts and check accountId
       await clickByXPath(page, 'xpath///*[contains(@class, "number") and contains(@class, "combo-inner")]');
-      await clickByXPath(page, `xpath///span[contains(text(), '${accountId}')]`);
+      // Clean the account ID to remove RTL/LTR marks and whitespace before using in XPath
+      const cleanAccountId = accountId?.trim().replace(/[\u200E\u200F\u202A-\u202E]/g, '') || '';
+      await clickByXPath(page, `xpath///span[contains(text(), '${cleanAccountId}')]`);
     }
 
-    accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(accountId)));
+    accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(accountId || '')));
   }
 
   return accounts;
