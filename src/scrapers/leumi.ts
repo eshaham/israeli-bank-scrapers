@@ -180,9 +180,6 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
 }
 
 async function navigateToLogin(page: Page): Promise<void> {
-  const loginButtonSelector = '.enter-account a[originaltitle="כניסה לחשבונך"]';
-  
-  // Handle cookie consent dialog if it appears - check this first
   try {
     debug('checking for cookie consent dialog');
     await waitUntilElementFound(page, 'button.hide-alert', true, 5000);
@@ -193,6 +190,7 @@ async function navigateToLogin(page: Page): Promise<void> {
     debug('no cookie dialog found or already closed');
   }
 
+  const loginButtonSelector = 'a.enter_account';
   debug('wait for homepage to click on login button');
   await waitUntilElementFound(page, loginButtonSelector);
   debug('navigate to login page');
