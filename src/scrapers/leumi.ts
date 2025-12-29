@@ -183,6 +183,18 @@ async function navigateToLogin(page: Page): Promise<void> {
   const loginButtonSelector = '.enter-account a[originaltitle="כניסה לחשבונך"]';
   debug('wait for homepage to click on login button');
   await waitUntilElementFound(page, loginButtonSelector);
+  
+  // Handle cookie consent dialog if it appears
+  try {
+    debug('checking for cookie consent dialog');
+    await waitUntilElementFound(page, 'button.hide-alert', true, 5000);
+    debug('closing cookie consent dialog');
+    await clickButton(page, 'button.hide-alert');
+    await hangProcess(500); // Brief wait after closing dialog
+  } catch (e) {
+    debug('no cookie dialog found or already closed');
+  }
+  
   debug('navigate to login page');
   const loginUrl = await pageEval(page, loginButtonSelector, null, element => {
     return (element as any).href;
