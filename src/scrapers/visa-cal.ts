@@ -2,7 +2,7 @@ import moment from 'moment';
 import { type HTTPRequest, type Frame, type Page } from 'puppeteer';
 import { getDebug } from '../helpers/debug';
 import { clickButton, elementPresentOnPage, pageEval, waitUntilElementFound } from '../helpers/elements-interactions';
-import { fetchPostWithinPage } from '../helpers/fetch';
+import { fetchPost } from '../helpers/fetch';
 import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { getFromSessionStorage } from '../helpers/storage';
 import { filterOldTransactions } from '../helpers/transactions';
@@ -11,6 +11,16 @@ import { TransactionStatuses, TransactionTypes, type Transaction, type Transacti
 import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
 import { type ScraperScrapingResult } from './interface';
 
+const apiHeaders = {
+  'User-Agent':
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
+  Origin: 'https://www.cal-online.co.il',
+  Referer: 'https://www.cal-online.co.il/',
+  'Accept-Language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
+  'Sec-Fetch-Site': 'same-site',
+  'Sec-Fetch-Mode': 'cors',
+  'Sec-Fetch-Dest': 'empty',
+};
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_REQUEST_ENDPOINT =
   'https://api.cal-online.co.il/Transactions/api/transactionsDetails/getCardTransactionsDetails';
@@ -148,6 +158,20 @@ interface CardPendingTransactionDetails extends CardTransactionDetailsError {
   statusTitle: string;
 }
 
+interface AuthModule {
+  auth: {
+    calConnectToken: string | null;
+  };
+}
+
+function isAuthModule(result: any): result is AuthModule {
+  return Boolean(result?.auth?.calConnectToken && String(result.auth.calConnectToken).trim());
+}
+
+function authModuleOrUndefined(result: any): AuthModule | undefined {
+  return isAuthModule(result) ? result : undefined;
+}
+
 function isPending(
   transaction: ScrapedTransaction | ScrapedPendingTransaction,
 ): transaction is ScrapedPendingTransaction {
@@ -267,13 +291,8 @@ function convertParsedDataToTransactions(
 
     const date = moment(transaction.trnPurchaseDate);
 
-    let chargedAmount = isPending(transaction) ? transaction.trnAmt * -1 : transaction.amtBeforeConvAndIndex * -1;
-    let originalAmount = transaction.trnAmt * -1;
-
-    if (transaction.trnTypeCode === TrnTypeCode.credit) {
-      chargedAmount = isPending(transaction) ? transaction.trnAmt : transaction.amtBeforeConvAndIndex;
-      originalAmount = transaction.trnAmt;
-    }
+    const chargedAmount = (isPending(transaction) ? transaction.trnAmt : transaction.amtBeforeConvAndIndex) * -1;
+    const originalAmount = transaction.trnAmt * (transaction.trnTypeCode === TrnTypeCode.credit ? 1 : -1);
 
     const result: Transaction = {
       identifier: !isPending(transaction) ? transaction.trnIntId : undefined,
@@ -341,22 +360,12 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     if (!this.authorization) {
       debug('fetching authorization header');
       const authModule = await waitUntil(
-        async () => {
-          const result = await getFromSessionStorage<{ auth: { calConnectToken: string | null } }>(
-            this.page,
-            'auth-module',
-          );
-          return result && result.auth && result.auth.calConnectToken !== null ? result : null;
-        },
+        async () => authModuleOrUndefined(await getFromSessionStorage<AuthModule>(this.page, 'auth-module')),
         'get authorization header with valid token in session storage',
-        1000,
+        10_000,
         50,
       );
-
-      if (authModule && authModule.auth.calConnectToken !== null) {
-        return `CALAuthScheme ${authModule.auth.calConnectToken}`;
-      }
-      throw new Error('could not retrieve authorization header');
+      return `CALAuthScheme ${authModule.auth.calConnectToken}`;
     }
     return this.authorization;
   }
@@ -401,7 +410,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
             await clickButton(this.page, 'button.btn-close');
           }
           const request = await this.authRequestPromise;
-          this.authorization = request?.headers()?.authorization;
+          this.authorization = String(request?.headers().authorization || '').trim();
         } catch (e) {
           const currentUrl = await getCurrentUrl(this.page);
           if (currentUrl.endsWith('dashboard')) return;
@@ -410,8 +419,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
           throw e;
         }
       },
-      userAgent:
-        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36',
+      userAgent: apiHeaders['User-Agent'],
     };
   }
 
@@ -437,28 +445,28 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         const allMonthsData: CardTransactionDetails[] = [];
 
         debug(`fetch pending transactions for card ${card.cardUniqueId}`);
-        let pendingData = await fetchPostWithinPage<CardPendingTransactionDetails | CardTransactionDetailsError>(
-          this.page,
+        let pendingData = await fetchPost(
           PENDING_TRANSACTIONS_REQUEST_ENDPOINT,
           { cardUniqueIDArray: [card.cardUniqueId] },
           {
             Authorization,
             'X-Site-Id': xSiteId,
             'Content-Type': 'application/json',
+            ...apiHeaders,
           },
         );
 
         debug(`fetch completed transactions for card ${card.cardUniqueId}`);
         for (let i = 0; i <= months; i += 1) {
           const month = finalMonthToFetchMoment.clone().subtract(i, 'months');
-          const monthData = await fetchPostWithinPage<CardTransactionDetails | CardTransactionDetailsError>(
-            this.page,
+          const monthData = await fetchPost(
             TRANSACTIONS_REQUEST_ENDPOINT,
             { cardUniqueId: card.cardUniqueId, month: month.format('M'), year: month.format('YYYY') },
             {
               Authorization,
               'X-Site-Id': xSiteId,
               'Content-Type': 'application/json',
+              ...apiHeaders,
             },
           );
 
