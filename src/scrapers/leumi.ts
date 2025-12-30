@@ -2,7 +2,7 @@ import moment, { type Moment } from 'moment';
 import { type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import { getDebug } from '../helpers/debug';
-import { clickButton, fillInput, pageEval, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
+import { clickButton, fillInput, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
 import { fetchGetWithinPage } from '../helpers/fetch';
 import { getRawTransaction } from '../helpers/transactions';
 import { waitForNavigation } from '../helpers/navigation';
@@ -283,15 +283,8 @@ async function fetchTransactions(
 }
 
 async function navigateToLogin(page: Page): Promise<void> {
-  const loginButtonSelector = '.enter_account';
-  debug('wait for homepage to click on login button');
-  await waitUntilElementFound(page, loginButtonSelector);
-  debug('navigate to login page');
-  const loginUrl = await pageEval(page, loginButtonSelector, null, element => {
-    return (element as any).href;
-  });
-  debug(`navigating to page (${loginUrl})`);
-  await page.goto(loginUrl);
+  debug('navigating directly to login page');
+  await page.goto('https://hb2.bankleumi.co.il/authenticate/logon');
   debug('waiting for page to be loaded (networkidle2)');
   await waitForNavigation(page, { waitUntil: 'networkidle2' });
   debug('waiting for components of login to enter credentials');
