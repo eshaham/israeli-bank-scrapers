@@ -159,8 +159,21 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
   try {
     debug('checking for post-login WalkMe dialog');
     await waitUntilElementFound(page, '.walkme-to-remove', true, 3000);
-    debug('closing post-login dialog by clicking accept button');
-    await clickButton(page, '#ea76bf72-b081-c146-3687-dccbc2d6b8c6');
+    debug('closing post-login dialog by clicking button');
+    const buttonIds = [
+      '#f3ac5286-8b3d-1bff-cca8-105a2e34e114', // Bottom button
+      '#b7d1657b-1334-9615-64e9-16cd2d87de77', // X button top-left
+    ];
+    for (const buttonId of buttonIds) {
+      try {
+        await waitUntilElementFound(page, buttonId, true, 1000);
+        await clickButton(page, buttonId);
+        debug(`Successfully clicked dialog button: ${buttonId}`);
+        break;
+      } catch (e) {
+        debug(`Button ${buttonId} not found or not clickable, trying next`);
+      }
+    }
     await hangProcess(500);
   } catch (e) {
     debug('no post-login dialog found or already closed');
