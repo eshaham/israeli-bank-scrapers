@@ -463,9 +463,19 @@ async function getInvestmentAccounts(
     await page.setRequestInterception(true);
     page.on('request', requestHandler);
 
-    await page.goto(mytradeUrl, { waitUntil: 'networkidle2', timeout: 60000 });
-    // Wait longer for the page to fully load and establish session
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    // Try to navigate, but if it fails (e.g., MyTrade not enabled), clean up and return empty
+    try {
+      await page.goto(mytradeUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+      // Wait longer for the page to fully load and establish session
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    } catch (navError) {
+      debug('  - Navigation to MyTrade failed (likely not enabled): %s', navError);
+      // Clean up request interception
+      page.off('request', requestHandler);
+      await page.setRequestInterception(false);
+      debug('Returning 0 investment accounts (MyTrade not accessible)');
+      return accounts;
+    }
 
     // Now turn off request interception before we make API calls
     page.off('request', requestHandler);
@@ -574,6 +584,18 @@ async function getInvestmentAccounts(
     } catch (e) {
       // Ignore cleanup errors
     }
+
+    // Navigate back to the main homepage to restore the session for subsequent scraping
+    try {
+      const homepageUrl = `${baseUrl}/ng-portals/rb/he/homepage`;
+      debug('Navigating back to homepage: %s', homepageUrl);
+      await page.goto(homepageUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      debug('Homepage restored');
+    } catch (navError) {
+      debug('  - Failed to navigate back to homepage: %s', navError);
+      // Continue anyway, the outer try-catch in fetchAccountData will handle it
+    }
   }
 
   debug('Returning %d investment accounts', accounts.length);
@@ -610,15 +632,21 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOpt
       debug('Skipping balance for a closed account, balance will be undefined');
     }
 
-    const txns = await getAccountTransactions(
-      baseUrl,
-      apiSiteUrl,
-      page,
-      accountNumber,
-      startDateStr,
-      endDateStr,
-      additionalTransactionInformation,
-    );
+    let txns: Transaction[] = [];
+    try {
+      txns = await getAccountTransactions(
+        baseUrl,
+        apiSiteUrl,
+        page,
+        accountNumber,
+        startDateStr,
+        endDateStr,
+        additionalTransactionInformation,
+      );
+    } catch (error) {
+      debug('Error fetching transactions for %s (possibly closed account): %s', accountNumber, error);
+      // Continue with empty transactions
+    }
 
     // Add regular checking account
     accounts.push({
