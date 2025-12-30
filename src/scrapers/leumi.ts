@@ -164,17 +164,28 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
       '#f3ac5286-8b3d-1bff-cca8-105a2e34e114', // Bottom button
       '#b7d1657b-1334-9615-64e9-16cd2d87de77', // X button top-left
     ];
+    let clicked = false;
     for (const buttonId of buttonIds) {
       try {
         await waitUntilElementFound(page, buttonId, true, 1000);
         await clickButton(page, buttonId);
         debug(`Successfully clicked dialog button: ${buttonId}`);
+        clicked = true;
         break;
       } catch (e) {
         debug(`Button ${buttonId} not found or not clickable, trying next`);
       }
     }
-    await hangProcess(500);
+    // Force remove dialog if clicking didn't work
+    if (!clicked) {
+      debug('No button worked, forcing dialog removal via JavaScript');
+      await page.evaluate(() => {
+        const dialogs = document.querySelectorAll('.walkme-to-remove');
+        dialogs.forEach(dialog => dialog.remove());
+      });
+    }
+    // Wait longer for page to settle after dialog removal
+    await hangProcess(2000);
   } catch (e) {
     debug('no post-login dialog found or already closed');
   }
@@ -193,8 +204,8 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
     if (accountsIds.length > 1) {
       // get list of accounts and check accountId
       await clickByXPath(page, 'xpath///*[contains(@class, "number") and contains(@class, "combo-inner")]');
-      // Clean the account ID to remove RTL/LTR marks and whitespace before using in XPath
-      const cleanAccountId = accountId?.trim().replace(/[\u200E\u200F\u202A-\u202E]/g, '') || '';
+      // Clean the account ID - remove RTL/LTR marks and ALL whitespace
+      const cleanAccountId = accountId?.replace(/[\u200E\u200F\u202A-\u202E\s]/g, '') || '';
       await clickByXPath(page, `xpath///span[contains(text(), '${cleanAccountId}')]`);
     }
 
