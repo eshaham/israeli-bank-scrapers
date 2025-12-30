@@ -156,6 +156,29 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
   // runtime for some accounts after 1-2 seconds so we need to hang the process for a short while.
   await hangProcess(4000);
 
+  // Handle "לתשומת לבך" dialog if it appears after login
+  try {
+    debug('checking for post-login WalkMe dialog');
+    await waitUntilElementFound(page, '.walkme-to-remove', true, 3000);
+    debug('closing post-login dialog by clicking close button');
+    // Try multiple selectors in case the dialog structure varies
+    const closeButtonSelectors = [
+      'button.wm-visual-design-button[style*="top:0px"]', // X button at top-left
+      '.walkme-to-remove button.wm-visual-design-button:last-child', // Last button (usually close)
+    ];
+    for (const selector of closeButtonSelectors) {
+      try {
+        await clickButton(page, selector);
+        break;
+      } catch (e) {
+        debug(`Failed to click with selector ${selector}, trying next`);
+      }
+    }
+    await hangProcess(500);
+  } catch (e) {
+    debug('no post-login dialog found or already closed');
+  }
+
   const accountsIds = (await page.evaluate(() =>
     Array.from(document.querySelectorAll('app-masked-number-combo span.display-number-li'), e => e.textContent),
   )) as string[];
