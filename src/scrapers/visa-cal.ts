@@ -354,7 +354,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
       1000,
     );
     if (!initData) {
-      throw new Error("could not find 'init' data in session storage");
+      throw new Error('could not find "init" data in session storage');
     }
     return initData?.result.cards.map(({ cardUniqueId, last4Digits }) => ({ cardUniqueId, last4Digits }));
   }
