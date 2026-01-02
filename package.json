@@ -1,5 +1,5 @@
 {
-  "name": "@tomerh2001/israeli-bank-scrapers",
+  "name": "israeli-bank-scrapers",
   "version": "1.0.4",
   "private": true,
   "description": "Provide scrapers for all major Israeli banks and credit card companies",
@@ -28,7 +28,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tomerh2001/israeli-bank-scrapers.git"
+    "url": "git+https://github.com/eshaham/israeli-bank-scrapers.git"
   },
   "keywords": [
     "israel",
@@ -38,9 +38,9 @@
   "author": "Elad Shaham",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/tomerh2001/israeli-bank-scrapers/issues"
+    "url": "https://github.com/eshaham/israeli-bank-scrapers/issues"
   },
-  "homepage": "https://github.com/tomerh2001/israeli-bank-scrapers#readme",
+  "homepage": "https://github.com/eshaham/israeli-bank-scrapers#readme",
   "devDependencies": {
     "@babel/cli": "^7.4.4",
     "@babel/core": "^7.4.5",
