@@ -2,64 +2,66 @@ name: Release
 on:
   push:
     branches:
-      - master
-      - next
+    - master
+    - next
 jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          registry-url: https://registry.npmjs.org/
-      - name: prepare default version
-        run: npm run prepare:default
-      - name: Release to Github
-        uses: cycjimmy/semantic-release-action@v4
-        id: semantic   # Need an `id` for output variables
-        with:
-          semantic_version: 16.0.2
-          branches: |
-            [
-              '+([0-9])?(.{+([0-9]),x}).x',
-              'master',
-              'next',
-              'next-major',
-              {
-                name: 'hotfix',
-                prerelease: true
-              },
-              {
-                name: 'beta',
-                prerelease: true
-              },
-              {
-                name: 'alpha',
-                prerelease: true
-              }
-            ]
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Prepare release of default to NPM
-        if: steps.semantic.outputs.new_release_published == 'true'
-        run: |
-          node utils/pre-publish.js --version ${{ steps.semantic.outputs.new_release_version }}
-      - name: Publish to NPM
-        if: steps.semantic.outputs.new_release_published == 'true'
-        run: npm publish --access public --ignore-scripts
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
-      - name: Prepare release of core to NPM
-        if: steps.semantic.outputs.new_release_published == 'true'
-        run: |
-          npm run prepare:core
-          node utils/pre-publish.js --version ${{ steps.semantic.outputs.new_release_version }}
-      - name: Publish to NPM
-        if: steps.semantic.outputs.new_release_published == 'true'
-        run: npm publish --access public --ignore-scripts
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+        registry-url: https://registry.npmjs.org/
+    - name: prepare default version
+      run: npm run prepare:default
+    - name: Release to Github
+      uses: cycjimmy/semantic-release-action@v4
+      id: semantic # Need an `id` for output variables
+      with:
+        semantic_version: 16.0.2
+        branches: |
+          [
+            '+([0-9])?(.{+([0-9]),x}).x',
+            'master',
+            'next',
+            'next-major',
+            {
+              name: 'hotfix',
+              prerelease: true
+            },
+            {
+              name: 'beta',
+              prerelease: true
+            },
+            {
+              name: 'alpha',
+              prerelease: true
+            }
+          ]
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Prepare release of default to NPM
+      if: steps.semantic.outputs.new_release_published == 'true'
+      run: |
+        node utils/pre-publish.js --version ${{ steps.semantic.outputs.new_release_version }}
+    - name: Publish to NPM
+      if: steps.semantic.outputs.new_release_published == 'true'
+      run: npm publish --access public --ignore-scripts
+      env:
+        NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+    - name: Prepare release of core to NPM
+      if: steps.semantic.outputs.new_release_published == 'true'
+      run: |
+        npm run prepare:core
+        node utils/pre-publish.js --version ${{ steps.semantic.outputs.new_release_version }}
+    - name: Publish to NPM
+      if: steps.semantic.outputs.new_release_published == 'true'
+      run: npm publish --access public --ignore-scripts
+      env:
+        NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
