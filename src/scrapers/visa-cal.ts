@@ -440,7 +440,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
     const futureMonthsToScrape = this.options.futureMonthsToScrape ?? 1;
 
-    debug(`fetch frames (misgarot) of cards`);
+    debug('fetch frames (misgarot) of cards');
     const frames = await fetchPost(
       FRAMES_REQUEST_ENDPOINT,
       { cardsForFrameData: cards.map(({ cardUniqueId }) => ({ cardUniqueId })) },
