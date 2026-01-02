@@ -9,10 +9,27 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     steps:
+
     - name: Checkout
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
+
+    - name: Ensure local branch matches remote
+      run: |
+        git fetch origin --prune --tags
+        git checkout -B master origin/master
+        git status
+        git rev-parse HEAD
+        git rev-parse origin/master
+
+    - name: Debug git state
+      run: |
+        echo "branch=$(git branch --show-current)"
+        git remote -v
+        git log -1 --oneline
+        git log -1 --oneline origin/master
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
