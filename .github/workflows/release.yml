@@ -20,8 +20,6 @@ jobs:
         with:
           node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org/
-      - name: Upgrade npm for OIDC support
-        run: sudo npm install -g npm@latest
       - name: Verify npm version
         run: |
           echo "Node version: $(node -v)"
