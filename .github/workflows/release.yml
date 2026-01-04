@@ -19,6 +19,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org/
       - name: Upgrade npm for OIDC support
         run: sudo npm install -g npm@latest
       - name: prepare default version
@@ -56,6 +57,8 @@ jobs:
       - name: Publish to NPM
         if: steps.semantic.outputs.new_release_published == 'true'
         run: npm publish --access public --ignore-scripts --provenance
+        env:
+          NODE_AUTH_TOKEN: ""
       - name: Prepare release of core to NPM
         if: steps.semantic.outputs.new_release_published == 'true'
         run: |
@@ -64,3 +67,5 @@ jobs:
       - name: Publish to NPM
         if: steps.semantic.outputs.new_release_published == 'true'
         run: npm publish --access public --ignore-scripts --provenance
+        env:
+          NODE_AUTH_TOKEN: ""
