@@ -35,7 +35,7 @@ Currently only the following banks are supported:
 - Behatsdaa - [בהצדעה](behatsdaa.org.il) (thanks [@daniel-hauser](https://github.com/daniel-hauser))
 
 # Prerequisites
-To use this you will need to have [Node.js](https://nodejs.org) >= 16.x installed.
+To use this you will need to have [Node.js](https://nodejs.org) >= 22.12.0 installed.
 
 # Getting started
 To use these scrapers you'll need to install the package from npm:
