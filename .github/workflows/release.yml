@@ -21,7 +21,7 @@ jobs:
           node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org/
       - name: Upgrade npm for OIDC support
-        run: npm install -g npm@latest
+        run: sudo npm install -g npm@latest
       - name: prepare default version
         run: npm run prepare:default
       - name: Release to Github
