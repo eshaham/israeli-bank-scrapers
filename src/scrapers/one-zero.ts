@@ -269,7 +269,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
       txns: matchingMovements.map((movement): ScrapingTransaction => {
         const hasInstallments = movement.transaction?.enrichment?.recurrences?.some(x => x.isRecurrent);
         const modifier = movement.creditDebit === 'DEBIT' ? -1 : 1;
-        return {
+        const result: ScrapingTransaction = {
           identifier: movement.movementId,
           date: movement.valueDate,
           chargedAmount: +movement.movementAmount * modifier,
@@ -281,6 +281,12 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
           status: TransactionStatuses.Completed,
           type: hasInstallments ? TransactionTypes.Installments : TransactionTypes.Normal,
         };
+
+        if (this.options?.includeRawTransaction) {
+          result.rawTransaction = movement;
+        }
+
+        return result;
       }),
     };
   }

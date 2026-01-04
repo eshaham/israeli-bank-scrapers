@@ -63,7 +63,7 @@ type BalanceAndCreditLimit = {
   withdrawalBalance: number;
 };
 
-function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
+function convertTransactions(txns: ScrapedTransaction[], options?: ScraperOptions): Transaction[] {
   return txns.map(txn => {
     const isOutbound = txn.eventActivityTypeCode === 2;
 
@@ -104,6 +104,10 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
       status: txn.serialNumber === 0 ? TransactionStatuses.Pending : TransactionStatuses.Completed,
       memo,
     };
+
+    if (options?.includeRawTransaction) {
+      result.rawTransaction = txn;
+    }
 
     return result;
   });
@@ -170,6 +174,7 @@ async function getAccountTransactions(
   startDate: string,
   endDate: string,
   additionalTransactionInformation = false,
+  options?: ScraperOptions,
 ) {
   const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=1000&retrievalEndDate=${endDate}&retrievalStartDate=${startDate}&sortCode=1`;
   const txnsResult = await fetchPoalimXSRFWithinPage(page, txnsUrl, '/current-account/transactions');
@@ -179,7 +184,7 @@ async function getAccountTransactions(
       ? await getExtraScrap(txnsResult, baseUrl, page, accountNumber)
       : txnsResult;
 
-  return convertTransactions(finalResult?.transactions ?? []);
+  return convertTransactions(finalResult?.transactions ?? [], options);
 }
 
 async function getAccountBalance(apiSiteUrl: string, page: Page, accountNumber: string) {
@@ -227,6 +232,7 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOpt
       startDateStr,
       endDateStr,
       additionalTransactionInformation,
+      options,
     );
 
     accounts.push({

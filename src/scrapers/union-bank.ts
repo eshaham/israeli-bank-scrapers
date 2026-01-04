@@ -13,6 +13,7 @@ import {
 import { waitForNavigation } from '../helpers/navigation';
 import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
+import { type ScraperOptions } from './interface';
 
 const BASE_URL = 'https://hb.unionbank.co.il';
 const TRANSACTIONS_URL = `${BASE_URL}/eBanking/Accounts/ExtendedActivity.aspx#/`;
@@ -63,11 +64,11 @@ function getTxnAmount(txn: ScrapedTransaction) {
   return (Number.isNaN(credit) ? 0 : credit) - (Number.isNaN(debit) ? 0 : debit);
 }
 
-function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
+function convertTransactions(txns: ScrapedTransaction[], options?: ScraperOptions): Transaction[] {
   return txns.map(txn => {
     const convertedDate = moment(txn.date, DATE_FORMAT).toISOString();
     const convertedAmount = getTxnAmount(txn);
-    return {
+    const result: Transaction = {
       type: TransactionTypes.Normal,
       identifier: txn.reference ? parseInt(txn.reference, 10) : undefined,
       date: convertedDate,
@@ -79,6 +80,12 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
       description: txn.description,
       memo: txn.memo,
     };
+
+    if (options?.includeRawTransaction) {
+      result.rawTransaction = txn;
+    }
+
+    return result;
   });
 }
 
@@ -233,7 +240,7 @@ async function expandTransactionsTable(page: Page) {
   }
 }
 
-async function scrapeTransactionsFromTable(page: Page): Promise<Transaction[]> {
+async function scrapeTransactionsFromTable(page: Page, options?: ScraperOptions): Promise<Transaction[]> {
   const pendingTxns = await extractTransactionsFromTable(
     page,
     PENDING_TRANSACTIONS_TABLE_ID,
@@ -245,10 +252,10 @@ async function scrapeTransactionsFromTable(page: Page): Promise<Transaction[]> {
     TransactionStatuses.Completed,
   );
   const txns = [...pendingTxns, ...completedTxns];
-  return convertTransactions(txns);
+  return convertTransactions(txns, options);
 }
 
-async function getAccountTransactions(page: Page): Promise<Transaction[]> {
+async function getAccountTransactions(page: Page, options?: ScraperOptions): Promise<Transaction[]> {
   await Promise.race([
     waitUntilElementFound(page, `#${COMPLETED_TRANSACTIONS_TABLE_ID}`, false),
     waitUntilElementFound(page, `.${ERROR_MESSAGE_CLASS}`, false),
@@ -260,27 +267,32 @@ async function getAccountTransactions(page: Page): Promise<Transaction[]> {
   }
 
   await expandTransactionsTable(page);
-  return scrapeTransactionsFromTable(page);
+  return scrapeTransactionsFromTable(page, options);
 }
 
-async function fetchAccountData(page: Page, startDate: Moment, accountId: string): Promise<TransactionsAccount> {
+async function fetchAccountData(
+  page: Page,
+  startDate: Moment,
+  accountId: string,
+  options?: ScraperOptions,
+): Promise<TransactionsAccount> {
   await chooseAccount(page, accountId);
   await searchByDates(page, startDate);
   const accountNumber = await getAccountNumber(page);
-  const txns = await getAccountTransactions(page);
+  const txns = await getAccountTransactions(page, options);
   return {
     accountNumber,
     txns,
   };
 }
 
-async function fetchAccounts(page: Page, startDate: Moment) {
+async function fetchAccounts(page: Page, startDate: Moment, options?: ScraperOptions) {
   const accounts: TransactionsAccount[] = [];
   const accountsList = await dropdownElements(page, ACCOUNTS_DROPDOWN_SELECTOR);
   for (const account of accountsList) {
     if (account.value !== '-1') {
       // Skip "All accounts" option
-      const accountData = await fetchAccountData(page, startDate, account.value);
+      const accountData = await fetchAccountData(page, startDate, account.value, options);
       accounts.push(accountData);
     }
   }
@@ -311,7 +323,7 @@ class UnionBankScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials
 
     await this.navigateTo(TRANSACTIONS_URL);
 
-    const accounts = await fetchAccounts(this.page, startMoment);
+    const accounts = await fetchAccounts(this.page, startMoment, this.options);
 
     return {
       success: true,

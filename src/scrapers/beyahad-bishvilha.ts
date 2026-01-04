@@ -55,7 +55,7 @@ function getAmountData(amountStr: string) {
   };
 }
 
-function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
+function convertTransactions(txns: ScrapedTransaction[], options?: ScraperOptions): Transaction[] {
   debug(`convert ${txns.length} raw transactions to official Transaction structure`);
   return txns.map(txn => {
     const chargedAmountTuple = getAmountData(txn.chargedAmount || '');
@@ -74,6 +74,10 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
       memo: '',
       identifier: txn.identifier,
     };
+
+    if (options?.includeRawTransaction) {
+      result.rawTransaction = txn;
+    }
 
     return result;
   });
@@ -118,7 +122,10 @@ async function fetchTransactions(page: Page, options: ScraperOptions) {
   );
   debug(`fetched ${rawTransactions.length} raw transactions from page`);
 
-  const accountTransactions = convertTransactions(rawTransactions.filter(item => !!item) as ScrapedTransaction[]);
+  const accountTransactions = convertTransactions(
+    rawTransactions.filter(item => !!item) as ScrapedTransaction[],
+    options,
+  );
 
   debug('filer out old transactions');
   const txns =

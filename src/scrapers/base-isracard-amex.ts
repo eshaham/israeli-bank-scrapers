@@ -175,7 +175,11 @@ function getTransactionType(txn: ScrapedTransaction) {
   return getInstallmentsInfo(txn) ? TransactionTypes.Installments : TransactionTypes.Normal;
 }
 
-function convertTransactions(txns: ScrapedTransaction[], processedDate: string): Transaction[] {
+function convertTransactions(
+  txns: ScrapedTransaction[],
+  processedDate: string,
+  options?: ScraperOptions,
+): Transaction[] {
   const filteredTxns = txns.filter(
     txn =>
       txn.dealSumType !== '1' && txn.voucherNumberRatz !== '000000000' && txn.voucherNumberRatzOutbound !== '000000000',
@@ -204,6 +208,10 @@ function convertTransactions(txns: ScrapedTransaction[], processedDate: string):
       status: TransactionStatuses.Completed,
     };
 
+    if (options?.includeRawTransaction) {
+      result.rawTransaction = txn;
+    }
+
     return result;
   });
 }
@@ -231,11 +239,11 @@ async function fetchTransactions(
         let allTxns: Transaction[] = [];
         txnGroups.forEach(txnGroup => {
           if (txnGroup.txnIsrael) {
-            const txns = convertTransactions(txnGroup.txnIsrael, account.processedDate);
+            const txns = convertTransactions(txnGroup.txnIsrael, account.processedDate, options);
             allTxns.push(...txns);
           }
           if (txnGroup.txnAbroad) {
-            const txns = convertTransactions(txnGroup.txnAbroad, account.processedDate);
+            const txns = convertTransactions(txnGroup.txnAbroad, account.processedDate, options);
             allTxns.push(...txns);
           }
         });
