@@ -68,6 +68,7 @@ enum MaxPlanName {
   EarlyRepayment = 'פרעון מוקדם',
   MonthlyCardFee = 'דמי כרטיס',
   CurrencyPocket = 'חיוב ארנק מטח',
+  MonthlyChargeDistribution = 'חלוקת חיוב חודשי',
 }
 
 const INVALID_DETAILS_SELECTOR = '#popupWrongDetails';
@@ -141,6 +142,7 @@ function getTransactionType(planName: string, planTypeId: number) {
     case MaxPlanName.EarlyRepayment:
     case MaxPlanName.MonthlyCardFee:
     case MaxPlanName.CurrencyPocket:
+    case MaxPlanName.MonthlyChargeDistribution:
       return TransactionTypes.Normal;
     case MaxPlanName.Installments:
     case MaxPlanName.Credit:
