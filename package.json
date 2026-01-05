@@ -4,7 +4,11 @@
   "private": true,
   "description": "Provide scrapers for all major Israeli banks and credit card companies",
   "engines": {
-    "node": ">= 18.19.0"
+    "node": ">= 22.12.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
