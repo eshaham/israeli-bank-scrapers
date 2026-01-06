@@ -20,6 +20,8 @@ import UnionBankScraper from './union-bank';
 import VisaCalScraper from './visa-cal';
 import YahavScraper from './yahav';
 
+import CibusScraper from './cibus';
+
 export default function createScraper(options: ScraperOptions): Scraper<ScraperCredentials> {
   switch (options.companyId) {
     case CompanyTypes.hapoalim:
@@ -58,6 +60,8 @@ export default function createScraper(options: ScraperOptions): Scraper<ScraperC
       return new BehatsdaaScraper(options);
     case CompanyTypes.pagi:
       return new PagiScraper(options);
+    case CompanyTypes.cibus:
+      return new CibusScraper(options);
     default:
       return assertNever(options.companyId, `unknown company id ${options.companyId}`);
   }
