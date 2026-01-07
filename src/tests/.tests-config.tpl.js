@@ -32,6 +32,7 @@ module.exports = {
     // behatsdaa: { id: '', password: ''},
     // oneZero: { email: '', password: '', otpCode: '', otpToken: null },
     // pagi: { username: '', password: ''},
+    // jerusalem: { username: '', password: '' },
   },
   companyAPI: {
     // enable companyAPI to execute tests against the real companies api

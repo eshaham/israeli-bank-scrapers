@@ -48,3 +48,4 @@ components:
     - daniel-hauser
   src/scrapers/yahav.ts:
     - gczobel
+  # src/scrapers/jerusalem.ts:
