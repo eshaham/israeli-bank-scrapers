@@ -456,7 +456,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         const finalMonthToFetchMoment = moment().add(futureMonthsToScrape, 'month');
         const months = finalMonthToFetchMoment.diff(startMoment, 'months');
         const allMonthsData: CardTransactionDetails[] = [];
-        const frame = _.find(frames.result.bankIssuedCards.cardLevelFrames, { cardUniqueId: card.cardUniqueId });
+        const frame = _.find(frames.result.bankIssuedCards?.cardLevelFrames, { cardUniqueId: card.cardUniqueId });
 
         debug(`fetch pending transactions for card ${card.cardUniqueId}`);
         let pendingData = await fetchPost(
