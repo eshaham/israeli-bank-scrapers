@@ -197,7 +197,11 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOpt
   debug('fetching accounts data');
   const accountsInfo = (await fetchGetWithinPage<FetchedAccountData>(page, accountDataUrl)) || [];
   const openAccountsInfo = accountsInfo.filter(account => account.accountClosingReasonCode === 0);
-  debug('got %d open accounts from %d total accounts, fetching txns and balance', openAccountsInfo.length, accountsInfo.length);
+  debug(
+    'got %d open accounts from %d total accounts, fetching txns and balance',
+    openAccountsInfo.length,
+    accountsInfo.length,
+  );
 
   const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
   const startDate = options.startDate || defaultStartMoment.toDate();
