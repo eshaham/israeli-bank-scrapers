@@ -148,6 +148,12 @@ export type ScraperOptions = ScraperBrowserOptions & {
   additionalTransactionInformation?: boolean;
 
   /**
+   * Include the raw transaction object as received from the scraper source for debugging purposes.
+   * @default false
+   */
+  includeRawTransaction?: boolean;
+
+  /**
    * Adjust the viewport size of the browser page.
    * If not set, the default viewport size of 1024x768 will be used.
    */

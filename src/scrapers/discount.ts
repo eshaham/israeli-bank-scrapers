@@ -46,12 +46,16 @@ interface ScrapedTransactionData {
   };
 }
 
-function convertTransactions(txns: ScrapedTransaction[], txnStatus: TransactionStatuses): Transaction[] {
+function convertTransactions(
+  txns: ScrapedTransaction[],
+  txnStatus: TransactionStatuses,
+  options?: ScraperOptions,
+): Transaction[] {
   if (!txns) {
     return [];
   }
   return txns.map(txn => {
-    return {
+    const result: Transaction = {
       type: TransactionTypes.Normal,
       identifier: txn.OperationNumber,
       date: moment(txn.OperationDate, DATE_FORMAT).toISOString(),
@@ -62,6 +66,12 @@ function convertTransactions(txns: ScrapedTransaction[], txnStatus: TransactionS
       description: txn.OperationDescriptionToDisplay,
       status: txnStatus,
     };
+
+    if (options?.includeRawTransaction) {
+      result.rawTransaction = txn;
+    }
+
+    return result;
   });
 }
 
@@ -102,12 +112,13 @@ async function fetchAccountData(page: Page, options: ScraperOptions): Promise<Sc
     const accountCompletedTxns = convertTransactions(
       txnsResult.CurrentAccountLastTransactions.OperationEntry,
       TransactionStatuses.Completed,
+      options,
     );
     const rawFutureTxns = _.get(
       txnsResult,
       'CurrentAccountLastTransactions.FutureTransactionsBlock.FutureTransactionEntry',
     ) as ScrapedTransaction[];
-    const accountPendingTxns = convertTransactions(rawFutureTxns, TransactionStatuses.Pending);
+    const accountPendingTxns = convertTransactions(rawFutureTxns, TransactionStatuses.Pending, options);
 
     accountsData.push({
       accountNumber,

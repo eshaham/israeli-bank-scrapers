@@ -6,7 +6,7 @@ import { clickButton, fillInput, pageEval, pageEvalAll, waitUntilElementFound } 
 import { waitForNavigation } from '../helpers/navigation';
 import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
-import { type ScraperScrapingResult } from './interface';
+import { type ScraperOptions, type ScraperScrapingResult } from './interface';
 
 const debug = getDebug('leumi');
 const BASE_URL = 'https://hb2.bankleumi.co.il';
@@ -58,7 +58,11 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
   ];
 }
 
-function extractTransactionsFromPage(transactions: any[], status: TransactionStatuses): Transaction[] {
+function extractTransactionsFromPage(
+  transactions: any[],
+  status: TransactionStatuses,
+  options?: ScraperOptions,
+): Transaction[] {
   if (transactions === null || transactions.length === 0) {
     return [];
   }
@@ -77,6 +81,10 @@ function extractTransactionsFromPage(transactions: any[], status: TransactionSta
       chargedAmount: rawTransaction.Amount,
       originalAmount: rawTransaction.Amount,
     };
+
+    if (options?.includeRawTransaction) {
+      newTransaction.rawTransaction = rawTransaction;
+    }
 
     return newTransaction;
   });
@@ -106,6 +114,7 @@ async function fetchTransactionsForAccount(
   page: Page,
   startDate: Moment,
   accountId: string,
+  options: ScraperOptions,
 ): Promise<TransactionsAccount> {
   // DEVELOPER NOTICE the account number received from the server is being altered at
   // runtime for some accounts after 1-2 seconds so we need to hang the process for a short while.
@@ -138,8 +147,8 @@ async function fetchTransactionsForAccount(
   const transactions = response.HistoryTransactionsItems;
   const balance = response.BalanceDisplay ? parseFloat(response.BalanceDisplay) : undefined;
 
-  const pendingTxns = extractTransactionsFromPage(pendingTransactions, TransactionStatuses.Pending);
-  const completedTxns = extractTransactionsFromPage(transactions, TransactionStatuses.Completed);
+  const pendingTxns = extractTransactionsFromPage(pendingTransactions, TransactionStatuses.Pending, options);
+  const completedTxns = extractTransactionsFromPage(transactions, TransactionStatuses.Completed, options);
   const txns = [...pendingTxns, ...completedTxns];
 
   return {
@@ -149,7 +158,11 @@ async function fetchTransactionsForAccount(
   };
 }
 
-async function fetchTransactions(page: Page, startDate: Moment): Promise<TransactionsAccount[]> {
+async function fetchTransactions(
+  page: Page,
+  startDate: Moment,
+  options: ScraperOptions,
+): Promise<TransactionsAccount[]> {
   const accounts: TransactionsAccount[] = [];
 
   // DEVELOPER NOTICE the account number received from the server is being altered at
@@ -173,7 +186,7 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
       await clickByXPath(page, `xpath///span[contains(text(), '${accountId}')]`);
     }
 
-    accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(accountId)));
+    accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(accountId), options));
   }
 
   return accounts;
@@ -230,7 +243,7 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
 
     await this.navigateTo(TRANSACTIONS_URL);
 
-    const accounts = await fetchTransactions(this.page, startMoment);
+    const accounts = await fetchTransactions(this.page, startMoment, this.options);
 
     return {
       success: true,

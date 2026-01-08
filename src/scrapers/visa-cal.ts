@@ -9,7 +9,7 @@ import { filterOldTransactions } from '../helpers/transactions';
 import { waitUntil } from '../helpers/waiting';
 import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
-import { type ScraperScrapingResult } from './interface';
+import { type ScraperScrapingResult, type ScraperOptions } from './interface';
 import _ from 'lodash';
 
 const apiHeaders = {
@@ -268,6 +268,7 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
 function convertParsedDataToTransactions(
   data: CardTransactionDetails[],
   pendingData?: CardPendingTransactionDetails | null,
+  options?: ScraperOptions,
 ): Transaction[] {
   const pendingTransactions = pendingData?.result
     ? pendingData.result.cardsList.flatMap(card => card.authDetalisList)
@@ -315,6 +316,10 @@ function convertParsedDataToTransactions(
 
     if (installments) {
       result.installments = installments;
+    }
+
+    if (options?.includeRawTransaction) {
+      result.rawTransaction = transaction;
     }
 
     return result;
@@ -506,7 +511,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
           pendingData = null;
         }
 
-        const transactions = convertParsedDataToTransactions(allMonthsData, pendingData);
+        const transactions = convertParsedDataToTransactions(allMonthsData, pendingData, this.options);
 
         debug('filter out old transactions');
         const txns =
