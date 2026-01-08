@@ -92,12 +92,6 @@ function hangProcess(timeout: number) {
   });
 }
 
-async function clickByXPath(page: Page, xpath: string): Promise<void> {
-  await page.waitForSelector(xpath, { timeout: 30000, visible: true });
-  const elm = await page.$$(xpath);
-  await elm[0].click();
-}
-
 function removeSpecialCharacters(str: string): string {
   return str.replace(/[^0-9/-]/g, '');
 }
@@ -106,10 +100,49 @@ async function fetchTransactionsForAccount(
   page: Page,
   startDate: Moment,
   accountId: string,
+  accountIndex?: number,
 ): Promise<TransactionsAccount> {
   // DEVELOPER NOTICE the account number received from the server is being altered at
   // runtime for some accounts after 1-2 seconds so we need to hang the process for a short while.
   await hangProcess(4000);
+
+  let requestHandler: ((request: any) => void) | null = null;
+
+  // Only enable request interception if we need to modify the AccountIndex
+  if (accountIndex !== undefined) {
+    await page.setRequestInterception(true);
+
+    requestHandler = (request: any) => {
+      if (request.url() === FILTERED_TRANSACTIONS_URL && request.method() === 'POST') {
+        try {
+          const rawPostData = request.postData();
+          if (rawPostData) {
+            const postData = JSON.parse(rawPostData);
+            if (postData && postData.reqObj) {
+              const reqObj = JSON.parse(postData.reqObj);
+              reqObj.AccountIndex = accountIndex;
+              postData.reqObj = JSON.stringify(reqObj);
+
+              request.continue({
+                method: 'POST',
+                postData: JSON.stringify(postData),
+                headers: {
+                  ...request.headers(),
+                  'Content-Type': 'application/json',
+                },
+              });
+              return;
+            }
+          }
+        } catch (error) {
+          debug(`Failed to modify request: ${(error as Error).message}`);
+        }
+      }
+      request.continue();
+    };
+
+    page.on('request', requestHandler);
+  }
 
   await waitUntilElementFound(page, 'button[title="חיפוש מתקדם"]', true);
   await clickButton(page, 'button[title="חיפוש מתקדם"]');
@@ -129,6 +162,12 @@ async function fetchTransactionsForAccount(
   });
 
   const responseJson: any = await finalResponse.json();
+
+  // Clean up request interception if it was enabled
+  if (requestHandler) {
+    page.off('request', requestHandler);
+    await page.setRequestInterception(false);
+  }
 
   const accountNumber = accountId.replace('/', '_').replace(/[^\d-_]/g, '');
 
@@ -166,14 +205,49 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
     throw new Error('Failed to extract or parse the account number');
   }
 
-  for (const accountId of accountsIds) {
-    if (accountsIds.length > 1) {
-      // get list of accounts and check accountId
-      await clickByXPath(page, 'xpath///*[contains(@class, "number") and contains(@class, "combo-inner")]');
-      await clickByXPath(page, `xpath///span[contains(text(), '${accountId}')]`);
-    }
+  debug(`Found ${accountsIds.length} account(s)`);
 
-    accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(accountId)));
+  // When users have multiple accounts, Leumi displays the LAST account in the dropdown list by default.
+  // We need to:
+  // 1. Fetch the last account WITHOUT AccountIndex modification (gets the default displayed data)
+  // 2. Fetch remaining accounts using AccountIndex starting from 1
+  //
+  // For 2 accounts specifically:
+  // - accountsIds[1] (second/last in dropdown): fetch without AccountIndex
+  // - accountsIds[0] (first in dropdown): fetch with AccountIndex 1
+
+  // Create a mapping array with account info and the AccountIndex to use
+  const accountsToFetch =
+    accountsIds.length === 2
+      ? [
+          { id: accountsIds[1], accountIndex: undefined }, // Second in dropdown, no AccountIndex (default)
+          { id: accountsIds[0], accountIndex: 1 }, // First in dropdown, AccountIndex 1
+        ]
+      : accountsIds.map((id, i) => ({ id, accountIndex: i === 0 ? undefined : i }));
+
+  for (let i = 0; i < accountsToFetch.length; i++) {
+    const { id: accountId, accountIndex } = accountsToFetch[i];
+    try {
+      debug(
+        `Processing account ${i + 1}/${accountsToFetch.length}: ${accountId}${
+          accountIndex !== undefined ? ` with AccountIndex ${accountIndex}` : ' (no AccountIndex)'
+        }`,
+      );
+
+      await page.goto(TRANSACTIONS_URL, { waitUntil: 'networkidle2' });
+      await hangProcess(3000);
+
+      const accountData = await fetchTransactionsForAccount(
+        page,
+        startDate,
+        removeSpecialCharacters(accountId),
+        accountIndex,
+      );
+
+      accounts.push(accountData);
+    } catch (error) {
+      debug(`Failed to process account ${i + 1}: ${(error as Error).message}`);
+    }
   }
 
   return accounts;
