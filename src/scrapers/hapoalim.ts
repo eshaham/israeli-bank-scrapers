@@ -201,7 +201,12 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOpt
 
   debug('fetching accounts data');
   const accountsInfo = (await fetchGetWithinPage<FetchedAccountData>(page, accountDataUrl)) || [];
-  debug('got %d accounts, fetching txns and balance', accountsInfo.length);
+  const openAccountsInfo = accountsInfo.filter(account => account.accountClosingReasonCode === 0);
+  debug(
+    'got %d open accounts from %d total accounts, fetching txns and balance',
+    openAccountsInfo.length,
+    accountsInfo.length,
+  );
 
   const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
   const startDate = options.startDate || defaultStartMoment.toDate();
@@ -213,17 +218,11 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOpt
 
   const accounts: TransactionsAccount[] = [];
 
-  for (const account of accountsInfo) {
-    let balance: number | undefined;
+  for (const account of openAccountsInfo) {
+    debug('getting information for account %s', account.accountNumber);
     const accountNumber = `${account.bankNumber}-${account.branchNumber}-${account.accountNumber}`;
 
-    const isActiveAccount = account.accountClosingReasonCode === 0;
-    if (isActiveAccount) {
-      balance = await getAccountBalance(apiSiteUrl, page, accountNumber);
-    } else {
-      debug('Skipping balance for a closed account, balance will be undefined');
-    }
-
+    const balance = await getAccountBalance(apiSiteUrl, page, accountNumber);
     const txns = await getAccountTransactions(
       baseUrl,
       apiSiteUrl,
