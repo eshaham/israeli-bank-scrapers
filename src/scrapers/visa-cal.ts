@@ -160,6 +160,19 @@ interface CardPendingTransactionDetails extends CardTransactionDetailsError {
   statusTitle: string;
 }
 
+interface CardLevelFrame {
+  cardUniqueId: string;
+  nextTotalDebit?: number;
+}
+
+interface FramesResponse {
+  result?: {
+    bankIssuedCards?: {
+      cardLevelFrames?: CardLevelFrame[];
+    };
+  };
+}
+
 interface AuthModule {
   auth: {
     calConnectToken: string | null;
@@ -445,7 +458,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     const futureMonthsToScrape = this.options.futureMonthsToScrape ?? 1;
 
     debug('fetch frames (misgarot) of cards');
-    const frames = await fetchPost(
+    const frames = await fetchPost<FramesResponse>(
       FRAMES_REQUEST_ENDPOINT,
       { cardsForFrameData: cards.map(({ cardUniqueId }) => ({ cardUniqueId })) },
       {
@@ -461,7 +474,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         const finalMonthToFetchMoment = moment().add(futureMonthsToScrape, 'month');
         const months = finalMonthToFetchMoment.diff(startMoment, 'months');
         const allMonthsData: CardTransactionDetails[] = [];
-        const frame = _.find(frames.result.bankIssuedCards?.cardLevelFrames, { cardUniqueId: card.cardUniqueId });
+        const frame = _.find(frames.result?.bankIssuedCards?.cardLevelFrames, { cardUniqueId: card.cardUniqueId });
 
         debug(`fetch pending transactions for card ${card.cardUniqueId}`);
         let pendingData = await fetchPost(
@@ -521,7 +534,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
         return {
           txns,
-          balance: -frame?.nextTotalDebit,
+          balance: frame?.nextTotalDebit != null ? -frame.nextTotalDebit : undefined,
           accountNumber: card.last4Digits,
         } as TransactionsAccount;
       }),
