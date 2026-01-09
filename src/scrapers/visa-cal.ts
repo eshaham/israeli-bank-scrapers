@@ -163,18 +163,14 @@ interface CardPendingTransactionDetails extends CardTransactionDetailsError {
 interface CardLevelFrame {
   cardUniqueId: string;
   nextTotalDebit?: number;
-  [key: string]: unknown;
 }
 
 interface FramesResponse {
   result?: {
     bankIssuedCards?: {
       cardLevelFrames?: CardLevelFrame[];
-      [key: string]: unknown;
     };
-    [key: string]: unknown;
   };
-  [key: string]: unknown;
 }
 
 interface AuthModule {
