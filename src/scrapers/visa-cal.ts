@@ -160,6 +160,23 @@ interface CardPendingTransactionDetails extends CardTransactionDetailsError {
   statusTitle: string;
 }
 
+interface CardLevelFrame {
+  cardUniqueId: string;
+  nextTotalDebit?: number;
+  [key: string]: unknown;
+}
+
+interface FramesResponse {
+  result?: {
+    bankIssuedCards?: {
+      cardLevelFrames?: CardLevelFrame[];
+      [key: string]: unknown;
+    };
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 interface AuthModule {
   auth: {
     calConnectToken: string | null;
@@ -445,7 +462,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     const futureMonthsToScrape = this.options.futureMonthsToScrape ?? 1;
 
     debug('fetch frames (misgarot) of cards');
-    const frames = await fetchPost(
+    const frames = await fetchPost<FramesResponse>(
       FRAMES_REQUEST_ENDPOINT,
       { cardsForFrameData: cards.map(({ cardUniqueId }) => ({ cardUniqueId })) },
       {
@@ -521,7 +538,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
         return {
           txns,
-          balance: -frame?.nextTotalDebit,
+          balance: frame?.nextTotalDebit !== undefined ? -frame.nextTotalDebit : undefined,
           accountNumber: card.last4Digits,
         } as TransactionsAccount;
       }),
