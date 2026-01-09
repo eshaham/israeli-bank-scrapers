@@ -538,7 +538,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
         return {
           txns,
-          balance: frame?.nextTotalDebit !== undefined ? -frame.nextTotalDebit : undefined,
+          balance: frame?.nextTotalDebit != null ? -frame.nextTotalDebit : undefined,
           accountNumber: card.last4Digits,
         } as TransactionsAccount;
       }),
