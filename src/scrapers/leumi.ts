@@ -20,7 +20,11 @@ const INVALID_PASSWORD_MSG = 'אחד או יותר מפרטי ההזדהות ש�
 
 function getPossibleLoginResults() {
   const urls: LoginOptions['possibleResults'] = {
-    [LoginResults.Success]: [/ebanking\/SO\/SPA.aspx/i],
+    [LoginResults.Success]: [
+      /ebanking\/SO\/SPA.aspx/i,
+      /staticcontent\/digitalfront\/he/i,
+      /staticcontent\/gate-keeper\/he/i,
+    ],
     [LoginResults.InvalidPassword]: [
       async options => {
         if (!options || !options.page) {
@@ -213,12 +217,29 @@ async function navigateToLogin(page: Page): Promise<void> {
 }
 
 async function waitForPostLogin(page: Page): Promise<void> {
+  debug('Waiting for post-login navigation...');
+
+  // Use URL-based detection instead of problematic XPath
   await Promise.race([
+    // Wait for successful navigation to Leumi's authenticated pages
+    page.waitForFunction(
+      () => {
+        const url = window.location.href;
+        return (
+          url.includes('/ebanking/SO/SPA.aspx') ||
+          url.includes('/staticcontent/digitalfront/he') ||
+          url.includes('/staticcontent/gate-keeper/he')
+        );
+      },
+      { timeout: 60000 },
+    ),
+    // Still check for error elements, but use more reliable selectors
     waitUntilElementFound(page, 'a[title="דלג לחשבון"]', true, 60000),
     waitUntilElementFound(page, 'div.main-content', false, 60000),
-    page.waitForSelector(`xpath//div[contains(string(),"${INVALID_PASSWORD_MSG}")]`),
-    waitUntilElementFound(page, 'form[action="/changepassword"]', true, 60000), // not sure if they kept this one
+    waitUntilElementFound(page, 'form[action="/changepassword"]', true, 60000),
   ]);
+
+  debug('Post-login navigation completed, current URL: %s', page.url());
 }
 
 type ScraperSpecificCredentials = { username: string; password: string };
@@ -240,6 +261,10 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
     const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(minimumStartMoment, moment(startDate));
+
+    // Wait for login session to be fully established
+    debug('Waiting for login session to stabilize...');
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
     await this.navigateTo(TRANSACTIONS_URL);
 
