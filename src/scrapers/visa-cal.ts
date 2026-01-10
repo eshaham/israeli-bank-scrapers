@@ -170,9 +170,10 @@ interface FramesResponse {
     bankIssuedCards?: {
       cardLevelFrames?: CardLevelFrame[];
     };
+    calIssuedCards?: {
+      accountLevelFrames?: CardLevelFrame[];
+    };
   };
-}
-
 interface AuthModule {
   auth: {
     calConnectToken: string | null;
@@ -418,13 +419,44 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     return {
       loginUrl: `${LOGIN_URL}`,
       fields: createLoginFields(credentials),
-      submitButtonSelector: 'button[type="submit"]',
+      submitButtonSelector: async () => {
+        const frame = await getLoginFrame(this.page);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const passwordField = await frame.$('[formcontrolname="password"]');
+        if (passwordField) {
+          await passwordField.focus();
+          await passwordField.press('Enter');
+          await new Promise(resolve => setTimeout(resolve, 10000));
+        }
+      },
       possibleResults: getPossibleLoginResults(),
       checkReadiness: async () => waitUntilElementFound(this.page, '#ccLoginDesktopBtn'),
       preAction: this.openLoginPopup,
       postAction: async () => {
         try {
           await waitForNavigation(this.page);
+          
+          // Close WhatsApp popup if it appears
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          const selectors = [
+            'button.close[data-dismiss="modal"]',
+            'button.close[title="סגירה"]',
+            '.modal-header button.close'
+          ];
+          
+          for (const selector of selectors) {
+            try {
+              const closeButton = await this.page.$(selector);
+              if (closeButton) {
+                await closeButton.click();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                break;
+              }
+            } catch (e) {
+              // Continue to next selector
+            }
+          }
+          
           const currentUrl = await getCurrentUrl(this.page);
           if (currentUrl.endsWith('site-tutorial')) {
             await clickButton(this.page, 'button.btn-close');
@@ -474,7 +506,14 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         const finalMonthToFetchMoment = moment().add(futureMonthsToScrape, 'month');
         const months = finalMonthToFetchMoment.diff(startMoment, 'months');
         const allMonthsData: CardTransactionDetails[] = [];
-        const frame = _.find(frames.result?.bankIssuedCards?.cardLevelFrames, { cardUniqueId: card.cardUniqueId });
+        // Support both old and new API structures
+        let cardFrames;
+        if (frames.result?.calIssuedCards?.accountLevelFrames) {
+          cardFrames = frames.result.calIssuedCards.accountLevelFrames;
+        } else if (frames.result?.bankIssuedCards?.cardLevelFrames) {
+          cardFrames = frames.result.bankIssuedCards.cardLevelFrames;
+        }
+        const frame = _.find(cardFrames, { cardUniqueId: card.cardUniqueId });
 
         debug(`fetch pending transactions for card ${card.cardUniqueId}`);
         let pendingData = await fetchPost(
