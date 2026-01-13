@@ -330,8 +330,7 @@ async function getForexAccounts(
 
   const currency = { code: 19, swift: SHEKEL_CURRENCY };
   try {
-    const detailedAccountTypeCode = 142; // For foreign currency accounts
-    const forexUrl = `${baseUrl}/ServerServices/foreign-currency/transactions?accountId=${accountNumber}&type=business&retrievalStartDate=${startDate}&retrievalEndDate=${endDate}&currencyCodeList=${currency.code}&detailedAccountTypeCodeList=${detailedAccountTypeCode}&view=details&lang=he`;
+    const forexUrl = `${baseUrl}/ServerServices/foreign-currency/transactions?accountId=${accountNumber}&type=business&retrievalStartDate=${startDate}&retrievalEndDate=${endDate}&lang=he`;
     debug('Trying forex %s', forexUrl);
 
     const forexData = await fetchGetWithinPage<ForexAccountData>(page, forexUrl, true); // ignoreErrors = true
@@ -343,14 +342,8 @@ async function getForexAccounts(
         const currencySwiftCode = currencyData.currencySwiftCode || currency.swift;
         const transactionCount = currencyData.transactions?.length || 0;
 
-        // Get balance from the most recent transaction's currentBalance field
-        // If no transactions, fall back to currencyData.currentBalance
-        let balance = currencyData.currentBalance;
-        if (transactionCount > 0 && currencyData.transactions) {
-          balance = currencyData.transactions[0].currentBalance;
-          debug('  - Using balance from most recent transaction: %s', balance);
-        }
-
+        // Get balance from currencyData.currentBalance
+        const balance = currencyData.currentBalance;
         debug('  - Currency: %s, Balance: %s, Transactions: %d', currencySwiftCode, balance, transactionCount);
 
         // Log transaction dates for debugging
@@ -381,7 +374,6 @@ async function getForexAccounts(
     }
   } catch (error) {
     debug('  - Error fetching forex: %s', error);
-    // Continue trying other currencies
   }
 
   debug('Returning %d forex accounts', accounts.length);
