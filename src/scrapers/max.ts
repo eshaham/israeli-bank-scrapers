@@ -7,6 +7,7 @@ import { clickButton, elementPresentOnPage, waitUntilElementFound } from '../hel
 import { fetchGetWithinPage } from '../helpers/fetch';
 import { waitForRedirect } from '../helpers/navigation';
 import { filterOldTransactions, fixInstallments, sortTransactionsByDate } from '../helpers/transactions';
+import { sleep } from '../helpers/waiting';
 import { TransactionStatuses, TransactionTypes, type Transaction } from '../transactions';
 import {
   BaseScraperWithBrowser,
@@ -357,7 +358,7 @@ class MaxScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
         try {
           await waitUntilElementFound(this.page, '#login-password-link', true, 10000);
         } catch {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await sleep(1000);
           await waitUntilElementFound(this.page, '#login-password-link', true, 10000);
         }
         await clickButton(this.page, '#login-password-link');
