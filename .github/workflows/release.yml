@@ -8,6 +8,10 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    environment: npm-publish
+    permissions:
+      id-token: write
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -16,6 +20,13 @@ jobs:
         with:
           node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org/
+      - name: Upgrade npm for OIDC support
+        run: npm install -g npm@latest
+      - name: Verify npm version
+        run: |
+          echo "Node version: $(node -v)"
+          echo "npm version: $(npm -v)"
+          npm config list
       - name: prepare default version
         run: npm run prepare:default
       - name: Release to Github
@@ -50,9 +61,7 @@ jobs:
           node utils/pre-publish.js --version ${{ steps.semantic.outputs.new_release_version }}
       - name: Publish to NPM
         if: steps.semantic.outputs.new_release_published == 'true'
-        run: npm publish --access public --ignore-scripts
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+        run: npm publish --access public --ignore-scripts --provenance
       - name: Prepare release of core to NPM
         if: steps.semantic.outputs.new_release_published == 'true'
         run: |
@@ -60,6 +69,4 @@ jobs:
           node utils/pre-publish.js --version ${{ steps.semantic.outputs.new_release_version }}
       - name: Publish to NPM
         if: steps.semantic.outputs.new_release_published == 'true'
-        run: npm publish --access public --ignore-scripts
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+        run: npm publish --access public --ignore-scripts --provenance
