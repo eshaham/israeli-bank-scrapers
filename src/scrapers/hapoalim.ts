@@ -122,11 +122,11 @@ interface InvestmentSecurityBalance {
   EquityNumber: string;
   BaseRate?: number;
   LastRate?: number;
-  BaseRateChangePercentage?: number;
+  AveragePriceProfitLossPercentage?: number;
   OnlineNV: number;
   OnlineVL: number;
   OnlineNisVL?: number;
-  ProfitLoss?: number;
+  AveragePriceProfitLoss?: number;
   CurrencyCode?: string;
 }
 
@@ -536,8 +536,9 @@ async function getInvestmentAccounts(
           volume: securityBalance.OnlineNV,
           value: securityBalance.OnlineVL,
           currency: securityBalance.CurrencyCode || meta?.CurrencyCode || SHEKEL_CURRENCY,
-          changePercentage: securityBalance.BaseRateChangePercentage,
-          profitLoss: securityBalance.ProfitLoss,
+          // Use AveragePrice to get overall profit/loss data for the security
+          changePercentage: securityBalance.AveragePriceProfitLossPercentage,
+          profitLoss: Math.round((securityBalance.AveragePriceProfitLoss || 0) * 100) / 100, // Round to two decimal places
         });
       }
 
