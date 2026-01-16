@@ -10,7 +10,7 @@ import { type ScraperOptions, type ScraperScrapingResult } from './interface';
 
 const debug = getDebug('leumi');
 const BASE_URL = 'https://hb2.bankleumi.co.il';
-const LOGIN_URL = 'https://www.leumi.co.il/';
+const LOGIN_URL = 'https://www.leumi.co.il/he';
 const TRANSACTIONS_URL = `${BASE_URL}/eBanking/SO/SPA.aspx#/ts/BusinessAccountTrx?WidgetPar=1`;
 const FILTERED_TRANSACTIONS_URL = `${BASE_URL}/ChannelWCF/Broker.svc/ProcessRequest?moduleName=UC_SO_27_GetBusinessAccountTrx`;
 
@@ -193,7 +193,7 @@ async function fetchTransactions(
 }
 
 async function navigateToLogin(page: Page): Promise<void> {
-  const loginButtonSelector = '.enter-account a[originaltitle="כניסה לחשבונך"]';
+  const loginButtonSelector = '.enter_account';
   debug('wait for homepage to click on login button');
   await waitUntilElementFound(page, loginButtonSelector);
   debug('navigate to login page');
