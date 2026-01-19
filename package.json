@@ -86,6 +86,8 @@
     "moment-timezone": "^0.5.37",
     "node-fetch": "^2.2.0",
     "puppeteer": "22.15.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "utility-types": "^3.11.0",
     "uuid": "^9.0.1"
   },
