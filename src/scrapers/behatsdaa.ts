@@ -3,6 +3,7 @@ import { getDebug } from '../helpers/debug';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { sleep } from '../helpers/waiting';
+import { getRawTransaction } from '../helpers/transactions';
 import { type Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
 import { BaseScraperWithBrowser, type LoginOptions, LoginResults } from './base-scraper-with-browser';
 import { type ScraperOptions, type ScraperScrapingResult } from './interface';
@@ -50,7 +51,7 @@ function variantToTransaction(variant: Variant, options?: ScraperOptions): Trans
   };
 
   if (options?.includeRawTransaction) {
-    result.rawTransaction = variant;
+    result.rawTransaction = getRawTransaction(variant);
   }
 
   return result;

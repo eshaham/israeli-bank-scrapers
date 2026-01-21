@@ -6,7 +6,12 @@ import { getDebug } from '../helpers/debug';
 import { clickButton, elementPresentOnPage, waitUntilElementFound } from '../helpers/elements-interactions';
 import { fetchGetWithinPage } from '../helpers/fetch';
 import { waitForRedirect } from '../helpers/navigation';
-import { filterOldTransactions, fixInstallments, sortTransactionsByDate } from '../helpers/transactions';
+import {
+  filterOldTransactions,
+  fixInstallments,
+  sortTransactionsByDate,
+  getRawTransaction,
+} from '../helpers/transactions';
 import { TransactionStatuses, TransactionTypes, type Transaction } from '../transactions';
 import {
   BaseScraperWithBrowser,
@@ -229,7 +234,7 @@ function mapTransaction(rawTransaction: ScrapedTransaction, options?: ScraperOpt
   };
 
   if (options?.includeRawTransaction) {
-    result.rawTransaction = rawTransaction;
+    result.rawTransaction = getRawTransaction(rawTransaction);
   }
 
   return result;

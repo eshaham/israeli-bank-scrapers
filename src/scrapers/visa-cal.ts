@@ -5,7 +5,7 @@ import { clickButton, elementPresentOnPage, pageEval, waitUntilElementFound } fr
 import { fetchPost } from '../helpers/fetch';
 import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { getFromSessionStorage } from '../helpers/storage';
-import { filterOldTransactions } from '../helpers/transactions';
+import { filterOldTransactions, getRawTransaction } from '../helpers/transactions';
 import { waitUntil } from '../helpers/waiting';
 import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
@@ -332,7 +332,7 @@ function convertParsedDataToTransactions(
     }
 
     if (options?.includeRawTransaction) {
-      result.rawTransaction = transaction;
+      result.rawTransaction = getRawTransaction(transaction);
     }
 
     return result;

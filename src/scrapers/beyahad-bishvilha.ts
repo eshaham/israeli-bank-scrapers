@@ -10,7 +10,7 @@ import {
 } from '../constants';
 import { getDebug } from '../helpers/debug';
 import { pageEval, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
-import { filterOldTransactions } from '../helpers/transactions';
+import { getRawTransaction, filterOldTransactions } from '../helpers/transactions';
 import { TransactionStatuses, TransactionTypes, type Transaction } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { type ScraperOptions } from './interface';
@@ -76,7 +76,7 @@ function convertTransactions(txns: ScrapedTransaction[], options?: ScraperOption
     };
 
     if (options?.includeRawTransaction) {
-      result.rawTransaction = txn;
+      result.rawTransaction = getRawTransaction(txn);
     }
 
     return result;

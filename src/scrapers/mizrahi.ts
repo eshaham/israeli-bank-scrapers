@@ -13,6 +13,7 @@ import { type Transaction, TransactionStatuses, TransactionTypes, type Transacti
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
 import { getDebug } from '../helpers/debug';
+import { getRawTransaction } from '../helpers/transactions';
 import { type ScraperOptions } from './interface';
 
 const debug = getDebug('mizrahi');
@@ -227,7 +228,7 @@ async function convertTransactions(
       };
 
       if (options?.includeRawTransaction) {
-        result.rawTransaction = row;
+        result.rawTransaction = getRawTransaction(row);
       }
 
       return result;

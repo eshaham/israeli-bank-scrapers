@@ -8,6 +8,7 @@ import { waitUntil } from '../helpers/waiting';
 import { type Transaction, TransactionStatuses, TransactionTypes, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { type ScraperOptions } from './interface';
+import { getRawTransaction } from '../helpers/transactions';
 
 const debug = getDebug('hapoalim');
 
@@ -106,7 +107,7 @@ function convertTransactions(txns: ScrapedTransaction[], options?: ScraperOption
     };
 
     if (options?.includeRawTransaction) {
-      result.rawTransaction = txn;
+      result.rawTransaction = getRawTransaction(txn);
     }
 
     return result;

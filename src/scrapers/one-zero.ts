@@ -1,6 +1,7 @@
 import moment from 'moment/moment';
 import { getDebug } from '../helpers/debug';
 import { fetchGraphql, fetchPost } from '../helpers/fetch';
+import { getRawTransaction } from '../helpers/transactions';
 import {
   type Transaction as ScrapingTransaction,
   TransactionStatuses,
@@ -283,7 +284,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
         };
 
         if (this.options?.includeRawTransaction) {
-          result.rawTransaction = movement;
+          result.rawTransaction = getRawTransaction(movement);
         }
 
         return result;
