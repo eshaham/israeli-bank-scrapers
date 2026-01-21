@@ -3,6 +3,7 @@ import { type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import { getDebug } from '../helpers/debug';
 import { clickButton, fillInput, pageEval, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
+import { getRawTransaction } from '../helpers/transactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
@@ -83,7 +84,7 @@ function extractTransactionsFromPage(
     };
 
     if (options?.includeRawTransaction) {
-      newTransaction.rawTransaction = rawTransaction;
+      newTransaction.rawTransaction = getRawTransaction(rawTransaction);
     }
 
     return newTransaction;

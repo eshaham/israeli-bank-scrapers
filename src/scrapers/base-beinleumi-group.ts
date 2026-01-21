@@ -9,6 +9,7 @@ import {
   waitUntilElementFound,
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
+import { getRawTransaction } from '../helpers/transactions';
 import { sleep } from '../helpers/waiting';
 import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
@@ -96,7 +97,7 @@ function convertTransactions(txns: ScrapedTransaction[], options?: ScraperOption
     };
 
     if (options?.includeRawTransaction) {
-      result.rawTransaction = txn;
+      result.rawTransaction = getRawTransaction(txn);
     }
 
     return result;

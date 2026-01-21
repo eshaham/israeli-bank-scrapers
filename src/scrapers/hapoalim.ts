@@ -8,6 +8,7 @@ import { waitUntil } from '../helpers/waiting';
 import { type Transaction, TransactionStatuses, TransactionTypes, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { type ScraperOptions } from './interface';
+import { getRawTransaction } from '../helpers/transactions';
 
 const debug = getDebug('hapoalim');
 
@@ -35,6 +36,7 @@ interface ScrapedTransaction {
     messageHeadline?: string;
     messageDetail?: string;
   };
+  additionalInformation?: unknown;
 }
 
 interface ScrapedPfmTransaction {
@@ -106,7 +108,7 @@ function convertTransactions(txns: ScrapedTransaction[], options?: ScraperOption
     };
 
     if (options?.includeRawTransaction) {
-      result.rawTransaction = txn;
+      result.rawTransaction = getRawTransaction(txn);
     }
 
     return result;
@@ -156,7 +158,11 @@ async function getExtraScrap(
       if (extraTransactionDetails && extraTransactionDetails.length) {
         const { transactionNumber } = extraTransactionDetails[0];
         if (transactionNumber) {
-          return { ...transaction, referenceNumber: transactionNumber };
+          return {
+            ...transaction,
+            referenceNumber: transactionNumber,
+            additionalInformation: extraTransactionDetails,
+          };
         }
       }
     }
