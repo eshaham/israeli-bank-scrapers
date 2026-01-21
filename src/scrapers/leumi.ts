@@ -21,7 +21,10 @@ const INVALID_PASSWORD_MSG = 'אחד או יותר מפרטי ההזדהות ש�
 
 function getPossibleLoginResults() {
   const urls: LoginOptions['possibleResults'] = {
-    [LoginResults.Success]: [/ebanking\/SO\/SPA.aspx/i],
+    [LoginResults.Success]: [
+      /ebanking\/SO\/SPA.aspx/i, // Private accounts
+      /staticcontent\/digitalfront/i, // Business accounts
+    ],
     [LoginResults.InvalidPassword]: [
       async options => {
         if (!options || !options.page) {
@@ -214,12 +217,28 @@ async function navigateToLogin(page: Page): Promise<void> {
 }
 
 async function waitForPostLogin(page: Page): Promise<void> {
+  debug('Waiting for post-login navigation...');
+
   await Promise.race([
+    // URL-based detection for successful login (supports both private and business accounts)
+    page.waitForFunction(
+      () => {
+        const url = window.location.href;
+        return (
+          url.includes('/ebanking/SO/SPA.aspx') || // Private accounts
+          url.includes('/eBanking/') || // Alternative private account URL
+          url.includes('/staticcontent/digitalfront') // Business accounts
+        );
+      },
+      { timeout: 60000 },
+    ),
+    // Fallback element selectors
     waitUntilElementFound(page, 'a[title="דלג לחשבון"]', true, 60000),
     waitUntilElementFound(page, 'div.main-content', false, 60000),
-    page.waitForSelector(`xpath//div[contains(string(),"${INVALID_PASSWORD_MSG}")]`),
-    waitUntilElementFound(page, 'form[action="/changepassword"]', true, 60000), // not sure if they kept this one
+    waitUntilElementFound(page, 'form[action="/changepassword"]', true, 60000),
   ]);
+
+  debug('Post-login check completed, current URL: %s', page.url());
 }
 
 type ScraperSpecificCredentials = { username: string; password: string };
