@@ -228,7 +228,10 @@ async function convertTransactions(
       };
 
       if (options?.includeRawTransaction) {
-        result.rawTransaction = getRawTransaction(row);
+        result.rawTransaction = getRawTransaction({
+          ...row,
+          additionalInformation: moreDetails.entries,
+        });
       }
 
       return result;

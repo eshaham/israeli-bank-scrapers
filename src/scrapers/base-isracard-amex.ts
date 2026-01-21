@@ -290,6 +290,7 @@ async function getExtraScrapTransaction(
   return {
     ...transaction,
     category: rawCategory.trim(),
+    rawTransaction: getRawTransaction(data, transaction),
   };
 }
 

@@ -74,10 +74,22 @@ function removeEmptyValues<T>(value: T): T {
 }
 
 /**
- * Add raw transaction data with new raw data.
+ * Add/extend raw transaction data with new raw data.
  * - Cleans the data to remove null/undefined/empty-string keys.
+ * - When called with one argument: returns cleaned data (common case for setting new raw transaction).
+ * - When called with two arguments and transaction has rawTransaction: extends existing raw transaction.
  */
-export function getRawTransaction(data: unknown): unknown {
+export function getRawTransaction(data: unknown, transaction?: { rawTransaction?: unknown }): unknown {
+  const current = transaction?.rawTransaction;
   const cleaned = removeEmptyValues(data);
-  return cleaned;
+
+  if (!current) {
+    return cleaned;
+  }
+
+  if (Array.isArray(current)) {
+    return [...current, cleaned];
+  }
+
+  return [current, cleaned];
 }

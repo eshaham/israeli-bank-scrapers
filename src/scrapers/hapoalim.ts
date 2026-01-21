@@ -36,6 +36,7 @@ interface ScrapedTransaction {
     messageHeadline?: string;
     messageDetail?: string;
   };
+  additionalInformation?: unknown;
 }
 
 interface ScrapedPfmTransaction {
@@ -157,7 +158,11 @@ async function getExtraScrap(
       if (extraTransactionDetails && extraTransactionDetails.length) {
         const { transactionNumber } = extraTransactionDetails[0];
         if (transactionNumber) {
-          return { ...transaction, referenceNumber: transactionNumber };
+          return {
+            ...transaction,
+            referenceNumber: transactionNumber,
+            additionalInformation: extraTransactionDetails,
+          };
         }
       }
     }
