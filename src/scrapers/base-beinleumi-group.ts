@@ -9,9 +9,11 @@ import {
   waitUntilElementFound,
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
+import { getRawTransaction } from '../helpers/transactions';
 import { sleep } from '../helpers/waiting';
 import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
+import { type ScraperOptions } from './interface';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא נמצאו נתונים בנושא המבוקש';
@@ -77,11 +79,11 @@ function getTxnAmount(txn: ScrapedTransaction) {
   return (Number.isNaN(credit) ? 0 : credit) - (Number.isNaN(debit) ? 0 : debit);
 }
 
-function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
+function convertTransactions(txns: ScrapedTransaction[], options?: ScraperOptions): Transaction[] {
   return txns.map((txn): Transaction => {
     const convertedDate = moment(txn.date, DATE_FORMAT).toISOString();
     const convertedAmount = getTxnAmount(txn);
-    return {
+    const result: Transaction = {
       type: TransactionTypes.Normal,
       identifier: txn.reference ? parseInt(txn.reference, 10) : undefined,
       date: convertedDate,
@@ -93,6 +95,12 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
       description: txn.description,
       memo: txn.memo,
     };
+
+    if (options?.includeRawTransaction) {
+      result.rawTransaction = getRawTransaction(txn);
+    }
+
+    return result;
   });
 }
 
@@ -243,6 +251,7 @@ async function scrapeTransactions(
   tableLocator: string,
   transactionStatus: TransactionStatuses,
   needToPaginate: boolean,
+  options?: ScraperOptions,
 ) {
   const txns = [];
   let hasNextPage = false;
@@ -258,10 +267,10 @@ async function scrapeTransactions(
     }
   } while (hasNextPage);
 
-  return convertTransactions(txns);
+  return convertTransactions(txns, options);
 }
 
-async function getAccountTransactions(page: Page | Frame) {
+async function getAccountTransactions(page: Page | Frame, options?: ScraperOptions) {
   await Promise.race([
     waitUntilElementFound(page, "div[id*='divTable']", false),
     waitUntilElementFound(page, `.${ERROR_MESSAGE_CLASS}`, false),
@@ -272,12 +281,19 @@ async function getAccountTransactions(page: Page | Frame) {
     return [];
   }
 
-  const pendingTxns = await scrapeTransactions(page, PENDING_TRANSACTIONS_TABLE, TransactionStatuses.Pending, false);
+  const pendingTxns = await scrapeTransactions(
+    page,
+    PENDING_TRANSACTIONS_TABLE,
+    TransactionStatuses.Pending,
+    false,
+    options,
+  );
   const completedTxns = await scrapeTransactions(
     page,
     COMPLETED_TRANSACTIONS_TABLE,
     TransactionStatuses.Completed,
     true,
+    options,
   );
   const txns = [...pendingTxns, ...completedTxns];
   return txns;
@@ -304,11 +320,11 @@ export async function waitForPostLogin(page: Page) {
   ]);
 }
 
-async function fetchAccountData(page: Page | Frame, startDate: Moment) {
+async function fetchAccountData(page: Page | Frame, startDate: Moment, options?: ScraperOptions) {
   const accountNumber = await getAccountNumber(page);
   const balance = await getCurrentBalance(page);
   await searchByDates(page, startDate);
-  const txns = await getAccountTransactions(page);
+  const txns = await getAccountTransactions(page, options);
 
   return {
     accountNumber,
@@ -452,28 +468,32 @@ async function selectAccountBothUIs(page: Page, accountId: string): Promise<void
   }
 }
 
-async function fetchAccountDataBothUIs(page: Page, startDate: Moment) {
+async function fetchAccountDataBothUIs(
+  page: Page,
+  startDate: Moment,
+  options?: ScraperOptions,
+): Promise<TransactionsAccount> {
   // Try to get the iframe for the new UI
   const frame = await getTransactionsFrame(page);
 
   // Use the frame if available (new UI), otherwise use the page directly (old UI)
   const targetPage = frame || page;
-  return fetchAccountData(targetPage, startDate);
+  return fetchAccountData(targetPage, startDate, options);
 }
 
-async function fetchAccounts(page: Page, startDate: Moment): Promise<TransactionsAccount[]> {
+async function fetchAccounts(page: Page, startDate: Moment, options?: ScraperOptions): Promise<TransactionsAccount[]> {
   const accountsIds = await getAccountIdsBothUIs(page);
 
   if (accountsIds.length === 0) {
     // In case accountsIds could no be parsed just return the transactions of the currently selected account
-    const accountData = await fetchAccountDataBothUIs(page, startDate);
+    const accountData = await fetchAccountDataBothUIs(page, startDate, options);
     return [accountData];
   }
 
   const accounts: TransactionsAccount[] = [];
   for (const accountId of accountsIds) {
     await selectAccountBothUIs(page, accountId);
-    const accountData = await fetchAccountDataBothUIs(page, startDate);
+    const accountData = await fetchAccountDataBothUIs(page, startDate, options);
     accounts.push(accountData);
   }
 
@@ -512,7 +532,7 @@ class BeinleumiGroupBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCr
 
     await this.navigateTo(this.TRANSACTIONS_URL);
 
-    const accounts = await fetchAccounts(this.page, startMoment);
+    const accounts = await fetchAccounts(this.page, startMoment, this.options);
 
     return {
       success: true,

@@ -4,6 +4,7 @@ import { type Page } from 'puppeteer';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { fetchGetWithinPage } from '../helpers/fetch';
 import { waitForNavigation } from '../helpers/navigation';
+import { getRawTransaction } from '../helpers/transactions';
 import { type Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
@@ -46,12 +47,16 @@ interface ScrapedTransactionData {
   };
 }
 
-function convertTransactions(txns: ScrapedTransaction[], txnStatus: TransactionStatuses): Transaction[] {
+function convertTransactions(
+  txns: ScrapedTransaction[],
+  txnStatus: TransactionStatuses,
+  options?: ScraperOptions,
+): Transaction[] {
   if (!txns) {
     return [];
   }
   return txns.map(txn => {
-    return {
+    const result: Transaction = {
       type: TransactionTypes.Normal,
       identifier: txn.OperationNumber,
       date: moment(txn.OperationDate, DATE_FORMAT).toISOString(),
@@ -62,6 +67,12 @@ function convertTransactions(txns: ScrapedTransaction[], txnStatus: TransactionS
       description: txn.OperationDescriptionToDisplay,
       status: txnStatus,
     };
+
+    if (options?.includeRawTransaction) {
+      result.rawTransaction = getRawTransaction(txn);
+    }
+
+    return result;
   });
 }
 
@@ -102,12 +113,13 @@ async function fetchAccountData(page: Page, options: ScraperOptions): Promise<Sc
     const accountCompletedTxns = convertTransactions(
       txnsResult.CurrentAccountLastTransactions.OperationEntry,
       TransactionStatuses.Completed,
+      options,
     );
     const rawFutureTxns = _.get(
       txnsResult,
       'CurrentAccountLastTransactions.FutureTransactionsBlock.FutureTransactionEntry',
     ) as ScrapedTransaction[];
-    const accountPendingTxns = convertTransactions(rawFutureTxns, TransactionStatuses.Pending);
+    const accountPendingTxns = convertTransactions(rawFutureTxns, TransactionStatuses.Pending, options);
 
     accountsData.push({
       accountNumber,
@@ -137,6 +149,7 @@ function getPossibleLoginResults(): PossibleLoginResults {
   urls[LoginResults.Success] = [
     `${BASE_URL}/apollo/retail/#/MY_ACCOUNT_HOMEPAGE`,
     `${BASE_URL}/apollo/retail2/#/MY_ACCOUNT_HOMEPAGE`,
+    `${BASE_URL}/apollo/retail2/`,
   ];
   urls[LoginResults.InvalidPassword] = [`${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/LOGIN_PAGE`];
   urls[LoginResults.ChangePassword] = [`${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/PWD_RENEW`];

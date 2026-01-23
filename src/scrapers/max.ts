@@ -6,7 +6,12 @@ import { getDebug } from '../helpers/debug';
 import { clickButton, elementPresentOnPage, waitUntilElementFound } from '../helpers/elements-interactions';
 import { fetchGetWithinPage } from '../helpers/fetch';
 import { waitForRedirect } from '../helpers/navigation';
-import { filterOldTransactions, fixInstallments, sortTransactionsByDate } from '../helpers/transactions';
+import {
+  filterOldTransactions,
+  fixInstallments,
+  sortTransactionsByDate,
+  getRawTransaction,
+} from '../helpers/transactions';
 import { TransactionStatuses, TransactionTypes, type Transaction } from '../transactions';
 import {
   BaseScraperWithBrowser,
@@ -41,7 +46,7 @@ export interface ScrapedTransaction {
 const BASE_API_ACTIONS_URL = 'https://onlinelcapi.max.co.il';
 const BASE_WELCOME_URL = 'https://www.max.co.il';
 
-const LOGIN_URL = `${BASE_WELCOME_URL}/homepage/welcome`;
+const LOGIN_URL = `${BASE_WELCOME_URL}/login`;
 const PASSWORD_EXPIRED_URL = `${BASE_WELCOME_URL}/renew-password`;
 const SUCCESS_URL = `${BASE_WELCOME_URL}/homepage/personal`;
 
@@ -68,6 +73,7 @@ enum MaxPlanName {
   EarlyRepayment = 'פרעון מוקדם',
   MonthlyCardFee = 'דמי כרטיס',
   CurrencyPocket = 'חיוב ארנק מטח',
+  MonthlyChargeDistribution = 'חלוקת חיוב חודשי',
 }
 
 const INVALID_DETAILS_SELECTOR = '#popupWrongDetails';
@@ -141,6 +147,7 @@ function getTransactionType(planName: string, planTypeId: number) {
     case MaxPlanName.EarlyRepayment:
     case MaxPlanName.MonthlyCardFee:
     case MaxPlanName.CurrencyPocket:
+    case MaxPlanName.MonthlyChargeDistribution:
       return TransactionTypes.Normal;
     case MaxPlanName.Installments:
     case MaxPlanName.Credit:
@@ -200,7 +207,7 @@ export function getMemo({
   return comments;
 }
 
-function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
+function mapTransaction(rawTransaction: ScrapedTransaction, options?: ScraperOptions): Transaction {
   const isPending = rawTransaction.paymentDate === null;
   const processedDate = moment(isPending ? rawTransaction.purchaseDate : rawTransaction.paymentDate).toISOString();
   const status = isPending ? TransactionStatuses.Pending : TransactionStatuses.Completed;
@@ -210,7 +217,7 @@ function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
     ? `${rawTransaction.dealData?.arn}_${installments.number}`
     : rawTransaction.dealData?.arn;
 
-  return {
+  const result: Transaction = {
     type: getTransactionType(rawTransaction.planName, rawTransaction.planTypeId),
     date: moment(rawTransaction.purchaseDate).toISOString(),
     processedDate,
@@ -225,6 +232,12 @@ function mapTransaction(rawTransaction: ScrapedTransaction): Transaction {
     identifier,
     status,
   };
+
+  if (options?.includeRawTransaction) {
+    result.rawTransaction = getRawTransaction(rawTransaction);
+  }
+
+  return result;
 }
 interface ScrapedTransactionsResult {
   result?: {
@@ -232,7 +245,7 @@ interface ScrapedTransactionsResult {
   };
 }
 
-async function fetchTransactionsForMonth(page: Page, monthMoment: Moment) {
+async function fetchTransactionsForMonth(page: Page, monthMoment: Moment, options?: ScraperOptions) {
   const url = getTransactionsUrl(monthMoment);
 
   const data = await fetchGetWithinPage<ScrapedTransactionsResult>(page, url);
@@ -248,7 +261,7 @@ async function fetchTransactionsForMonth(page: Page, monthMoment: Moment) {
         transactionsByAccount[transaction.shortCardNumber] = [];
       }
 
-      const mappedTransaction = mapTransaction(transaction);
+      const mappedTransaction = mapTransaction(transaction, options);
       transactionsByAccount[transaction.shortCardNumber].push(mappedTransaction);
     });
 
@@ -295,7 +308,7 @@ async function fetchTransactions(page: Page, options: ScraperOptions) {
 
   let allResults: Record<string, Transaction[]> = {};
   for (let i = 0; i < allMonths.length; i += 1) {
-    const result = await fetchTransactionsForMonth(page, allMonths[i]);
+    const result = await fetchTransactionsForMonth(page, allMonths[i], options);
     allResults = addResult(allResults, result);
   }
 

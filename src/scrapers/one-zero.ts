@@ -1,6 +1,7 @@
 import moment from 'moment/moment';
 import { getDebug } from '../helpers/debug';
 import { fetchGraphql, fetchPost } from '../helpers/fetch';
+import { getRawTransaction } from '../helpers/transactions';
 import {
   type Transaction as ScrapingTransaction,
   TransactionStatuses,
@@ -269,7 +270,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
       txns: matchingMovements.map((movement): ScrapingTransaction => {
         const hasInstallments = movement.transaction?.enrichment?.recurrences?.some(x => x.isRecurrent);
         const modifier = movement.creditDebit === 'DEBIT' ? -1 : 1;
-        return {
+        const result: ScrapingTransaction = {
           identifier: movement.movementId,
           date: movement.valueDate,
           chargedAmount: +movement.movementAmount * modifier,
@@ -281,6 +282,12 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
           status: TransactionStatuses.Completed,
           type: hasInstallments ? TransactionTypes.Installments : TransactionTypes.Normal,
         };
+
+        if (this.options?.includeRawTransaction) {
+          result.rawTransaction = getRawTransaction(movement);
+        }
+
+        return result;
       }),
     };
   }

@@ -49,3 +49,47 @@ export function filterOldTransactions(txns: Transaction[], startMoment: Moment, 
     );
   });
 }
+
+/**
+ * Recursively remove null, undefined, empty string, and empty array values from objects and arrays.
+ */
+function removeEmptyValues<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map(item => removeEmptyValues(item)) as unknown as T;
+  }
+
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => {
+        if (v === null || v === undefined || v === '') return false;
+        if (Array.isArray(v) && v.length === 0) return false;
+        return true;
+      })
+      .map(([k, v]) => [k, removeEmptyValues(v)]);
+
+    return Object.fromEntries(entries) as unknown as T;
+  }
+
+  return value;
+}
+
+/**
+ * Add/extend raw transaction data with new raw data.
+ * - Cleans the data to remove null/undefined/empty-string keys.
+ * - When called with one argument: returns cleaned data (common case for setting new raw transaction).
+ * - When called with two arguments and transaction has rawTransaction: extends existing raw transaction.
+ */
+export function getRawTransaction(data: unknown, transaction?: { rawTransaction?: unknown }): unknown {
+  const current = transaction?.rawTransaction;
+  const cleaned = removeEmptyValues(data);
+
+  if (!current) {
+    return cleaned;
+  }
+
+  if (Array.isArray(current)) {
+    return [...current, cleaned];
+  }
+
+  return [current, cleaned];
+}

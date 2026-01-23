@@ -3,15 +3,16 @@ import { type HTTPResponse, type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import { getDebug } from '../helpers/debug';
 import { clickButton, fillInput, pageEval, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
+import { getRawTransaction } from '../helpers/transactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
 import { type InvestmentTransaction, type Investment, type Portfolio } from '../investments';
 import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
-import { type ScraperScrapingResult } from './interface';
+import { type ScraperOptions, type ScraperScrapingResult } from './interface';
 
 const debug = getDebug('leumi');
 const BASE_URL = 'https://hb2.bankleumi.co.il';
-const LOGIN_URL = 'https://www.leumi.co.il/';
+const LOGIN_URL = 'https://www.leumi.co.il/he';
 const TRANSACTIONS_URL = `${BASE_URL}/eBanking/SO/SPA.aspx#/ts/BusinessAccountTrx?WidgetPar=1`;
 const FILTERED_TRANSACTIONS_URL = `${BASE_URL}/ChannelWCF/Broker.svc/ProcessRequest?moduleName=UC_SO_27_GetBusinessAccountTrx`;
 const LEUMI_TRADING_URL = `${BASE_URL}/lti/lti-app/trade/portfolio`;
@@ -61,7 +62,11 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
   ];
 }
 
-function extractTransactionsFromPage(transactions: any[], status: TransactionStatuses): Transaction[] {
+function extractTransactionsFromPage(
+  transactions: any[],
+  status: TransactionStatuses,
+  options?: ScraperOptions,
+): Transaction[] {
   if (transactions === null || transactions.length === 0) {
     return [];
   }
@@ -80,6 +85,10 @@ function extractTransactionsFromPage(transactions: any[], status: TransactionSta
       chargedAmount: rawTransaction.Amount,
       originalAmount: rawTransaction.Amount,
     };
+
+    if (options?.includeRawTransaction) {
+      newTransaction.rawTransaction = getRawTransaction(rawTransaction);
+    }
 
     return newTransaction;
   });
@@ -109,6 +118,7 @@ async function fetchTransactionsForAccount(
   page: Page,
   startDate: Moment,
   accountId: string,
+  options: ScraperOptions,
 ): Promise<TransactionsAccount> {
   // DEVELOPER NOTICE the account number received from the server is being altered at
   // runtime for some accounts after 1-2 seconds so we need to hang the process for a short while.
@@ -141,8 +151,8 @@ async function fetchTransactionsForAccount(
   const transactions = response.HistoryTransactionsItems;
   const balance = response.BalanceDisplay ? parseFloat(response.BalanceDisplay) : undefined;
 
-  const pendingTxns = extractTransactionsFromPage(pendingTransactions, TransactionStatuses.Pending);
-  const completedTxns = extractTransactionsFromPage(transactions, TransactionStatuses.Completed);
+  const pendingTxns = extractTransactionsFromPage(pendingTransactions, TransactionStatuses.Pending, options);
+  const completedTxns = extractTransactionsFromPage(transactions, TransactionStatuses.Completed, options);
   const txns = [...pendingTxns, ...completedTxns];
 
   return {
@@ -152,7 +162,11 @@ async function fetchTransactionsForAccount(
   };
 }
 
-async function fetchTransactions(page: Page, startDate: Moment): Promise<TransactionsAccount[]> {
+async function fetchTransactions(
+  page: Page,
+  startDate: Moment,
+  options: ScraperOptions,
+): Promise<TransactionsAccount[]> {
   const accounts: TransactionsAccount[] = [];
 
   // DEVELOPER NOTICE the account number received from the server is being altered at
@@ -176,14 +190,14 @@ async function fetchTransactions(page: Page, startDate: Moment): Promise<Transac
       await clickByXPath(page, `xpath///span[contains(text(), '${accountId}')]`);
     }
 
-    accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(accountId)));
+    accounts.push(await fetchTransactionsForAccount(page, startDate, removeSpecialCharacters(accountId), options));
   }
 
   return accounts;
 }
 
 async function navigateToLogin(page: Page): Promise<void> {
-  const loginButtonSelector = '.enter-account a[originaltitle="כניסה לחשבונך"]';
+  const loginButtonSelector = '.enter_account';
   debug('wait for homepage to click on login button');
   await waitUntilElementFound(page, loginButtonSelector);
   debug('navigate to login page');
@@ -422,7 +436,7 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
 
     await this.navigateTo(TRANSACTIONS_URL);
 
-    const accounts = await fetchTransactions(this.page, startMoment);
+    const accounts = await fetchTransactions(this.page, startMoment, this.options);
     const investments = await this.fetchPortfolios(startMoment);
 
     return {
