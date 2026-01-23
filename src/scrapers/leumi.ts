@@ -1,11 +1,12 @@
 import moment, { type Moment } from 'moment';
-import { type Page } from 'puppeteer';
+import { type HTTPResponse, type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import { getDebug } from '../helpers/debug';
 import { clickButton, fillInput, pageEval, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
 import { getRawTransaction } from '../helpers/transactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
+import { type InvestmentTransaction, type Investment, type Portfolio } from '../investments';
 import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
 import { type ScraperOptions, type ScraperScrapingResult } from './interface';
 
@@ -14,6 +15,8 @@ const BASE_URL = 'https://hb2.bankleumi.co.il';
 const LOGIN_URL = 'https://www.leumi.co.il/he';
 const TRANSACTIONS_URL = `${BASE_URL}/eBanking/SO/SPA.aspx#/ts/BusinessAccountTrx?WidgetPar=1`;
 const FILTERED_TRANSACTIONS_URL = `${BASE_URL}/ChannelWCF/Broker.svc/ProcessRequest?moduleName=UC_SO_27_GetBusinessAccountTrx`;
+const LEUMI_TRADING_URL = `${BASE_URL}/lti/lti-app/trade/portfolio`;
+const LEUMI_TRADING_HISTORY_URL = `${BASE_URL}/lti/lti-app/trade/orders/history`;
 
 const DATE_FORMAT = 'DD.MM.YY';
 const ACCOUNT_BLOCKED_MSG = 'המנוי חסום';
@@ -224,6 +227,116 @@ async function waitForPostLogin(page: Page): Promise<void> {
 
 type ScraperSpecificCredentials = { username: string; password: string };
 
+function extractPortfolios(response: HTTPResponse, portfolios: Portfolio[]) {
+  response
+    .json()
+    .then(data => {
+      debug('Portfolio data received:', data);
+
+      const portfoliosData = data?.data.user?.Portfolios;
+      debug('Portfolios:', portfoliosData);
+
+      for (const item of portfoliosData) {
+        const portfolio: Portfolio = {
+          portfolioId: item.PortfolioId,
+          portfolioName: item.PortfolioName,
+          investments: [],
+          transactions: [],
+        };
+
+        portfolios.push(portfolio);
+      }
+    })
+    .catch(error => {
+      debug('Error parsing response JSON:', error);
+    });
+}
+
+function convertInvestmentCurrency(currencyCode: any): string {
+  if (currencyCode == 1) {
+    return SHEKEL_CURRENCY;
+  }
+
+  return SHEKEL_CURRENCY;
+}
+
+function extractPortfolioInvestments(response: HTTPResponse, investments: Investment[]) {
+  response
+    .json()
+    .then(data => {
+      debug('Investment data received:', data);
+
+      const userStatement = data?.data.UserStatement?.DataSource;
+      debug('User statement:', userStatement);
+
+      for (const item of userStatement) {
+        const investment: Investment = {
+          paperId: item.PaperId,
+          paperName: item.PaperName,
+          symbol: item.Symbol,
+          amount: parseFloat(item.Amount),
+          value: parseFloat(item.Value),
+          currency: convertInvestmentCurrency(item.CurrencyRate),
+        };
+
+        investments.push(investment);
+      }
+    })
+    .catch(error => {
+      debug('Error parsing response JSON:', error);
+    });
+}
+
+async function extractPortfolioTransactionsFromResponse(response: HTTPResponse): Promise<InvestmentTransaction[]> {
+  const data = await response.json();
+  debug('Portfolio data received:', data);
+
+  const records = data?.data.GetOrdersHistory?.ordersHistory?.records;
+  debug('User statement:', records);
+
+  const transactions: InvestmentTransaction[] = [];
+  for (const item of records) {
+    const transaction: InvestmentTransaction = {
+      paperId: item.PaperId,
+      paperName: item.PaperName,
+      symbol: item.Symbol,
+      amount: parseFloat(item.Amount),
+      value: parseFloat(item.ExecutableTotal),
+      currency: convertInvestmentCurrency(item.ExchangeCurrencyCode),
+      taxSum: parseFloat(item.TaxSum),
+      executionDate: new Date(item.ExecutionDate),
+      executablePrice: parseFloat(item.ExecutablePrice),
+    };
+
+    transactions.push(transaction);
+  }
+
+  return transactions;
+}
+
+async function setStartingDateForPortfolioTransactions(page: Page, startDate: moment.Moment) {
+  await page.waitForSelector('div.mat-select-panel-wrap');
+  await clickByXPath(page, 'xpath///mat-option[last()]');
+
+  await page.waitForSelector('div#chooseByDatesBlock');
+  await clickByXPath(page, 'xpath///div[@id="chooseByDatesBlock"]//input[@id="mat-input-0"]');
+
+  await page.waitForSelector('mat-calendar');
+  await clickByXPath(page, 'xpath///mat-calendar//button[contains(@class, "mat-calendar-period-button")]');
+
+  const year = startDate.get('year');
+  await page.waitForSelector(`mat-calendar td[aria-label="${year}"]`);
+  await clickByXPath(page, `xpath///mat-calendar//td[contains(@aria-label, "${year}")]`);
+
+  const month = '01/' + startDate.format('MM/YY');
+  await page.waitForSelector(`mat-calendar td[aria-label="${month}"]`);
+  await clickByXPath(page, `xpath///mat-calendar//td[contains(@aria-label, "${month}")]`);
+
+  const day = startDate.format('DD/MM/YY');
+  await page.waitForSelector(`mat-calendar td[aria-label="${day}"]`);
+  await clickByXPath(page, `xpath///mat-calendar//td[contains(@aria-label, "${day}")]`);
+}
+
 class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   getLoginOptions(credentials: ScraperSpecificCredentials) {
     return {
@@ -236,6 +349,85 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
     };
   }
 
+  private async fetchPortfolioTransactions(startDate: Moment): Promise<InvestmentTransaction[]> {
+    await this.page.setRequestInterception(true);
+
+    await this.navigateTo(LEUMI_TRADING_HISTORY_URL);
+
+    await this.page.waitForSelector('div.select-period-block');
+    await clickByXPath(this.page, 'xpath///div[contains(@class, "select-period-block")]');
+
+    await setStartingDateForPortfolioTransactions(this.page, startDate);
+
+    const responsePromise = this.page.waitForResponse(
+      response =>
+        (response.request().resourceType() === 'xhr' || response.request().resourceType() === 'fetch') &&
+        response.url().includes('GetOrdersHistory'),
+    );
+
+    await clickByXPath(this.page, 'xpath///div[@id="chooseByDatesBlock"]//button[contains(@class, "btn-primary")]');
+
+    const response = await responsePromise; // Wait for the specific response
+    debug('Response received:', response.url());
+    const transactions = await extractPortfolioTransactionsFromResponse(response);
+
+    await this.page.setRequestInterception(false);
+
+    return transactions;
+  }
+
+  async fetchPortfolios(startDate: Moment): Promise<Portfolio[]> {
+    await this.page.setRequestInterception(true);
+
+    this.page.on('request', request => {
+      request.continue().catch(error => {
+        debug('Error continuing request:', error);
+      });
+    });
+
+    const investments: Investment[] = [];
+    const portfolios: Portfolio[] = [];
+
+    function handlePortfoliosPageResponse(response: HTTPResponse) {
+      // You can filter responses based on criteria like URL, method, or resource type.
+      // For XHR requests, check if the resource type is 'xhr' or 'fetch'.
+      if (response.request().resourceType() !== 'xhr' && response.request().resourceType() !== 'fetch') {
+        return;
+      }
+
+      if (response.url().includes('Statement')) {
+        extractPortfolioInvestments(response, investments);
+        return;
+      }
+
+      if (response.url().includes('lti-app/api/config')) {
+        extractPortfolios(response, portfolios);
+        return;
+      }
+
+      return;
+    }
+
+    this.page.on('response', handlePortfoliosPageResponse);
+
+    await this.navigateTo(LEUMI_TRADING_URL);
+
+    await this.page.waitForSelector('.portfolio-tbl-sticky-native', { visible: true });
+    await hangProcess(5000); // Wait for the investments data to load
+
+    portfolios[0].investments = investments;
+
+    this.page.off('response', handlePortfoliosPageResponse);
+
+    await this.page.setRequestInterception(false);
+
+    portfolios[0].transactions = await this.fetchPortfolioTransactions(startDate);
+
+    debug('Fetched portfolio transactions:', JSON.stringify(portfolios));
+
+    return portfolios;
+  }
+
   async fetchData(): Promise<ScraperScrapingResult> {
     const minimumStartMoment = moment().subtract(3, 'years').add(1, 'day');
     const defaultStartMoment = moment().subtract(1, 'years').add(1, 'day');
@@ -245,10 +437,12 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
     await this.navigateTo(TRANSACTIONS_URL);
 
     const accounts = await fetchTransactions(this.page, startMoment, this.options);
+    const investments = await this.fetchPortfolios(startMoment);
 
     return {
       success: true,
       accounts,
+      portfolios: investments,
     };
   }
 }
