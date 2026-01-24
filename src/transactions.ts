@@ -49,4 +49,5 @@ export interface Transaction {
   status: TransactionStatuses;
   installments?: TransactionInstallments;
   category?: string;
+  rawTransaction?: unknown;
 }

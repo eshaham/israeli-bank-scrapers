@@ -9,8 +9,10 @@ import {
   waitUntilElementFound,
 } from '../helpers/elements-interactions';
 import { waitForNavigation } from '../helpers/navigation';
+import { getRawTransaction } from '../helpers/transactions';
 import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
+import { type ScraperOptions } from './interface';
 
 const LOGIN_URL = 'https://login.yahav.co.il/login/';
 const BASE_URL = 'https://digital.yahav.co.il/BaNCSDigitalUI/app/index.html#/';
@@ -84,11 +86,11 @@ function getTxnAmount(txn: ScrapedTransaction) {
 
 type TransactionsTr = { id: string; innerDivs: string[] };
 
-function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
+function convertTransactions(txns: ScrapedTransaction[], options?: ScraperOptions): Transaction[] {
   return txns.map(txn => {
     const convertedDate = moment(txn.date, DATE_FORMAT).toISOString();
     const convertedAmount = getTxnAmount(txn);
-    return {
+    const result: Transaction = {
       type: TransactionTypes.Normal,
       identifier: txn.reference ? parseInt(txn.reference, 10) : undefined,
       date: convertedDate,
@@ -100,6 +102,12 @@ function convertTransactions(txns: ScrapedTransaction[]): Transaction[] {
       description: txn.description,
       memo: txn.memo,
     };
+
+    if (options?.includeRawTransaction) {
+      result.rawTransaction = getRawTransaction(txn);
+    }
+
+    return result;
   });
 }
 
@@ -122,7 +130,7 @@ function handleTransactionRow(txns: ScrapedTransaction[], txnRow: TransactionsTr
   txns.push(tx);
 }
 
-async function getAccountTransactions(page: Page): Promise<Transaction[]> {
+async function getAccountTransactions(page: Page, options?: ScraperOptions): Promise<Transaction[]> {
   // Wait for transactions.
   await waitUntilElementFound(page, '.under-line-txn-table-header', true);
 
@@ -143,7 +151,7 @@ async function getAccountTransactions(page: Page): Promise<Transaction[]> {
     handleTransactionRow(txns, txnRow);
   }
 
-  return convertTransactions(txns);
+  return convertTransactions(txns, options);
 }
 
 // Manipulate the calendar drop down to choose the txs start date.
@@ -209,11 +217,16 @@ async function searchByDates(page: Page, startDate: Moment) {
   }
 }
 
-async function fetchAccountData(page: Page, startDate: Moment, accountID: string): Promise<TransactionsAccount> {
+async function fetchAccountData(
+  page: Page,
+  startDate: Moment,
+  accountID: string,
+  options?: ScraperOptions,
+): Promise<TransactionsAccount> {
   await waitUntilElementDisappear(page, '.loading-bar-spinner');
   await searchByDates(page, startDate);
   await waitUntilElementDisappear(page, '.loading-bar-spinner');
-  const txns = await getAccountTransactions(page);
+  const txns = await getAccountTransactions(page, options);
 
   return {
     accountNumber: accountID,
@@ -221,12 +234,12 @@ async function fetchAccountData(page: Page, startDate: Moment, accountID: string
   };
 }
 
-async function fetchAccounts(page: Page, startDate: Moment): Promise<TransactionsAccount[]> {
+async function fetchAccounts(page: Page, startDate: Moment, options?: ScraperOptions): Promise<TransactionsAccount[]> {
   const accounts: TransactionsAccount[] = [];
 
   // TODO: get more accounts. Not sure is supported.
   const accountID = await getAccountID(page);
-  const accountData = await fetchAccountData(page, startDate, accountID);
+  const accountData = await fetchAccountData(page, startDate, accountID, options);
   accounts.push(accountData);
 
   return accounts;
@@ -284,7 +297,7 @@ class YahavScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-    const accounts = await fetchAccounts(this.page, startMoment);
+    const accounts = await fetchAccounts(this.page, startMoment, this.options);
 
     return {
       success: true,

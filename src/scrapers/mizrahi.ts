@@ -13,6 +13,8 @@ import { type Transaction, TransactionStatuses, TransactionTypes, type Transacti
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
 import { getDebug } from '../helpers/debug';
+import { getRawTransaction } from '../helpers/transactions';
+import { type ScraperOptions } from './interface';
 
 const debug = getDebug('mizrahi');
 
@@ -201,6 +203,7 @@ async function convertTransactions(
   txns: ScrapedTransaction[],
   getMoreDetails: (row: ScrapedTransaction) => Promise<MoreDetails>,
   pendingIfTodayTransaction: boolean = false,
+  options?: ScraperOptions,
 ): Promise<Transaction[]> {
   return Promise.all(
     txns.map(async row => {
@@ -208,7 +211,7 @@ async function convertTransactions(
 
       const txnDate = moment(row.MC02PeulaTaaEZ, moment.HTML5_FMT.DATETIME_LOCAL_SECONDS).toISOString();
 
-      return {
+      const result: Transaction = {
         type: TransactionTypes.Normal,
         identifier: row.MC02AsmahtaMekoritEZ ? parseInt(row.MC02AsmahtaMekoritEZ, 10) : undefined,
         date: txnDate,
@@ -223,6 +226,15 @@ async function convertTransactions(
             ? TransactionStatuses.Pending
             : TransactionStatuses.Completed,
       };
+
+      if (options?.includeRawTransaction) {
+        result.rawTransaction = getRawTransaction({
+          ...row,
+          additionalInformation: moreDetails.entries,
+        });
+      }
+
+      return result;
     }),
   );
 }
@@ -354,6 +366,7 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         ? row => getExtraTransactionDetails(this.page, row, apiHeaders)
         : () => Promise.resolve({ entries: {}, memo: undefined }),
       this.options.optInFeatures?.includes('mizrahi:pendingIfTodayTransaction'),
+      this.options,
     );
 
     oshTxn

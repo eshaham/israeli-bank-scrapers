@@ -28,7 +28,11 @@ export async function fetchGet<TResult>(url: string, extraHeaders: Record<string
   return fetchResult.json();
 }
 
-export async function fetchPost(url: string, data: Record<string, any>, extraHeaders: Record<string, any> = {}) {
+export async function fetchPost<TResult = any>(
+  url: string,
+  data: Record<string, any>,
+  extraHeaders: Record<string, any> = {},
+): Promise<TResult> {
   const request = {
     method: 'POST',
     headers: { ...getJsonHeaders(), ...extraHeaders },

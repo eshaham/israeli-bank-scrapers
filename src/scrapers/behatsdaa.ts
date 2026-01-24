@@ -3,9 +3,10 @@ import { getDebug } from '../helpers/debug';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { sleep } from '../helpers/waiting';
+import { getRawTransaction } from '../helpers/transactions';
 import { type Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
 import { BaseScraperWithBrowser, type LoginOptions, LoginResults } from './base-scraper-with-browser';
-import { type ScraperScrapingResult } from './interface';
+import { type ScraperOptions, type ScraperScrapingResult } from './interface';
 
 const BASE_URL = 'https://www.behatsdaa.org.il';
 const LOGIN_URL = `${BASE_URL}/login`;
@@ -32,10 +33,10 @@ type PurchaseHistoryResponse = {
   errorDescription?: string;
 };
 
-function variantToTransaction(variant: Variant): Transaction {
+function variantToTransaction(variant: Variant, options?: ScraperOptions): Transaction {
   // The price is positive, make it negative as it's an expense
   const originalAmount = -variant.customerPrice;
-  return {
+  const result: Transaction = {
     type: TransactionTypes.Normal,
     identifier: variant.tTransactionID,
     date: moment(variant.orderDate).format('YYYY-MM-DD'),
@@ -48,6 +49,12 @@ function variantToTransaction(variant: Variant): Transaction {
     status: TransactionStatuses.Completed,
     memo: variant.variantName,
   };
+
+  if (options?.includeRawTransaction) {
+    result.rawTransaction = getRawTransaction(variant);
+  }
+
+  return result;
 }
 
 class BehatsdaaScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
@@ -124,7 +131,7 @@ class BehatsdaaScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials
       accounts: [
         {
           accountNumber: res.data.memberId,
-          txns: res.data.variants.map(variantToTransaction),
+          txns: res.data.variants.map(variant => variantToTransaction(variant, this.options)),
         },
       ],
     };

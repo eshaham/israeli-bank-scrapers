@@ -5,11 +5,11 @@ import { clickButton, elementPresentOnPage, pageEval, waitUntilElementFound } fr
 import { fetchPost } from '../helpers/fetch';
 import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { getFromSessionStorage } from '../helpers/storage';
-import { filterOldTransactions } from '../helpers/transactions';
+import { filterOldTransactions, getRawTransaction } from '../helpers/transactions';
 import { waitUntil } from '../helpers/waiting';
 import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
-import { type ScraperScrapingResult } from './interface';
+import { type ScraperScrapingResult, type ScraperOptions } from './interface';
 import _ from 'lodash';
 
 const apiHeaders = {
@@ -160,6 +160,19 @@ interface CardPendingTransactionDetails extends CardTransactionDetailsError {
   statusTitle: string;
 }
 
+interface CardLevelFrame {
+  cardUniqueId: string;
+  nextTotalDebit?: number;
+}
+
+interface FramesResponse {
+  result?: {
+    bankIssuedCards?: {
+      cardLevelFrames?: CardLevelFrame[];
+    };
+  };
+}
+
 interface AuthModule {
   auth: {
     calConnectToken: string | null;
@@ -268,6 +281,7 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
 function convertParsedDataToTransactions(
   data: CardTransactionDetails[],
   pendingData?: CardPendingTransactionDetails | null,
+  options?: ScraperOptions,
 ): Transaction[] {
   const pendingTransactions = pendingData?.result
     ? pendingData.result.cardsList.flatMap(card => card.authDetalisList)
@@ -315,6 +329,10 @@ function convertParsedDataToTransactions(
 
     if (installments) {
       result.installments = installments;
+    }
+
+    if (options?.includeRawTransaction) {
+      result.rawTransaction = getRawTransaction(transaction);
     }
 
     return result;
@@ -440,7 +458,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     const futureMonthsToScrape = this.options.futureMonthsToScrape ?? 1;
 
     debug('fetch frames (misgarot) of cards');
-    const frames = await fetchPost(
+    const frames = await fetchPost<FramesResponse>(
       FRAMES_REQUEST_ENDPOINT,
       { cardsForFrameData: cards.map(({ cardUniqueId }) => ({ cardUniqueId })) },
       {
@@ -456,7 +474,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         const finalMonthToFetchMoment = moment().add(futureMonthsToScrape, 'month');
         const months = finalMonthToFetchMoment.diff(startMoment, 'months');
         const allMonthsData: CardTransactionDetails[] = [];
-        const frame = _.find(frames.result.bankIssuedCards.cardLevelFrames, { cardUniqueId: card.cardUniqueId });
+        const frame = _.find(frames.result?.bankIssuedCards?.cardLevelFrames, { cardUniqueId: card.cardUniqueId });
 
         debug(`fetch pending transactions for card ${card.cardUniqueId}`);
         let pendingData = await fetchPost(
@@ -506,7 +524,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
           pendingData = null;
         }
 
-        const transactions = convertParsedDataToTransactions(allMonthsData, pendingData);
+        const transactions = convertParsedDataToTransactions(allMonthsData, pendingData, this.options);
 
         debug('filter out old transactions');
         const txns =
@@ -516,7 +534,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
         return {
           txns,
-          balance: -frame?.nextTotalDebit,
+          balance: frame?.nextTotalDebit != null ? -frame.nextTotalDebit : undefined,
           accountNumber: card.last4Digits,
         } as TransactionsAccount;
       }),
