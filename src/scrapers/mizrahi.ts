@@ -275,11 +275,30 @@ async function extractPendingTransactions(page: Frame): Promise<Transaction[]> {
 }
 
 async function postLogin(page: Page) {
-  await Promise.race([
-    waitUntilElementFound(page, afterLoginSelector),
-    waitUntilElementFound(page, invalidPasswordSelector),
-    waitForUrl(page, CHANGE_PASSWORD_URL),
-  ]);
+  try {
+    await Promise.race([
+      waitUntilElementFound(page, afterLoginSelector, false, 30000),
+      waitUntilElementFound(page, invalidPasswordSelector, false, 30000),
+      waitForUrl(page, CHANGE_PASSWORD_URL, 30000),
+    ]);
+  } catch (error) {
+    const currentUrl = page.url();
+    const isChangePasswordPage = typeof CHANGE_PASSWORD_URL === 'string'
+      ? currentUrl === CHANGE_PASSWORD_URL
+      : CHANGE_PASSWORD_URL.test(currentUrl);
+
+    if (!isChangePasswordPage) {
+      const hasInvalidPassword = await page.$(invalidPasswordSelector);
+      if (!hasInvalidPassword) {
+        try {
+          await waitUntilElementFound(page, afterLoginSelector, false, 10000);
+        } catch {
+          throw new Error('Login result unclear - timed out waiting for success indicators');
+        }
+      }
+    }
+    throw error;
+  }
 }
 
 type ScraperSpecificCredentials = { username: string; password: string };
