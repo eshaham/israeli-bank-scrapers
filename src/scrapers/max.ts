@@ -48,7 +48,6 @@ const BASE_WELCOME_URL = 'https://www.max.co.il';
 
 const LOGIN_URL = `${BASE_WELCOME_URL}/login`;
 const PASSWORD_EXPIRED_URL = `${BASE_WELCOME_URL}/renew-password`;
-const SUCCESS_URL = `${BASE_WELCOME_URL}/homepage/personal`;
 
 enum MaxPlanName {
   Normal = 'רגילה',
@@ -328,7 +327,7 @@ async function fetchTransactions(page: Page, options: ScraperOptions) {
 
 function getPossibleLoginResults(page: Page): PossibleLoginResults {
   const urls: PossibleLoginResults = {};
-  urls[LoginResults.Success] = [SUCCESS_URL];
+  urls[LoginResults.Success] = [/max\.co\.il.*\/personal/i];
   urls[LoginResults.ChangePassword] = [PASSWORD_EXPIRED_URL];
   urls[LoginResults.InvalidPassword] = [
     async () => {
@@ -366,7 +365,7 @@ class MaxScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
         if (await elementPresentOnPage(this.page, '.login-link#private')) {
           await clickButton(this.page, '.login-link#private');
         }
-        await waitUntilElementFound(this.page, '#login-password-link', true);
+        await waitUntilElementFound(this.page, '#login-password-link', false);
         await clickButton(this.page, '#login-password-link');
         await waitUntilElementFound(this.page, '#login-password.tab-pane.active app-user-login-form', true);
       },
