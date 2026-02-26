@@ -199,6 +199,16 @@ function createHeadersFromRequest(request: HTTPRequest) {
   };
 }
 
+function getTransactionIdentifier(row: ScrapedTransaction): string | number | undefined {
+  if (!row.MC02AsmahtaMekoritEZ) {
+    return undefined;
+  }
+  if (row.TransactionNumber && String(row.TransactionNumber) !== '1') {
+    return `${row.MC02AsmahtaMekoritEZ}-${row.TransactionNumber}`;
+  }
+  return parseInt(row.MC02AsmahtaMekoritEZ, 10);
+}
+
 async function convertTransactions(
   txns: ScrapedTransaction[],
   getMoreDetails: (row: ScrapedTransaction) => Promise<MoreDetails>,
@@ -213,7 +223,7 @@ async function convertTransactions(
 
       const result: Transaction = {
         type: TransactionTypes.Normal,
-        identifier: row.MC02AsmahtaMekoritEZ ? parseInt(row.MC02AsmahtaMekoritEZ, 10) : undefined,
+        identifier: getTransactionIdentifier(row),
         date: txnDate,
         processedDate: txnDate,
         originalAmount: row.MC02SchumEZ,
