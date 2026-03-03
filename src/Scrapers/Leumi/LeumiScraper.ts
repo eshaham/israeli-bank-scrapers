@@ -14,8 +14,8 @@ import {
 } from '../../Transactions';
 import { GenericBankScraper } from '../Base/GenericBankScraper';
 import { type ScraperOptions, type ScraperScrapingResult } from '../Base/Interface';
-import { BANK_REGISTRY } from '../Registry/BankRegistry';
 import { SCRAPER_CONFIGURATION } from '../Registry/ScraperConfig';
+import { LEUMI_CONFIG } from './LeumiLoginConfig';
 
 const CFG = SCRAPER_CONFIGURATION.banks[CompanyTypes.Leumi];
 // Phase-1 compat: extract first CSS candidate until full resolveDashboardField() migration
@@ -217,7 +217,7 @@ interface ScraperSpecificCredentials {
 
 class LeumiScraper extends GenericBankScraper<ScraperSpecificCredentials> {
   constructor(options: ScraperOptions) {
-    super(options, BANK_REGISTRY[CompanyTypes.Leumi]!);
+    super(options, LEUMI_CONFIG);
   }
 
   public async fetchData(): Promise<ScraperScrapingResult> {

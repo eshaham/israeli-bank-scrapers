@@ -1,11 +1,12 @@
 import { CompanyTypes } from '../../Definitions';
 import { type ScraperOptions } from '../Base/Interface';
+import { discountConfig } from '../Discount/DiscountLoginConfig';
 import DiscountScraper from '../Discount/DiscountScraper';
-import { BANK_REGISTRY } from '../Registry/BankRegistry';
+import { SCRAPER_CONFIGURATION } from '../Registry/ScraperConfig';
 
 class MercantileScraper extends DiscountScraper {
   constructor(options: ScraperOptions) {
-    super(options, BANK_REGISTRY[CompanyTypes.Mercantile]);
+    super(options, discountConfig(SCRAPER_CONFIGURATION.banks[CompanyTypes.Mercantile].urls.base));
   }
 }
 

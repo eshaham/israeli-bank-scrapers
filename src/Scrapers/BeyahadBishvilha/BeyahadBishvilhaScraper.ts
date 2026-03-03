@@ -17,8 +17,8 @@ import { CompanyTypes } from '../../Definitions';
 import { type Transaction, TransactionStatuses, TransactionTypes } from '../../Transactions';
 import { GenericBankScraper } from '../Base/GenericBankScraper';
 import { type ScraperOptions } from '../Base/Interface';
-import { BANK_REGISTRY } from '../Registry/BankRegistry';
 import { SCRAPER_CONFIGURATION } from '../Registry/ScraperConfig';
+import { BEYAHAD_CONFIG } from './BeyahadBishvilhaLoginConfig';
 
 const LOG = getDebug('beyahadBishvilha');
 
@@ -162,7 +162,7 @@ interface ScraperSpecificCredentials {
 
 class BeyahadBishvilhaScraper extends GenericBankScraper<ScraperSpecificCredentials> {
   constructor(options: ScraperOptions) {
-    super(options, BANK_REGISTRY[CompanyTypes.BeyahadBishvilha]!);
+    super(options, BEYAHAD_CONFIG);
   }
 
   public async fetchData(): Promise<{

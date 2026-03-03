@@ -15,8 +15,8 @@ import { CompanyTypes } from '../../Definitions';
 import { type Transaction, TransactionStatuses, TransactionTypes } from '../../Transactions';
 import { GenericBankScraper } from '../Base/GenericBankScraper';
 import { type ScraperOptions } from '../Base/Interface';
-import { BANK_REGISTRY } from '../Registry/BankRegistry';
 import { SCRAPER_CONFIGURATION } from '../Registry/ScraperConfig';
+import { MAX_CONFIG } from './MaxLoginConfig';
 
 const LOG = getDebug('max');
 
@@ -301,7 +301,7 @@ interface ScraperSpecificCredentials {
 
 class MaxScraper extends GenericBankScraper<ScraperSpecificCredentials> {
   constructor(options: ScraperOptions) {
-    super(options, BANK_REGISTRY[CompanyTypes.Max]!);
+    super(options, MAX_CONFIG);
   }
 
   public async fetchData(): Promise<{

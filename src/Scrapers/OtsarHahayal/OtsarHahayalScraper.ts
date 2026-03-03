@@ -1,11 +1,15 @@
 import { CompanyTypes } from '../../Definitions';
 import { type ScraperOptions } from '../Base/Interface';
 import BeinleumiGroupBaseScraper from '../BaseBeinleumiGroup/BaseBeinleumiGroup';
-import { BANK_REGISTRY } from '../Registry/BankRegistry';
+import { beinleumiConfig } from '../BaseBeinleumiGroup/BeinleumiLoginConfig';
+import { SCRAPER_CONFIGURATION } from '../Registry/ScraperConfig';
 
 class OtsarHahayalScraper extends BeinleumiGroupBaseScraper {
   constructor(options: ScraperOptions) {
-    super(options, BANK_REGISTRY[CompanyTypes.OtsarHahayal]!);
+    super(
+      options,
+      beinleumiConfig(SCRAPER_CONFIGURATION.banks[CompanyTypes.OtsarHahayal].urls.base),
+    );
   }
 }
 

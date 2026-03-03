@@ -21,7 +21,6 @@ import {
 import { ScraperErrorTypes } from '../Base/Errors';
 import { GenericBankScraper } from '../Base/GenericBankScraper';
 import type { ScraperOptions, ScraperScrapingResult } from '../Base/Interface';
-import { BANK_REGISTRY } from '../Registry/BankRegistry';
 import { SCRAPER_CONFIGURATION } from '../Registry/ScraperConfig';
 import {
   type ConvertOneRowOpts,
@@ -38,6 +37,7 @@ import {
   type ScrapedTransactionsResult,
   TRANSACTIONS_REQUEST_URLS,
 } from './MizrahiHelpers';
+import { MIZRAHI_CONFIG } from './MizrahiLoginConfig';
 
 const LOG = getDebug('mizrahi');
 // Phase-1 compat: extract first CSS candidate — full resolveDashboardField() migration in Phase 2
@@ -131,7 +131,7 @@ interface ScraperSpecificCredentials {
 
 class MizrahiScraper extends GenericBankScraper<ScraperSpecificCredentials> {
   constructor(options: ScraperOptions) {
-    super(options, BANK_REGISTRY[CompanyTypes.Mizrahi]!);
+    super(options, MIZRAHI_CONFIG);
   }
 
   public async fetchData(): Promise<ScraperScrapingResult> {

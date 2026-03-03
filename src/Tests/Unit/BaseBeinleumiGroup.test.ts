@@ -5,11 +5,10 @@ import { clickButton, elementPresentOnPage, pageEvalAll } from '../../Common/Ele
 import { getCurrentUrl } from '../../Common/Navigation';
 import { sleep } from '../../Common/Waiting';
 import { SHEKEL_CURRENCY } from '../../Constants';
-import { CompanyTypes } from '../../Definitions';
 import { ScraperErrorTypes } from '../../Scrapers/Base/Errors';
 import { type ScraperOptions } from '../../Scrapers/Base/Interface';
 import BeinleumiGroupBaseScraper from '../../Scrapers/BaseBeinleumiGroup/BaseBeinleumiGroup';
-import { BANK_REGISTRY } from '../../Scrapers/Registry/BankRegistry';
+import { beinleumiConfig } from '../../Scrapers/BaseBeinleumiGroup/BeinleumiLoginConfig';
 import { TransactionStatuses, TransactionTypes } from '../../Transactions';
 import { createMockPage, createMockScraperOptions } from '../MockPage';
 
@@ -51,7 +50,7 @@ class TestBeinleumiScraper extends BeinleumiGroupBaseScraper {
   TRANSACTIONS_URL = 'https://test.fibi.co.il/transactions';
 
   constructor(options: ScraperOptions) {
-    super(options, BANK_REGISTRY[CompanyTypes.Beinleumi]!);
+    super(options, beinleumiConfig('https://www.fibi.co.il'));
   }
 }
 

@@ -9,8 +9,8 @@ import { ScraperErrorTypes } from '../Base/Errors';
 import { GenericBankScraper } from '../Base/GenericBankScraper';
 import { type ScraperOptions, type ScraperScrapingResult } from '../Base/Interface';
 import { type LoginConfig } from '../Base/LoginConfig';
-import { BANK_REGISTRY } from '../Registry/BankRegistry';
 import { SCRAPER_CONFIGURATION } from '../Registry/ScraperConfig';
+import { discountConfig } from './DiscountLoginConfig';
 
 const CFG = SCRAPER_CONFIGURATION.banks[CompanyTypes.Discount];
 
@@ -200,7 +200,9 @@ interface ScraperSpecificCredentials {
 class DiscountScraper extends GenericBankScraper<ScraperSpecificCredentials> {
   constructor(
     options: ScraperOptions,
-    config: LoginConfig = BANK_REGISTRY[CompanyTypes.Discount]!,
+    config: LoginConfig = discountConfig(
+      SCRAPER_CONFIGURATION.banks[CompanyTypes.Discount].urls.base,
+    ),
   ) {
     super(options, config);
   }

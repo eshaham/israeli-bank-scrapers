@@ -7,8 +7,8 @@ import { CompanyTypes } from '../../Definitions';
 import { type Transaction, TransactionStatuses, TransactionTypes } from '../../Transactions';
 import { GenericBankScraper } from '../Base/GenericBankScraper';
 import { type ScraperOptions, type ScraperScrapingResult } from '../Base/Interface';
-import { BANK_REGISTRY } from '../Registry/BankRegistry';
 import { SCRAPER_CONFIGURATION } from '../Registry/ScraperConfig';
+import { BEHATSDAA_CONFIG } from './BehatsdaaLoginConfig';
 
 const CFG = SCRAPER_CONFIGURATION.banks[CompanyTypes.Behatsdaa];
 
@@ -62,7 +62,7 @@ function variantToTransaction(variant: Variant, options?: ScraperOptions): Trans
 
 class BehatsdaaScraper extends GenericBankScraper<ScraperSpecificCredentials> {
   constructor(options: ScraperOptions) {
-    super(options, BANK_REGISTRY[CompanyTypes.Behatsdaa]!);
+    super(options, BEHATSDAA_CONFIG);
   }
 
   public async fetchData(): Promise<ScraperScrapingResult> {
