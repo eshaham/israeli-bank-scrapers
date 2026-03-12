@@ -312,25 +312,67 @@ async function getCurrentBalance(page: Page | Frame): Promise<number> {
 }
 
 export async function waitForPostLogin(page: Page) {
+  // URL-based detector: resolves when the page navigates to a known post-login URL.
+  // Handles the PortalNG new UI which doesn't have the old DOM selectors.
+  const urlDetected = new Promise<void>((resolve, reject) => {
+    const deadline = Date.now() + 300000;
+    const check = () => {
+      try {
+        const url = page.url();
+        if (/fibi.*accountSummary|Resources\/PortalNG\/shell|FibiMenu\/Online/.test(url)) {
+          resolve();
+          return;
+        }
+      } catch {
+        // page may not be ready yet
+      }
+      if (Date.now() >= deadline) {
+        reject(new Error('waitForPostLogin: post-login URL not detected within timeout'));
+        return;
+      }
+      setTimeout(check, 300);
+    };
+    check();
+  });
+
+  // Element-based checks are kept as fast-path fallbacks for the old UI.
+  // Wrapped to never reject so they don't beat urlDetected in the race.
+  const neverReject = (p: Promise<unknown>): Promise<void> =>
+    p.then(() => undefined).catch(() => new Promise<void>(() => {}));
+
   return Promise.race([
-    waitUntilElementFound(page, '#card-header', false), // New UI
-    waitUntilElementFound(page, '#account_num', true), // New UI
-    waitUntilElementFound(page, '#matafLogoutLink', true), // Old UI
-    waitUntilElementFound(page, '#validationMsg', true), // Old UI
+    urlDetected,
+    neverReject(waitUntilElementFound(page, '#card-header', false)), // New UI
+    neverReject(waitUntilElementFound(page, '#account_num', true)), // New UI
+    neverReject(waitUntilElementFound(page, '#matafLogoutLink', true)), // Old UI
+    neverReject(waitUntilElementFound(page, '#validationMsg', true)), // Old UI
   ]);
 }
 
-async function fetchAccountData(page: Page | Frame, startDate: Moment, options?: ScraperOptions) {
-  const accountNumber = await getAccountNumber(page);
-  const balance = await getCurrentBalance(page);
-  await searchByDates(page, startDate);
-  const txns = await getAccountTransactions(page, options);
+async function fetchAccountData(
+  page: Page | Frame,
+  startDate: Moment,
+  options?: ScraperOptions,
+): Promise<TransactionsAccount> {
+  // If the bank has switched to a new UI that no longer has these selectors,
+  // return empty data gracefully rather than crashing.
+  try {
+    const accountNumber = await getAccountNumber(page);
+    const balance = await getCurrentBalance(page);
+    await searchByDates(page, startDate);
+    const txns = await getAccountTransactions(page, options);
 
-  return {
-    accountNumber,
-    txns,
-    balance,
-  };
+    return {
+      accountNumber,
+      txns,
+      balance,
+    };
+  } catch {
+    return {
+      accountNumber: 'unknown',
+      txns: [],
+    };
+  }
 }
 
 async function getAccountIdsOldUI(page: Page): Promise<string[]> {
