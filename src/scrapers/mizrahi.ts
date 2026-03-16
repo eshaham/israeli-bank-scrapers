@@ -9,7 +9,7 @@ import {
 } from '../helpers/elements-interactions';
 import { fetchPostWithinPage } from '../helpers/fetch';
 import { waitForUrl } from '../helpers/navigation';
-import { type Transaction, TransactionStatuses, TransactionTypes, type TransactionsAccount } from '../transactions';
+import { type Transaction, type TransferDetails, TransactionStatuses, TransactionTypes, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
 import { getDebug } from '../helpers/debug';
@@ -72,6 +72,7 @@ type MoreDetailsResponse = {
 type MoreDetails = {
   entries: Record<string, string>;
   memo: string | undefined;
+  transferDetails: TransferDetails | undefined;
 };
 
 const BASE_WEBSITE_URL = 'https://www.mizrahi-tefahot.co.il';
@@ -163,12 +164,30 @@ async function getExtraTransactionDetails(
       debug('fetch details for', params, 'details:', details);
       if (Array.isArray(details) && details.length > 0) {
         const entries = details.map(record => [record.Label.trim(), record.Value.trim()]);
+        const entriesMap = Object.fromEntries(entries);
+
+        const findValue = (prefix: string) => {
+          const entry = entries.find(([label]) => label.startsWith(prefix));
+          return entry?.[1] || undefined;
+        };
+
+        const transferDetails: TransferDetails = {
+          counterpartyName: findValue('שם'),
+          bank: findValue('בנק'),
+          branch: findValue('סניף'),
+          account: findValue('חשבון'),
+          transferPurpose: findValue('מהות'),
+        };
+
+        const hasTransferDetails = Object.values(transferDetails).some(v => v !== undefined);
+
         return {
-          entries: Object.fromEntries(entries),
+          entries: entriesMap,
           memo: entries
-            .filter(([label]) => ['שם', 'מהות', 'חשבון'].some(key => label.startsWith(key)))
+            .filter(([label]) => ['שם', 'מהות', 'חשבון', 'בנק', 'סניף'].some(key => label.startsWith(key)))
             .map(([label, value]) => `${label} ${value}`)
             .join(', '),
+          transferDetails: hasTransferDetails ? transferDetails : undefined,
         };
       }
     }
@@ -179,6 +198,7 @@ async function getExtraTransactionDetails(
   return {
     entries: {},
     memo: undefined,
+    transferDetails: undefined,
   };
 }
 
@@ -231,6 +251,7 @@ async function convertTransactions(
         chargedAmount: row.MC02SchumEZ,
         description: row.MC02TnuaTeurEZ,
         memo: moreDetails?.memo,
+        transferDetails: moreDetails?.transferDetails,
         status:
           pendingIfTodayTransaction && row.IsTodayTransaction
             ? TransactionStatuses.Pending
@@ -372,9 +393,7 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     const relevantRows = response.body.table.rows.filter(row => row.RecTypeSpecified);
     const oshTxn = await convertTransactions(
       relevantRows,
-      this.options.additionalTransactionInformation
-        ? row => getExtraTransactionDetails(this.page, row, apiHeaders)
-        : () => Promise.resolve({ entries: {}, memo: undefined }),
+      row => getExtraTransactionDetails(this.page, row, apiHeaders),
       this.options.optInFeatures?.includes('mizrahi:pendingIfTodayTransaction'),
       this.options,
     );

@@ -26,6 +26,14 @@ export interface TransactionInstallments {
   total: number;
 }
 
+export interface TransferDetails {
+  counterpartyName?: string;
+  bank?: string;
+  branch?: string;
+  account?: string;
+  transferPurpose?: string;
+}
+
 export interface Transaction {
   type: TransactionTypes;
   /**
@@ -49,5 +57,6 @@ export interface Transaction {
   status: TransactionStatuses;
   installments?: TransactionInstallments;
   category?: string;
+  transferDetails?: TransferDetails;
   rawTransaction?: unknown;
 }
