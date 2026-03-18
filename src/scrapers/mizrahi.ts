@@ -327,7 +327,11 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
   }
 
   private async getPendingTransactions(): Promise<Transaction[]> {
-    await this.page.$eval(`a[href*="${PENDING_TRANSACTIONS_PAGE}"]`, el => (el as HTMLElement).click());
+    const pendingLink = await this.page.$(`a[href*="${PENDING_TRANSACTIONS_PAGE}"]`);
+    if (!pendingLink) {
+      return [];
+    }
+    await pendingLink.click();
     const frame = await waitUntilIframeFound(this.page, f => f.url().includes(PENDING_TRANSACTIONS_IFRAME));
     const isPending = await waitUntilElementFound(frame, pendingTrxIdentifierId)
       .then(() => true)
