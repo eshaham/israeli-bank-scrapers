@@ -5,7 +5,7 @@ import { clickButton, fillInput, waitUntilElementFound } from '../helpers/elemen
 import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { BaseScraper } from './base-scraper';
 import { ScraperErrorTypes } from './errors';
-import { type ScraperCredentials, type ScraperScrapingResult } from './interface';
+import { type DeviceTrustData, type ScraperCredentials, type ScraperScrapingResult } from './interface';
 
 const debug = getDebug('base-scraper-with-browser');
 
@@ -85,6 +85,8 @@ async function safeCleanup(cleanup: () => Promise<void>) {
 class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends BaseScraper<TCredentials> {
   private cleanups: Array<() => Promise<void>> = [];
 
+  private extractedDeviceTrustData?: DeviceTrustData;
+
   private defaultViewportSize = {
     width: 1024,
     height: 768,
@@ -134,6 +136,10 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     this.page.on('requestfailed', request => {
       debug('Request failed: %s %s', request.failure()?.errorText, request.url());
     });
+
+    if (this.options.deviceTrustData) {
+      await this.injectDeviceTrustData(this.options.deviceTrustData);
+    }
   }
 
   private async initializePage() {
@@ -286,6 +292,14 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     return this.handleLoginResult(loginResult);
   }
 
+  async scrape(credentials: TCredentials): Promise<ScraperScrapingResult> {
+    const result = await super.scrape(credentials);
+    if (this.extractedDeviceTrustData) {
+      result.deviceTrustData = this.extractedDeviceTrustData;
+    }
+    return result;
+  }
+
   async terminate(_success: boolean) {
     debug(`terminating browser with success = ${_success}`);
     this.emitProgress(ScraperProgressTypes.Terminating);
@@ -298,8 +312,58 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
       });
     }
 
+    if (_success && this.page) {
+      try {
+        this.extractedDeviceTrustData = await this.extractDeviceTrustData();
+        debug('extracted device trust data: %d cookies, %d localStorage entries',
+          this.extractedDeviceTrustData.cookies.length,
+          Object.keys(this.extractedDeviceTrustData.localStorage).length);
+      } catch (e) {
+        debug(`failed to extract device trust data: ${(e as Error).message}`);
+      }
+    }
+
     await Promise.all(this.cleanups.reverse().map(safeCleanup));
     this.cleanups = [];
+  }
+
+  private async injectDeviceTrustData(data: DeviceTrustData) {
+    debug('injecting device trust data');
+    if (data.cookies?.length) {
+      await this.page.setCookie(...data.cookies);
+      debug(`injected ${data.cookies.length} cookies`);
+    }
+    if (data.localStorage && Object.keys(data.localStorage).length) {
+      const domain = data.cookies?.find(c => c.domain)?.domain?.replace(/^\./, '');
+      if (domain) {
+        await this.page.goto(`https://${domain}`, { waitUntil: 'domcontentloaded' });
+        await this.page.evaluate((items: Record<string, string>) => {
+          for (const [key, value] of Object.entries(items)) {
+            window.localStorage.setItem(key, value);
+          }
+        }, data.localStorage);
+        debug(`injected ${Object.keys(data.localStorage).length} localStorage entries`);
+      }
+    }
+  }
+
+  private async extractDeviceTrustData(): Promise<DeviceTrustData> {
+    const rawCookies = await this.page.cookies();
+    const cookies = rawCookies.map(({ name, value, domain, path, expires, httpOnly, secure, sameSite }) => ({
+      name, value, domain, path, expires, httpOnly, secure,
+      sameSite: sameSite as DeviceTrustData['cookies'][number]['sameSite'],
+    }));
+
+    const localStorage = await this.page.evaluate(() => {
+      const items: Record<string, string> = {};
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i)!;
+        items[key] = window.localStorage.getItem(key)!;
+      }
+      return items;
+    });
+
+    return { cookies, localStorage };
   }
 
   private handleLoginResult(loginResult: LoginResults) {
