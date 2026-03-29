@@ -2,12 +2,14 @@ import moment from 'moment';
 import { type Page } from 'puppeteer';
 import { randomUUID } from 'crypto';
 import { getDebug } from '../helpers/debug';
+import { clickButton } from '../helpers/elements-interactions';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
-import { waitForRedirect } from '../helpers/navigation';
+import { getCurrentUrl, waitForRedirect } from '../helpers/navigation';
 import { waitUntil } from '../helpers/waiting';
 import { type Transaction, TransactionStatuses, TransactionTypes, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
-import { type ScraperOptions } from './interface';
+import { ScraperErrorTypes } from './errors';
+import { type ScraperLoginResult, type ScraperOptions } from './interface';
 import { getRawTransaction } from '../helpers/transactions';
 
 const debug = getDebug('hapoalim');
@@ -255,6 +257,9 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOpt
   return accountData;
 }
 
+const OTP_FORM_SELECTOR = 'form.auth-otp-login';
+const OTP_SUBMIT_SELECTOR = '.btn-red_1';
+
 function getPossibleLoginResults(baseUrl: string) {
   const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [
@@ -269,6 +274,12 @@ function getPossibleLoginResults(baseUrl: string) {
     `${baseUrl}/MCP/START?flow=MCP&state=START&expiredDate=null`,
     /\/ABOUTTOEXPIRE\/START/i,
   ];
+  urls[LoginResults.TwoFactorRetrieverMissing] = [
+    async (options?: { page?: Page }) => {
+      if (!options?.page) return false;
+      return !!(await options.page.$(OTP_FORM_SELECTOR));
+    },
+  ];
   return urls;
 }
 
@@ -279,7 +290,11 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
   ];
 }
 
-type ScraperSpecificCredentials = { userCode: string; password: string };
+type ScraperSpecificCredentials = {
+  userCode: string;
+  password: string;
+  otpCodeRetriever?: () => Promise<string>;
+};
 
 class HapoalimScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   get baseUrl() {
@@ -293,6 +308,51 @@ class HapoalimScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials>
       submitButtonSelector: '.login-btn',
       postAction: async () => waitForRedirect(this.page),
       possibleResults: getPossibleLoginResults(this.baseUrl),
+    };
+  }
+
+  async login(credentials: ScraperSpecificCredentials): Promise<ScraperLoginResult> {
+    const result = await super.login(credentials);
+
+    if (result.success || result.errorType !== ScraperErrorTypes.TwoFactorRetrieverMissing) {
+      return result;
+    }
+
+    // 2FA page detected — need OTP
+    if (!credentials.otpCodeRetriever) {
+      debug('2FA required but no otpCodeRetriever provided');
+      return {
+        success: false,
+        errorType: ScraperErrorTypes.TwoFactorRetrieverMissing,
+        errorMessage: 'OTP code retriever is required for Hapoalim 2FA',
+      };
+    }
+
+    debug('2FA page detected, requesting OTP from caller');
+    const otpCode = await credentials.otpCodeRetriever();
+
+    debug('entering OTP code');
+    const otpInputs = await this.page.$$(`${OTP_FORM_SELECTOR} input`);
+    for (let i = 0; i < otpCode.length && i < otpInputs.length; i++) {
+      await otpInputs[i].type(otpCode[i]);
+    }
+
+    debug('submitting OTP');
+    await clickButton(this.page, OTP_SUBMIT_SELECTOR);
+    await waitForRedirect(this.page);
+
+    const current = await getCurrentUrl(this.page, true);
+    const successPatterns = ['/portalserver/HomePage', '/ng-portals-bt/rb/he/homepage', '/ng-portals/rb/he/homepage'];
+    if (successPatterns.some(p => current.includes(p))) {
+      debug('OTP verification succeeded');
+      return { success: true };
+    }
+
+    debug('OTP verification failed, current url: %s', current);
+    return {
+      success: false,
+      errorType: ScraperErrorTypes.General,
+      errorMessage: 'OTP verification failed',
     };
   }
 
