@@ -138,7 +138,11 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     });
 
     if (this.options.deviceTrustData) {
-      await this.injectDeviceTrustData(this.options.deviceTrustData);
+      try {
+        await this.injectDeviceTrustData(this.options.deviceTrustData);
+      } catch (e) {
+        debug(`failed to inject device trust data, continuing without it: ${(e as Error).message}`);
+      }
     }
   }
 
@@ -387,6 +391,12 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
         return {
           success: false,
           errorType: ScraperErrorTypes.ChangePassword,
+        };
+      case LoginResults.TwoFactorRetrieverMissing:
+        this.emitProgress(ScraperProgressTypes.LoginFailed);
+        return {
+          success: false,
+          errorType: ScraperErrorTypes.TwoFactorRetrieverMissing,
         };
       default:
         throw new Error(`unexpected login result "${loginResult}"`);
