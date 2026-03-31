@@ -6,7 +6,7 @@ import { type ErrorResult, type ScraperErrorTypes } from './errors';
 // TODO: Remove this type when the scraper 'factory' will return concrete scraper types
 // Instead of a generic interface (which in turn uses this type)
 export type ScraperCredentials =
-  | { userCode: string; password: string; otpCodeRetriever?: () => Promise<string> }
+  | { userCode: string; password: string; otpCodeRetriever?: (options?: { attempt: number }) => Promise<string> }
   | { username: string; password: string }
   | { id: string; password: string }
   | { id: string; password: string; num: string }
@@ -14,7 +14,7 @@ export type ScraperCredentials =
   | { username: string; nationalID: string; password: string }
   | ({ email: string; password: string } & (
       | {
-          otpCodeRetriever: () => Promise<string>;
+          otpCodeRetriever: (options?: { attempt: number }) => Promise<string>;
           phoneNumber: string;
         }
       | {
