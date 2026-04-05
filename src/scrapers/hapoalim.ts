@@ -2,10 +2,10 @@ import moment from 'moment';
 import { type Page } from 'puppeteer';
 import { randomUUID } from 'crypto';
 import { getDebug } from '../helpers/debug';
-import { clickButton } from '../helpers/elements-interactions';
+
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import { getCurrentUrl } from '../helpers/navigation';
-import { waitUntil } from '../helpers/waiting';
+import { sleep, waitUntil } from '../helpers/waiting';
 import { type Transaction, TransactionStatuses, TransactionTypes, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
@@ -311,9 +311,14 @@ class HapoalimScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials>
         const initialUrl = await getCurrentUrl(this.page, true);
         await waitUntil(
           async () => {
-            const currentUrl = await getCurrentUrl(this.page, true);
-            if (currentUrl !== initialUrl) return true;
-            return !!(await this.page.$(OTP_FORM_SELECTOR));
+            try {
+              const currentUrl = await getCurrentUrl(this.page, true);
+              if (currentUrl !== initialUrl) return true;
+              return !!(await this.page.$(OTP_FORM_SELECTOR));
+            } catch {
+              // Navigation destroyed the execution context — page is redirecting, which is progress
+              return true;
+            }
           },
           'waiting for redirect or OTP form',
           20000,
@@ -347,33 +352,44 @@ class HapoalimScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials>
       const otpCode = await credentials.otpCodeRetriever({ attempt });
 
       debug('entering OTP code');
-      const otpInputs = await this.page.$$(`${OTP_FORM_SELECTOR} input`);
+      const otpInputs = await this.page.$$(`${OTP_FORM_SELECTOR} input[type="text"]`);
+      debug('found %d OTP digit inputs', otpInputs.length);
+
       for (let i = 0; i < otpInputs.length; i++) {
-        await otpInputs[i].click({ clickCount: 3 });
+        await otpInputs[i].click();
+        await otpInputs[i].evaluate((el) => { (el as HTMLInputElement).value = ''; });
         if (i < otpCode.length) {
-          await otpInputs[i].type(otpCode[i]);
-        } else {
-          await otpInputs[i].press('Backspace');
+          await otpInputs[i].type(otpCode[i], { delay: 50 });
         }
+        await sleep(100);
       }
 
       debug('submitting OTP');
-      await clickButton(this.page, OTP_SUBMIT_SELECTOR);
+      // Use page.click() for proper mouse events — clickButton uses synthetic el.click()
+      // which Angular ignores.
+      await this.page.click(OTP_SUBMIT_SELECTOR);
 
-      await waitUntil(
-        async () => {
-          const otpForm = await this.page.$(OTP_FORM_SELECTOR);
-          const errorEl = await this.page.$(OTP_ERROR_SELECTOR);
-          const url = await getCurrentUrl(this.page, true);
-          debug('OTP poll: form=%s, error=%s, url=%s', !!otpForm, !!errorEl, url);
-          if (!otpForm) return 'success';
-          if (errorEl) return 'error';
-          return false;
-        },
-        'waiting for OTP result',
-        20000,
-        1000,
-      );
+      let otpResult: string;
+      try {
+        otpResult = await waitUntil(
+          async () => {
+            const otpForm = await this.page.$(OTP_FORM_SELECTOR);
+            const errorEl = await this.page.$(OTP_ERROR_SELECTOR);
+            const url = await getCurrentUrl(this.page, true);
+            debug('OTP poll: form=%s, error=%s, url=%s', !!otpForm, !!errorEl, url);
+            if (!otpForm) return 'success';
+            if (errorEl) return 'error';
+            return false;
+          },
+          'waiting for OTP result',
+          20000,
+          1000,
+        );
+      } catch {
+        // Timeout: error selector didn't match but form is still showing — treat as wrong OTP
+        debug('OTP waitUntil timed out — treating as wrong OTP');
+        otpResult = 'error';
+      }
 
       if (!(await this.page.$(OTP_FORM_SELECTOR))) {
         // OTP form closed — wait for the bank to navigate to homepage
