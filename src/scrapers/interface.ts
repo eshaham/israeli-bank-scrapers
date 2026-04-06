@@ -120,6 +120,13 @@ export type ScraperOptions = ScraperBrowserOptions & {
   combineInstallments?: boolean;
 
   /**
+   * Last 4 digits of each card to scrape (Isracard only).
+   * When provided, transactions are fetched per card. If omitted, all cards
+   * visible on the account are scraped together.
+   */
+  cardSuffixes?: string[];
+
+  /**
    * adjust the page instance before it is being used.
    *
    * @param page
