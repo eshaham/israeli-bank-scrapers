@@ -346,9 +346,8 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
       await this.page.$eval(`a[href*="${PENDING_TRANSACTIONS_PAGE}"]`, el => (el as HTMLElement).click());
       
-      // Wait for the page to load, but with a shorter timeout
-      await this.page.waitForLoadState('networkidle').catch(() => {});
-      await wait(2000);
+      // Wait for the page to load
+      await wait(3000);
 
       // Try to find the iframe with the pending transactions
       // The URL pattern may have changed, so we try multiple approaches
@@ -382,19 +381,36 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     await this.page.keyboard.press('Escape').catch(() => {});
     await wait(500);
 
-    await this.page.waitForSelector(`a[href*="${OSH_PAGE}"]`);
-    await this.page.$eval(`a[href*="${OSH_PAGE}"]`, el => (el as HTMLElement).click());
+    // Check if we're already on the transactions page (direct URL after login)
+    const currentUrl = this.page.url();
+    debug('Current URL before fetchAccount:', currentUrl);
     
-    // Wait for OSH page to load
-    await this.page.waitForLoadState('networkidle').catch(() => {});
-    await wait(1000);
+    // If already on a page that contains osh and p428, we're good
+    if (currentUrl.includes('p428')) {
+      debug('Already on transactions page, waiting for it to load');
+      await wait(2000);
+    } else if (!currentUrl.includes(OSH_PAGE)) {
+      // Navigate to OSH page if not already there
+      await this.page.waitForSelector(`a[href*="${OSH_PAGE}"]`);
+      await this.page.$eval(`a[href*="${OSH_PAGE}"]`, el => (el as HTMLElement).click());
+      
+      // Wait for OSH page to load
+      await wait(2000);
 
-    // Close any modal that might appear after clicking OSH
-    await this.page.keyboard.press('Escape').catch(() => {});
-    await wait(500);
+      // Close any modal that might appear after clicking OSH
+      await this.page.keyboard.press('Escape').catch(() => {});
+      await wait(500);
+      
+      await waitUntilElementFound(this.page, `a[href*="${TRANSACTIONS_PAGE}"]`);
+      await this.page.$eval(`a[href*="${TRANSACTIONS_PAGE}"]`, el => (el as HTMLElement).click());
+    } else {
+      debug('On OSH page, navigating to transactions');
+      await waitUntilElementFound(this.page, `a[href*="${TRANSACTIONS_PAGE}"]`);
+      await this.page.$eval(`a[href*="${TRANSACTIONS_PAGE}"]`, el => (el as HTMLElement).click());
+    }
     
-    await waitUntilElementFound(this.page, `a[href*="${TRANSACTIONS_PAGE}"]`);
-    await this.page.$eval(`a[href*="${TRANSACTIONS_PAGE}"]`, el => (el as HTMLElement).click());
+    // Wait for transactions page to fully load
+    await wait(2000);
 
     const accountNumberElement = await this.page.$('#dropdownBasic b span');
     const accountNumberHandle = await accountNumberElement?.getProperty('title');
