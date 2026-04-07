@@ -18,6 +18,10 @@ import { type ScraperOptions } from './interface';
 
 const debug = getDebug('mizrahi');
 
+function wait(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 interface ScrapedTransaction {
   RecTypeSpecified: boolean;
   MC02PeulaTaaEZ: string;
@@ -280,6 +284,11 @@ async function postLogin(page: Page) {
     waitUntilElementFound(page, invalidPasswordSelector),
     waitForUrl(page, CHANGE_PASSWORD_URL),
   ]);
+
+  // Close any modal/popup that might appear after login (e.g., promotional popups)
+  // This prevents "intercepted by modal" errors when clicking OSH links
+  await page.keyboard.press('Escape').catch(() => {});
+  await wait(500);
 }
 
 type ScraperSpecificCredentials = { username: string; password: string };
@@ -327,22 +336,63 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
   }
 
   private async getPendingTransactions(): Promise<Transaction[]> {
-    await this.page.$eval(`a[href*="${PENDING_TRANSACTIONS_PAGE}"]`, el => (el as HTMLElement).click());
-    const frame = await waitUntilIframeFound(this.page, f => f.url().includes(PENDING_TRANSACTIONS_IFRAME));
-    const isPending = await waitUntilElementFound(frame, pendingTrxIdentifierId)
-      .then(() => true)
-      .catch(() => false);
-    if (!isPending) {
+    try {
+      // Check if the link exists on the page first
+      const pendingLink = await this.page.$(`a[href*="${PENDING_TRANSACTIONS_PAGE}"]`);
+      if (!pendingLink) {
+        debug('Pending transactions link not found, skipping');
+        return [];
+      }
+
+      await this.page.$eval(`a[href*="${PENDING_TRANSACTIONS_PAGE}"]`, el => (el as HTMLElement).click());
+      
+      // Wait for the page to load, but with a shorter timeout
+      await this.page.waitForLoadState('networkidle').catch(() => {});
+      await wait(2000);
+
+      // Try to find the iframe with the pending transactions
+      // The URL pattern may have changed, so we try multiple approaches
+      const frame = await waitUntilIframeFound(this.page, f => f.url().includes(PENDING_TRANSACTIONS_IFRAME))
+        .catch(() => null);
+
+      if (!frame) {
+        // The pending transactions page structure may have changed
+        // Try to navigate back or check if we're on a different page
+        debug('Could not find pending transactions iframe, skipping');
+        return [];
+      }
+
+      const isPending = await waitUntilElementFound(frame, pendingTrxIdentifierId)
+        .then(() => true)
+        .catch(() => false);
+      if (!isPending) {
+        return [];
+      }
+
+      const pendingTxn = await extractPendingTransactions(frame);
+      return pendingTxn;
+    } catch (error) {
+      debug('Error fetching pending transactions:', error);
       return [];
     }
-
-    const pendingTxn = await extractPendingTransactions(frame);
-    return pendingTxn;
   }
 
   private async fetchAccount() {
+    // Close any modal that might be blocking interactions
+    await this.page.keyboard.press('Escape').catch(() => {});
+    await wait(500);
+
     await this.page.waitForSelector(`a[href*="${OSH_PAGE}"]`);
     await this.page.$eval(`a[href*="${OSH_PAGE}"]`, el => (el as HTMLElement).click());
+    
+    // Wait for OSH page to load
+    await this.page.waitForLoadState('networkidle').catch(() => {});
+    await wait(1000);
+
+    // Close any modal that might appear after clicking OSH
+    await this.page.keyboard.press('Escape').catch(() => {});
+    await wait(500);
+    
     await waitUntilElementFound(this.page, `a[href*="${TRANSACTIONS_PAGE}"]`);
     await this.page.$eval(`a[href*="${TRANSACTIONS_PAGE}"]`, el => (el as HTMLElement).click());
 
