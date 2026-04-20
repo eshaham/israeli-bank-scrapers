@@ -1,4 +1,4 @@
-import type { Falsy } from 'utility-types';
+type Falsy = false | '' | 0 | null | undefined;
 
 export class TimeoutError extends Error {}
 

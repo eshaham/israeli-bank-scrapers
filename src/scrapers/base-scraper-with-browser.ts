@@ -20,7 +20,6 @@ export const LoginResults = {
   ...LoginBaseResults,
 };
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export type LoginResults =
   | Exclude<ScraperErrorTypes, ScraperErrorTypes.Timeout | ScraperErrorTypes.Generic | ScraperErrorTypes.General>
   | LoginBaseResults;

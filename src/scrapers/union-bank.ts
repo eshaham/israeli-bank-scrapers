@@ -135,7 +135,6 @@ function isExpandedDescRow(txnRow: TransactionsTr) {
   return txnRow.id === 'rowAdded';
 }
 
-/* eslint-disable no-param-reassign */
 function editLastTransactionDesc(txnRow: TransactionsTr, lastTxn: ScrapedTransaction): ScrapedTransaction {
   lastTxn.description = `${lastTxn.description} ${txnRow.innerTds[0]}`;
   return lastTxn;

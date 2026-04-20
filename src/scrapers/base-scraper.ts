@@ -63,14 +63,14 @@ export class BaseScraper<TCredentials extends ScraperCredentials> implements Scr
     return scrapeResult;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   triggerTwoFactorAuth(_phoneNumber: string): Promise<ScraperTwoFactorAuthTriggerResult> {
-    throw new Error(`triggerOtp() is not created in ${this.options.companyId}`);
+    throw new Error(`triggerTwoFactorAuth() is not created in ${this.options.companyId}`);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getLongTermTwoFactorToken(_otpCode: string): Promise<ScraperGetLongTermTwoFactorTokenResult> {
-    throw new Error(`getPermanentOtpToken() is not created in ${this.options.companyId}`);
+    throw new Error(`getLongTermTwoFactorToken() is not created in ${this.options.companyId}`);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await

@@ -4,7 +4,6 @@ import { BaseScraperWithBrowser } from './base-scraper-with-browser';
 const testsConfig = getTestsConfig();
 
 function isNoSandbox(browser: any) {
-  // eslint-disable-next-line no-underscore-dangle
   const args = browser._process.spawnargs;
   return args.includes('--no-sandbox');
 }
