@@ -20,8 +20,10 @@ const INVALID_DETAILS_SELECTOR = '.ui-dialog-buttons';
 const CHANGE_PASSWORD_OLD_PASS = 'input#ef_req_parameter_old_credential';
 const BASE_WELCOME_URL = `${BASE_URL}main/home`;
 
+const PORTFOLIO_FORM = 'form[name="formPortfolioSelect"]';
 const ACCOUNT_ID_SELECTOR_SINGLE = 'span.portfolio-value';
-const ACCOUNT_ID_SELECTOR_MULTI = 'form[name="formPortfolioSelect"] .selected-item-top';
+const ACCOUNT_ID_SELECTOR_MULTI = `${PORTFOLIO_FORM} .selected-item-top`;
+const PORTFOLIO_OPTION_SELECTOR = `${PORTFOLIO_FORM} .drop-down-item-list li.drop-down-item`;
 const ACCOUNT_DETAILS_SELECTOR = '.account-details';
 const DATE_FORMAT = 'DD/MM/YYYY';
 
@@ -57,24 +59,6 @@ function getPossibleLoginResults(page: Page): PossibleLoginResults {
   ];
 
   return urls;
-}
-
-async function getAccountID(page: Page): Promise<string> {
-  // Wait for whichever selector appears first — single-portfolio vs multi-portfolio accounts
-  await Promise.any([
-    page.waitForSelector(ACCOUNT_ID_SELECTOR_SINGLE, { timeout: 10000 }),
-    page.waitForSelector(ACCOUNT_ID_SELECTOR_MULTI, { timeout: 10000 }),
-  ]).catch(() => null);
-
-  const selector = (await page.$(ACCOUNT_ID_SELECTOR_SINGLE)) ? ACCOUNT_ID_SELECTOR_SINGLE : ACCOUNT_ID_SELECTOR_MULTI;
-
-  try {
-    const text = await page.$eval(selector, (element: Element) => element.textContent ?? '');
-    return text.trim();
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to retrieve account ID. Possible outdated selector '${selector}': ${errorMessage}`);
-  }
 }
 
 function getAmountData(amountStr: string) {
@@ -161,13 +145,9 @@ async function getAccountTransactions(page: Page, options?: ScraperOptions): Pro
 // All datepicker selectors are scoped to the "from date" control to avoid ambiguity with the "to date" picker.
 const FROM_PICKER = 'date-picker-access[btn-label="from"]';
 
-// Manipulate the calendar drop down to choose the txs start date.
 async function searchByDates(page: Page, startDate: Moment) {
-  // Open the "from date" calendar picker
   await waitUntilElementFound(page, `${FROM_PICKER} a.datepicker-button`, true);
   await clickButton(page, `${FROM_PICKER} a.datepicker-button`);
-
-  // Wait for the calendar popup to appear
   await waitUntilElementFound(page, `${FROM_PICKER} .datepicker-calendar`, true);
 
   // Read the input value (set by ng-value/textToDateFilter, always DD/MM/YYYY) to determine which
@@ -182,7 +162,7 @@ async function searchByDates(page: Page, startDate: Moment) {
     await clickButton(page, prevMonthSelector);
   }
 
-  // Click the target day — scoped to current-month cells to avoid adjacent-month cells with the same day number
+  // :not(.other-month) avoids adjacent-month cells sharing the same day number.
   const daySelector = `${FROM_PICKER} .datepicker-calendar td.day.selectable:not(.other-month)[data-value="${startDate.date()}"]`;
   await waitUntilElementFound(page, daySelector, true);
   await clickButton(page, daySelector);
@@ -205,16 +185,68 @@ async function fetchAccountData(
   };
 }
 
-async function fetchAccounts(page: Page, startDate: Moment, options?: ScraperOptions): Promise<TransactionsAccount[]> {
-  const accounts: TransactionsAccount[] = [];
+// Multi-portfolio iteration contributed by @mamlukishay (https://github.com/gczobel/israeli-bank-scrapers/pull/1)
+// Multi-portfolio accounts render <inline-drop-down> inside form[name="formPortfolioSelect"]
+// (Angular ng-if="portfolioList.length > 1") with the current portfolio at .selected-item-top
+// and the unselected ones as <li>s; single-portfolio accounts render only the single selector.
+// Returned selected-first so fetchAccounts can skip re-selecting on the first iteration.
+async function getPortfolioIDs(page: Page): Promise<string[]> {
+  await Promise.any([
+    page.waitForSelector(ACCOUNT_ID_SELECTOR_MULTI, { timeout: 10000 }),
+    page.waitForSelector(ACCOUNT_ID_SELECTOR_SINGLE, { timeout: 10000 }),
+  ]).catch(() => null);
 
-  // TODO: only the currently selected portfolio is scraped. For multi-portfolio accounts,
-  // this should iterate over the options in form[name="formPortfolioSelect"], select each one,
-  // and call fetchAccountData for each. The data model supports it — ScraperScrapingResult
-  // returns TransactionsAccount[], each with its own accountNumber and txns[].
-  const accountID = await getAccountID(page);
-  const accountData = await fetchAccountData(page, startDate, accountID, options);
-  accounts.push(accountData);
+  return page.evaluate(
+    (multiSelector, optionSelector, singleSelector) => {
+      const selected = document.querySelector(multiSelector)?.textContent?.trim();
+      if (selected) {
+        const others = Array.from(document.querySelectorAll(optionSelector)).map(li => li.textContent?.trim() ?? '');
+        return [selected, ...others].filter(Boolean);
+      }
+      const single = document.querySelector(singleSelector)?.textContent?.trim();
+      return single ? [single] : [];
+    },
+    ACCOUNT_ID_SELECTOR_MULTI,
+    PORTFOLIO_OPTION_SELECTOR,
+    ACCOUNT_ID_SELECTOR_SINGLE,
+  );
+}
+
+// Angular's listItemAction navigates the page back to /main/home with the new portfolio
+// selected — callers must re-enter the statements flow after this returns.
+async function selectPortfolio(page: Page, targetID: string) {
+  const clicked = await page.$$eval(
+    PORTFOLIO_OPTION_SELECTOR,
+    (lis, id) => {
+      const target = (lis as HTMLElement[]).find(li => li.textContent?.trim() === id);
+      if (!target) return false;
+      target.click();
+      return true;
+    },
+    targetID,
+  );
+  if (!clicked) throw new Error(`Portfolio option not found for ID: ${targetID}`);
+  await waitUntilElementDisappear(page, '.loading-bar-spinner');
+}
+
+async function fetchAccounts(page: Page, startDate: Moment, options?: ScraperOptions): Promise<TransactionsAccount[]> {
+  // Snapshot up front: the dropdown only lists unselected portfolios, so after the first
+  // switch we would lose any not yet scraped.
+  const portfolioIDs = await getPortfolioIDs(page);
+  if (portfolioIDs.length === 0) {
+    throw new Error('No portfolios found on /main/home — Yahav DOM likely changed');
+  }
+  const accounts: TransactionsAccount[] = [];
+  for (let i = 0; i < portfolioIDs.length; i += 1) {
+    const portfolioID = portfolioIDs[i];
+    if (i > 0) {
+      await selectPortfolio(page, portfolioID);
+    }
+    await waitUntilElementFound(page, ACCOUNT_DETAILS_SELECTOR, true);
+    await clickButton(page, ACCOUNT_DETAILS_SELECTOR);
+    await waitUntilElementFound(page, '.statement-options .selected-item-top', true);
+    accounts.push(await fetchAccountData(page, startDate, portfolioID, options));
+  }
 
   return accounts;
 }
@@ -262,10 +294,7 @@ class YahavScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   }
 
   async fetchData() {
-    // Goto statements page
     await waitUntilElementFound(this.page, ACCOUNT_DETAILS_SELECTOR, true);
-    await clickButton(this.page, ACCOUNT_DETAILS_SELECTOR);
-    await waitUntilElementFound(this.page, '.statement-options .selected-item-top', true);
 
     const defaultStartMoment = moment().subtract(3, 'months').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
