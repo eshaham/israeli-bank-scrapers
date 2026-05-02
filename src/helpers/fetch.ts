@@ -73,8 +73,9 @@ export async function fetchGetWithinPage<TResult>(
       );
     }
   }, url);
-  if (result !== null && (status === 429 || result.includes('Block Automation'))) {
-    throw new Error('AutomationBlockedError: Provider blocked the headless request (429)');
+  if (result !== null && result.includes('Block Automation')) {
+    const errorBody = result.substring(0, 200);
+    throw new Error(`AutomationBlockedError: Provider blocked the headless request. url: ${url}, status: ${status}, body: ${errorBody}`);
   }
   if (result !== null) {
     try {
@@ -120,7 +121,8 @@ export async function fetchPostWithinPage<TResult>(
   );
 
   if (result !== null && result.includes('Block Automation')) {
-    throw new Error('AutomationBlockedError: Provider blocked the headless request (429)');
+    const errorBody = result.substring(0, 200);
+    throw new Error(`AutomationBlockedError: Provider blocked the headless request. url: ${url}, body: ${errorBody}`);
   }
   try {
     if (result !== null) {
