@@ -73,6 +73,9 @@ export async function fetchGetWithinPage<TResult>(
       );
     }
   }, url);
+  if (result !== null && (status === 429 || result.includes('Block Automation'))) {
+    throw new Error('AutomationBlockedError: Provider blocked the headless request (429)');
+  }
   if (result !== null) {
     try {
       return JSON.parse(result);
@@ -116,6 +119,9 @@ export async function fetchPostWithinPage<TResult>(
     extraHeaders,
   );
 
+  if (result !== null && result.includes('Block Automation')) {
+    throw new Error('AutomationBlockedError: Provider blocked the headless request (429)');
+  }
   try {
     if (result !== null) {
       return JSON.parse(result);
