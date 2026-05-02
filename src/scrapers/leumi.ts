@@ -18,6 +18,7 @@ const FILTERED_TRANSACTIONS_URL = `${BASE_URL}/ChannelWCF/Broker.svc/ProcessRequ
 const DATE_FORMAT = 'DD.MM.YY';
 const ACCOUNT_BLOCKED_MSG = 'המנוי חסום';
 const INVALID_PASSWORD_MSG = 'אחד או יותר מפרטי ההזדהות שמסרת שגויים. ניתן לנסות שוב';
+const ADVANCED_SEARCH_BUTTON_SELECTOR = 'button[title="חיפוש מתקדם"]';
 
 function getPossibleLoginResults() {
   const urls: LoginOptions['possibleResults'] = {
@@ -121,8 +122,8 @@ async function fetchTransactionsForAccount(
   // runtime for some accounts after 1-2 seconds so we need to hang the process for a short while.
   await hangProcess(4000);
 
-  await waitUntilElementFound(page, 'button[title="חיפוש מתקדם"]', true);
-  await clickButton(page, 'button[title="חיפוש מתקדם"]');
+  await waitUntilElementFound(page, ADVANCED_SEARCH_BUTTON_SELECTOR, true);
+  await clickButton(page, ADVANCED_SEARCH_BUTTON_SELECTOR);
   await waitUntilElementFound(page, 'bll-radio-button', true);
   await clickButton(page, 'bll-radio-button:not([checked])');
 
@@ -243,7 +244,7 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
     const startMoment = moment.max(minimumStartMoment, moment(startDate));
 
     await this.navigateTo(TRANSACTIONS_URL);
-    await waitUntilElementFound(this.page, 'button[title="חיפוש מתקדם"]', true);
+    await waitUntilElementFound(this.page, ADVANCED_SEARCH_BUTTON_SELECTOR, true);
 
     const accounts = await fetchTransactions(this.page, startMoment, this.options);
 
