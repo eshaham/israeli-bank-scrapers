@@ -243,6 +243,7 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
     const startMoment = moment.max(minimumStartMoment, moment(startDate));
 
     await this.navigateTo(TRANSACTIONS_URL);
+    await waitUntilElementFound(this.page, 'button[title="חיפוש מתקדם"]', true);
 
     const accounts = await fetchTransactions(this.page, startMoment, this.options);
 
