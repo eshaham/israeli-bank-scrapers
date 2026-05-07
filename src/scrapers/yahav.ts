@@ -154,6 +154,26 @@ async function getAccountTransactions(page: Page, options?: ScraperOptions): Pro
   return convertTransactions(txns, options);
 }
 
+/** Opens the "from" date control — first .date-options-cell that contains a date-picker (avoids brittle nth-child row index). */
+async function openYahavFromDatePicker(page: Page) {
+  await waitUntilElementFound(page, 'div.date-options-cell date-picker', true);
+  await page.evaluate(() => {
+    const cells = Array.from(document.querySelectorAll('div.date-options-cell'));
+    for (const cell of cells) {
+      const picker = cell.querySelector('date-picker');
+      if (!picker) {
+        continue;
+      }
+      const span = picker.querySelector(':scope > div:nth-child(1) > span:nth-child(2)');
+      if (span instanceof HTMLElement) {
+        span.click();
+        return;
+      }
+    }
+    throw new Error('Yahav: could not find from-date picker control inside .date-options-cell');
+  });
+}
+
 // Manipulate the calendar drop down to choose the txs start date.
 async function searchByDates(page: Page, startDate: Moment) {
   // Get the day number from startDate. 1-31 (usually 1)
@@ -161,11 +181,7 @@ async function searchByDates(page: Page, startDate: Moment) {
   const startDateMonth = startDate.format('M');
   const startDateYear = startDate.format('Y');
 
-  // Open the calendar date picker
-  const dateFromPick =
-    'div.date-options-cell:nth-child(7) > date-picker:nth-child(1) > div:nth-child(1) > span:nth-child(2)';
-  await waitUntilElementFound(page, dateFromPick, true);
-  await clickButton(page, dateFromPick);
+  await openYahavFromDatePicker(page);
 
   // Wait until first day appear.
   await waitUntilElementFound(page, '.pmu-days > div:nth-child(1)', true);
