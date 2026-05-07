@@ -154,24 +154,75 @@ async function getAccountTransactions(page: Page, options?: ScraperOptions): Pro
   return convertTransactions(txns, options);
 }
 
-/** Opens the "from" date control — first .date-options-cell that contains a date-picker (avoids brittle nth-child row index). */
-async function openYahavFromDatePicker(page: Page) {
-  await waitUntilElementFound(page, 'div.date-options-cell date-picker', true);
-  await page.evaluate(() => {
-    const cells = Array.from(document.querySelectorAll('div.date-options-cell'));
-    for (const cell of cells) {
-      const picker = cell.querySelector('date-picker');
-      if (!picker) {
-        continue;
-      }
-      const span = picker.querySelector(':scope > div:nth-child(1) > span:nth-child(2)');
-      if (span instanceof HTMLElement) {
-        span.click();
-        return;
-      }
+function getPageActionTimeoutMs(page: Page): number {
+  try {
+    const getter = (page as unknown as { getDefaultTimeout?: () => number }).getDefaultTimeout;
+    const ms = getter?.call(page);
+    if (typeof ms === 'number' && ms > 0) {
+      return ms;
     }
-    throw new Error('Yahav: could not find from-date picker control inside .date-options-cell');
+  } catch {
+    /* ignore */
+  }
+  return 30000;
+}
+
+/**
+ * Opens the "from" date control.
+ * Waits for a date-picker in the statement area (DOM presence), scrolls it into view, then clicks.
+ * Avoids `visible: true` on the compound selector — Yahav often keeps the control in DOM before Puppeteer
+ * considers it "visible", which caused `Waiting for selector div.date-options-cell date-picker failed`.
+ */
+async function openYahavFromDatePicker(page: Page) {
+  const timeoutMs = getPageActionTimeoutMs(page);
+
+  if (await elementPresentOnPage(page, '.loading-bar-spinner')) {
+    await waitUntilElementDisappear(page, '.loading-bar-spinner', timeoutMs);
+  }
+
+  await page.waitForFunction(
+    () => {
+      const inCells = document.querySelectorAll('div.date-options-cell date-picker').length;
+      const inStatement = document.querySelector('.statement-options')?.querySelectorAll('date-picker').length ?? 0;
+      return inCells + inStatement > 0;
+    },
+    { timeout: timeoutMs },
+  );
+
+  const clicked = await page.evaluate(() => {
+    const tryClickPicker = (picker: Element): boolean => {
+      const span =
+        picker.querySelector(':scope > div:nth-child(1) > span:nth-child(2)') ||
+        picker.querySelector('div > span:nth-child(2)') ||
+        picker.querySelector('span:nth-child(2)');
+      if (span instanceof HTMLElement) {
+        span.scrollIntoView({ block: 'center', inline: 'nearest' });
+        span.click();
+        return true;
+      }
+      if (picker instanceof HTMLElement) {
+        picker.scrollIntoView({ block: 'center', inline: 'nearest' });
+        picker.click();
+        return true;
+      }
+      return false;
+    };
+
+    const ordered: Element[] = [];
+    document.querySelectorAll('div.date-options-cell date-picker').forEach(el => ordered.push(el));
+    if (ordered.length === 0) {
+      const stmt = document.querySelector('.statement-options');
+      stmt?.querySelectorAll('date-picker').forEach(el => ordered.push(el));
+    }
+    const first = ordered[0];
+    return first ? tryClickPicker(first) : false;
   });
+
+  if (!clicked) {
+    throw new Error(
+      'Yahav: could not open from-date picker (date-picker present but no clickable inner control). DOM or layout may have changed.',
+    );
+  }
 }
 
 // Manipulate the calendar drop down to choose the txs start date.
@@ -308,6 +359,9 @@ class YahavScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
     await waitUntilElementFound(this.page, ACCOUNT_DETAILS_SELECTOR, true);
     await clickButton(this.page, ACCOUNT_DETAILS_SELECTOR);
     await waitUntilElementFound(this.page, '.statement-options .selected-item-top', true);
+    if (await elementPresentOnPage(this.page, '.loading-bar-spinner')) {
+      await waitUntilElementDisappear(this.page, '.loading-bar-spinner');
+    }
 
     const defaultStartMoment = moment().subtract(3, 'months').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();

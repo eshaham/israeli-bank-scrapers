@@ -495,7 +495,7 @@ const credentials = {
 
 This scraper supports fetching transaction from up to six months.
 
-**This fork:** Statement date filtering used to target the “from” date via `div.date-options-cell:nth-child(7)`. After a Yahav UI change (May 2026), that index no longer matched the date picker and Puppeteer timed out. The scraper now opens the first `.date-options-cell` that contains a `date-picker`. Details: [CHANGELOG.md](./CHANGELOG.md).
+**This fork:** Statement date filtering used to target the “from” date via `div.date-options-cell:nth-child(7)`. After Yahav UI changes (May 2026), that index no longer matched. The scraper now finds the first `date-picker` in the statement area, waits for DOM presence (not strict `visible` on the compound selector), scrolls into view, then clicks—see [CHANGELOG.md](./CHANGELOG.md).
 
 ## Beyhad Bishvilha
 
