@@ -61,3 +61,21 @@ flowchart TD
 **סיבה:** האלמנט יכול להיות ב-DOM אך עדיין לא מסומן כ-visible עבור Puppeteer, ולכן המתנה ל-selector "גלוי" נכשלת.
 
 **תיקון:** המתנה לנוכחות ב-DOM, גלילה לתצוגה, לחיצה עם מספר ניסיונות ל-span פנימי, והמתנה לסיום ספינר טעינה לפני בורר התאריך.
+
+## Yahav — loading spinner wait (May 2026)
+
+### English
+
+**Symptom:** Some runs failed with a generic Puppeteer timeout, e.g. `Waiting failed: 30000ms exceeded`, during `fetch_transactions`, even after the date-picker visibility fix.
+
+**Cause:** `waitUntilElementDisappear('.loading-bar-spinner')` was called unconditionally. In Puppeteer, waiting for an element to become **hidden** when it **never exists** in the DOM can consume the full default timeout (~30s).
+
+**Fix:** Only call `waitUntilElementDisappear` for `.loading-bar-spinner` when the element is present (`waitYahavLoadingSpinnerGoneIfPresent`). Use the same helper after navigation, before/after date search, and on the statement screen.
+
+### עברית
+
+**תסמין:** timeout כללי של ~30 שניות בשלב איסוף תנועות.
+
+**סיבה:** המתנה להיעלמות ספינר שלא הופיע בכלל ב-DOM.
+
+**תיקון:** המתנה להיעלמות הספינר רק אם הוא קיים.

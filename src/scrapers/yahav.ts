@@ -167,6 +167,16 @@ function getPageActionTimeoutMs(page: Page): number {
   return 30000;
 }
 
+const LOADING_SPINNER = '.loading-bar-spinner';
+
+/** If the spinner is absent, `waitForSelector(..., { hidden: true })` can burn the full default timeout. */
+async function waitYahavLoadingSpinnerGoneIfPresent(page: Page) {
+  const timeoutMs = getPageActionTimeoutMs(page);
+  if (await elementPresentOnPage(page, LOADING_SPINNER)) {
+    await waitUntilElementDisappear(page, LOADING_SPINNER, timeoutMs);
+  }
+}
+
 /**
  * Opens the "from" date control.
  * Waits for a date-picker in the statement area (DOM presence), scrolls it into view, then clicks.
@@ -176,9 +186,7 @@ function getPageActionTimeoutMs(page: Page): number {
 async function openYahavFromDatePicker(page: Page) {
   const timeoutMs = getPageActionTimeoutMs(page);
 
-  if (await elementPresentOnPage(page, '.loading-bar-spinner')) {
-    await waitUntilElementDisappear(page, '.loading-bar-spinner', timeoutMs);
-  }
+  await waitYahavLoadingSpinnerGoneIfPresent(page);
 
   await page.waitForFunction(
     () => {
@@ -290,9 +298,9 @@ async function fetchAccountData(
   accountID: string,
   options?: ScraperOptions,
 ): Promise<TransactionsAccount> {
-  await waitUntilElementDisappear(page, '.loading-bar-spinner');
+  await waitYahavLoadingSpinnerGoneIfPresent(page);
   await searchByDates(page, startDate);
-  await waitUntilElementDisappear(page, '.loading-bar-spinner');
+  await waitYahavLoadingSpinnerGoneIfPresent(page);
   const txns = await getAccountTransactions(page, options);
 
   return {
@@ -322,7 +330,7 @@ async function waitReadinessForAll(page: Page) {
 async function redirectOrDialog(page: Page) {
   // Click on bank messages if any.
   await waitForNavigation(page);
-  await waitUntilElementDisappear(page, '.loading-bar-spinner');
+  await waitYahavLoadingSpinnerGoneIfPresent(page);
   const hasMessage = await elementPresentOnPage(page, '.messaging-links-container');
   if (hasMessage) {
     await clickButton(page, '.link-1');
@@ -333,7 +341,7 @@ async function redirectOrDialog(page: Page) {
   const promises = [promise1, promise2];
 
   await Promise.race(promises);
-  await waitUntilElementDisappear(page, '.loading-bar-spinner');
+  await waitYahavLoadingSpinnerGoneIfPresent(page);
 }
 
 type ScraperSpecificCredentials = { username: string; password: string; nationalID: string };
@@ -359,9 +367,7 @@ class YahavScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
     await waitUntilElementFound(this.page, ACCOUNT_DETAILS_SELECTOR, true);
     await clickButton(this.page, ACCOUNT_DETAILS_SELECTOR);
     await waitUntilElementFound(this.page, '.statement-options .selected-item-top', true);
-    if (await elementPresentOnPage(this.page, '.loading-bar-spinner')) {
-      await waitUntilElementDisappear(this.page, '.loading-bar-spinner');
-    }
+    await waitYahavLoadingSpinnerGoneIfPresent(this.page);
 
     const defaultStartMoment = moment().subtract(3, 'months').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
