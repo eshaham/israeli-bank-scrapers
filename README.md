@@ -33,6 +33,10 @@ This fork tracks **[eshaham/israeli-bank-scrapers](https://github.com/eshaham/is
 
 **Sync status:** Upstream [latest release](https://github.com/eshaham/israeli-bank-scrapers/releases/latest) is **v6.7.4** — this fork is aligned. When upstream publishes a newer version, maintainers should merge `upstream/master` and run `npm run sync:upstream:metadata` (see [Upstream sync](./CONTRIBUTING.md#upstream-sync-maintainers)).
 
+### npm dependencies
+
+This fork keeps **patch/minor** dependency updates current via `npm update`; `package-lock.json` is committed and CI uses `npm ci`. Major upgrades (for example Jest 30, TypeScript 6, ESLint 10) are done in separate migrations. See [CHANGELOG.md](./CHANGELOG.md) for the latest refresh.
+
 ### Fork releases (npm vs GitHub)
 
 This fork’s [GitHub releases](https://github.com/HirezRa/israeli-bank-scrapers/releases) use tags **`hirez-v1.x.x`**. The numeric part is the same **semver** published to npm as [@hirez10/israeli-bank-scrapers](https://www.npmjs.com/package/@hirez10/israeli-bank-scrapers). If npm lags behind GitHub, the Release workflow likely failed on **npm publish** (for example `E404` on a scoped package: missing or underpowered `NPM_TOKEN`, or org publish rights on `@hirez10`). See [npm publish recovery](./CONTRIBUTING.md#npm-publish-recovery-github-ahead-of-npm).

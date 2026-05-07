@@ -229,7 +229,7 @@ async function getAccountNumber(page: Page | Frame): Promise<string> {
   await waitUntilElementFound(page, ACCOUNTS_NUMBER, true, ELEMENT_RENDER_TIMEOUT_MS);
 
   const selectedSnifAccount = await page.$eval(ACCOUNTS_NUMBER, option => {
-    return (option as HTMLElement).innerText;
+    return option.innerText;
   });
 
   return selectedSnifAccount.replace('/', '_').trim();

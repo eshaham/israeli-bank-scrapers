@@ -2,6 +2,20 @@
 
 All notable changes to this fork (`@hirez10/israeli-bank-scrapers`) are documented here. Release versions and Git tags are produced by [semantic-release](https://github.com/semantic-release/semantic-release) (`hirez-v*` tags).
 
+## Maintenance — npm dependency refresh (May 2026)
+
+### English
+
+- Ran `npm update` within existing semver ranges and committed the updated `package-lock.json` (no vulnerabilities reported by `npm audit` at refresh time).
+- Raised declared minimum versions in `package.json` where the lockfile resolved newer patch/minor releases: `puppeteer` ^24.43.0, `prettier` ^3.8.3, `@types/node` ^25.6.1, `typescript-eslint` ^8.59.2.
+- **Deferred** (separate migration PR): ESLint 10, Jest 30, TypeScript 6, major bumps for `cross-env`, `husky`, `fs-extra`, `moment-timezone`.
+- **Toolchain:** `@typescript-eslint` 8.59.x surfaced new `no-unnecessary-type-assertion` findings; removed redundant assertions (and an unused import in `visa-cal.ts`).
+
+### עברית
+
+- עדכון `npm` בתחום ה-semver הקיים ועדכון `package-lock.json`.
+- שדרוגי major לא בוצעו במסגרת זו.
+
 ## Yahav — from-date picker selector (May 2026)
 
 ### English

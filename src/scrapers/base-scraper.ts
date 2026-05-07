@@ -40,7 +40,7 @@ export class BaseScraper<TCredentials extends ScraperCredentials> implements Scr
       loginResult = await this.login(credentials);
     } catch (e) {
       loginResult =
-        e instanceof TimeoutError ? createTimeoutError((e as Error).message) : createGenericError((e as Error).message);
+        e instanceof TimeoutError ? createTimeoutError(e.message) : createGenericError((e as Error).message);
     }
 
     let scrapeResult;
@@ -49,9 +49,7 @@ export class BaseScraper<TCredentials extends ScraperCredentials> implements Scr
         scrapeResult = await this.fetchData();
       } catch (e) {
         scrapeResult =
-          e instanceof TimeoutError
-            ? createTimeoutError((e as Error).message)
-            : createGenericError((e as Error).message);
+          e instanceof TimeoutError ? createTimeoutError(e.message) : createGenericError((e as Error).message);
       }
     } else {
       scrapeResult = loginResult;

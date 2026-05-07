@@ -66,7 +66,7 @@ function removeEmptyValues<T>(value: T): T {
       })
       .map(([k, v]) => [k, removeEmptyValues(v)]);
 
-    return Object.fromEntries(entries) as unknown as T;
+    return Object.fromEntries(entries);
   }
 
   return value;

@@ -7,7 +7,7 @@ import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { getFromSessionStorage } from '../helpers/storage';
 import { filterOldTransactions, getRawTransaction } from '../helpers/transactions';
 import { waitUntil } from '../helpers/waiting';
-import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
+import { TransactionStatuses, TransactionTypes, type Transaction } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
 import { type ScraperScrapingResult, type ScraperOptions } from './interface';
 
@@ -545,7 +545,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
           txns,
           balance: frame?.nextTotalDebit != null ? -frame.nextTotalDebit : undefined,
           accountNumber: card.last4Digits,
-        } as TransactionsAccount;
+        };
       }),
     );
 
