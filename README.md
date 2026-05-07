@@ -38,12 +38,14 @@ This fork tracks **[eshaham/israeli-bank-scrapers](https://github.com/eshaham/is
 This fork’s [GitHub releases](https://github.com/HirezRa/israeli-bank-scrapers/releases) use tags **`hirez-v1.x.x`**. The numeric part is the same **semver** published to npm as [@hirez10/israeli-bank-scrapers](https://www.npmjs.com/package/@hirez10/israeli-bank-scrapers). If npm lags behind GitHub, the Release workflow likely failed on **npm publish** (for example `E404` on a scoped package: missing or underpowered `NPM_TOKEN`, or org publish rights on `@hirez10`). See [npm publish recovery](./CONTRIBUTING.md#npm-publish-recovery-github-ahead-of-npm).
 
 > Important!
-> 
+>
 > The scrapers are set to use timezone `Asia/Jerusalem` to avoid conflicts in case you're running the scrapers outside Israel.
- 
+
 # What's here?
+
 What you can find here is scrapers for all major Israeli banks and credit card companies. That's the plan at least.
 Currently only the following banks are supported:
+
 - Bank Hapoalim (thanks [@sebikaplun](https://github.com/sebikaplun))
 - Leumi Bank (thanks [@esakal](https://github.com/esakal))
 - Discount Bank
@@ -75,9 +77,11 @@ This project handles **real financial credentials and data**. See **[SECURITY.md
 When pasting code samples or opening issues/PRs, **never** include real passwords, OTPs, tokens, or unredacted bank responses.
 
 # Prerequisites
+
 To use this you will need to have [Node.js](https://nodejs.org) >= 22.13.0 installed.
 
 # Getting started
+
 To use these scrapers from **this fork**, install the published scoped package from npm:
 
 ```sh
@@ -91,35 +95,34 @@ Then you can import and use it in your Node module (use the fork’s package nam
 ```node
 import { CompanyTypes, createScraper } from '@hirez10/israeli-bank-scrapers';
 
-(async function() {
+(async function () {
   try {
     // read documentation below for available options
     const options = {
-      companyId: CompanyTypes.leumi, 
+      companyId: CompanyTypes.leumi,
       startDate: new Date('2020-05-01'),
       combineInstallments: false,
-      showBrowser: false
+      showBrowser: false,
     };
 
     // read documentation below for information about credentials
     // Use mock credentials only — never real banking passwords in source control or logs.
     const credentials = {
       username: 'demo_user',
-      password: 'demo_password'
+      password: 'demo_password',
     };
 
     const scraper = createScraper(options);
     const scrapeResult = await scraper.scrape(credentials);
 
     if (scrapeResult.success) {
-      scrapeResult.accounts.forEach((account) => {
+      scrapeResult.accounts.forEach(account => {
         console.log(`found ${account.txns.length} transactions for account number ${account.accountNumber}`);
       });
-    }
-    else {
+    } else {
       throw new Error(scrapeResult.errorType);
     }
-  } catch(e) {
+  } catch (e) {
     console.error(`scraping failed for the following reason: ${e.message}`);
   }
 })();
@@ -162,11 +165,13 @@ The structure of the result object is as follows:
 ```
 
 You can also use the `SCRAPERS` list to get scraper metadata:
+
 ```node
 import { SCRAPERS } from 'israeli-bank-scrapers';
 ```
 
 The return value is a list of scraper metadata:
+
 ```node
 {
   <companyId>: {
@@ -218,7 +223,7 @@ const browserContext = await browser.createBrowserContext();
 const options = {
   companyId: CompanyTypes.leumi,
   startDate: new Date('2020-05-01'),
-  browserContext
+  browserContext,
 };
 const scraper = createScraper(options);
 const scrapeResult = await scraper.scrape({ username: 'vr29485', password: 'sometingsomething' });
@@ -235,9 +240,9 @@ See the [OptInFeatures](https://github.com/eshaham/israeli-bank-scrapers/blob/ma
 ## Two-Factor Authentication Scrapers
 
 Some companies require two-factor authentication, and as such the scraper cannot be fully automated. When using the relevant scrapers, you have two options:
+
 1. Provide an async callback that knows how to retrieve real time secrets like OTP codes.
 2. When supported by the scraper - provide a "long term token". These are usually available if the financial provider only requires Two-Factor authentication periodically, and not on every login. You can retrieve your long term token from the relevant credit/banking app using reverse engineering and a MITM proxy, or use helper functions that are provided by some Two-Factor Auth scrapers (e.g. OneZero).
-
 
 ```node
 import { CompanyTypes, createScraper } from 'israeli-bank-scrapers';
@@ -246,24 +251,24 @@ import { prompt } from 'enquirer';
 // Option 1 - Provide a callback
 
 const result = await scraper.login({
- email: relevantAccount.credentials.email,
- password: relevantAccount.credentials.password,
- phoneNumber,
- otpCodeRetriever: async () => {
-  let otpCode;
-  while (!otpCode) {
-   otpCode = await questions('OTP Code?');
-  }
+  email: relevantAccount.credentials.email,
+  password: relevantAccount.credentials.password,
+  phoneNumber,
+  otpCodeRetriever: async () => {
+    let otpCode;
+    while (!otpCode) {
+      otpCode = await questions('OTP Code?');
+    }
 
-  return otpCode[0];
- }
+    return otpCode[0];
+  },
 });
 
 // Option 2 - Retrieve a long term otp token (OneZero)
 await scraper.triggerTwoFactorAuth(phoneNumber);
 
 // OTP is sent, retrieve it somehow
-const otpCode='...';
+const otpCode = '...';
 
 const result = scraper.getLongTermTwoFactorToken(otpCode);
 /*
@@ -275,39 +280,46 @@ result = {
 ```
 
 # Getting deployed version of latest changes in master
+
 Upstream deploys [`israeli-bank-scrapers`](https://www.npmjs.com/package/israeli-bank-scrapers) to npm when changes land on its main branch, on its own release cadence.
 
 **This fork** publishes separately as [@hirez10/israeli-bank-scrapers](https://www.npmjs.com/package/@hirez10/israeli-bank-scrapers). The latest **GitHub** tag (`hirez-v*`) is the release line; [`package.json`](./package.json) `version` should match that line between publishes. Always confirm what **npm** actually serves on the [package page](https://www.npmjs.com/package/@hirez10/israeli-bank-scrapers) — it can lag if CI publish fails.
 
 # `Israeli-bank-scrapers-core` library
 
-> TL;DR this is the same library as the default library. The only difference is that it is using `puppeteer-core` instead of `puppeteer` which is useful if you are using frameworks like Electron to pack your application. 
+> TL;DR this is the same library as the default library. The only difference is that it is using `puppeteer-core` instead of `puppeteer` which is useful if you are using frameworks like Electron to pack your application.
 >
 > In most cases you will probably want to use the default library (read [Getting Started](#getting-started) section).
 
-Israeli bank scrapers library is published  twice:
- 1. [israeli-bank-scrapers](https://www.npmjs.com/package/israeli-bank-scrapers) - the default variation, great for common usage as node dependency in server application or cli.
- 2. [israeli-bank-scrapers-core](https://www.npmjs.com/package/israeli-bank-scrapers-core) - extremely useful for applications that bundle `node_modules` like Electron applications. 
- 
- ## Differences between default and core variations
-  
- The default variation [israeli-bank-scrapers](https://www.npmjs.com/package/israeli-bank-scrapers) is using [puppeteer](https://www.npmjs.com/package/puppeteer) which handles the installation of local chroumium on its' own. This behavior is very handy since it takes care on all the hard work figuring which chromium to download and manage the actual download process.  As a side effect it increases node_modules by several hundred megabytes. 
- 
- The core variation [israeli-bank-scrapers-core](https://www.npmjs.com/package/israeli-bank-scrapers-core) is using [puppeteer-core](https://www.npmjs.com/package/puppeteer-core) which is exactly the same library as `puppeteer` except that it doesn't download chromium when installed by npm. It is up to you to make sure the specific version of chromium is installed locally and provide a path to that version. It is useful in Electron applications since it doesn't bloat the size of the application and you can provide a much friendlier experience like loading the application and download it later when needed. 
- 
- To install `israeli-bank-scrapers-core`:
+Israeli bank scrapers library is published twice:
+
+1.  [israeli-bank-scrapers](https://www.npmjs.com/package/israeli-bank-scrapers) - the default variation, great for common usage as node dependency in server application or cli.
+2.  [israeli-bank-scrapers-core](https://www.npmjs.com/package/israeli-bank-scrapers-core) - extremely useful for applications that bundle `node_modules` like Electron applications.
+
+## Differences between default and core variations
+
+The default variation [israeli-bank-scrapers](https://www.npmjs.com/package/israeli-bank-scrapers) is using [puppeteer](https://www.npmjs.com/package/puppeteer) which handles the installation of local chroumium on its' own. This behavior is very handy since it takes care on all the hard work figuring which chromium to download and manage the actual download process. As a side effect it increases node_modules by several hundred megabytes.
+
+The core variation [israeli-bank-scrapers-core](https://www.npmjs.com/package/israeli-bank-scrapers-core) is using [puppeteer-core](https://www.npmjs.com/package/puppeteer-core) which is exactly the same library as `puppeteer` except that it doesn't download chromium when installed by npm. It is up to you to make sure the specific version of chromium is installed locally and provide a path to that version. It is useful in Electron applications since it doesn't bloat the size of the application and you can provide a much friendlier experience like loading the application and download it later when needed.
+
+To install `israeli-bank-scrapers-core`:
+
 ```sh
 npm install israeli-bank-scrapers-core --save
 ```
 
 ## Getting chromium version used by puppeteer-core
+
 When using the `israeli-bank-scrapers-core` it is up to you to make sure the relevant chromium version exists. You must:
+
 1. query for the specific chromium revision required by the `puppeteer-core` library being used.
 2. make sure that you have local version of that revision.
 3. provide an absolute path to `israeli-bank-scrapers-core` scrapers.
 
-Please read the following to learn more about the process: 
+Please read the following to learn more about the process:
+
 1. To get the required chromium revision use the following code:
+
 ```
 import { getPuppeteerConfig } from 'israeli-bank-scrapers-core';
 
@@ -315,33 +327,41 @@ const chromiumVersion = getPuppeteerConfig().chromiumRevision;
 ```
 
 2. Once you have the chromium revision, you can either download it manually or use other liraries like [download-chromium](https://www.npmjs.com/package/download-chromium) to fetch that version. The mentioned library is very handy as it caches the download and provide useful helpers like download progress information.
- 
- 3. provide the path to chromium to the library using the option key `executablePath`. 
+
+3. provide the path to chromium to the library using the option key `executablePath`.
 
 # Specific definitions per scraper
 
 ## Bank Hapoalim scraper
+
 This scraper expects the following credentials object:
+
 ```node
 const credentials = {
   userCode: <user identification code>,
   password: <user password>
 };
 ```
+
 This scraper supports fetching transaction from up to one year.
 
 ## Bank Leumi scraper
+
 This scraper expects the following credentials object:
+
 ```node
 const credentials = {
   username: <user name>,
   password: <user password>
 };
 ```
+
 This scraper supports fetching transaction from up to one year.
 
 ## Discount scraper
+
 This scraper expects the following credentials object:
+
 ```node
 const credentials = {
   id: <user identification number>,
@@ -349,10 +369,13 @@ const credentials = {
   num: <user identificaiton code>
 };
 ```
+
 This scraper supports fetching transaction from up to one year (minus 1 day).
 
 ## Mercantile scraper
+
 This scraper expects the following credentials object:
+
 ```node
 const credentials = {
   id: <user identification number>,
@@ -360,24 +383,30 @@ const credentials = {
   num: <user identificaiton code>
 };
 ```
+
 This scraper supports fetching transaction from up to one year (minus 1 day).
 
-
 ### Known Limitations
+
 - Missing memo field
 
 ## Mizrahi scraper
+
 This scraper expects the following credentials object:
+
 ```node
 const credentials = {
   username: <user identification number>,
   password: <user password>
 };
 ```
+
 This scraper supports fetching transaction from up to one year.
 
 ## Beinleumi & Massad
+
 These scrapers are essentially identical and expect the following credentials object:
+
 ```node
 const credentials = {
   username: <user name>,
@@ -386,37 +415,48 @@ const credentials = {
 ```
 
 ## Bank Otsar Hahayal scraper
+
 This scraper expects the following credentials object:
+
 ```node
 const credentials = {
   username: <user name>,
   password: <user password>
 };
 ```
+
 This scraper supports fetching transaction from up to one year.
 
 ## Visa Cal scraper
+
 This scraper expects the following credentials object:
+
 ```node
 const credentials = {
   username: <user name>,
   password: <user password>
 };
 ```
+
 This scraper supports fetching transaction from up to one year.
 
 ## Max scraper (Formerly Leumi-Card)
+
 This scraper expects the following credentials object:
+
 ```node
 const credentials = {
   username: <user name>,
   password: <user password>
 };
 ```
+
 This scraper supports fetching transaction from up to one year.
 
 ## Isracard scraper
+
 This scraper expects the following credentials object:
+
 ```node
 const credentials = {
   id: <user identification number>,
@@ -424,10 +464,13 @@ const credentials = {
   password: <user password>
 };
 ```
+
 This scraper supports fetching transaction from up to one year.
 
 ## Amex scraper
+
 This scraper expects the following credentials object:
+
 ```node
 const credentials = {
   username: <user identification number>,
@@ -435,10 +478,13 @@ const credentials = {
   password: <user password>
 };
 ```
+
 This scraper supports fetching transaction from up to one year.
 
 ## Yahav
+
 This scraper expects the following credentials object:
+
 ```node
 const credentials = {
   username: <user name>,
@@ -446,10 +492,15 @@ const credentials = {
   nationalID: <user national ID>
 };
 ```
+
 This scraper supports fetching transaction from up to six months.
 
+**This fork:** Statement date filtering used to target the “from” date via `div.date-options-cell:nth-child(7)`. After a Yahav UI change (May 2026), that index no longer matched the date picker and Puppeteer timed out. The scraper now opens the first `.date-options-cell` that contains a `date-picker`. Details: [CHANGELOG.md](./CHANGELOG.md).
+
 ## Beyhad Bishvilha
+
 This scraper expects the following credentials object::
+
 ```node
 const credentials = {
   id: <user identification number>,
@@ -458,7 +509,9 @@ const credentials = {
 ```
 
 # Known projects
+
 These are the projects known to be using this module:
+
 - [Israeli YNAB updater](https://github.com/eshaham/israeli-ynab-updater) - A command line tool for exporting banks data to CSVs, formatted specifically for [YNAB](https://www.youneedabudget.com)
 - [Caspion](https://github.com/brafdlog/caspion) - An app for automatically sending transactions from Israeli banks and credit cards to budget tracking apps
 - [Finance Notifier](https://github.com/LiranBri/finance-notifier) - A simple script with the ability to send custom financial alerts to multiple contacts and platforms
@@ -471,4 +524,5 @@ These are the projects known to be using this module:
 Built something interesting you want to share here? [Let me know](https://goo.gl/forms/5Fb9JAjvzMIpmzqo2).
 
 # License
+
 The MIT License

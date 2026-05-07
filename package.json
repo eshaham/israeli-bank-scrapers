@@ -90,6 +90,7 @@
   },
   "files": [
     "lib/**/*",
+    "CHANGELOG.md",
     "SECURITY.md"
   ]
 }
