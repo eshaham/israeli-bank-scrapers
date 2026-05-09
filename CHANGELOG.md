@@ -93,3 +93,35 @@ flowchart TD
 **סיבה:** המתנה להיעלמות ספינר שלא הופיע בכלל ב-DOM.
 
 **תיקון:** המתנה להיעלמות הספינר רק אם הוא קיים.
+
+## Yahav — live-account fallback triggers for date calendar (May 2026)
+
+### English
+
+- During a real-account live check, login succeeded but fetch timed out after ~45s.
+- Root cause: the old date-opening path expected a `date-picker` trigger variant that was not consistently clickable.
+- Fix: iterate multiple date-trigger selectors in statement options, click each candidate, and verify the calendar actually opened (`.pmu-days`) before proceeding.
+- Failure message now points to the exact stage: failed to open date picker / calendar missing.
+
+### עברית
+
+- בבדיקה חיה עם חשבון אמיתי: ההתחברות הצליחה, אך שלב איסוף התנועות נתקע ב-timeout.
+- נוספה לוגיקת fallback לבוררי פתיחת לוח תאריכים, עם אימות שהלוח נפתח בפועל.
+
+## Yahav — input fallback when calendar widget is absent (May 2026)
+
+### English
+
+- Live-run diagnostics showed pages where `.statement-options` exists and date inputs exist, but no `date-picker` and no `.pmu-days` popup can be opened.
+- Root cause: waiting/clicking for calendar UI only; some Yahav layouts expose plain input fields for date range.
+- Fix:
+  1. Scope-independent DOM wait for date triggers (`document.querySelector(...)` instead of `.statement-options` only).
+  2. If no known trigger opens `.pmu-days`, fallback to direct date input (`DD/MM/YYYY`) with `input/change/blur` events.
+  3. Stage-labeled errors (`runYahavStage`) to avoid generic `Waiting failed...` loops.
+- Added a secure local command `npm run yahav:live-check` for real-account validation without printing secrets.
+
+### עברית
+
+- בריצה חיה זוהו מסכים שבהם אין `date-picker` ואין popup של `.pmu-days`, אך יש שדות `input` לתאריך.
+- נוספה נפילה חכמה: אם לוח השנה לא נפתח, הסקרייפר ממלא את תאריך ה־"מתאריך" ישירות בשדה input.
+- נוספו הודעות שגיאה עם שלב מדויק כדי למנוע לופ תיקונים עם timeout כללי.

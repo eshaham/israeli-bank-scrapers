@@ -39,6 +39,15 @@ interface ScrapedTransaction {
   status: TransactionStatuses;
 }
 
+async function runYahavStage<T>(stage: string, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Yahav stage '${stage}' failed: ${message}`);
+  }
+}
+
 function getPossibleLoginResults(page: Page): PossibleLoginResults {
   // checkout file `base-scraper-with-browser.ts` for available result types
   const urls: PossibleLoginResults = {};
@@ -183,54 +192,122 @@ async function waitYahavLoadingSpinnerGoneIfPresent(page: Page) {
  * Avoids `visible: true` on the compound selector — Yahav often keeps the control in DOM before Puppeteer
  * considers it "visible", which caused `Waiting for selector div.date-options-cell date-picker failed`.
  */
-async function openYahavFromDatePicker(page: Page) {
+async function openYahavFromDatePicker(page: Page): Promise<'calendar' | 'input'> {
   const timeoutMs = getPageActionTimeoutMs(page);
 
   await waitYahavLoadingSpinnerGoneIfPresent(page);
-
-  await page.waitForFunction(
-    () => {
-      const inCells = document.querySelectorAll('div.date-options-cell date-picker').length;
-      const inStatement = document.querySelector('.statement-options')?.querySelectorAll('date-picker').length ?? 0;
-      return inCells + inStatement > 0;
-    },
-    { timeout: timeoutMs },
-  );
-
-  const clicked = await page.evaluate(() => {
-    const tryClickPicker = (picker: Element): boolean => {
-      const span =
-        picker.querySelector(':scope > div:nth-child(1) > span:nth-child(2)') ||
-        picker.querySelector('div > span:nth-child(2)') ||
-        picker.querySelector('span:nth-child(2)');
-      if (span instanceof HTMLElement) {
-        span.scrollIntoView({ block: 'center', inline: 'nearest' });
-        span.click();
-        return true;
-      }
-      if (picker instanceof HTMLElement) {
-        picker.scrollIntoView({ block: 'center', inline: 'nearest' });
-        picker.click();
-        return true;
-      }
-      return false;
-    };
-
-    const ordered: Element[] = [];
-    document.querySelectorAll('div.date-options-cell date-picker').forEach(el => ordered.push(el));
-    if (ordered.length === 0) {
-      const stmt = document.querySelector('.statement-options');
-      stmt?.querySelectorAll('date-picker').forEach(el => ordered.push(el));
-    }
-    const first = ordered[0];
-    return first ? tryClickPicker(first) : false;
-  });
-
-  if (!clicked) {
+  try {
+    await page.waitForFunction(
+      () => {
+        return !!(
+          document.querySelector('div.date-options-cell date-picker') ||
+          document.querySelector('div.date-options-cell input') ||
+          document.querySelector('div.date-options-cell [role="button"]') ||
+          document.querySelector('.date-options-cell span')
+        );
+      },
+      { timeout: timeoutMs },
+    );
+  } catch (error) {
+    const diagnostics = await page.evaluate(() => {
+      const statement = document.querySelector('.statement-options');
+      return {
+        statementOptionsPresent: !!statement,
+        dateOptionsCellCount: document.querySelectorAll('div.date-options-cell').length,
+        datePickerCount: document.querySelectorAll('date-picker').length,
+        dateInputCount: document.querySelectorAll('div.date-options-cell input, input[type="date"]').length,
+        roleButtonCount: document.querySelectorAll('div.date-options-cell [role="button"]').length,
+      };
+    });
+    const message = error instanceof Error ? error.message : String(error);
     throw new Error(
-      'Yahav: could not open from-date picker (date-picker present but no clickable inner control). DOM or layout may have changed.',
+      `Yahav date trigger not found in DOM before timeout. diagnostics=${JSON.stringify(diagnostics)}. original=${message}`,
     );
   }
+
+  const triggerSelectors = [
+    'div.date-options-cell date-picker > div:nth-child(1) > span:nth-child(2)',
+    'div.date-options-cell date-picker span:nth-child(2)',
+    'div.date-options-cell date-picker',
+    '.statement-options date-picker > div:nth-child(1) > span:nth-child(2)',
+    '.statement-options date-picker span:nth-child(2)',
+    '.statement-options date-picker',
+    'div.date-options-cell input',
+    'div.date-options-cell [role="button"]',
+  ];
+
+  const calendarSelector = '.pmu-days > div:nth-child(1)';
+  const shortTimeout = Math.min(timeoutMs, 7000);
+  for (const selector of triggerSelectors) {
+    const clicked = await page.evaluate((s: string) => {
+      const el = document.querySelector(s);
+      if (!(el instanceof HTMLElement)) {
+        return false;
+      }
+      el.scrollIntoView({ block: 'center', inline: 'nearest' });
+      el.click();
+      return true;
+    }, selector);
+
+    if (!clicked) {
+      continue;
+    }
+
+    try {
+      await waitUntilElementFound(page, calendarSelector, true, shortTimeout);
+      return 'calendar';
+    } catch {
+      // Try next trigger in case this click did not open the calendar.
+    }
+  }
+
+  const hasDateInput = await page.evaluate(() => {
+    return !!document.querySelector(
+      'div.date-options-cell input, .statement-options input[type="date"], .statement-options input',
+    );
+  });
+  if (hasDateInput) {
+    return 'input';
+  }
+
+  throw new Error(
+    'Yahav: failed to open from-date picker. No known trigger opened calendar and no date input was found.',
+  );
+}
+
+async function setYahavFromDateInput(page: Page, dateValue: string): Promise<boolean> {
+  const selectors = [
+    'div.date-options-cell input',
+    '.statement-options input[type="date"]',
+    '.statement-options input',
+  ];
+
+  for (const selector of selectors) {
+    const changed = await page.evaluate(
+      (s: string, value: string) => {
+        const input = document.querySelector(s);
+        if (!(input instanceof HTMLInputElement)) {
+          return false;
+        }
+        input.scrollIntoView({ block: 'center', inline: 'nearest' });
+        input.focus();
+        input.value = '';
+        input.value = value;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        input.dispatchEvent(new Event('blur', { bubbles: true }));
+        return true;
+      },
+      selector,
+      dateValue,
+    );
+
+    if (changed) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // Manipulate the calendar drop down to choose the txs start date.
@@ -240,22 +317,27 @@ async function searchByDates(page: Page, startDate: Moment) {
   const startDateMonth = startDate.format('M');
   const startDateYear = startDate.format('Y');
 
-  await openYahavFromDatePicker(page);
-
-  // Wait until first day appear.
-  await waitUntilElementFound(page, '.pmu-days > div:nth-child(1)', true);
+  const pickerMode = await runYahavStage('open from-date picker', () => openYahavFromDatePicker(page));
+  if (pickerMode === 'input') {
+    const formattedDate = startDate.format(DATE_FORMAT);
+    const setInput = await runYahavStage('set from-date input', () => setYahavFromDateInput(page, formattedDate));
+    if (!setInput) {
+      throw new Error('Yahav: fallback input mode selected but failed to set from-date input.');
+    }
+    return;
+  }
 
   // Open Months options.
   const monthFromPick = '.pmu-month';
-  await waitUntilElementFound(page, monthFromPick, true);
-  await clickButton(page, monthFromPick);
-  await waitUntilElementFound(page, '.pmu-months > div:nth-child(1)', true);
+  await runYahavStage('wait month picker', () => waitUntilElementFound(page, monthFromPick, true));
+  await runYahavStage('open month options', () => clickButton(page, monthFromPick));
+  await runYahavStage('wait month grid', () => waitUntilElementFound(page, '.pmu-months > div:nth-child(1)', true));
 
   // Open Year options.
   // Use same selector... Yahav knows why...
-  await waitUntilElementFound(page, monthFromPick, true);
-  await clickButton(page, monthFromPick);
-  await waitUntilElementFound(page, '.pmu-years > div:nth-child(1)', true);
+  await runYahavStage('wait month picker for year switch', () => waitUntilElementFound(page, monthFromPick, true));
+  await runYahavStage('open year options', () => clickButton(page, monthFromPick));
+  await runYahavStage('wait year grid', () => waitUntilElementFound(page, '.pmu-years > div:nth-child(1)', true));
 
   // Select year from a 12 year grid.
   for (let i = 1; i < 13; i += 1) {
@@ -264,16 +346,18 @@ async function searchByDates(page: Page, startDate: Moment) {
       return (y as HTMLElement).innerText;
     });
     if (startDateYear === year) {
-      await clickButton(page, selector);
+      await runYahavStage(`select year ${startDateYear}`, () => clickButton(page, selector));
       break;
     }
   }
 
   // Select Month.
-  await waitUntilElementFound(page, '.pmu-months > div:nth-child(1)', true);
+  await runYahavStage('wait month grid before selecting month', () =>
+    waitUntilElementFound(page, '.pmu-months > div:nth-child(1)', true),
+  );
   // The first element (1) is January.
   const monthSelector = `.pmu-months > div:nth-child(${startDateMonth})`;
-  await clickButton(page, monthSelector);
+  await runYahavStage(`select month ${startDateMonth}`, () => clickButton(page, monthSelector));
 
   // Select Day.
   // The calendar grid shows 7 days and 6 weeks = 42 days.
@@ -286,7 +370,7 @@ async function searchByDates(page: Page, startDate: Moment) {
     });
 
     if (startDateDay === day) {
-      await clickButton(page, selector);
+      await runYahavStage(`select day ${startDateDay}`, () => clickButton(page, selector));
       break;
     }
   }
@@ -298,10 +382,10 @@ async function fetchAccountData(
   accountID: string,
   options?: ScraperOptions,
 ): Promise<TransactionsAccount> {
-  await waitYahavLoadingSpinnerGoneIfPresent(page);
-  await searchByDates(page, startDate);
-  await waitYahavLoadingSpinnerGoneIfPresent(page);
-  const txns = await getAccountTransactions(page, options);
+  await runYahavStage('pre-search spinner wait', () => waitYahavLoadingSpinnerGoneIfPresent(page));
+  await runYahavStage('search by dates', () => searchByDates(page, startDate));
+  await runYahavStage('post-search spinner wait', () => waitYahavLoadingSpinnerGoneIfPresent(page));
+  const txns = await runYahavStage('fetch account transactions', () => getAccountTransactions(page, options));
 
   return {
     accountNumber: accountID,
@@ -364,16 +448,20 @@ class YahavScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
 
   async fetchData() {
     // Goto statements page
-    await waitUntilElementFound(this.page, ACCOUNT_DETAILS_SELECTOR, true);
-    await clickButton(this.page, ACCOUNT_DETAILS_SELECTOR);
-    await waitUntilElementFound(this.page, '.statement-options .selected-item-top', true);
-    await waitYahavLoadingSpinnerGoneIfPresent(this.page);
+    await runYahavStage('wait account details card', () =>
+      waitUntilElementFound(this.page, ACCOUNT_DETAILS_SELECTOR, true),
+    );
+    await runYahavStage('open account details', () => clickButton(this.page, ACCOUNT_DETAILS_SELECTOR));
+    await runYahavStage('wait statement options', () =>
+      waitUntilElementFound(this.page, '.statement-options .selected-item-top', true),
+    );
+    await runYahavStage('statement spinner wait', () => waitYahavLoadingSpinnerGoneIfPresent(this.page));
 
     const defaultStartMoment = moment().subtract(3, 'months').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-    const accounts = await fetchAccounts(this.page, startMoment, this.options);
+    const accounts = await runYahavStage('fetch accounts', () => fetchAccounts(this.page, startMoment, this.options));
 
     return {
       success: true,
