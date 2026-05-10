@@ -1,6 +1,6 @@
 {
   "name": "@hirez10/israeli-bank-scrapers",
-  "version": "1.0.9",
+  "version": "1.0.16",
   "private": true,
   "upstreamSync": {
     "repo": "eshaham/israeli-bank-scrapers",

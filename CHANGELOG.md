@@ -2,6 +2,93 @@
 
 All notable changes to this fork (`@hirez10/israeli-bank-scrapers`) are documented here. Release versions and Git tags are produced by [semantic-release](https://github.com/semantic-release/semantic-release) (`hirez-v*` tags).
 
+**Source of truth for published releases:** [GitHub Releases — HirezRa/israeli-bank-scrapers](https://github.com/HirezRa/israeli-bank-scrapers/releases). Target / current publish line: **`1.0.16`** (tag [`hirez-v1.0.16`](https://github.com/HirezRa/israeli-bank-scrapers/releases/tag/hirez-v1.0.16) when released). If this file lags CI, follow GitHub.
+
+## [1.0.16] (2026-05-10)
+
+### English
+
+- **Release hygiene:** Bump package semver to **1.0.16** and align README, CONTRIBUTING, and this changelog with the publish line (`@hirez10/israeli-bank-scrapers`).
+
+### עברית
+
+- סנכרון גרסה 1.0.16 ותיעוד (README, CONTRIBUTING, CHANGELOG) מול קו הפרסום.
+
+## [1.0.15] (2026-05-09)
+
+### English
+
+- **Yahav:** Support **input-based** date filter layouts (range controls that use plain input fields, not only calendar / `date-picker` UIs). ([#25](https://github.com/HirezRa/israeli-bank-scrapers/issues/25))
+
+### עברית
+
+- יהב: סינון לפי תאריכים כשהממשק מציג שדות קלט (לא רק לוח שנה).
+
+## [1.0.14] (2026-05-07)
+
+### English
+
+- **Dependencies:** Refresh lockfile, bump declared minimums, align `typescript-eslint` and related tooling. ([#24](https://github.com/HirezRa/israeli-bank-scrapers/issues/24))
+
+### עברית
+
+- תלות: עדכון lockfile ורצפת גרסאות מינימלית.
+
+## [1.0.13] (2026-05-07)
+
+### English
+
+- **Yahav:** Avoid a long default timeout when the loading spinner element is **absent** (wait for disappear only if present). ([#23](https://github.com/HirezRa/israeli-bank-scrapers/issues/23))
+
+### עברית
+
+- יהב: המתנה לספינר רק אם קיים — בלי לשרוף timeout מלא.
+
+## [1.0.12] (2026-05-07)
+
+### English
+
+- **Yahav:** Wait for `date-picker` in the DOM and **scroll into view** before click. ([#22](https://github.com/HirezRa/israeli-bank-scrapers/issues/22))
+
+### עברית
+
+- יהב: המתנה ל־date-picker ב־DOM וגלילה לפני לחיצה.
+
+## [1.0.11] (2026-05-07)
+
+### English
+
+- **Yahav:** Resilient **from-date** picker after bank layout change (no brittle fixed column index). ([#21](https://github.com/HirezRa/israeli-bank-scrapers/issues/21))
+
+### עברית
+
+- יהב: בורר תאריך "מ־" עמיד יותר לשינויי ממשק.
+
+## [1.0.10] — Yahav DOM parsing and live-check diagnostics (May 2026)
+
+### English
+
+- **Yahav transaction rows:** Collect column text from all direct child elements (not only `div`); try alternative selectors until parsed rows exist; scroll list containers to support virtualized rows.
+- **Column semantics:** Skip duplicate `DD/MM/YYYY` cells when locating reference/description; place debit/credit after the two semantic columns; detect description vs reference order (text vs numeric reference pattern).
+- **Diagnostics:** Set `YAHAV_DEBUG_DOM=1` to log selector counts and frame URL when debugging empty results (no credentials). `yahav-live-check` prints a hint when this is enabled.
+
+### עברית
+
+- יהב: חילוץ עמודות משורת תנועות, גלילה, ופרסור גמיש של אסמכתא/תיאור מול תאריכים כפולים.
+- `YAHAV_DEBUG_DOM=1` לאבחון DOM בלי סיסמאות.
+
+## Yahav — statement row parsing and from-date calendar (May 2026)
+
+### English
+
+- **Transaction rows:** Use **direct child** `div` columns for each row instead of all nested `div` descendants, so date/debit/credit columns stay aligned (wrong dates could hide a month in downstream filters).
+- **Calendar:** When choosing the start day, skip `pmu-disabled` cells (other-month days) so the first matching day is not a trailing/leading day from an adjacent month. Fail loudly if the year or day cannot be selected.
+
+### עברית
+
+- פרסור שורות דוח: עמודות לפי ילדים ישירים בלבד.
+- בוחן תאריך: בחירת יום בלוח רק בתאים שאינם `pmu-disabled`, ושגיאה אם בחירת שנה/יום נכשלת.
+
 ## Maintenance — npm dependency refresh (May 2026)
 
 ### English
