@@ -501,13 +501,7 @@ This scraper supports fetching transaction from up to six months.
 
 **This fork:** Statement date filtering used to target the “from” date via `div.date-options-cell:nth-child(7)`. After Yahav UI changes (May 2026), that index no longer matched. The scraper now finds the first `date-picker` in the statement area, waits for DOM presence (not strict `visible` on the compound selector), scrolls into view, then clicks—see [CHANGELOG.md](./CHANGELOG.md).
 
-For a local **real-account** validation (without printing credentials), run:
-
-```sh
-npm run yahav:live-check
-```
-
-It loads `BANK_YAHAV_USERNAME`, `BANK_YAHAV_ID_NUMBER`, `BANK_YAHAV_PASSWORD` from your local `.env` override file (for example an `.env` + `.local` suffix file) when present, otherwise prompts locally (password hidden).
+For **real-account** validation, use a **small local script** (not committed to this repo) that calls `createScraper` / `CompanyTypes.yahav` with credentials from your machine only. Never commit `.env.local`, passwords, or bank helper scripts.
 
 ## Beyhad Bishvilha
 

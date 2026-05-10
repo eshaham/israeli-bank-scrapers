@@ -4,6 +4,17 @@ All notable changes to this fork (`@hirez10/israeli-bank-scrapers`) are document
 
 **Source of truth for published releases:** [GitHub Releases — HirezRa/israeli-bank-scrapers](https://github.com/HirezRa/israeli-bank-scrapers/releases). Target / current publish line: **`1.0.16`** (tag [`hirez-v1.0.16`](https://github.com/HirezRa/israeli-bank-scrapers/releases/tag/hirez-v1.0.16) when released). If this file lags CI, follow GitHub.
 
+## Security / repository — Yahav live-check script removed (May 2026)
+
+### English
+
+- **Removed** `scripts/yahav-live-check.cjs` from the repository. It was a local smoke-test helper only. The file did not contain embedded secrets; it read credentials from a local env file or prompts. The script name and env key names are no longer published in-tree; use your own **untracked** local script to call the library if you need live validation.
+- **`.gitignore`:** `scripts/yahav-live-check.cjs` so a local copy is not committed by mistake.
+
+### עברית
+
+- הוסר סקריפט בדיקה בלבד; אין בו סודות שמורים — רק שמות משתני סביבה. אפשר להחזיק עותק מקומי; לא לקמיט.
+
 ## [1.0.16] (2026-05-10)
 
 ### English
@@ -70,7 +81,7 @@ All notable changes to this fork (`@hirez10/israeli-bank-scrapers`) are document
 
 - **Yahav transaction rows:** Collect column text from all direct child elements (not only `div`); try alternative selectors until parsed rows exist; scroll list containers to support virtualized rows.
 - **Column semantics:** Skip duplicate `DD/MM/YYYY` cells when locating reference/description; place debit/credit after the two semantic columns; detect description vs reference order (text vs numeric reference pattern).
-- **Diagnostics:** Set `YAHAV_DEBUG_DOM=1` to log selector counts and frame URL when debugging empty results (no credentials). `yahav-live-check` prints a hint when this is enabled.
+- **Diagnostics:** Set `YAHAV_DEBUG_DOM=1` to log selector counts and frame URL when debugging empty results (no credentials).
 
 ### עברית
 
@@ -205,7 +216,6 @@ flowchart TD
   1. Scope-independent DOM wait for date triggers (`document.querySelector(...)` instead of `.statement-options` only).
   2. If no known trigger opens `.pmu-days`, fallback to direct date input (`DD/MM/YYYY`) with `input/change/blur` events.
   3. Stage-labeled errors (`runYahavStage`) to avoid generic `Waiting failed...` loops.
-- Added a secure local command `npm run yahav:live-check` for real-account validation without printing secrets.
 
 ### עברית
 

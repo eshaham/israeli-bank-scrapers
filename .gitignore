@@ -62,6 +62,9 @@ typings/
 # NPM package related
 lib/
 
+# Local-only Yahav smoke-test script (never commit; may reference env key names)
+scripts/yahav-live-check.cjs
+
 # IDEs
 .idea
 .vscode
