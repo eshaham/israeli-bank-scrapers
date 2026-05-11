@@ -2,9 +2,11 @@
 
 All notable changes to this fork (`@hirez10/israeli-bank-scrapers`) are documented here. Release versions and Git tags are produced by [semantic-release](https://github.com/semantic-release/semantic-release) (`hirez-v*` tags).
 
-**Source of truth for published releases:** [GitHub Releases — HirezRa/israeli-bank-scrapers](https://github.com/HirezRa/israeli-bank-scrapers/releases). Target / current publish line: **`1.0.17`** (tag [`hirez-v1.0.17`](https://github.com/HirezRa/israeli-bank-scrapers/releases/tag/hirez-v1.0.17) when released). If this file lags CI, follow GitHub.
+**Source of truth for published releases:** [GitHub Releases — HirezRa/israeli-bank-scrapers](https://github.com/HirezRa/israeli-bank-scrapers/releases). Target / current publish line: **`1.0.18`** (tag [`hirez-v1.0.18`](https://github.com/HirezRa/israeli-bank-scrapers/releases/tag/hirez-v1.0.18)). If this file lags CI, follow GitHub.
 
-## [1.0.17] (2026-05-11)
+## [1.0.18] (2026-05-11)
+
+Published on npm and GitHub as **`hirez-v1.0.18`** ([#30](https://github.com/HirezRa/israeli-bank-scrapers/pull/30)).
 
 ### English
 
