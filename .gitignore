@@ -65,6 +65,9 @@ lib/
 # Local-only Yahav smoke-test script (never commit; may reference env key names)
 scripts/yahav-live-check.cjs
 
+# Finance app export logs (may contain account metadata); keep local only
+finance-app-logs*.json
+
 # IDEs
 .idea
 .vscode

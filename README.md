@@ -497,9 +497,9 @@ const credentials = {
 };
 ```
 
-This scraper supports fetching transaction from up to six months.
+This scraper uses a **rolling default window** of about **three months plus one day** (`moment().subtract(3, 'months').add(1, 'day')`), combined with `options.startDate` as documented in code. It does **not** guarantee six months of history unless the bank UI allows it and `startDate` is set accordingly.
 
-**This fork:** Statement date filtering used to target the “from” date via `div.date-options-cell:nth-child(7)`. After Yahav UI changes (May 2026), that index no longer matched. The scraper now finds the first `date-picker` in the statement area, waits for DOM presence (not strict `visible` on the compound selector), scrolls into view, then clicks—see [CHANGELOG.md](./CHANGELOG.md).
+**This fork:** Statement date filtering used to target the “from” date via `div.date-options-cell:nth-child(7)`. After Yahav UI changes (May 2026), that index no longer matched. The scraper now finds the first `date-picker` in the statement area, waits for DOM presence (not strict `visible` on the compound selector), scrolls into view, then clicks—see [CHANGELOG.md](./CHANGELOG.md). For Yahav-specific behaviour, logs, and `YAHAV_DEBUG_DOM`, see [docs/YAHAV_SCRAPER.md](./docs/YAHAV_SCRAPER.md).
 
 For **real-account** validation, use a **small local script** (not committed to this repo) that calls `createScraper` / `CompanyTypes.yahav` with credentials from your machine only. Never commit `.env.local`, passwords, or bank helper scripts.
 

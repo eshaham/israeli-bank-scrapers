@@ -2,7 +2,26 @@
 
 All notable changes to this fork (`@hirez10/israeli-bank-scrapers`) are documented here. Release versions and Git tags are produced by [semantic-release](https://github.com/semantic-release/semantic-release) (`hirez-v*` tags).
 
-**Source of truth for published releases:** [GitHub Releases — HirezRa/israeli-bank-scrapers](https://github.com/HirezRa/israeli-bank-scrapers/releases). Target / current publish line: **`1.0.16`** (tag [`hirez-v1.0.16`](https://github.com/HirezRa/israeli-bank-scrapers/releases/tag/hirez-v1.0.16) when released). If this file lags CI, follow GitHub.
+**Source of truth for published releases:** [GitHub Releases — HirezRa/israeli-bank-scrapers](https://github.com/HirezRa/israeli-bank-scrapers/releases). Target / current publish line: **`1.0.17`** (tag [`hirez-v1.0.17`](https://github.com/HirezRa/israeli-bank-scrapers/releases/tag/hirez-v1.0.17) when released). If this file lags CI, follow GitHub.
+
+## [1.0.17] (2026-05-11)
+
+### English
+
+- **Yahav — transaction list:** Scroll the statement list until row count stabilizes so virtualized DOM exposes more rows (addresses low `transactionsFetched` vs visible row count in host apps).
+- **Yahav — row parsing:** Parse each row from **direct child** column texts with `parseYahavTransactionRowCells` (`src/scrapers/yahav-parse.ts`); amount cells must look like currency (e.g. `0.00`, `1,234.56`) so numeric references are not mistaken for amounts. Deduplicate identical parsed rows.
+- **Yahav — date range (input mode):** Set **from** on the first `div.date-options-cell` input and **to** on the second when present; optional click on Hebrew search/display buttons after changing dates.
+- **Yahav — calendar:** Skip `.pmu-disabled` day cells; throw if the target year or day cannot be selected.
+- **Diagnostics:** `YAHAV_DEBUG_DOM=1` logs URL, selector row counts, and parsed count (no credentials).
+- **Docs:** Added [docs/YAHAV_SCRAPER.md](./docs/YAHAV_SCRAPER.md); README Yahav section aligned with the **~3 month + 1 day** default window (replacing the incorrect “six months” wording).
+
+### עברית
+
+- יהב: גלילת רשימת תנועות לפני קריאת שורות (רשימה וירטואלית).
+- יהב: פרסור עמודות לפי ילדים ישירים ולוגיקת סכומים/אסמכתא ב־`yahav-parse.ts`.
+- יהב: שדה "מ־" ו־"עד" בשדות קלט; לחיצת חיפוש/הצגה כשקיימת.
+- לוח שנה: דילוג על `pmu-disabled`; שגיאה אם שנה/יום לא נבחרו.
+- `YAHAV_DEBUG_DOM` לדיבוג; תיעוד ב־`docs/YAHAV_SCRAPER.md`; תיקון ניסוח חלון זמן ב־README.
 
 ## Security / repository — Yahav live-check script removed (May 2026)
 
