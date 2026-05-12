@@ -100,12 +100,19 @@ function getTxnAmount(txn: YahavScrapedRow) {
 }
 
 function convertTransactions(txns: YahavScrapedRow[], options?: ScraperOptions): Transaction[] {
-  return txns.map(txn => {
-    const convertedDate = moment(txn.date, DATE_FORMAT).toISOString();
+  const out: Transaction[] = [];
+  for (const txn of txns) {
+    const m = moment(txn.date, DATE_FORMAT, true);
+    if (!m.isValid()) {
+      continue;
+    }
+    const convertedDate = m.toISOString();
     const convertedAmount = getTxnAmount(txn);
+    const ref = (txn.reference ?? '').trim();
+    /** Finance App: `referenceNumber` preferred in scraperHash (see ScraperService.generateTransactionHash). */
     const result: Transaction = {
       type: TransactionTypes.Normal,
-      identifier: txn.reference ? parseInt(txn.reference, 10) : undefined,
+      referenceNumber: ref || undefined,
       date: convertedDate,
       processedDate: convertedDate,
       originalAmount: convertedAmount,
@@ -115,16 +122,171 @@ function convertTransactions(txns: YahavScrapedRow[], options?: ScraperOptions):
       description: txn.description,
       memo: txn.memo,
     };
-
     if (options?.includeRawTransaction) {
       result.rawTransaction = getRawTransaction(txn);
     }
-
-    return result;
-  });
+    out.push(result);
+  }
+  return out;
 }
 
 type YahavRowEval = { id: string; cellTexts: string[] };
+
+const YAHAV_ROW_SEL = '.list-item-holder .entire-content-ctr';
+
+/**
+ * Virtualized lists reuse row nodes; Yahav often responds to wheel events better than programmatic scrollTop.
+ */
+async function collectYahavTransactionRowsFromDom(page: Page): Promise<YahavRowEval[]> {
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+
+  const mergeBatch = (batch: string[]) => {
+    for (const t of batch) {
+      if (!seen.has(t)) {
+        seen.add(t);
+        ordered.push(t);
+      }
+    }
+  };
+
+  await page.evaluate(() => {
+    document.querySelectorAll('.list-item-holder').forEach(h => {
+      if (h instanceof HTMLElement) {
+        h.scrollTop = 0;
+      }
+    });
+  });
+  await delay(180);
+
+  const holder = await page.$('.list-item-holder');
+  if (holder) {
+    const box = await holder.boundingBox();
+    if (box && box.height > 4) {
+      const cx = box.x + box.width * 0.5;
+      const cy = box.y + Math.min(box.height * 0.45, 140);
+      await holder.click({ delay: 30 });
+      await page.mouse.move(cx, cy);
+
+      const wheelPass = async (deltaY: number, maxIter: number, stableLimit: number) => {
+        let stable = 0;
+        for (let i = 0; i < maxIter; i += 1) {
+          const batch = await page.$$eval(YAHAV_ROW_SEL, els =>
+            els.map(e => (e as HTMLElement).innerText.replace(/\s+/g, ' ').trim()).filter(t => t.length > 8),
+          );
+          const before = ordered.length;
+          mergeBatch(batch);
+          if (ordered.length === before) {
+            stable += 1;
+            if (stable >= stableLimit) {
+              break;
+            }
+          } else {
+            stable = 0;
+          }
+          await page.mouse.wheel({ deltaY });
+          await delay(42);
+        }
+      };
+
+      await wheelPass(340, 280, 40);
+      await page.evaluate(() => {
+        document.querySelectorAll('.list-item-holder').forEach(h => {
+          if (h instanceof HTMLElement) {
+            h.scrollTop = h.scrollHeight;
+          }
+        });
+      });
+      await delay(200);
+      await page.mouse.move(cx, cy);
+      await wheelPass(-340, 280, 40);
+    }
+  }
+
+  if (ordered.length === 0) {
+    const lines = await page.evaluate(async () => {
+      const rowSel = YAHAV_ROW_SEL;
+      const localSeen = new Set<string>();
+      const out: string[] = [];
+      const capture = () => {
+        document.querySelectorAll(rowSel).forEach(el => {
+          const t = (el as HTMLElement).innerText.replace(/\s+/g, ' ').trim();
+          if (t.length > 8 && !localSeen.has(t)) {
+            localSeen.add(t);
+            out.push(t);
+          }
+        });
+      };
+      const scrollableAncestors = (start: Element | null): HTMLElement[] => {
+        const roots: HTMLElement[] = [];
+        let el: Element | null = start;
+        while (el && el !== document.body) {
+          if (el instanceof HTMLElement) {
+            const st = getComputedStyle(el);
+            const oy = st.overflowY;
+            if ((oy === 'auto' || oy === 'scroll' || oy === 'overlay') && el.scrollHeight > el.clientHeight + 40) {
+              roots.push(el);
+            }
+          }
+          el = el.parentElement;
+        }
+        return roots;
+      };
+      const firstRow = document.querySelector(rowSel);
+      const dynamicRoots = scrollableAncestors(firstRow);
+      const listEl = document.querySelector('.list-item-holder');
+      const listHolder =
+        (listEl instanceof HTMLElement
+          ? listEl
+          : listEl?.parentElement instanceof HTMLElement
+            ? listEl.parentElement
+            : null) || null;
+      const scrollRoots = [...new Set([listHolder, ...dynamicRoots].filter(Boolean))] as HTMLElement[];
+      const step = 220;
+      const scrollOne = async (root: HTMLElement | Window, maxIter: number) => {
+        if (root instanceof Window) {
+          for (let j = 0; j < maxIter; j += 1) {
+            capture();
+            root.scrollBy(0, step);
+            await new Promise<void>(r => {
+              setTimeout(r, 55);
+            });
+          }
+          return;
+        }
+        for (let pass = 0; pass < 2; pass += 1) {
+          root.scrollTop = pass === 0 ? 0 : root.scrollHeight;
+          await new Promise<void>(r => {
+            setTimeout(r, 120);
+          });
+          let pos = root.scrollTop;
+          const maxScroll = root.scrollHeight;
+          for (let j = 0; j < maxIter; j += 1) {
+            capture();
+            const next = pass === 0 ? Math.min(pos + step, maxScroll) : Math.max(pos - step, 0);
+            if (next === pos) {
+              break;
+            }
+            pos = next;
+            root.scrollTop = pos;
+            await new Promise<void>(r => {
+              setTimeout(r, 55);
+            });
+          }
+          capture();
+        }
+      };
+      for (const root of scrollRoots) {
+        await scrollOne(root, 200);
+      }
+      await scrollOne(window, 80);
+      return out;
+    });
+    return lines.map((line, i) => ({ id: String(i), cellTexts: [line] }));
+  }
+
+  return ordered.map((line, i) => ({ id: String(i), cellTexts: [line] }));
+}
 
 async function scrollYahavTransactionListFully(page: Page) {
   const rowSelector = '.list-item-holder .entire-content-ctr';
@@ -164,10 +326,16 @@ async function getAccountTransactions(page: Page, options?: ScraperOptions): Pro
 
   await scrollYahavTransactionListFully(page);
 
+  let transactionsDivs = await collectYahavTransactionRowsFromDom(page);
+  yahavDebugLog('virtualized collect', { uniqueRows: transactionsDivs.length });
+
   const rowSelectors = ['.list-item-holder .entire-content-ctr', '.entire-content-ctr'];
-  let transactionsDivs: YahavRowEval[] = [];
 
   for (const sel of rowSelectors) {
+    if (transactionsDivs.length > 0) {
+      break;
+    }
+    await scrollYahavTransactionListFully(page);
     const count = await page.$$eval(sel, els => els.length);
     yahavDebugLog('row selector probe', { selector: sel, count });
     transactionsDivs = await pageEvalAll<YahavRowEval[]>(page, sel, [], divs => {
@@ -195,6 +363,14 @@ async function getAccountTransactions(page: Page, options?: ScraperOptions): Pro
       break;
     }
   }
+
+  yahavDebugLog('row cell preview (first rows)', {
+    rows: transactionsDivs.slice(0, 4).map(r => ({
+      id: r.id,
+      cellCount: r.cellTexts.length,
+      cells: r.cellTexts.map(t => t.slice(0, 80)),
+    })),
+  });
 
   const txns: YahavScrapedRow[] = [];
   const seen = new Set<string>();
@@ -348,14 +524,25 @@ async function clickYahavStatementSearchIfPresent(page: Page): Promise<void> {
 async function setYahavDateRangeInputs(page: Page, fromFormatted: string, toFormatted: string): Promise<boolean> {
   return page.evaluate(
     (fromVal, toVal) => {
-      const root = document.querySelector('.statement-options') || document.body;
-      const cells = Array.from(root.querySelectorAll('div.date-options-cell'));
-      const inputs: HTMLInputElement[] = [];
-      for (const cell of cells) {
-        const inp = cell.querySelector('input');
-        if (inp instanceof HTMLInputElement) {
-          inputs.push(inp);
+      const collectVisibleInputs = (root: Document | Element) => {
+        const cells = Array.from(root.querySelectorAll('div.date-options-cell'));
+        const out: HTMLInputElement[] = [];
+        for (const cell of cells) {
+          const inp = cell.querySelector('input:not([type="hidden"])');
+          if (inp instanceof HTMLInputElement) {
+            out.push(inp);
+          }
         }
+        return out;
+      };
+      let inputs = collectVisibleInputs(document.querySelector('.statement-options') || document.body);
+      if (inputs.length === 0) {
+        inputs = collectVisibleInputs(document.body);
+      }
+      if (inputs.length === 0) {
+        inputs = Array.from(document.querySelectorAll('div.date-options-cell input:not([type="hidden"])')).filter(
+          (el): el is HTMLInputElement => el instanceof HTMLInputElement,
+        );
       }
       if (inputs.length === 0) {
         return false;

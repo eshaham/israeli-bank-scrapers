@@ -1,4 +1,4 @@
-import { parseYahavTransactionRowCells, YAHAV_DATE_CELL_RE } from './yahav-parse';
+import { parseYahavTransactionRowCells, splitYahavConcatenatedRow, YAHAV_DATE_CELL_RE } from './yahav-parse';
 import { TransactionStatuses } from '../transactions';
 
 describe('parseYahavTransactionRowCells', () => {
@@ -42,6 +42,21 @@ describe('parseYahavTransactionRowCells', () => {
 
   test('returns null when fewer than two amount columns', () => {
     expect(parseYahavTransactionRowCells(['01/01/2026', 'ref', 'only one 10.00'])).toBeNull();
+  });
+});
+
+describe('splitYahavConcatenatedRow / single-cell rows', () => {
+  test('splits one-cell Yahav line into date, ref, desc, two amounts', () => {
+    const line = '10/05/2026 202-385165900 פריסבי מימון בע 1,210.04 396.51';
+    const parts = splitYahavConcatenatedRow(line);
+    expect(parts).toEqual(['10/05/2026', '202385165900', 'פריסבי מימון בע', '1,210.04', '396.51']);
+  });
+
+  test('parse accepts single concatenated cell', () => {
+    const row = parseYahavTransactionRowCells(['01/05/2026 111-222 משכורת 0.00 8,500.00']);
+    expect(row?.description).toContain('משכורת');
+    expect(row?.credit).toBe('8,500.00');
+    expect(row?.debit).toBe('0.00');
   });
 });
 

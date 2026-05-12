@@ -2,7 +2,24 @@
 
 All notable changes to this fork (`@hirez10/israeli-bank-scrapers`) are documented here. Release versions and Git tags are produced by [semantic-release](https://github.com/semantic-release/semantic-release) (`hirez-v*` tags).
 
-**Source of truth for published releases:** [GitHub Releases — HirezRa/israeli-bank-scrapers](https://github.com/HirezRa/israeli-bank-scrapers/releases). Target / current publish line: **`1.0.18`** (tag [`hirez-v1.0.18`](https://github.com/HirezRa/israeli-bank-scrapers/releases/tag/hirez-v1.0.18)). If this file lags CI, follow GitHub.
+**Source of truth for published releases:** [GitHub Releases — HirezRa/israeli-bank-scrapers](https://github.com/HirezRa/israeli-bank-scrapers/releases). Target / current publish line: **`1.0.19`** (tag [`hirez-v1.0.19`](https://github.com/HirezRa/israeli-bank-scrapers/releases/tag/hirez-v1.0.19)). If this file lags CI, follow GitHub.
+
+## [1.0.19] (2026-05-11)
+
+### English
+
+- **Yahav — `convertTransactions`:** Parse dates with strict `DD/MM/YYYY`; skip invalid rows instead of emitting `Invalid Date`.
+- **Yahav — reference:** Emit **`referenceNumber`** (trimmed full bank reference string) instead of numeric `identifier` from `parseInt` on references like `202-…`.
+- **`Transaction` type:** Optional **`referenceNumber?: string`** for consumers that hash on full reference (e.g. Finance App `ScraperService.generateTransactionHash`).
+- **Yahav — list collection:** Wheel-based scrolling on `.list-item-holder` plus fallback evaluate scroll; call `scrollYahavTransactionListFully` before collecting rows.
+- **Lint:** ESLint quote rule on Yahav list selector; Prettier alignment.
+
+### עברית
+
+- יהב: תאריך strict, דילוג על שורות לא תקינות.
+- יהב: `referenceNumber` במקום `identifier` מספרי על אסמכתא.
+- טיפוס `Transaction`: שדה `referenceNumber` אופציונלי.
+- יהב: איסוף שורות עם גלגלת וגלילה מלאה לפני איסוף.
 
 ## [1.0.18] (2026-05-11)
 
