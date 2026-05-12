@@ -22,6 +22,46 @@ function parseAmountNumber(s: string): number | null {
   return Number.isNaN(n) ? null : n;
 }
 
+const BIDI_MARKS_RE = /[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
+
+/**
+ * Yahav sometimes renders the whole row as one child: "DD/MM/YYYY ref-with-dashes description amt amt [amt]".
+ * Split into column cells for the same parser used for multi-cell rows.
+ */
+export function splitYahavConcatenatedRow(line: string): string[] | null {
+  const s = line.replace(BIDI_MARKS_RE, '').replace(/\s+/g, ' ').trim();
+  const dm = s.match(/^(\d{1,2}\/\d{1,2}\/\d{4})\s+/);
+  if (!dm) {
+    return null;
+  }
+  const date = dm[1];
+  let rest = s.slice(dm[0].length).trim();
+  const three = rest.match(/\s([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})$/);
+  const two = rest.match(/\s([\d,]+\.\d{2})\s+([\d,]+\.\d{2})$/);
+  let amounts: string[];
+  let consumed: number;
+  if (three) {
+    amounts = [three[1], three[2], three[3]];
+    consumed = three[0].length;
+  } else if (two) {
+    amounts = [two[1], two[2]];
+    consumed = two[0].length;
+  } else {
+    return null;
+  }
+  rest = rest.slice(0, rest.length - consumed).trim();
+  const refM = rest.match(/^([\d-]+)\s+(.*)$/);
+  if (!refM) {
+    return null;
+  }
+  const ref = refM[1].replace(/\D/g, '');
+  const desc = refM[2].trim();
+  if (amounts.length === 3) {
+    return [date, ref, desc, amounts[0], amounts[1], amounts[2]];
+  }
+  return [date, ref, desc, amounts[0], amounts[1]];
+}
+
 /** Yahav shows currency with agorot (e.g. 1,234.56); plain integers are references, not amounts. */
 function isAmountLikeCell(text: string): boolean {
   const t = text.replace(/[₪\s]/g, '').trim();
@@ -37,7 +77,13 @@ function isAmountLikeCell(text: string): boolean {
  * Tolerates an extra balance column and duplicate date-like noise.
  */
 export function parseYahavTransactionRowCells(cellsInput: string[]): YahavScrapedRow | null {
-  const cells = cellsInput.map(c => c.replace(/\s+/g, ' ').trim()).filter(c => c.length > 0);
+  let cells = cellsInput.map(c => c.replace(/\s+/g, ' ').trim()).filter(c => c.length > 0);
+  if (cells.length === 1) {
+    const split = splitYahavConcatenatedRow(cells[0]);
+    if (split && split.length >= 5) {
+      cells = split;
+    }
+  }
   if (cells.length < 4) {
     return null;
   }

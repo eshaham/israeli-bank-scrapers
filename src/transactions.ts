@@ -33,6 +33,10 @@ export interface Transaction {
    */
   identifier?: string | number;
   /**
+   * Full bank reference string (e.g. Yahav "202-…"); some apps prefer this for stable hashing vs numeric identifier.
+   */
+  referenceNumber?: string;
+  /**
    * ISO date string
    */
   date: string;
