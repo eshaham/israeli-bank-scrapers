@@ -52,6 +52,13 @@ describe('splitYahavConcatenatedRow / single-cell rows', () => {
     expect(parts).toEqual(['10/05/2026', '202385165900', 'פריסבי מימון בע', '1,210.04', '396.51']);
   });
 
+  test('splits when reference has spaces around hyphen', () => {
+    const line = '01/05/2026 202 - 385165900 מעסיק א/משכורת 0.00 8,500.00';
+    const parts = splitYahavConcatenatedRow(line);
+    expect(parts?.[0]).toBe('01/05/2026');
+    expect(parts?.[2]).toContain('משכורת');
+  });
+
   test('parse accepts single concatenated cell', () => {
     const row = parseYahavTransactionRowCells(['01/05/2026 111-222 משכורת 0.00 8,500.00']);
     expect(row?.description).toContain('משכורת');

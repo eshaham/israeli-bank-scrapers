@@ -497,11 +497,11 @@ const credentials = {
 };
 ```
 
-This scraper uses a **rolling default window** of about **three months plus one day** (`moment().subtract(3, 'months').add(1, 'day')`), combined with `options.startDate` as documented in code. It does **not** guarantee six months of history unless the bank UI allows it and `startDate` is set accordingly.
+This scraper uses a **rolling default window** of about **four months plus one day** (`moment().subtract(4, 'months').add(1, 'day')` unless overridden), combined with `options.startDate` as documented in code. Override the default span with env **`YAHAV_STATEMENT_MONTHS_BACK`** (integer `1`–`24`, applied in `fetchData`). It does **not** guarantee six months of history unless the bank UI allows it and `startDate` is set accordingly.
 
 **This fork:** Statement date filtering used to target the “from” date via `div.date-options-cell:nth-child(7)`. After Yahav UI changes (May 2026), that index no longer matched. The scraper now finds the first `date-picker` in the statement area, waits for DOM presence (not strict `visible` on the compound selector), scrolls into view, then clicks—see [CHANGELOG.md](./CHANGELOG.md). For Yahav-specific behaviour, logs, and `YAHAV_DEBUG_DOM`, see [docs/YAHAV_SCRAPER.md](./docs/YAHAV_SCRAPER.md).
 
-For **real-account** validation, use a **small local script** (not committed to this repo) that calls `createScraper` / `CompanyTypes.yahav` with credentials from your machine only. Never commit `.env.local`, passwords, or bank helper scripts.
+For **real-account** validation, use the tracked helper [utils/yahav-may-salary-smoke.cjs](./utils/yahav-may-salary-smoke.cjs) (loads `.env.local` on your machine) or another local harness. Never commit `.env.local`, passwords, or export files with real transactions.
 
 ## Beyhad Bishvilha
 

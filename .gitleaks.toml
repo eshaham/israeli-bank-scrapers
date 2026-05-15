@@ -1,0 +1,32 @@
+# See skills/security-git-sensitive-data-sanitization/SKILL.md
+title = "Israeli Bank Scrapers — sensitive data rules"
+
+[extend]
+useDefault = true
+
+# Naive private-IPv4 regex omitted — it matches npm semver (e.g. ^10.1.8).
+
+[[rules]]
+id = "org-container-or-instance-id"
+description = "Potential container or instance identifier"
+regex = '''(?i)\b(?:container[_-]?id|instance[_-]?id|ctid|vmid)\s*[:=]\s*["']?\d{2,10}'''
+keywords = ["container", "instance", "ctid", "vmid"]
+tags = ["infrastructure", "container", "medium"]
+
+[[rules]]
+id = "org-internal-hostname"
+description = "Internal hostname or private domain"
+regex = '''(?i)\b[a-z0-9][a-z0-9-]{1,63}\.(?:internal|local|corp|lan|intra)\b'''
+tags = ["infrastructure", "hostname", "medium"]
+
+[allowlist]
+description = "Tests/placeholders; legacy README doc commits with illustrative snippet"
+paths = [
+  "(?i).*\\.test\\.ts$",
+  "(?i).*\\.test\\.js$",
+  "(?i)src/tests/.*",
+]
+commits = [
+  "488033a865d0cdbf71f41a15983ee59c1f7cc1b9",
+  "2da370e080f1b54e418601084df98688de9e1d14",
+]

@@ -50,7 +50,11 @@ export function splitYahavConcatenatedRow(line: string): string[] | null {
     return null;
   }
   rest = rest.slice(0, rest.length - consumed).trim();
-  const refM = rest.match(/^([\d-]+)\s+(.*)$/);
+  // Reference is usually "202-#########" (Yahav); allow spaces around the hyphen.
+  const refM =
+    rest.match(/^(\d{3}\s*-\s*\d{9})\s+(.+)$/) ||
+    rest.match(/^(\d{3}-\d{9})\s+(.+)$/) ||
+    rest.match(/^([\d-]+)\s+(.+)$/);
   if (!refM) {
     return null;
   }

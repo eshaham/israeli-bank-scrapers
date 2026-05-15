@@ -2,6 +2,10 @@
 
 All notable changes to this fork (`@hirez10/israeli-bank-scrapers`) are documented here. Release versions and Git tags are produced by [semantic-release](https://github.com/semantic-release/semantic-release) (`hirez-v*` tags).
 
+## [Unreleased]
+
+- **Yahav:** Navigate to **`#/main/accounts/current/`** after opening the statement so scraping matches the full “תנועות בחשבון עו״ש” screen. **Input-first** date range when two date fields exist (RTL-aware field order via bounding box, native `value` setter + `InputEvent`). **`waitForNetworkIdle`** after search; **`clickYahavStatementSearchHard`** for `ng-click` search controls (scoped to `main` / statement, not `document.body`). **`expandYahavStatementTable`** scoped to `main` / list area to avoid clicking global nav “הצג”. **`YAHAV_DEBUG_DOM`** logs a short **`dom text probe`** (date token count + `משכורת` presence) before row collection. CDK **`scrollToOffset` / `scrollToIndex`**, synthetic **`WheelEvent`** on the row scroll parent, and improved in-page scroll capture for virtualized rows. Wider default statement window (**4** months + 1 day, **`YAHAV_STATEMENT_MONTHS_BACK`**). Optional **`YAHAV_DEBUG_NET`**. `splitYahavConcatenatedRow` hyphen spacing. **`utils/yahav-may-salary-smoke.cjs`** and [docs/YAHAV_SCRAPER.md](./docs/YAHAV_SCRAPER.md).
+
 **Source of truth for published releases:** [GitHub Releases — HirezRa/israeli-bank-scrapers](https://github.com/HirezRa/israeli-bank-scrapers/releases). Target / current publish line: **`1.0.19`** (tag [`hirez-v1.0.19`](https://github.com/HirezRa/israeli-bank-scrapers/releases/tag/hirez-v1.0.19)). If this file lags CI, follow GitHub.
 
 ## [1.0.19] (2026-05-11)
