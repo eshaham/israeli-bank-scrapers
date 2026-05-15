@@ -213,7 +213,12 @@ This fork tracks **[eshaham/israeli-bank-scrapers](https://github.com/eshaham/is
 
 - Periodically: `npm outdated` → `npm update` within current semver ranges; commit `package-lock.json` and any raised floors in `package.json`.
 - Verify with `npm ci`, `npm run build`, and `npm test`. Run `npm audit` and fix or record accepted risk.
+- **TLS / `UNABLE_TO_VERIFY_LEAF_SIGNATURE`** on `npm view` or `npm ci` (common on corporate proxies): import the org root CA and set `npm config set cafile /path/to/ca.pem` (do not disable `strict-ssl` unless policy allows).
 - Record user-visible refreshes in `CHANGELOG.md`. Reserve major upgrades (e.g. Jest 30, TypeScript 6) for dedicated PRs.
+
+### Repo version bump commits (maintainers)
+
+The Release workflow uses **`@semantic-release/git`** to push a **`chore(release): x.y.z [skip ci]`** commit that updates **`package.json`** and **`package-lock.json`** after each successful npm publish. Repository rules must **allow GitHub Actions to bypass** protections on `master` when required (or equivalent), otherwise semantic-release cannot push that commit while tags and npm still advance.
 
 ## npm publish recovery (GitHub ahead of npm)
 
