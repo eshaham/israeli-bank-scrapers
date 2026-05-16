@@ -184,6 +184,18 @@ export interface ScraperScrapingResult {
   success: boolean;
   accounts?: TransactionsAccount[];
   futureDebits?: FutureDebit[];
+  /**
+   * Indicates the scrape succeeded technically but data coverage may be partial/suspicious.
+   */
+  partial?: boolean;
+  /**
+   * Non-fatal warnings for callers that need operational visibility.
+   */
+  warnings?: string[];
+  /**
+   * Optional machine-readable diagnostics payload.
+   */
+  diagnostics?: Record<string, unknown>;
   errorType?: ScraperErrorTypes;
   errorMessage?: string; // only on success=false
 }

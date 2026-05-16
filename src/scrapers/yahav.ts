@@ -79,6 +79,42 @@ type YahavStatementDomSnapshot = {
   oldestDateToken: string | null;
 };
 
+type YahavCoverageDiagnostics = {
+  requestedStartDate: string;
+  minTxnDate: string | null;
+  maxTxnDate: string | null;
+  txnsCount: number;
+  coverageGapDays: number;
+  suspiciousCoverage: boolean;
+};
+
+export function buildYahavCoverageDiagnostics(
+  accounts: TransactionsAccount[],
+  requestedStartMoment: Moment,
+  suspiciousGapDays: number,
+): YahavCoverageDiagnostics {
+  const txns = accounts.flatMap(acc => acc.txns || []);
+  const dates = txns
+    .map(txn => moment(txn.date))
+    .filter(m => m.isValid())
+    .sort((a, b) => a.valueOf() - b.valueOf());
+  const minTxn = dates[0];
+  const maxTxn = dates[dates.length - 1];
+  const coverageGapDays = minTxn
+    ? Math.max(0, minTxn.startOf('day').diff(requestedStartMoment.clone().startOf('day'), 'days'))
+    : 0;
+  const suspiciousCoverage = txns.length > 0 && coverageGapDays >= suspiciousGapDays;
+
+  return {
+    requestedStartDate: requestedStartMoment.format('YYYY-MM-DD'),
+    minTxnDate: minTxn ? minTxn.format('YYYY-MM-DD') : null,
+    maxTxnDate: maxTxn ? maxTxn.format('YYYY-MM-DD') : null,
+    txnsCount: txns.length,
+    coverageGapDays,
+    suspiciousCoverage,
+  };
+}
+
 async function countYahavListRows(page: Page): Promise<number> {
   try {
     return await page.$$eval('.list-item-holder .entire-content-ctr', els => els.length);
@@ -2143,10 +2179,36 @@ class YahavScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
     const accounts = await runYahavStage('fetch accounts', () => fetchAccounts(this.page, startMoment, this.options));
+    const suspiciousGapDays =
+      process.env.YAHAV_COVERAGE_GAP_DAYS && !Number.isNaN(parseInt(process.env.YAHAV_COVERAGE_GAP_DAYS, 10))
+        ? Math.max(1, parseInt(process.env.YAHAV_COVERAGE_GAP_DAYS, 10))
+        : 5;
+    const coverage = buildYahavCoverageDiagnostics(accounts, startMoment, suspiciousGapDays);
+    const warnings: string[] = [];
+    if (coverage.suspiciousCoverage) {
+      const warning =
+        `Yahav coverage anomaly: requestedStartDate=${coverage.requestedStartDate}, ` +
+        `minTxnDate=${coverage.minTxnDate ?? 'null'}, txnsCount=${coverage.txnsCount}, ` +
+        `coverageGapDays=${coverage.coverageGapDays}.`;
+      warnings.push(warning);
+      yahavDebugLog('coverage anomaly detected', {
+        warning,
+        diagnostics: coverage,
+      });
+    }
 
     return {
       success: true,
       accounts,
+      partial: coverage.suspiciousCoverage,
+      warnings: warnings.length > 0 ? warnings : undefined,
+      diagnostics: {
+        requestedStartDate: coverage.requestedStartDate,
+        minTxnDate: coverage.minTxnDate,
+        maxTxnDate: coverage.maxTxnDate,
+        txnsCount: coverage.txnsCount,
+        coverageGapDays: coverage.coverageGapDays,
+      },
     };
   }
 }
