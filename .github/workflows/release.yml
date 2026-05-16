@@ -44,14 +44,20 @@ jobs:
           npm config list
       - name: prepare default version
         run: npm run prepare:default
+      - name: Install semantic-release stack
+        run: |
+          npm install --no-save --no-audit \
+            semantic-release@24.2.3 \
+            @semantic-release/commit-analyzer@13.0.1 \
+            @semantic-release/release-notes-generator@14.0.3 \
+            @semantic-release/npm@12.0.1 \
+            @semantic-release/git@10.0.1 \
+            @semantic-release/github@11.0.1
       - name: Release to Github
         uses: cycjimmy/semantic-release-action@v4
         id: semantic   # Need an `id` for output variables
         with:
-          semantic_version: 16.0.2
-          # Commit version bumps to the branch (npm plugin alone does not push); keep lockfile in sync.
-          extra_plugins: |
-            @semantic-release/git
+          semantic_version: 24.2.3
           branches: |
             [
               '+([0-9])?(.{+([0-9]),x}).x',
