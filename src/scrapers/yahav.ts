@@ -288,11 +288,68 @@ function convertTransactions(txns: YahavScrapedRow[], options?: ScraperOptions):
 type YahavRowEval = { id: string; cellTexts: string[] };
 
 const YAHAV_ROW_SEL = '.list-item-holder .entire-content-ctr';
+const YAHAV_ROW_FALLBACK_SELS = ['.list-item-holder .entire-content-ctr', '.entire-content-ctr'];
 
 async function captureYahavRowInnerTexts(page: Page): Promise<string[]> {
-  return page.$$eval(YAHAV_ROW_SEL, els =>
-    els.map(e => (e as HTMLElement).innerText.replace(/\s+/g, ' ').trim()).filter(t => t.length > 8),
-  );
+  return page.evaluate((sels: string[]) => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    sels.forEach(sel => {
+      document.querySelectorAll(sel).forEach(el => {
+        const t = (el as HTMLElement).innerText.replace(/\s+/g, ' ').trim();
+        if (t.length > 8 && !seen.has(t)) {
+          seen.add(t);
+          out.push(t);
+        }
+      });
+    });
+    return out;
+  }, YAHAV_ROW_FALLBACK_SELS);
+}
+
+/**
+ * Fallback collector for Yahav host-app layouts where virtual list wrappers differ.
+ * Scans broadly for row-like elements that contain date tokens and amount-like values.
+ */
+async function collectYahavRowsByDatePatternFallback(page: Page): Promise<YahavRowEval[]> {
+  const lines = await page.evaluate(() => {
+    const norm = (s: string) => s.replace(/\s+/g, ' ').trim();
+    const dateRx = /\b\d{2}\/\d{2}\/20\d{2}\b/;
+    const amountRx = /-?\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})/;
+    const selectors = [
+      '.entire-content-ctr',
+      '.list-item-holder > *',
+      '.cdk-virtual-scroll-content-wrapper > *',
+      '[class*="statement"] [class*="row"]',
+      '[class*="transaction"] [class*="row"]',
+      '.list-item-holder li',
+    ];
+    const seenLine = new Set<string>();
+    const out: string[] = [];
+
+    selectors.forEach(sel => {
+      document.querySelectorAll(sel).forEach(node => {
+        if (!(node instanceof HTMLElement)) {
+          return;
+        }
+        const line = norm(node.innerText || '');
+        if (!line || line.length < 12 || line.length > 420) {
+          return;
+        }
+        if (!dateRx.test(line) || !amountRx.test(line)) {
+          return;
+        }
+        if (!seenLine.has(line)) {
+          seenLine.add(line);
+          out.push(line);
+        }
+      });
+    });
+
+    return out;
+  });
+
+  return lines.map((line, i) => ({ id: `fallback-${i}`, cellTexts: [line] }));
 }
 
 /** Scroll the element with the largest vertical overflow under the statement / account area (virtual list viewport). */
@@ -911,6 +968,22 @@ async function getAccountTransactions(page: Page, options?: ScraperOptions): Pro
     if (snapshotDivs.length > 0 && snapParsed > collectParsed) {
       yahavDebugLog('prefer DOM snapshot rows', { selector: sel, snapParsed, collectParsed });
       transactionsDivs = snapshotDivs;
+    }
+  }
+
+  const minRowsAfterCollection = Math.max(8, parseInt(process.env.YAHAV_MIN_STATEMENT_ROWS || '10', 10) || 10);
+  const parsedBeforeFallback = countYahavParsedRows(transactionsDivs);
+  if (parsedBeforeFallback < minRowsAfterCollection) {
+    const fallbackRows = await collectYahavRowsByDatePatternFallback(page);
+    const fallbackParsed = countYahavParsedRows(fallbackRows);
+    yahavDebugLog('fallback row collector', {
+      parsedBeforeFallback,
+      fallbackRows: fallbackRows.length,
+      fallbackParsed,
+      threshold: minRowsAfterCollection,
+    });
+    if (fallbackParsed > parsedBeforeFallback) {
+      transactionsDivs = fallbackRows;
     }
   }
 
@@ -1786,16 +1859,22 @@ async function enforceYahavStatementLoaded(page: Page, startDate: Moment): Promi
   const formattedTo = moment().format(DATE_FORMAT);
 
   const isIncomplete = (snap: YahavStatementDomSnapshot): boolean => {
+    const oldest = parseYahavUiDateToken(snap.oldestDateToken);
     if (!snap.onCurrentAccountPage) {
       return true;
     }
     if (/^בחר$/.test(snap.scopeSelectedText)) {
-      return true;
+      const hasEnoughRows = snap.listRowCount >= minRows;
+      const hasRichDateFootprint = snap.dateTokenCount2026 >= Math.max(12, minRows);
+      const coversRequestedFromDate = !oldest || !startDate.isBefore(oldest, 'day');
+      // In some Yahav overlays the visible scope label stays "בחר" even when full statement rows are loaded.
+      if (!(hasEnoughRows && coversRequestedFromDate && (hasRichDateFootprint || snap.hasSalaryWord))) {
+        return true;
+      }
     }
     if (snap.listRowCount < minRows) {
       return true;
     }
-    const oldest = parseYahavUiDateToken(snap.oldestDateToken);
     if (oldest && startDate.isBefore(oldest, 'day')) {
       return true;
     }
@@ -1828,7 +1907,7 @@ async function enforceYahavStatementLoaded(page: Page, startDate: Moment): Promi
     throw new Error(
       `Yahav: statement data incomplete after date search (expected from ${formattedFrom}). ` +
         `Still on preview or wrong period — snapshot=${JSON.stringify(snap)}. ` +
-        'Host apps must land on #/main/accounts/current/ with scope not "בחר".',
+        'Host apps must land on #/main/accounts/current/ and show full statement rows for the requested from-date.',
     );
   }
 }
