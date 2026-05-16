@@ -10,7 +10,7 @@ This document describes how the Yahav scraper in this package works, how to inte
    - `defaultStartMoment = now - N months + 1 day`, where **N** defaults to **4** or **`YAHAV_STATEMENT_MONTHS_BACK`** (clamped to `1`–`24`) when set in the process environment.
    - `startMoment = max(defaultStartMoment, moment(options.startDate))`  
    So the scraper never asks the bank for a window **earlier** than that default, even if `startDate` is older.
-4. **`searchByDates`** - if **two** date inputs exist, fills **from** / **to** in **RTL-aware** order (bounding box: rightmost field = “מ”, then “עד”), fires Angular-friendly events, then clicks search / display (including **`clickYahavStatementSearchHard`** for `ng-click` controls scoped to `main` / statement). Otherwise **calendar mode:** year grid, month grid, then a **non-`pmu-disabled`** day cell matching the start day. After search, **`waitForNetworkIdle`** waits for the grid to settle.
+4. **`searchByDates`** — ensures **`#/main/accounts/current/`**, sets the statement **scope** dropdown away from **`בחר`** (preview ~5 rows) via **`selectYahavStatementScopeAllIfPresent`**, applies the date filter via **`applyYahavDateFilterOnly`** (inputs + calendar fallback), **asserts** from/to on screen, then **`enforceYahavStatementLoaded`** (retries scope + dates up to 3× if the list is still a short preview).
 5. **Optional search button** - Hebrew-labelled buttons (e.g. search / display) are clicked when present so the grid refreshes after date changes.
 6. **`getAccountTransactions`** - **`expandYahavStatementTable`** only scans **`main` / list area** (avoids clicking global nav “הצג”). Then scroll helpers (including CDK **`scrollToOffset`**, synthetic **`WheelEvent`**, in-page `requestAnimationFrame` scroll capture), then collects `.list-item-holder .entire-content-ctr` rows into `parseYahavTransactionRowCells`. With **`YAHAV_DEBUG_DOM`**, logs **`dom text probe`**: how many `DD/MM/2026` strings appear in `document.body.innerText` and whether **`משכורת`** is present — helps tell “data not in DOM yet” vs “wrong row selector”.
 
@@ -25,6 +25,13 @@ Integer number of months for the rolling default window (see step 3). Example: `
 ## Environment: `YAHAV_DEBUG_NET`
 
 Set to `1` or `true` to log **response URLs** (and content-type) for `digital.yahav.co.il` while `fetchAccountData` runs. Useful to discover REST endpoints if DOM virtualization still hides rows. Does not log response bodies.
+
+## Environment: `YAHAV_STRICT_STATEMENT` and `YAHAV_MIN_STATEMENT_ROWS`
+
+After date search, **`enforceYahavStatementLoaded`** checks that the page is on the current-account URL, scope is not **`בחר`**, list row count is at least **`YAHAV_MIN_STATEMENT_ROWS`** (default **10**, max 30), and the oldest visible date is not newer than the requested **`startDate`**.
+
+- **`YAHAV_STRICT_STATEMENT=0`** or **`false`** — log incomplete snapshots but do not throw (legacy permissive behaviour).
+- Default (unset) — throw with a JSON snapshot if the statement still looks like a preview. Finance apps that previously got only ~5 rows should see a clear error instead of silent partial data.
 
 ## Environment: `YAHAV_DEBUG_DOM`
 

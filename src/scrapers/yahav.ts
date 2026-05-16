@@ -60,6 +60,146 @@ function delay(ms: number): Promise<void> {
   });
 }
 
+function yahavStrictStatementEnabled(): boolean {
+  return process.env.YAHAV_STRICT_STATEMENT !== '0' && process.env.YAHAV_STRICT_STATEMENT !== 'false';
+}
+
+function isYahavCurrentAccountTransactionsUrl(url: string): boolean {
+  return /\/main\/accounts\/current/i.test(url);
+}
+
+type YahavStatementDomSnapshot = {
+  url: string;
+  onCurrentAccountPage: boolean;
+  listRowCount: number;
+  dateInputs: Array<{ value: string; placeholder: string }>;
+  scopeSelectedText: string;
+  dateTokenCount2026: number;
+  hasSalaryWord: boolean;
+  oldestDateToken: string | null;
+};
+
+async function countYahavListRows(page: Page): Promise<number> {
+  try {
+    return await page.$$eval('.list-item-holder .entire-content-ctr', els => els.length);
+  } catch {
+    return 0;
+  }
+}
+
+async function readYahavStatementDomSnapshot(page: Page): Promise<YahavStatementDomSnapshot> {
+  return page.evaluate(() => {
+    const norm = (s: string) => s.replace(/\s+/g, ' ').trim();
+    const visibleText = document.body.innerText || '';
+    const dates = visibleText.match(/\d{2}\/\d{2}\/20\d{2}/g) || [];
+    const sorted = [...dates].sort();
+    const scopeEl =
+      document.querySelector('.statement-options .selected-item-top') ||
+      document.querySelector('.statement-options .selected-item');
+    return {
+      url: window.location.href,
+      onCurrentAccountPage: /\/main\/accounts\/current/i.test(window.location.href),
+      listRowCount: document.querySelectorAll('.list-item-holder .entire-content-ctr').length,
+      dateInputs: Array.from(document.querySelectorAll('div.date-options-cell input:not([type="hidden"])'))
+        .filter((el): el is HTMLInputElement => el instanceof HTMLInputElement)
+        .map(el => ({ value: el.value, placeholder: el.placeholder || '' })),
+      scopeSelectedText: norm(scopeEl?.textContent || ''),
+      dateTokenCount2026: dates.filter(d => d.endsWith('/2026')).length,
+      hasSalaryWord: /משכורת/.test(visibleText),
+      oldestDateToken: sorted[0] ?? null,
+    };
+  });
+}
+
+function normalizeYahavUiDate(value: string): string {
+  const m = value.trim().match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (!m) {
+    return value.trim();
+  }
+  const day = m[1].padStart(2, '0');
+  const month = m[2].padStart(2, '0');
+  return `${day}/${month}/${m[3]}`;
+}
+
+async function assertYahavDateInputsOnScreen(page: Page, formattedFrom: string, formattedTo: string): Promise<void> {
+  const expectedFrom = normalizeYahavUiDate(formattedFrom);
+  const expectedTo = normalizeYahavUiDate(formattedTo);
+  const rawValues = await page.evaluate(() => {
+    const isRtl = (): boolean => {
+      const d = getComputedStyle(document.documentElement).direction;
+      const b = getComputedStyle(document.body).direction;
+      return d === 'rtl' || b === 'rtl' || document.documentElement.getAttribute('dir') === 'rtl';
+    };
+    const score = (inp: HTMLInputElement) => {
+      const r = inp.getBoundingClientRect();
+      return isRtl() ? r.right : r.left;
+    };
+    const inputs = Array.from(document.querySelectorAll('div.date-options-cell input:not([type="hidden"])')).filter(
+      (el): el is HTMLInputElement => el instanceof HTMLInputElement,
+    );
+    return inputs
+      .map(inp => ({ inp, s: score(inp) }))
+      .sort((a, b) => b.s - a.s)
+      .map(p => p.inp.value);
+  });
+  if (rawValues.length === 0) {
+    throw new Error('Yahav: no date inputs visible on statement page for from/to assert.');
+  }
+  const values = rawValues.map(normalizeYahavUiDate);
+  const fromVal = values[0] || '';
+  const toVal = values[1] || values[0] || '';
+  if (fromVal !== expectedFrom) {
+    throw new Error(
+      `Yahav: from-date on screen is "${fromVal}" but expected "${expectedFrom}" (inputs=${JSON.stringify(values)})`,
+    );
+  }
+  if (values.length >= 2 && toVal !== expectedTo) {
+    throw new Error(
+      `Yahav: to-date on screen is "${toVal}" but expected "${expectedTo}" (inputs=${JSON.stringify(values)})`,
+    );
+  }
+  yahavDebugLog('date inputs assert ok', { expectedFrom, expectedTo, values });
+}
+
+async function waitYahavStatementListRowsAtLeast(page: Page, minRows: number, timeoutMs = 25000): Promise<number> {
+  const deadline = Date.now() + timeoutMs;
+  let last = 0;
+  while (Date.now() < deadline) {
+    last = await countYahavListRows(page);
+    if (last >= minRows) {
+      return last;
+    }
+    await delay(350);
+  }
+  return last;
+}
+
+function waitYahavAccountStatementPost(page: Page, timeoutMs = 30000): Promise<HTTPResponse | undefined> {
+  return page
+    .waitForResponse(
+      res => {
+        if (!/BaNCSDigitalApp\/account/i.test(res.url())) {
+          return false;
+        }
+        return res.request().method() === 'POST' && res.status() === 200;
+      },
+      { timeout: timeoutMs },
+    )
+    .catch(() => undefined);
+}
+
+async function ensureYahavOnCurrentAccountTransactionsPage(page: Page): Promise<void> {
+  if (!isYahavCurrentAccountTransactionsUrl(page.url())) {
+    await gotoYahavCurrentAccountTransactionsPage(page);
+    return;
+  }
+  const hasHeader = await elementPresentOnPage(page, '.under-line-txn-table-header');
+  const hasDateCell = await page.evaluate(() => document.querySelectorAll('div.date-options-cell').length > 0);
+  if (!hasHeader || !hasDateCell) {
+    await gotoYahavCurrentAccountTransactionsPage(page);
+  }
+}
+
 async function runYahavStage<T>(stage: string, fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
@@ -1343,84 +1483,107 @@ async function applyYahavDateRangeViaVisibleCalendars(page: Page, fromDate: Mome
  * Try selecting an "all transactions"-like option before applying date filters.
  */
 async function selectYahavStatementScopeAllIfPresent(page: Page): Promise<void> {
-  const result = await page.evaluate(() => {
-    const scope = document.querySelector('.statement-options') || document.querySelector('main') || document.body;
-    const norm = (s: string) => s.replace(/\s+/g, ' ').trim();
-    const selectedCandidates = Array.from(
-      scope.querySelectorAll(
-        'select, .selected-item-top, [class*="selected-item"], [class*="dropdown-toggle"], [role="combobox"], [aria-haspopup="listbox"]',
-      ),
-    ).filter((el): el is HTMLElement => el instanceof HTMLElement);
+  const minRowsAfterScope = Math.max(8, parseInt(process.env.YAHAV_MIN_STATEMENT_ROWS || '10', 10) || 10);
 
-    const selectedTexts = selectedCandidates.map(el => norm(el.textContent || '')).filter(Boolean);
-    let opened = false;
-    for (const el of selectedCandidates) {
-      const t = norm(el.textContent || '');
-      if (/^בחר$|בחר/.test(t) || el.matches('.selected-item-top, [role="combobox"], [aria-haspopup="listbox"]')) {
-        el.scrollIntoView({ block: 'center', inline: 'nearest' });
-        el.click();
-        opened = true;
-        break;
-      }
-    }
+  const pickScopeOnce = async () => {
+    const xhrWait = waitYahavAccountStatementPost(page);
+    const result = await page.evaluate(() => {
+      const scope = document.querySelector('.statement-options') || document.querySelector('main') || document.body;
+      const norm = (s: string) => s.replace(/\s+/g, ' ').trim();
+      const selectedCandidates = Array.from(
+        scope.querySelectorAll(
+          'select, .selected-item-top, [class*="selected-item"], [class*="dropdown-toggle"], [role="combobox"], [aria-haspopup="listbox"]',
+        ),
+      ).filter((el): el is HTMLElement => el instanceof HTMLElement);
 
-    // Native select first (most reliable if present).
-    const selects = Array.from(scope.querySelectorAll('select')).filter(
-      (el): el is HTMLSelectElement => el instanceof HTMLSelectElement,
-    );
-    for (const sel of selects) {
-      const options = Array.from(sel.options);
-      const target =
-        options.find(o => /מתחילת החודש|חודש נוכחי|current month/i.test(norm(o.text))) ||
-        options.find(o => /כל|all|תנועות|עו"ש/i.test(norm(o.text))) ||
-        options.find(o => /3 חודשים אחרונים|last 3/i.test(norm(o.text)));
-      if (target && sel.value !== target.value) {
-        sel.value = target.value;
-        sel.dispatchEvent(new Event('input', { bubbles: true }));
-        sel.dispatchEvent(new Event('change', { bubbles: true }));
-        return {
-          changed: true as const,
-          mode: 'native-select',
-          selectedTexts,
-          targetText: norm(target.text),
-          opened,
-        };
-      }
-    }
-
-    const optionNodes = Array.from(
-      scope.querySelectorAll(
-        '.drop-down-item, .drop-down-item-top, .dropdown-menu li, .dropdown-menu a, [role="option"], li[ng-repeat], .selected-item-holder li',
-      ),
-    ).filter((el): el is HTMLElement => el instanceof HTMLElement);
-
-    const pickOption = (pattern: RegExp) =>
-      optionNodes.find(el => {
+      const selectedTexts = selectedCandidates.map(el => norm(el.textContent || '')).filter(Boolean);
+      let opened = false;
+      for (const el of selectedCandidates) {
         const t = norm(el.textContent || '');
-        if (!t || t.length > 120 || /^בחר$/.test(t)) {
-          return false;
+        if (/^בחר$|בחר/.test(t) || el.matches('.selected-item-top, [role="combobox"], [aria-haspopup="listbox"]')) {
+          el.scrollIntoView({ block: 'center', inline: 'nearest' });
+          el.click();
+          opened = true;
+          break;
         }
-        return pattern.test(t);
-      });
+      }
 
-    const option =
-      pickOption(/מתחילת החודש|חודש נוכחי|current month/i) ||
-      pickOption(/כל|all|תנועות|עו"ש/i) ||
-      pickOption(/3 חודשים אחרונים|last 3/i);
+      const selects = Array.from(scope.querySelectorAll('select')).filter(
+        (el): el is HTMLSelectElement => el instanceof HTMLSelectElement,
+      );
+      for (const sel of selects) {
+        const options = Array.from(sel.options);
+        const target =
+          options.find(o => /מתחילת החודש|חודש נוכחי|current month/i.test(norm(o.text))) ||
+          options.find(o => /כל|all|תנועות|עו"ש/i.test(norm(o.text))) ||
+          options.find(o => /3 חודשים אחרונים|last 3/i.test(norm(o.text)));
+        if (target && sel.value !== target.value) {
+          sel.value = target.value;
+          sel.dispatchEvent(new Event('input', { bubbles: true }));
+          sel.dispatchEvent(new Event('change', { bubbles: true }));
+          return {
+            changed: true as const,
+            mode: 'native-select',
+            selectedTexts,
+            targetText: norm(target.text),
+            opened,
+          };
+        }
+      }
 
-    if (option) {
-      const optionText = norm(option.textContent || '');
-      option.scrollIntoView({ block: 'center', inline: 'nearest' });
-      option.click();
-      return { changed: true as const, mode: 'menu-option', selectedTexts, targetText: optionText, opened };
+      const optionNodes = Array.from(
+        scope.querySelectorAll(
+          '.drop-down-item, .drop-down-item-top, .dropdown-menu li, .dropdown-menu a, [role="option"], li[ng-repeat], .selected-item-holder li',
+        ),
+      ).filter((el): el is HTMLElement => el instanceof HTMLElement);
+
+      const pickOption = (pattern: RegExp) =>
+        optionNodes.find(el => {
+          const t = norm(el.textContent || '');
+          if (!t || t.length > 120 || /^בחר$/.test(t)) {
+            return false;
+          }
+          return pattern.test(t);
+        });
+
+      const option =
+        pickOption(/מתחילת החודש|חודש נוכחי|current month/i) ||
+        pickOption(/כל|all|תנועות|עו"ש/i) ||
+        pickOption(/3 חודשים אחרונים|last 3/i);
+
+      if (option) {
+        const optionText = norm(option.textContent || '');
+        option.scrollIntoView({ block: 'center', inline: 'nearest' });
+        option.click();
+        return { changed: true as const, mode: 'menu-option', selectedTexts, targetText: optionText, opened };
+      }
+
+      return { changed: false as const, selectedTexts, opened };
+    });
+    await xhrWait;
+    return result;
+  };
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const rowsBefore = await countYahavListRows(page);
+    const result = await pickScopeOnce();
+    if (result.changed) {
+      await delay(400);
+      await waitYahavLoadingSpinnerGoneIfPresent(page);
     }
-
-    return { changed: false as const, selectedTexts, opened };
-  });
-  yahavDebugLog('statement scope selector', result);
-  if (result.changed) {
-    await delay(300);
-    await waitYahavLoadingSpinnerGoneIfPresent(page);
+    const rowsAfter = await waitYahavStatementListRowsAtLeast(page, Math.max(minRowsAfterScope, rowsBefore + 2), 22000);
+    const scopeLabel = await page.evaluate(() => {
+      const el =
+        document.querySelector('.statement-options .selected-item-top') ||
+        document.querySelector('.statement-options .selected-item');
+      return (el?.textContent || '').replace(/\s+/g, ' ').trim();
+    });
+    const scopeOk = scopeLabel.length > 0 && !/^בחר$/.test(scopeLabel);
+    yahavDebugLog('statement scope selector', { attempt, rowsBefore, rowsAfter, scopeLabel, scopeOk, ...result });
+    if (scopeOk && rowsAfter >= minRowsAfterScope) {
+      return;
+    }
+    await delay(500);
   }
 }
 
@@ -1515,11 +1678,171 @@ async function setYahavDateRangeInputs(page: Page, fromFormatted: string, toForm
   );
 }
 
+function parseYahavUiDateToken(token: string | null): Moment | null {
+  if (!token) {
+    return null;
+  }
+  const m = moment(token, DATE_FORMAT, true);
+  return m.isValid() ? m : null;
+}
+
+/** Applies from/to date controls and search nudges (scope dropdown must already be set). */
+async function applyYahavDateFilterOnly(page: Page, startDate: Moment): Promise<void> {
+  const formattedFrom = startDate.format(DATE_FORMAT);
+  const formattedTo = moment().format(DATE_FORMAT);
+  const startDateDay = startDate.format('D');
+  const startDateMonth = startDate.format('M');
+  const startDateYear = startDate.format('Y');
+
+  const pickerMode = await runYahavStage('open from-date picker', () => openYahavFromDatePicker(page));
+  yahavDebugLog('applyYahavDateFilterOnly picker mode', { pickerMode, formattedFrom, formattedTo });
+
+  if (pickerMode === 'input') {
+    const setInput = await runYahavStage('set date range inputs', () =>
+      setYahavDateRangeInputs(page, formattedFrom, formattedTo),
+    );
+    if (!setInput) {
+      throw new Error('Yahav: input mode selected but failed to set from/to date inputs.');
+    }
+    await runYahavStage('type date range inputs with keyboard', () =>
+      typeYahavDateRangeInputsWithKeyboard(page, formattedFrom, formattedTo),
+    );
+    await runYahavStage('apply range via visible calendar cells', () =>
+      applyYahavDateRangeViaVisibleCalendars(page, startDate, moment()),
+    );
+    await runYahavStage('close open date pickers', () => closeYahavOpenDatePickers(page));
+  } else {
+    const monthFromPick = '.pmu-month';
+    await runYahavStage('wait month picker', () => waitUntilElementFound(page, monthFromPick, true));
+    await runYahavStage('open month options', () => clickButton(page, monthFromPick));
+    await runYahavStage('wait month grid', () => waitUntilElementFound(page, '.pmu-months > div:nth-child(1)', true));
+    await runYahavStage('wait month picker for year switch', () => waitUntilElementFound(page, monthFromPick, true));
+    await runYahavStage('open year options', () => clickButton(page, monthFromPick));
+    await runYahavStage('wait year grid', () => waitUntilElementFound(page, '.pmu-years > div:nth-child(1)', true));
+
+    let yearMatched = false;
+    for (let i = 1; i < 13; i += 1) {
+      const selector = `.pmu-years > div:nth-child(${i})`;
+      const year = await page.$eval(selector, y => (y as HTMLElement).innerText);
+      if (startDateYear === year) {
+        await runYahavStage(`select year ${startDateYear}`, () => clickButton(page, selector));
+        yearMatched = true;
+        break;
+      }
+    }
+    if (!yearMatched) {
+      throw new Error(`Yahav: calendar year ${startDateYear} not found in year grid.`);
+    }
+
+    await runYahavStage('wait month grid before selecting month', () =>
+      waitUntilElementFound(page, '.pmu-months > div:nth-child(1)', true),
+    );
+    const monthSelector = `.pmu-months > div:nth-child(${startDateMonth})`;
+    await runYahavStage(`select month ${startDateMonth}`, () => clickButton(page, monthSelector));
+
+    let dayChosen = false;
+    for (let i = 1; i < 43; i += 1) {
+      const selector = `.pmu-days > div:nth-child(${i})`;
+      const clicked = await page.evaluate(
+        (sel: string, day: string) => {
+          const el = document.querySelector(sel);
+          if (!(el instanceof HTMLElement)) {
+            return false;
+          }
+          if (el.classList.contains('pmu-disabled')) {
+            return false;
+          }
+          if ((el.innerText || '').trim() !== day) {
+            return false;
+          }
+          el.click();
+          return true;
+        },
+        selector,
+        startDateDay,
+      );
+      if (clicked) {
+        dayChosen = true;
+        break;
+      }
+    }
+    if (!dayChosen) {
+      throw new Error(`Yahav: calendar day ${startDateDay} not found in a non-disabled .pmu-days cell.`);
+    }
+  }
+
+  await runYahavStage('post-filter search click', () => clickYahavStatementSearchIfPresent(page));
+  await runYahavStage('post-filter search icon click', () => clickYahavStatementSearchIconIfPresent(page));
+  if (process.env.YAHAV_DATE_TOOLBAR_NUDGE === '1' || process.env.YAHAV_DATE_TOOLBAR_NUDGE === 'true') {
+    await runYahavStage('date-range toolbar click', () => clickYahavDateRangeToolbarAction(page));
+  }
+  await runYahavStage('post-filter hard search nudge', () => clickYahavStatementSearchHard(page));
+  await waitYahavLoadingSpinnerGoneIfPresent(page);
+}
+
+async function enforceYahavStatementLoaded(page: Page, startDate: Moment): Promise<void> {
+  const minRows = Math.min(30, Math.max(8, parseInt(process.env.YAHAV_MIN_STATEMENT_ROWS || '10', 10) || 10));
+  const formattedFrom = startDate.format(DATE_FORMAT);
+  const formattedTo = moment().format(DATE_FORMAT);
+
+  const isIncomplete = (snap: YahavStatementDomSnapshot): boolean => {
+    if (!snap.onCurrentAccountPage) {
+      return true;
+    }
+    if (/^בחר$/.test(snap.scopeSelectedText)) {
+      return true;
+    }
+    if (snap.listRowCount < minRows) {
+      return true;
+    }
+    const oldest = parseYahavUiDateToken(snap.oldestDateToken);
+    if (oldest && startDate.isBefore(oldest, 'day')) {
+      return true;
+    }
+    return false;
+  };
+
+  let snap = await readYahavStatementDomSnapshot(page);
+  yahavDebugLog('statement enforce: initial', snap);
+
+  for (let attempt = 0; attempt < 3 && isIncomplete(snap); attempt += 1) {
+    yahavDebugLog('statement enforce: recovery', { attempt, snap });
+    await ensureYahavOnCurrentAccountTransactionsPage(page);
+    await selectYahavStatementScopeAllIfPresent(page);
+    await applyYahavDateFilterOnly(page, startDate);
+    await page.waitForNetworkIdle({ idleTime: 500, timeout: 35000 }).catch(() => undefined);
+    await waitYahavStatementListRowsAtLeast(page, minRows, 25000);
+    try {
+      await assertYahavDateInputsOnScreen(page, formattedFrom, formattedTo);
+    } catch (err) {
+      yahavDebugLog('statement enforce: date assert warning', {
+        attempt,
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+    snap = await readYahavStatementDomSnapshot(page);
+    yahavDebugLog('statement enforce: after recovery', { attempt, snap });
+  }
+
+  if (yahavStrictStatementEnabled() && isIncomplete(snap)) {
+    throw new Error(
+      `Yahav: statement data incomplete after date search (expected from ${formattedFrom}). ` +
+        `Still on preview or wrong period — snapshot=${JSON.stringify(snap)}. ` +
+        'Host apps must land on #/main/accounts/current/ with scope not "בחר".',
+    );
+  }
+}
+
 // Manipulate the calendar drop down to choose the txs start date.
 async function searchByDates(page: Page, startDate: Moment) {
   const formattedFrom = startDate.format(DATE_FORMAT);
   const formattedTo = moment().format(DATE_FORMAT);
   const debugDom = process.env.YAHAV_DEBUG_DOM === '1' || process.env.YAHAV_DEBUG_DOM === 'true';
+
+  await runYahavStage('ensure current account transactions page', () =>
+    ensureYahavOnCurrentAccountTransactionsPage(page),
+  );
+
   if (debugDom) {
     await debugYahavStatementControls(page, 'before-scope-select');
   }
@@ -1529,132 +1852,35 @@ async function searchByDates(page: Page, startDate: Moment) {
     await debugYahavDateToolbarCandidates(page, 'after-scope-select');
   }
 
-  // Get the day number from startDate. 1-31 (usually 1)
-  const startDateDay = startDate.format('D');
-  const startDateMonth = startDate.format('M');
-  const startDateYear = startDate.format('Y');
-
   const dateInputCount = await page.evaluate(() => {
     const inCells = document.querySelectorAll('div.date-options-cell input:not([type="hidden"])').length;
     const stmt = document.querySelector('.statement-options');
     const inStmt = stmt ? stmt.querySelectorAll('input:not([type="hidden"])').length : 0;
     return Math.max(inCells, inStmt);
   });
-  yahavDebugLog('searchByDates', { dateInputCount, url: page.url() });
+  yahavDebugLog('searchByDates', { dateInputCount, url: page.url(), formattedFrom, formattedTo });
 
-  // Calendar-first: in Yahav this path is usually what commits date changes into the backend query model.
-  const pickerMode = await runYahavStage('open from-date picker', () => openYahavFromDatePicker(page));
-  yahavDebugLog('searchByDates picker mode', { pickerMode, formattedFrom, formattedTo });
-  if (pickerMode === 'input') {
-    const setInput = await runYahavStage('set date range inputs', () =>
-      setYahavDateRangeInputs(page, formattedFrom, formattedTo),
+  await runYahavStage('apply date filter', () => applyYahavDateFilterOnly(page, startDate));
+
+  if (debugDom) {
+    await debugYahavDateToolbarCandidates(page, 'after-input-set');
+    const dateInputs = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('div.date-options-cell input:not([type="hidden"])'))
+        .filter((el): el is HTMLInputElement => el instanceof HTMLInputElement)
+        .map(el => ({
+          value: el.value,
+          placeholder: el.placeholder || '',
+          className: (el.className || '').slice(0, 120),
+        })),
     );
-    if (!setInput) {
-      throw new Error('Yahav: fallback input mode selected but failed to set from/to date inputs.');
-    }
-    await runYahavStage('type date range inputs with keyboard', () =>
-      typeYahavDateRangeInputsWithKeyboard(page, formattedFrom, formattedTo),
-    );
-    await runYahavStage('apply range via visible calendar cells', () =>
-      applyYahavDateRangeViaVisibleCalendars(page, startDate, moment()),
-    );
-    await runYahavStage('close open date pickers', () => closeYahavOpenDatePickers(page));
-    await runYahavStage('post-input search click', () => clickYahavStatementSearchIfPresent(page));
-    await runYahavStage('post-input search icon click', () => clickYahavStatementSearchIconIfPresent(page));
-    if (process.env.YAHAV_DATE_TOOLBAR_NUDGE === '1' || process.env.YAHAV_DATE_TOOLBAR_NUDGE === 'true') {
-      await runYahavStage('date-range toolbar click (picker-input)', () => clickYahavDateRangeToolbarAction(page));
-    }
-    await runYahavStage('post-input hard search nudge (picker-input)', () => clickYahavStatementSearchHard(page));
-    if (debugDom) {
-      await debugYahavDateToolbarCandidates(page, 'after-input-set');
-      const dateInputs = await page.evaluate(() => {
-        return Array.from(document.querySelectorAll('div.date-options-cell input:not([type="hidden"])'))
-          .filter((el): el is HTMLInputElement => el instanceof HTMLInputElement)
-          .map(el => ({
-            value: el.value,
-            placeholder: el.placeholder || '',
-            className: (el.className || '').slice(0, 120),
-          }));
-      });
-      yahavDebugLog('searchByDates input values after set', { dateInputs });
-    }
-    await waitYahavLoadingSpinnerGoneIfPresent(page);
-    return;
+    yahavDebugLog('searchByDates input values after set', { dateInputs });
   }
 
-  // Open Months options.
-  const monthFromPick = '.pmu-month';
-  await runYahavStage('wait month picker', () => waitUntilElementFound(page, monthFromPick, true));
-  await runYahavStage('open month options', () => clickButton(page, monthFromPick));
-  await runYahavStage('wait month grid', () => waitUntilElementFound(page, '.pmu-months > div:nth-child(1)', true));
-
-  // Open Year options.
-  // Use same selector... Yahav knows why...
-  await runYahavStage('wait month picker for year switch', () => waitUntilElementFound(page, monthFromPick, true));
-  await runYahavStage('open year options', () => clickButton(page, monthFromPick));
-  await runYahavStage('wait year grid', () => waitUntilElementFound(page, '.pmu-years > div:nth-child(1)', true));
-
-  let yearMatched = false;
-  for (let i = 1; i < 13; i += 1) {
-    const selector = `.pmu-years > div:nth-child(${i})`;
-    const year = await page.$eval(selector, y => {
-      return (y as HTMLElement).innerText;
-    });
-    if (startDateYear === year) {
-      await runYahavStage(`select year ${startDateYear}`, () => clickButton(page, selector));
-      yearMatched = true;
-      break;
-    }
-  }
-  if (!yearMatched) {
-    throw new Error(`Yahav: calendar year ${startDateYear} not found in year grid.`);
-  }
-
-  // Select Month.
-  await runYahavStage('wait month grid before selecting month', () =>
-    waitUntilElementFound(page, '.pmu-months > div:nth-child(1)', true),
+  await runYahavStage('assert date inputs on screen', () =>
+    assertYahavDateInputsOnScreen(page, formattedFrom, formattedTo),
   );
-  // The first element (1) is January.
-  const monthSelector = `.pmu-months > div:nth-child(${startDateMonth})`;
-  await runYahavStage(`select month ${startDateMonth}`, () => clickButton(page, monthSelector));
-
-  let dayChosen = false;
-  for (let i = 1; i < 43; i += 1) {
-    const selector = `.pmu-days > div:nth-child(${i})`;
-    const clicked = await page.evaluate(
-      (sel: string, day: string) => {
-        const el = document.querySelector(sel);
-        if (!(el instanceof HTMLElement)) {
-          return false;
-        }
-        if (el.classList.contains('pmu-disabled')) {
-          return false;
-        }
-        if ((el.innerText || '').trim() !== day) {
-          return false;
-        }
-        el.click();
-        return true;
-      },
-      selector,
-      startDateDay,
-    );
-    if (clicked) {
-      dayChosen = true;
-      break;
-    }
-  }
-  if (!dayChosen) {
-    throw new Error(`Yahav: calendar day ${startDateDay} not found in a non-disabled .pmu-days cell.`);
-  }
-
-  await runYahavStage('post-calendar search click', () => clickYahavStatementSearchIfPresent(page));
-  await runYahavStage('post-calendar search icon click', () => clickYahavStatementSearchIconIfPresent(page));
-  if (process.env.YAHAV_DATE_TOOLBAR_NUDGE === '1' || process.env.YAHAV_DATE_TOOLBAR_NUDGE === 'true') {
-    await runYahavStage('date-range toolbar click (calendar)', () => clickYahavDateRangeToolbarAction(page));
-  }
-  await runYahavStage('post-calendar hard search nudge', () => clickYahavStatementSearchHard(page));
-  await waitYahavLoadingSpinnerGoneIfPresent(page);
+  await runYahavStage('enforce full statement loaded', () => enforceYahavStatementLoaded(page, startDate));
+  await page.waitForNetworkIdle({ idleTime: 500, timeout: 35000 }).catch(() => undefined);
 }
 
 async function fetchAccountData(
@@ -1750,6 +1976,7 @@ async function fetchAccountData(
     await runYahavStage('network idle after statement search', () =>
       page.waitForNetworkIdle({ idleTime: 500, timeout: 35000 }).catch(() => undefined),
     );
+    await runYahavStage('final statement enforce', () => enforceYahavStatementLoaded(page, startDate));
     await delay(400);
     const txns = await runYahavStage('fetch account transactions', () => getAccountTransactions(page, options));
 
