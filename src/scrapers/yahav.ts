@@ -2050,9 +2050,7 @@ async function searchByDates(page: Page, startDate: Moment) {
         .map(el => ((el as HTMLElement).innerText || el.textContent || '').replace(/\s+/g, ' ').trim())
         .filter(t => t.length > 0 && t.length < 60)
         .slice(0, 25);
-      const dateTokenCount = (
-        listItemHolderInnerText.match(/\b\d{1,2}\/\d{1,2}\/\d{4}\b/g) || []
-      ).length;
+      const dateTokenCount = (listItemHolderInnerText.match(/\b\d{1,2}\/\d{1,2}\/\d{4}\b/g) || []).length;
       return { listSelectorPresent, listItemHolderInnerText, buttonsTextSeen, dateTokenCount };
     });
     yahavDebugLog('searchByDates: post-search dom', postSearchDom);
