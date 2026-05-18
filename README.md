@@ -39,7 +39,7 @@ This fork keeps **patch/minor** dependency updates current via `npm update`; `pa
 
 ### Fork releases (npm vs GitHub)
 
-This fork’s [GitHub releases](https://github.com/HirezRa/israeli-bank-scrapers/releases) use tags **`hirez-v1.x.x`** (current publish line: [**`hirez-v1.0.20`**](https://github.com/HirezRa/israeli-bank-scrapers/releases/tag/hirez-v1.0.20)). The numeric part is the same **semver** published to npm as [@hirez10/israeli-bank-scrapers](https://www.npmjs.com/package/@hirez10/israeli-bank-scrapers). If npm lags behind GitHub, the Release workflow likely failed on **npm publish** (for example `E404` on a scoped package: missing or underpowered `NPM_TOKEN`, or org publish rights on `@hirez10`). See [npm publish recovery](./CONTRIBUTING.md#npm-publish-recovery-github-ahead-of-npm).
+This fork’s [GitHub releases](https://github.com/HirezRa/israeli-bank-scrapers/releases) use tags **`hirez-v1.x.x`** (current publish line: [**`hirez-v1.0.24`**](https://github.com/HirezRa/israeli-bank-scrapers/releases/tag/hirez-v1.0.24)). The numeric part is the same **semver** published to npm as [@hirez10/israeli-bank-scrapers](https://www.npmjs.com/package/@hirez10/israeli-bank-scrapers). If npm lags behind GitHub, the Release workflow likely failed on **npm publish** (for example `E404` on a scoped package: missing or underpowered `NPM_TOKEN`, or org publish rights on `@hirez10`). See [npm publish recovery](./CONTRIBUTING.md#npm-publish-recovery-github-ahead-of-npm).
 
 > Important!
 >
@@ -287,7 +287,7 @@ result = {
 
 Upstream deploys [`israeli-bank-scrapers`](https://www.npmjs.com/package/israeli-bank-scrapers) to npm when changes land on its main branch, on its own release cadence.
 
-**This fork** publishes separately as [@hirez10/israeli-bank-scrapers](https://www.npmjs.com/package/@hirez10/israeli-bank-scrapers). Current semver in [`package.json`](./package.json) should match the latest **GitHub** release tag (**[`hirez-v1.0.20`](https://github.com/HirezRa/israeli-bank-scrapers/releases/tag/hirez-v1.0.20)**; see [all releases](https://github.com/HirezRa/israeli-bank-scrapers/releases) and [CHANGELOG](./CHANGELOG.md)). **npm** may lag GitHub if `npm publish` failed in CI — confirm the [package page](https://www.npmjs.com/package/@hirez10/israeli-bank-scrapers) version.
+**This fork** publishes separately as [@hirez10/israeli-bank-scrapers](https://www.npmjs.com/package/@hirez10/israeli-bank-scrapers). Current semver in [`package.json`](./package.json) should match the latest **GitHub** release tag (**[`hirez-v1.0.24`](https://github.com/HirezRa/israeli-bank-scrapers/releases/tag/hirez-v1.0.24)**; see [all releases](https://github.com/HirezRa/israeli-bank-scrapers/releases) and [CHANGELOG](./CHANGELOG.md)). **npm** may lag GitHub if `npm publish` failed in CI — confirm the [package page](https://www.npmjs.com/package/@hirez10/israeli-bank-scrapers) version.
 
 # `Israeli-bank-scrapers-core` library
 

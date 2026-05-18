@@ -60,6 +60,30 @@ function delay(ms: number): Promise<void> {
   });
 }
 
+/**
+ * Headless Chromium in Docker (e.g. Finance App backend) defaults to ~800x600. The Yahav
+ * virtualized statement list materializes only ~5 rows at that viewport regardless of
+ * scroll, which masquerades as "the bank only returned a week" while in reality the rest
+ * of the rows were never rendered. Force a wider viewport before navigating to statements.
+ * Idempotent — caller can invoke multiple times.
+ */
+async function ensureYahavViewport(page: Page): Promise<void> {
+  const desiredWidth = 1366;
+  const desiredHeight = 900;
+  try {
+    const current = page.viewport();
+    if (current && current.width >= desiredWidth && current.height >= desiredHeight) {
+      return;
+    }
+    await page.setViewport({ width: desiredWidth, height: desiredHeight });
+    yahavDebugLog('viewport set', { width: desiredWidth, height: desiredHeight });
+  } catch (error) {
+    yahavDebugLog('viewport set failed (continuing)', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 function yahavStrictStatementEnabled(): boolean {
   return process.env.YAHAV_STRICT_STATEMENT !== '0' && process.env.YAHAV_STRICT_STATEMENT !== 'false';
 }
@@ -1154,6 +1178,9 @@ async function openYahavFromDatePicker(page: Page): Promise<'calendar' | 'input'
 
     try {
       await waitUntilElementFound(page, calendarSelector, true, shortTimeout);
+      yahavDebugLog('openYahavFromDatePicker: calendar opened', {
+        pickerOpenedBy: selector,
+      });
       return 'calendar';
     } catch {
       // Try next trigger in case this click did not open the calendar.
@@ -1166,6 +1193,7 @@ async function openYahavFromDatePicker(page: Page): Promise<'calendar' | 'input'
     );
   });
   if (hasDateInput) {
+    yahavDebugLog('openYahavFromDatePicker: input mode', { pickerOpenedBy: 'input-fallback' });
     return 'input';
   }
 
@@ -1175,12 +1203,16 @@ async function openYahavFromDatePicker(page: Page): Promise<'calendar' | 'input'
 }
 
 async function clickYahavStatementSearchIfPresent(page: Page): Promise<void> {
-  await page.evaluate(() => {
+  const probe = await page.evaluate(() => {
     const scope =
       document.querySelector('.statement-options') || document.querySelector('[class*="statement"]') || document.body;
     const clickable = Array.from(
       scope.querySelectorAll('button, [role="button"], a, input[type="submit"], .btn, .search-button, .link'),
     );
+    const allCandidates = clickable
+      .filter((el): el is HTMLElement => el instanceof HTMLElement)
+      .map(el => ((el.textContent || '').replace(/\s+/g, ' ').trim() || '<empty>').slice(0, 60))
+      .slice(0, 25);
     const match = clickable.find(el => {
       if (!(el instanceof HTMLElement)) {
         return false;
@@ -1191,7 +1223,17 @@ async function clickYahavStatementSearchIfPresent(page: Page): Promise<void> {
     if (match instanceof HTMLElement) {
       match.scrollIntoView({ block: 'center', inline: 'nearest' });
       match.click();
+      return {
+        matched: (match.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60),
+        candidates: allCandidates,
+      };
     }
+    return { matched: null, candidates: allCandidates };
+  });
+  yahavDebugLog('clickYahavStatementSearchIfPresent', {
+    matched: probe.matched,
+    matchedNone: probe.matched === null,
+    buttonsSeen: probe.candidates,
   });
   await delay(200);
 }
@@ -1996,6 +2038,25 @@ async function searchByDates(page: Page, startDate: Moment) {
   );
   await runYahavStage('enforce full statement loaded', () => enforceYahavStatementLoaded(page, startDate));
   await page.waitForNetworkIdle({ idleTime: 500, timeout: 35000 }).catch(() => undefined);
+
+  if (debugDom) {
+    const postSearchDom = await page.evaluate(() => {
+      const list = document.querySelector('.list-item-holder');
+      const listSelectorPresent = !!list;
+      const listItemHolderInnerText = (list instanceof HTMLElement ? list.innerText : '')
+        .replace(/\s+/g, ' ')
+        .slice(0, 400);
+      const buttonsTextSeen = Array.from(document.querySelectorAll('button, [role="button"]'))
+        .map(el => ((el as HTMLElement).innerText || el.textContent || '').replace(/\s+/g, ' ').trim())
+        .filter(t => t.length > 0 && t.length < 60)
+        .slice(0, 25);
+      const dateTokenCount = (
+        listItemHolderInnerText.match(/\b\d{1,2}\/\d{1,2}\/\d{4}\b/g) || []
+      ).length;
+      return { listSelectorPresent, listItemHolderInnerText, buttonsTextSeen, dateTokenCount };
+    });
+    yahavDebugLog('searchByDates: post-search dom', postSearchDom);
+  }
 }
 
 async function fetchAccountData(
@@ -2158,6 +2219,10 @@ class YahavScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   }
 
   async fetchData() {
+    // Headless Chromium in Docker defaults to ~800x600, which collapses the virtualized statement
+    // list to ~5 rows regardless of scroll. Force a wider viewport BEFORE any DOM probe.
+    await runYahavStage('ensure viewport', () => ensureYahavViewport(this.page));
+
     // Goto statements page
     await runYahavStage('wait account details card', () =>
       waitUntilElementFound(this.page, ACCOUNT_DETAILS_SELECTOR, true),

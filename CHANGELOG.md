@@ -6,7 +6,21 @@ All notable changes to this fork (`@hirez10/israeli-bank-scrapers`) are document
 
 <!-- Keep empty between releases until new changes accumulate. -->
 
-**Source of truth for published releases:** [GitHub Releases — HirezRa/israeli-bank-scrapers](https://github.com/HirezRa/israeli-bank-scrapers/releases). Target / current publish line: **`1.0.20`** (tag [`hirez-v1.0.20`](https://github.com/HirezRa/israeli-bank-scrapers/releases/tag/hirez-v1.0.20)). If this file lags CI, follow GitHub.
+## [1.0.24] (2026-05-17)
+
+Tag **`hirez-v1.0.24`**. Finance App overlay synced to this file (post-2.0.67 RCA).
+
+### English
+
+- **Yahav — viewport:** `ensureYahavViewport()` (1366×900) in `fetchData()` before statement navigation so headless Docker does not materialize only ~5 virtualized rows.
+- **Yahav — searchByDates (already in 1.0.23, now in overlay):** `ensureYahavOnCurrentAccountTransactionsPage`, `selectYahavStatementScopeAllIfPresent`, `applyYahavDateFilterOnly` (calendar + input + hard search), `enforceYahavStatementLoaded` with recovery loop.
+- **Yahav — debug (`YAHAV_DEBUG_DOM=1`):** log picker trigger selector, search button match (or none + candidates), post-search DOM footprint (`dateTokenCount`, `buttonsTextSeen`).
+
+### עברית
+
+- יהב: viewport מפורש לדוקר; סנכרון overlay עם fork; לוגי דיבוג ל־searchByDates / כפתור חיפוש / DOM אחרי סינון.
+
+**Source of truth for published releases:** [GitHub Releases — HirezRa/israeli-bank-scrapers](https://github.com/HirezRa/israeli-bank-scrapers/releases). Current publish line: **`1.0.24`** (tag [`hirez-v1.0.24`](https://github.com/HirezRa/israeli-bank-scrapers/releases/tag/hirez-v1.0.24)).
 
 ## [1.0.20] (2026-05-15)
 
