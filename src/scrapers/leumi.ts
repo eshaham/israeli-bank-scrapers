@@ -18,6 +18,7 @@ const FILTERED_TRANSACTIONS_URL = `${BASE_URL}/ChannelWCF/Broker.svc/ProcessRequ
 const DATE_FORMAT = 'DD.MM.YY';
 const ACCOUNT_BLOCKED_MSG = 'המנוי חסום';
 const INVALID_PASSWORD_MSG = 'אחד או יותר מפרטי ההזדהות שמסרת שגויים. ניתן לנסות שוב';
+const CHANGE_PASSWORD_MODAL_SELECTOR = 'form input[name="newPwd"]';
 
 function getPossibleLoginResults() {
   const urls: LoginOptions['possibleResults'] = {
@@ -47,7 +48,14 @@ function getPossibleLoginResults() {
         return errorMessage?.startsWith(ACCOUNT_BLOCKED_MSG);
       },
     ],
-    [LoginResults.ChangePassword]: ['https://hb2.bankleumi.co.il/authenticate'], // NOTICE - might not be relevant starting the Leumi re-design during 2022 Sep
+    [LoginResults.ChangePassword]: [
+      async options => {
+        if (!options || !options.page) {
+          throw new Error('missing page options argument');
+        }
+        return !!(await options.page.$(CHANGE_PASSWORD_MODAL_SELECTOR));
+      },
+    ],
   };
   return urls;
 }
@@ -218,7 +226,7 @@ async function waitForPostLogin(page: Page): Promise<void> {
     waitUntilElementFound(page, 'a[title="דלג לחשבון"]', true, 60000),
     waitUntilElementFound(page, 'div.main-content', false, 60000),
     page.waitForSelector(`xpath//div[contains(string(),"${INVALID_PASSWORD_MSG}")]`),
-    waitUntilElementFound(page, 'form[action="/changepassword"]', true, 60000), // not sure if they kept this one
+    waitUntilElementFound(page, CHANGE_PASSWORD_MODAL_SELECTOR, true, 60000),
   ]);
 }
 
