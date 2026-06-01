@@ -101,7 +101,6 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
   async initialize() {
     await super.initialize();
     debug('initialize scraper');
-    this.emitProgress(ScraperProgressTypes.Initializing);
 
     const page = await this.initializePage();
     await page.setCacheEnabled(false); // Clear cache and avoid 300's response status
