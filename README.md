@@ -12,7 +12,7 @@
 > The scrapers are set to use timezone `Asia/Jerusalem` to avoid conflicts in case you're running the scrapers outside Israel.
  
 # What's here?
-What you can find here is scrapers for all major Israeli banks and credit card companies. That's the plan at least.
+Here you can find scrapers for all major Israeli banks and credit card companies. That's the plan at least.
 Currently only the following banks are supported:
 - Bank Hapoalim (thanks [@sebikaplun](https://github.com/sebikaplun))
 - Leumi Bank (thanks [@esakal](https://github.com/esakal))
@@ -263,7 +263,7 @@ import { getPuppeteerConfig } from 'israeli-bank-scrapers-core';
 const chromiumVersion = getPuppeteerConfig().chromiumRevision;
 ```
 
-2. Once you have the chromium revision, you can either download it manually or use other liraries like [download-chromium](https://www.npmjs.com/package/download-chromium) to fetch that version. The mentioned library is very handy as it caches the download and provide useful helpers like download progress information.
+2. Once you have the chromium revision, you can either download it manually or use other libraries like [download-chromium](https://www.npmjs.com/package/download-chromium) to fetch that version. The mentioned library is very handy as it caches the download and provide useful helpers like download progress information.
  
  3. provide the path to chromium to the library using the option key `executablePath`. 
 
