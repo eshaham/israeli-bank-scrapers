@@ -143,11 +143,9 @@ async function navigateOrErrorLabel(page: Page) {
 
 function getPossibleLoginResults(): PossibleLoginResults {
   const urls: PossibleLoginResults = {};
-  urls[LoginResults.Success] = [
-    `${BASE_URL}/apollo/retail/#/MY_ACCOUNT_HOMEPAGE`,
-    `${BASE_URL}/apollo/retail2/#/MY_ACCOUNT_HOMEPAGE`,
-    `${BASE_URL}/apollo/retail2/`,
-  ];
+  // Discount periodically bumps the post-login app path (retail, retail2, retail3, ...).
+  // Match any retailN variant so a new bump does not break login detection.
+  urls[LoginResults.Success] = [/\/apollo\/retail\d*\/(#\/MY_ACCOUNT_HOMEPAGE)?$/];
   urls[LoginResults.InvalidPassword] = [`${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/LOGIN_PAGE`];
   urls[LoginResults.ChangePassword] = [`${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/PWD_RENEW`];
   return urls;
