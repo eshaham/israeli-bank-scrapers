@@ -447,6 +447,67 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         }
       },
       userAgent: apiHeaders['User-Agent'],
+      preparePage: async () => {
+        // Bypass Cal's anti-bot detection by doing a direct API login
+        // and injecting the SSO token into the browser's login flow.
+        // The browser-based login form submission is blocked by Cal's WAF
+        // when detected as automation, so we pre-authenticate via direct API call.
+        debug('visaCal: doing direct API login to bypass WAF anti-bot detection');
+        try {
+          const loginResponse = await fetch(
+            'https://connect.cal-online.co.il/col-rest/calconnect/authentication/login',
+            {
+              method: 'POST',
+              headers: {
+                accept: 'application/json, text/plain, */*',
+                'content-type': 'application/json',
+                origin: 'https://digital-web.cal-online.co.il',
+                referer: 'https://digital-web.cal-online.co.il/',
+                'x-site-id': '09031987-273E-2311-906C-8AF85B17C8D9',
+              },
+              body: JSON.stringify({
+                username: credentials.username,
+                password: credentials.password,
+                recaptcha: '',
+              }),
+            },
+          );
+
+          if (!loginResponse.ok) {
+            debug(`visaCal: direct login failed with status ${loginResponse.status}`);
+            return;
+          }
+
+          const loginData = await loginResponse.json();
+          if (!loginData.token) {
+            debug('visaCal: direct login did not return a token');
+            return;
+          }
+
+          debug('visaCal: direct login successful, setting up request interception');
+          (this as any).__visaCalToken = loginData.token;
+
+          await this.page.setRequestInterception(true);
+          this.page.on('request', async (request: HTTPRequest) => {
+            const url = request.url();
+            if (
+              url.includes('/col-rest/calconnect/authentication/login') &&
+              request.method() === 'POST'
+            ) {
+              debug('visaCal: intercepting login POST, injecting direct API token');
+              request.respond({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({ token: loginData.token, hash: null, innerLoginType: 0 }),
+              });
+              return;
+            }
+            request.continue();
+          });
+        } catch (err) {
+          debug(`visaCal: direct API login error: ${(err as Error).message}`);
+        }
+      },
     };
   }
 
