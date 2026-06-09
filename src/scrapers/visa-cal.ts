@@ -498,6 +498,10 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
               request.respond({
                 status: 200,
                 contentType: 'application/json',
+                headers: {
+                  'access-control-allow-origin': 'https://digital-web.cal-online.co.il',
+                  'access-control-allow-credentials': 'true',
+                },
                 body: JSON.stringify({ token: loginData.token, hash: null, innerLoginType: 0 }),
               });
               return;
