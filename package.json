@@ -1,13 +1,13 @@
 {
   "name": "@hirez10/israeli-bank-scrapers",
-  "version": "1.0.24",
+  "version": "1.0.25",
   "private": true,
   "upstreamSync": {
     "repo": "eshaham/israeli-bank-scrapers",
-    "tag": "v6.7.4",
-    "commit": "847f5f74e3923c3993b802c7a25fe12b30c1d18c"
+    "tag": "v6.7.5",
+    "commit": "ddec3111f8e1fa7f7850c1c899a79adb7b782eed"
   },
-  "description": "Hardened fork of eshaham/israeli-bank-scrapers (upstream base v6.7.4). Scrapers for Israeli banks and credit card companies.",
+  "description": "Hardened fork of eshaham/israeli-bank-scrapers (upstream base v6.7.5). Scrapers for Israeli banks and credit card companies.",
   "engines": {
     "node": ">= 22.13.0"
   },

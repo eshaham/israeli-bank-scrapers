@@ -6,6 +6,20 @@ All notable changes to this fork (`@hirez10/israeli-bank-scrapers`) are document
 
 <!-- Keep empty between releases until new changes accumulate. -->
 
+## [1.0.25] (2026-06-10)
+
+Tag **`hirez-v1.0.25`**. Upstream sync to **[eshaham v6.7.5](https://github.com/eshaham/israeli-bank-scrapers/releases/tag/v6.7.5)** (`ddec3111f8e1fa7f7850c1c899a79adb7b782eed`).
+
+### English
+
+- **Leumi — change-password detection (upstream #1117):** `LoginResults.ChangePassword` now probes the in-page modal via `CHANGE_PASSWORD_MODAL_SELECTOR` (`form input[name="newPwd"]`) instead of the stale `https://hb2.bankleumi.co.il/authenticate` URL match; `waitForPostLogin` waits on the same selector instead of `form[action="/changepassword"]`. Picked up from upstream v6.7.5.
+- **Metadata:** `upstreamSync` bumped to `v6.7.5`; README sync status and description aligned.
+
+### עברית
+
+- לאומי: זיהוי מודאל "החלפת סיסמה" לפי סלקטור בעמוד (`form input[name="newPwd"]`) במקום התאמת URL ישנה — מיושר ל‑upstream v6.7.5.
+- מטא‑דאטה: `upstreamSync` עודכן ל‑v6.7.5, וכן README ותיאור.
+
 ## [1.0.24] (2026-05-17)
 
 Tag **`hirez-v1.0.24`**. Finance App overlay synced to this file (post-2.0.67 RCA).
