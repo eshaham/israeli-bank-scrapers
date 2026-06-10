@@ -30,6 +30,7 @@ const PENDING_TRANSACTIONS_REQUEST_ENDPOINT =
 const SSO_AUTHORIZATION_REQUEST_ENDPOINT = 'https://connect.cal-online.co.il/col-rest/calconnect/authentication/SSO';
 
 const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו שגויים';
+const ChangePasswordMessage = 'להחליף סיסמה';
 
 const debug = getDebug('visa-cal');
 
@@ -238,8 +239,15 @@ async function hasInvalidPasswordError(page: Page) {
 
 async function hasChangePasswordForm(page: Page) {
   const frame = await getLoginFrame(page);
-  const errorFound = await elementPresentOnPage(frame, '.change-password-subtitle');
-  return errorFound;
+  // "כדי להחליף סיסמה יש ללחוץ על 'שכחתי שם משתמש / סיסמה' במסך הכניסה"
+  const errorFound = await elementPresentOnPage(frame, '.err-desc');
+  if (errorFound) {
+    const errText = await pageEval(frame, '.err-desc', '', item => {
+      return (item as HTMLElement).innerText.trim();
+    });
+    return errText.includes(ChangePasswordMessage);
+  }
+  return false;
 }
 
 function getPossibleLoginResults() {
