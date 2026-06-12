@@ -168,6 +168,23 @@ async function searchByDates(page: Page, startDate: Moment) {
   await clickButton(page, daySelector);
 }
 
+// Yahav does not render a dedicated current-balance field on the statements page — the closest
+// stable value is the running balance on the newest transaction row (last column of the top
+// row), which equals the current account balance after that transaction posted.
+// Returns undefined if the element is missing or the value cannot be parsed.
+async function getCurrentBalance(page: Page): Promise<number | undefined> {
+  try {
+    const balanceStr = await page.$eval(
+      '.transactions .list-item-holder .entire-content-ctr:first-of-type .col:last-child',
+      el => (el as HTMLElement).innerText,
+    );
+    const parsed = parseFloat(balanceStr.replace(/,/g, '').trim());
+    return Number.isNaN(parsed) ? undefined : parsed;
+  } catch {
+    return undefined;
+  }
+}
+
 async function fetchAccountData(
   page: Page,
   startDate: Moment,
@@ -178,9 +195,11 @@ async function fetchAccountData(
   await searchByDates(page, startDate);
   await waitUntilElementDisappear(page, '.loading-bar-spinner');
   const txns = await getAccountTransactions(page, options);
+  const balance = await getCurrentBalance(page);
 
   return {
     accountNumber: accountID,
+    balance,
     txns,
   };
 }
