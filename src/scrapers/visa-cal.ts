@@ -31,6 +31,8 @@ const SSO_AUTHORIZATION_REQUEST_ENDPOINT = 'https://connect.cal-online.co.il/col
 
 const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו שגויים';
 const ChangePasswordMessage = 'להחליף סיסמה';
+const ChangePasswordSubtitle = 'הגיע הזמן לסיסמה חדשה';
+const ChangePasswordUrl = '/change-password';
 
 const debug = getDebug('visa-cal');
 
@@ -238,14 +240,48 @@ async function hasInvalidPasswordError(page: Page) {
 }
 
 async function hasChangePasswordForm(page: Page) {
-  const frame = await getLoginFrame(page);
-  // "כדי להחליף סיסמה יש ללחוץ על 'שכחתי שם משתמש / סיסמה' במסך הכניסה"
-  const errorFound = await elementPresentOnPage(frame, '.err-desc');
-  if (errorFound) {
-    const errText = await pageEval(frame, '.err-desc', '', item => {
-      return (item as HTMLElement).innerText.trim();
-    });
-    return errText.includes(ChangePasswordMessage);
+  // Check if any frame navigated to the change-password route
+  const changePasswordFrame = page.frames().find(f => {
+    const url = f.url();
+    return url.includes('connect.cal-online.co.il') && url.includes(ChangePasswordUrl);
+  });
+  if (changePasswordFrame) {
+    return true;
+  }
+
+  try {
+    const frame = await getLoginFrame(page);
+
+    // Check for the change-password Angular component
+    if (await elementPresentOnPage(frame, 'change-password')) {
+      return true;
+    }
+
+    // Check for the change password title element
+    if (await elementPresentOnPage(frame, '.change-password-title')) {
+      return true;
+    }
+
+    // Check for the change password subtitle text
+    if (await elementPresentOnPage(frame, '.change-password-subtitle')) {
+      const subtitleText = await pageEval(frame, '.change-password-subtitle', '', item => {
+        return (item as HTMLElement).innerText.trim();
+      });
+      if (subtitleText.includes(ChangePasswordSubtitle)) {
+        return true;
+      }
+    }
+
+    // Legacy: check for the old .err-desc based change password message
+    const errorFound = await elementPresentOnPage(frame, '.err-desc');
+    if (errorFound) {
+      const errText = await pageEval(frame, '.err-desc', '', item => {
+        return (item as HTMLElement).innerText.trim();
+      });
+      return errText.includes(ChangePasswordMessage);
+    }
+  } catch (e) {
+    debug('failed to check change password form in login frame: %s', (e as Error).message);
   }
   return false;
 }
