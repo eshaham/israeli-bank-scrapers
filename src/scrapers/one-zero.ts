@@ -16,7 +16,7 @@ import {
   type ScraperScrapingResult,
   type ScraperTwoFactorAuthTriggerResult,
 } from './interface';
-import { GET_CUSTOMER, GET_MOVEMENTS } from './one-zero-queries';
+import { GET_CARD_ACTIVITY, GET_CARDS_DETAILS, GET_CUSTOMER, GET_MOVEMENTS } from './one-zero-queries';
 
 const HEBREW_WORDS_REGEX = /[\u0590-\u05FF][\u0590-\u05FF"'\-_ /\\]*[\u0590-\u05FF]/g;
 
@@ -80,6 +80,40 @@ type Movement = {
 };
 
 type QueryPagination = { hasMore: boolean; cursor: string };
+
+type CardAmount = {
+  amount: number;
+  currency: string;
+};
+
+type CardBaseDetails = {
+  cardId: string;
+  lastFourDigits: string;
+  cardType: string;
+  cardStatus: string;
+  currency: string;
+  localFirstName: string;
+  localLastName: string;
+  provider: string;
+};
+
+type CardDetail = {
+  baseDetails: CardBaseDetails;
+};
+
+type CardTransaction = {
+  transactionId: string;
+  merchantName: string;
+  purchaseDate: string;
+  paymentDate: string | null;
+  debitAmount: CardAmount | null;
+  originalAmount: CardAmount | null;
+  direction: string;
+  status: string;
+  type: string;
+  numberOfPayments: number | null;
+  paymentNumber: number | null;
+};
 
 const IDENTITY_SERVER_URL = 'https://identity.tfd-bank.com/v1';
 
@@ -292,6 +326,91 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
     };
   }
 
+  private async fetchCreditCardAccounts(portfolioId: string, startDate: Date): Promise<TransactionsAccount[]> {
+    debug('Fetching credit cards list');
+    const cardsResult = await mobileFetchGraphql<{ cardsDetailsV3: { cardsDetails: CardDetail[] } }>(
+      GRAPHQL_API_URL,
+      GET_CARDS_DETAILS,
+      { portfolioId },
+      { authorization: `Bearer ${this.accessToken}` },
+    );
+
+    const cards = cardsResult.cardsDetailsV3.cardsDetails.filter(card => card.baseDetails.cardStatus === 'ACTIVE');
+
+    const accounts: TransactionsAccount[] = [];
+
+    for (const card of cards) {
+      const { cardId, lastFourDigits } = card.baseDetails;
+      const allTransactions: CardTransaction[] = [];
+
+      const now = new Date();
+      let year = now.getFullYear();
+      let month = now.getMonth() + 1;
+      const startYear = startDate.getFullYear();
+      const startMonth = startDate.getMonth() + 1;
+
+      while (year > startYear || (year === startYear && month >= startMonth)) {
+        debug(`Fetching card activity for *${lastFourDigits}, ${year}-${month}`);
+        try {
+          const activityResult = await mobileFetchGraphql<{
+            cardActivityV3: { transactions: CardTransaction[] };
+          }>(
+            GRAPHQL_API_URL,
+            GET_CARD_ACTIVITY,
+            { cardId, billingYear: year, billingMonth: month },
+            { authorization: `Bearer ${this.accessToken}` },
+          );
+          allTransactions.push(...activityResult.cardActivityV3.transactions);
+        } catch (e) {
+          debug(`Failed to fetch card activity for *${lastFourDigits}, ${year}-${month}: ${String(e)}`);
+        }
+        month -= 1;
+        if (month === 0) {
+          month = 12;
+          year -= 1;
+        }
+      }
+
+      const matchingTransactions = allTransactions
+        .filter(txn => new Date(txn.purchaseDate) >= startDate)
+        .sort((a, b) => new Date(a.purchaseDate).valueOf() - new Date(b.purchaseDate).valueOf());
+
+      accounts.push({
+        accountNumber: `card-${lastFourDigits}`,
+        txns: matchingTransactions.map((txn): ScrapingTransaction => {
+          const modifier = txn.direction === 'DEBIT' ? -1 : 1;
+          const isInstallment = (txn.numberOfPayments ?? 0) > 1;
+          const result: ScrapingTransaction = {
+            identifier: txn.transactionId,
+            date: txn.purchaseDate,
+            processedDate: txn.paymentDate ?? txn.purchaseDate,
+            chargedAmount: (txn.debitAmount?.amount ?? 0) * modifier,
+            chargedCurrency: txn.debitAmount?.currency ?? 'ILS',
+            originalAmount: (txn.originalAmount?.amount ?? 0) * modifier,
+            originalCurrency: txn.originalAmount?.currency ?? txn.debitAmount?.currency ?? 'ILS',
+            description: txn.merchantName,
+            status: txn.status === 'COMPLETED' ? TransactionStatuses.Completed : TransactionStatuses.Pending,
+            type: isInstallment ? TransactionTypes.Installments : TransactionTypes.Normal,
+            ...(isInstallment && {
+              installments: {
+                number: txn.paymentNumber ?? 1,
+                total: txn.numberOfPayments ?? 1,
+              },
+            }),
+          };
+
+          if (this.options?.includeRawTransaction) {
+            result.rawTransaction = getRawTransaction(txn);
+          }
+
+          return result;
+        }),
+      });
+    }
+
+    return accounts;
+  }
+
   /**
    * one zero hebrew strings are reversed with a unicode control character that forces display in LTR order
    * We need to remove the unicode control character, and then reverse hebrew substrings inside the string
@@ -338,11 +457,21 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
     );
     const portfolios = result.customer.flatMap(customer => customer.portfolios || []);
 
+    const accounts = await Promise.all(
+      portfolios.map(portfolio => this.fetchPortfolioMovements(portfolio, startMoment.toDate())),
+    );
+
+    if (this.options.optInFeatures?.includes('oneZero:includeCreditCards')) {
+      debug('Fetching credit card transactions (opt-in)');
+      for (const portfolio of portfolios) {
+        const cardAccounts = await this.fetchCreditCardAccounts(portfolio.portfolioId, startMoment.toDate());
+        accounts.push(...cardAccounts);
+      }
+    }
+
     return {
       success: true,
-      accounts: await Promise.all(
-        portfolios.map(portfolio => this.fetchPortfolioMovements(portfolio, startMoment.toDate())),
-      ),
+      accounts,
     };
   }
 }
