@@ -340,7 +340,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
     const accounts: TransactionsAccount[] = [];
 
     for (const card of cards) {
-      const { cardId, lastFourDigits } = card.baseDetails;
+      const { cardId, lastFourDigits, localFirstName, localLastName } = card.baseDetails;
       const allTransactions: CardTransaction[] = [];
 
       const now = new Date();
@@ -376,7 +376,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
         .sort((a, b) => new Date(a.purchaseDate).valueOf() - new Date(b.purchaseDate).valueOf());
 
       accounts.push({
-        accountNumber: `card-${lastFourDigits}`,
+        accountNumber: `*${lastFourDigits} ${localFirstName} ${localLastName}`,
         txns: matchingTransactions.map((txn): ScrapingTransaction => {
           const modifier = txn.direction === 'DEBIT' ? -1 : 1;
           const isInstallment = (txn.numberOfPayments ?? 0) > 1;
@@ -389,7 +389,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
             originalAmount: (txn.originalAmount?.amount ?? 0) * modifier,
             originalCurrency: txn.originalAmount?.currency ?? txn.debitAmount?.currency ?? 'ILS',
             description: txn.merchantName,
-            status: txn.status === 'COMPLETED' ? TransactionStatuses.Completed : TransactionStatuses.Pending,
+            status: txn.status === 'BOOKED' ? TransactionStatuses.Completed : TransactionStatuses.Pending,
             type: isInstallment ? TransactionTypes.Installments : TransactionTypes.Normal,
             ...(isInstallment && {
               installments: {
