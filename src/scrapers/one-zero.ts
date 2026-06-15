@@ -1,6 +1,6 @@
 import moment from 'moment/moment';
 import { getDebug } from '../helpers/debug';
-import { fetchGraphql, fetchPost } from '../helpers/fetch';
+import { mobileFetchGraphql, mobileFetchPost } from '../helpers/mobile-fetch';
 import { getRawTransaction } from '../helpers/transactions';
 import {
   type Transaction as ScrapingTransaction,
@@ -81,7 +81,7 @@ type Movement = {
 
 type QueryPagination = { hasMore: boolean; cursor: string };
 
-const IDENTITY_SERVER_URL = 'https://identity.tfd-bank.com/v1/';
+const IDENTITY_SERVER_URL = 'https://identity.tfd-bank.com/v1';
 
 const GRAPHQL_API_URL = 'https://mobile.tfd-bank.com/mobile-graph/graphql';
 
@@ -108,7 +108,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
     }
 
     debug('Fetching device token');
-    const deviceTokenResponse = await fetchPost(`${IDENTITY_SERVER_URL}/devices/token`, {
+    const deviceTokenResponse = await mobileFetchPost(`${IDENTITY_SERVER_URL}/devices/token`, {
       extClientId: 'mobile',
       os: 'Android',
     });
@@ -119,7 +119,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
 
     debug(`Sending OTP to phone number ${phoneNumber}`);
 
-    const otpPrepareResponse = await fetchPost(`${IDENTITY_SERVER_URL}/otp/prepare`, {
+    const otpPrepareResponse = await mobileFetchPost(`${IDENTITY_SERVER_URL}/otp/prepare`, {
       factorValue: phoneNumber,
       deviceToken,
       otpChannel: 'SMS_OTP',
@@ -142,7 +142,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
     }
 
     debug('Requesting OTP token');
-    const otpVerifyResponse = await fetchPost(`${IDENTITY_SERVER_URL}/otp/verify`, {
+    const otpVerifyResponse = await mobileFetchPost(`${IDENTITY_SERVER_URL}/otp/verify`, {
       otpContext: this.otpContext,
       otpCode,
     });
@@ -199,7 +199,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
     }
 
     debug('Requesting id token');
-    const getIdTokenResponse = await fetchPost(`${IDENTITY_SERVER_URL}/getIdToken`, {
+    const getIdTokenResponse = await mobileFetchPost(`${IDENTITY_SERVER_URL}/getIdToken`, {
       otpSmsToken: otpTokenResult.longTermTwoFactorAuthToken,
       email: credentials.email,
       pass: credentials.password,
@@ -212,7 +212,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
 
     debug('Requesting session token');
 
-    const getSessionTokenResponse = await fetchPost(`${IDENTITY_SERVER_URL}/sessions/token`, {
+    const getSessionTokenResponse = await mobileFetchPost(`${IDENTITY_SERVER_URL}/sessions/token`, {
       idToken,
       pass: credentials.password,
     });
@@ -239,7 +239,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
       debug(`Fetching transactions for account ${portfolio.portfolioNum}...`);
       const {
         movements: { movements: newMovements, pagination },
-      }: { movements: { movements: Movement[]; pagination: QueryPagination } } = await fetchGraphql(
+      }: { movements: { movements: Movement[]; pagination: QueryPagination } } = await mobileFetchGraphql(
         GRAPHQL_API_URL,
         GET_MOVEMENTS,
         {
@@ -330,7 +330,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
     debug('Fetching account list');
-    const result = await fetchGraphql<{ customer: Customer[] }>(
+    const result = await mobileFetchGraphql<{ customer: Customer[] }>(
       GRAPHQL_API_URL,
       GET_CUSTOMER,
       {},
