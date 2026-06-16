@@ -123,7 +123,10 @@ export async function fetchPostWithinPage<TResult>(
   } catch (e) {
     if (!ignoreErrors) {
       throw new Error(
-        `fetchPostWithinPage parse error: ${e instanceof Error ? `${e.message}\n${e.stack}` : String(e)}, url: ${url}, data: ${JSON.stringify(data)}, extraHeaders: ${JSON.stringify(extraHeaders)}, result: ${result}`,
+        // Only log the field names, never their values: request bodies/headers can contain
+        // credentials (e.g. passwords, auth tokens). `result` is the institute's response body
+        // (not user credentials) and is kept as the primary diagnostic for the parse failure.
+        `fetchPostWithinPage parse error: ${e instanceof Error ? `${e.message}\n${e.stack}` : String(e)}, url: ${url}, data: ${JSON.stringify(Object.keys(data ?? {}))}, extraHeaders: ${JSON.stringify(Object.keys(extraHeaders ?? {}))}, result: ${result}`,
       );
     }
   }
