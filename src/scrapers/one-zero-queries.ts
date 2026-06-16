@@ -1,3 +1,42 @@
+export const GET_CARDS_DETAILS = `
+query GetCardsDetails($portfolioId: String!) {
+  cardsDetailsV3(portfolioId: $portfolioId) {
+    cardsDetails {
+      baseDetails {
+        cardId
+        lastFourDigits
+        cardType
+        cardStatus
+        currency
+        localFirstName
+        localLastName
+        provider
+      }
+    }
+  }
+}
+`;
+
+export const GET_CARD_ACTIVITY = `
+query GetCardActivity($cardId: String!, $billingYear: Int!, $billingMonth: Int!) {
+  cardActivityV3(cardId: $cardId, billingYear: $billingYear, billingMonth: $billingMonth) {
+    transactions {
+      transactionId
+      merchantName
+      purchaseDate
+      paymentDate
+      debitAmount { amount currency }
+      originalAmount { amount currency }
+      direction
+      status
+      type
+      numberOfPayments
+      paymentNumber
+    }
+  }
+}
+`;
+
 export const GET_CUSTOMER = `
 query GetCustomer {
   customer {
