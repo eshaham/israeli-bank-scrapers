@@ -2,7 +2,6 @@ import moment from 'moment';
 import { type Page } from 'puppeteer';
 import { randomUUID } from 'crypto';
 import { getDebug } from '../helpers/debug';
-
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import { getCurrentUrl } from '../helpers/navigation';
 import { sleep, waitUntil } from '../helpers/waiting';
@@ -357,7 +356,9 @@ class HapoalimScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials>
 
       for (let i = 0; i < otpInputs.length; i++) {
         await otpInputs[i].click();
-        await otpInputs[i].evaluate((el) => { (el as HTMLInputElement).value = ''; });
+        await otpInputs[i].evaluate(el => {
+          el.value = '';
+        });
         if (i < otpCode.length) {
           await otpInputs[i].type(otpCode[i], { delay: 50 });
         }
@@ -369,9 +370,8 @@ class HapoalimScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials>
       // which Angular ignores.
       await this.page.click(OTP_SUBMIT_SELECTOR);
 
-      let otpResult: string;
       try {
-        otpResult = await waitUntil(
+        await waitUntil(
           async () => {
             const otpForm = await this.page.$(OTP_FORM_SELECTOR);
             const errorEl = await this.page.$(OTP_ERROR_SELECTOR);
@@ -388,7 +388,6 @@ class HapoalimScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials>
       } catch {
         // Timeout: error selector didn't match but form is still showing — treat as wrong OTP
         debug('OTP waitUntil timed out — treating as wrong OTP');
-        otpResult = 'error';
       }
 
       if (!(await this.page.$(OTP_FORM_SELECTOR))) {

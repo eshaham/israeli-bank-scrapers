@@ -41,7 +41,7 @@ export function waitUntil<T>(
             setTimeout(wait, interval);
           }
         })
-        .catch((err) => {
+        .catch(err => {
           reject(err || new Error(description || 'waitUntil test function threw'));
         });
     }

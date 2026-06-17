@@ -364,7 +364,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
       expires,
       httpOnly,
       secure,
-      sameSite: sameSite as DeviceTrustData['cookies'][number]['sameSite'],
+      sameSite,
     }));
 
     const localStorage = await this.page.evaluate(() => {

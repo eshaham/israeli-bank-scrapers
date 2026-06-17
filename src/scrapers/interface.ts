@@ -1,4 +1,4 @@
-import { type BrowserContext, type Browser, type Page } from 'puppeteer';
+import { type BrowserContext, type Browser, type CookieData, type Page } from 'puppeteer';
 import { type CompanyTypes, type ScraperProgressTypes } from '../definitions';
 import { type TransactionsAccount } from '../transactions';
 import { type ErrorResult, type ScraperErrorTypes } from './errors';
@@ -28,19 +28,8 @@ export type OptInFeatures =
   | 'mizrahi:pendingIfHasGenericDescription'
   | 'mizrahi:pendingIfTodayTransaction';
 
-export interface DeviceTrustCookie {
-  name: string;
-  value: string;
-  domain?: string;
-  path?: string;
-  expires?: number;
-  httpOnly?: boolean;
-  secure?: boolean;
-  sameSite?: 'Strict' | 'Lax' | 'None';
-}
-
 export interface DeviceTrustData {
-  cookies: DeviceTrustCookie[];
+  cookies: CookieData[];
   localStorage: Record<string, string>;
 }
 
