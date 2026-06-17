@@ -341,15 +341,23 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
       debug(`injected ${data.cookies.length} cookies`);
     }
     if (data.localStorage && Object.keys(data.localStorage).length) {
-      const domain = data.cookies?.find(c => c.domain)?.domain?.replace(/^\./, '');
-      if (domain) {
-        await this.page.goto(`https://${domain}`, { waitUntil: 'domcontentloaded' });
+      // localStorage is origin-scoped — it MUST be restored on the same origin it was captured
+      // from, otherwise the bank's login JS reads an empty device-trust id and re-challenges 2FA.
+      // Prefer the recorded origin; fall back (for older trust data) to the most specific
+      // host-only cookie domain rather than the first cookie's (often a wildcard parent) domain.
+      const fallbackDomain = (data.cookies ?? [])
+        .map(c => c.domain)
+        .filter((d): d is string => !!d && !d.startsWith('.'))
+        .sort((a, b) => b.length - a.length)[0];
+      const origin = data.origin ?? (fallbackDomain ? `https://${fallbackDomain}` : undefined);
+      if (origin) {
+        await this.page.goto(origin, { waitUntil: 'domcontentloaded' });
         await this.page.evaluate((items: Record<string, string>) => {
           for (const [key, value] of Object.entries(items)) {
             window.localStorage.setItem(key, value);
           }
         }, data.localStorage);
-        debug(`injected ${Object.keys(data.localStorage).length} localStorage entries`);
+        debug(`injected ${Object.keys(data.localStorage).length} localStorage entries at ${origin}`);
       }
     }
   }
@@ -376,7 +384,9 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
       return items;
     });
 
-    return { cookies, localStorage };
+    const origin = await this.page.evaluate(() => window.location.origin);
+
+    return { cookies, localStorage, origin };
   }
 
   private handleLoginResult(loginResult: LoginResults) {

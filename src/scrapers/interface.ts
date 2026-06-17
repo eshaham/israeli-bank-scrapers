@@ -31,6 +31,12 @@ export type OptInFeatures =
 export interface DeviceTrustData {
   cookies: CookieData[];
   localStorage: Record<string, string>;
+  /**
+   * The origin (e.g. https://login.bankhapoalim.co.il) the localStorage was captured from.
+   * localStorage is origin-scoped, so it must be restored on the same origin or the bank's
+   * login JS won't see the device-trust identifier and will re-challenge for 2FA.
+   */
+  origin?: string;
 }
 
 export interface FutureDebit {
