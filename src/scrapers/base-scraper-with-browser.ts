@@ -38,6 +38,7 @@ export interface LoginOptions {
   possibleResults: PossibleLoginResults;
   userAgent?: string;
   waitUntil?: PuppeteerLifeCycleEvent;
+  preparePage?: () => Promise<void>;
 }
 
 async function getKeyByValue(object: PossibleLoginResults, value: string, page: Page): Promise<LoginResults> {
@@ -246,6 +247,10 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     }
 
     debug('navigate to login url');
+    if (loginOptions.preparePage) {
+      debug("execute 'preparePage' interceptor provided in login options");
+      await loginOptions.preparePage();
+    }
     await this.navigateTo(loginOptions.loginUrl, loginOptions.waitUntil);
     if (loginOptions.checkReadiness) {
       debug("execute 'checkReadiness' interceptor provided in login options");
