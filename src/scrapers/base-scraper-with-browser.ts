@@ -82,6 +82,15 @@ async function safeCleanup(cleanup: () => Promise<void>) {
   }
 }
 
+function isValidHttpOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    return url.origin === origin && (url.protocol === 'https:' || url.protocol === 'http:');
+  } catch {
+    return false;
+  }
+}
+
 class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends BaseScraper<TCredentials> {
   private cleanups: Array<() => Promise<void>> = [];
 
@@ -341,7 +350,7 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
       debug(`injected ${data.cookies.length} cookies`);
     }
     if (data.localStorage && Object.keys(data.localStorage).length) {
-      // localStorage is origin-scoped — it MUST be restored on the same origin it was captured
+      // localStorage is origin-scoped; it must be restored on the same origin it was captured
       // from, otherwise the bank's login JS reads an empty device-trust id and re-challenges 2FA.
       // Prefer the recorded origin; fall back (for older trust data) to the most specific
       // host-only cookie domain rather than the first cookie's (often a wildcard parent) domain.
@@ -349,7 +358,12 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
         .map(c => c.domain)
         .filter((d): d is string => !!d && !d.startsWith('.'))
         .sort((a, b) => b.length - a.length)[0];
-      const origin = data.origin ?? (fallbackDomain ? `https://${fallbackDomain}` : undefined);
+      const origin =
+        data.origin && isValidHttpOrigin(data.origin)
+          ? data.origin
+          : fallbackDomain
+            ? `https://${fallbackDomain}`
+            : undefined;
       if (origin) {
         await this.page.goto(origin, { waitUntil: 'domcontentloaded' });
         await this.page.evaluate((items: Record<string, string>) => {

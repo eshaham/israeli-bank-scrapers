@@ -65,6 +65,23 @@ describe('Device trust data', () => {
       expect(page.evaluate).toHaveBeenCalledWith(expect.any(Function), { k: 'v' });
     });
 
+    test('with an invalid origin, falls back to the most specific host-only cookie domain', async () => {
+      const page = createMockPage();
+      const scraper = scraperWithMockPage(page);
+
+      await injectTrust(scraper, {
+        cookies: [
+          { name: 'wildcard', value: '1', domain: '.bankhapoalim.co.il' },
+          { name: 'login', value: '2', domain: 'login.bankhapoalim.co.il' },
+        ] as DeviceTrustData['cookies'],
+        localStorage: { k: 'v' },
+        origin: 'not-an-origin',
+      });
+
+      expect(page.goto).toHaveBeenCalledWith('https://login.bankhapoalim.co.il', { waitUntil: 'domcontentloaded' });
+      expect(page.evaluate).toHaveBeenCalledWith(expect.any(Function), { k: 'v' });
+    });
+
     test('skips localStorage restore when no origin can be determined', async () => {
       const page = createMockPage();
       const scraper = scraperWithMockPage(page);
