@@ -346,7 +346,13 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
       inFromDate: getStartMoment(this.options.startDate).format(DATE_FORMAT),
       inToDate: moment().format(DATE_FORMAT),
       inSugTnua: '',
-      table: { sortExpression: 'MC02PeulaTaaEZ DESC', sortOrder: 'DESC', startRowIndex: 0, maxRow: MAX_ROWS_PER_REQUEST, actionGuid: '' },
+      table: {
+        sortExpression: 'MC02PeulaTaaEZ DESC',
+        sortOrder: 'DESC',
+        startRowIndex: 0,
+        maxRow: MAX_ROWS_PER_REQUEST,
+        actionGuid: '',
+      },
       isFromSearch: false,
     };
     const response = await fetchPostWithinPage<ScrapedTransactionsResult>(this.page, url, data, apiHeaders);
