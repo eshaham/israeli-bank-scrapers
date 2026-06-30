@@ -77,7 +77,7 @@ type MoreDetails = {
 const BASE_WEBSITE_URL = 'https://www.mizrahi-tefahot.co.il';
 const LOGIN_URL = `${BASE_WEBSITE_URL}/login/index.html#/auth-page-he`;
 const BASE_APP_URL = 'https://mto.mizrahi-tefahot.co.il';
-const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/OnlineApp\/.*/;
+const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/OnlineApp(Pilot)?\/.*/;
 const OSH_PAGE = '/osh/legacy/legacy-Osh-Main';
 const TRANSACTIONS_PAGE = '/osh/legacy/root-main-osh-p428New';
 const TRANSACTIONS_REQUEST_URLS = [
@@ -86,7 +86,7 @@ const TRANSACTIONS_REQUEST_URLS = [
 ];
 const PENDING_TRANSACTIONS_PAGE = '/osh/legacy/legacy-Osh-p420';
 const PENDING_TRANSACTIONS_IFRAME = 'p420.aspx';
-const MORE_DETAILS_URL = `${BASE_APP_URL}/Online/api/OSH/getMaherBerurimSMF`;
+const MORE_DETAILS_URL = `${BASE_APP_URL}/OnlinePilot/api/OSH/getMaherBerurimSMF`;
 const CHANGE_PASSWORD_URL = /https:\/\/www\.mizrahi-tefahot\.co\.il\/login\/index\.html#\/change-pass/;
 const DATE_FORMAT = 'DD/MM/YYYY';
 const MAX_ROWS_PER_REQUEST = 10000000000;
@@ -182,22 +182,7 @@ async function getExtraTransactionDetails(
   };
 }
 
-function createDataFromRequest(request: HTTPRequest, optionsStartDate: Date) {
-  const data = JSON.parse(request.postData() || '{}');
 
-  data.inFromDate = getStartMoment(optionsStartDate).format(DATE_FORMAT);
-  data.inToDate = moment().format(DATE_FORMAT);
-  data.table.maxRow = MAX_ROWS_PER_REQUEST;
-
-  return data;
-}
-
-function createHeadersFromRequest(request: HTTPRequest) {
-  return {
-    mizrahixsrftoken: request.headers().mizrahixsrftoken,
-    'Content-Type': request.headers()['content-type'],
-  };
-}
 
 function getTransactionIdentifier(row: ScrapedTransaction): string | number | undefined {
   if (!row.MC02AsmahtaMekoritEZ) {
@@ -341,10 +326,17 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
   }
 
   private async fetchAccount() {
-    await this.page.waitForSelector(`a[href*="${OSH_PAGE}"]`);
-    await this.page.$eval(`a[href*="${OSH_PAGE}"]`, el => (el as HTMLElement).click());
-    await waitUntilElementFound(this.page, `a[href*="${TRANSACTIONS_PAGE}"]`);
-    await this.page.$eval(`a[href*="${TRANSACTIONS_PAGE}"]`, el => (el as HTMLElement).click());
+    // OnlineAppPilot (mid-2026): get428Index is fired from an in-page iframe only on a real
+    // user click, which a headless click does not reliably reproduce. Capture the session's
+    // xsrf token from any authenticated OnlinePilot API request (keepAlive / Get428ODS fire
+    // automatically after login) and issue the get428Index request directly.
+    const tokenRequest = await this.page.waitForRequest(
+      req => /\/OnlinePilot\/api\//.test(req.url()) && !!req.headers().mizrahixsrftoken,
+    );
+    const apiHeaders = {
+      mizrahixsrftoken: tokenRequest.headers().mizrahixsrftoken,
+      'Content-Type': 'application/json',
+    };
 
     const accountNumberElement = await this.page.$('#dropdownBasic b span');
     const accountNumberHandle = await accountNumberElement?.getProperty('title');
@@ -353,15 +345,15 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
       throw new Error('Account number not found');
     }
 
-    const [response, apiHeaders] = await Promise.any(
-      TRANSACTIONS_REQUEST_URLS.map(async url => {
-        const request = await this.page.waitForRequest(url);
-        const data = createDataFromRequest(request, this.options.startDate);
-        const headers = createHeadersFromRequest(request);
-
-        return [await fetchPostWithinPage<ScrapedTransactionsResult>(this.page, url, data, headers), headers] as const;
-      }),
-    );
+    const url = TRANSACTIONS_REQUEST_URLS[0]; // OnlinePilot get428Index
+    const data = {
+      inFromDate: getStartMoment(this.options.startDate).format(DATE_FORMAT),
+      inToDate: moment().format(DATE_FORMAT),
+      inSugTnua: '',
+      table: { sortExpression: 'MC02PeulaTaaEZ DESC', sortOrder: 'DESC', startRowIndex: 0, maxRow: MAX_ROWS_PER_REQUEST, actionGuid: '' },
+      isFromSearch: false,
+    };
+    const response = await fetchPostWithinPage<ScrapedTransactionsResult>(this.page, url, data, apiHeaders);
 
     if (!response || response.header.success === false) {
       throw new Error(
