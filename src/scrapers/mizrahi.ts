@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { type Frame, type HTTPRequest, type Page } from 'puppeteer';
+import { type Frame, type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import {
   pageEvalAll,
@@ -78,8 +78,6 @@ const BASE_WEBSITE_URL = 'https://www.mizrahi-tefahot.co.il';
 const LOGIN_URL = `${BASE_WEBSITE_URL}/login/index.html#/auth-page-he`;
 const BASE_APP_URL = 'https://mto.mizrahi-tefahot.co.il';
 const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/OnlineApp(Pilot)?\/.*/;
-const OSH_PAGE = '/osh/legacy/legacy-Osh-Main';
-const TRANSACTIONS_PAGE = '/osh/legacy/root-main-osh-p428New';
 const TRANSACTIONS_REQUEST_URLS = [
   `${BASE_APP_URL}/OnlinePilot/api/SkyOSH/get428Index`,
   `${BASE_APP_URL}/Online/api/SkyOSH/get428Index`,
@@ -181,8 +179,6 @@ async function getExtraTransactionDetails(
     memo: undefined,
   };
 }
-
-
 
 function getTransactionIdentifier(row: ScrapedTransaction): string | number | undefined {
   if (!row.MC02AsmahtaMekoritEZ) {
