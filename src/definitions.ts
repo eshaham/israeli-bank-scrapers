@@ -54,7 +54,7 @@ export const SCRAPERS = {
   },
   [CompanyTypes.visaCal]: {
     name: 'Visa Cal',
-    loginFields: ['username', PASSWORD_FIELD],
+    loginFields: ['username', PASSWORD_FIELD, 'id', 'last4Digits', 'otpCodeRetriever'],
   },
   [CompanyTypes.isracard]: {
     name: 'Isracard',

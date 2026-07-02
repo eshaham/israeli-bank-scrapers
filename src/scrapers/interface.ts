@@ -12,6 +12,7 @@ export type ScraperCredentials =
   | { id: string; password: string; num: string }
   | { id: string; password: string; card6Digits: string }
   | { username: string; nationalID: string; password: string }
+  | { id: string; last4Digits: string; otpCodeRetriever: () => Promise<string> }
   | ({ email: string; password: string } & (
       | {
           otpCodeRetriever: () => Promise<string>;
