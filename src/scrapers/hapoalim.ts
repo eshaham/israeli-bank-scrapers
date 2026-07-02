@@ -1,19 +1,12 @@
 import moment from 'moment';
 import { type Page } from 'puppeteer';
 import { randomUUID } from 'crypto';
-import { v4 as uuid4 } from 'uuid';
 import { SHEKEL_CURRENCY } from '../constants';
 import { getDebug } from '../helpers/debug';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntil } from '../helpers/waiting';
-import {
-  type Transaction,
-  TransactionStatuses,
-  TransactionTypes,
-  type TransactionsAccount,
-  type Security,
-} from '../transactions';
+import { type Transaction, TransactionStatuses, TransactionTypes, type TransactionsAccount, type Security } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { type ScraperOptions } from './interface';
 import { getRawTransaction } from '../helpers/transactions';
@@ -229,8 +222,8 @@ function convertForexTransactions(txns: ForexTransaction[], currency: string): T
     const result: Transaction = {
       type: TransactionTypes.Normal,
       identifier: txn.referenceNumber || txn.recordSerialNumber,
-      date: moment(valueDateStr, DATE_FORMAT).toISOString(),
-      processedDate: moment(dateStr, DATE_FORMAT).toISOString(),
+      date: moment(dateStr, DATE_FORMAT).toISOString(),
+      processedDate: moment(valueDateStr, DATE_FORMAT).toISOString(),
       originalAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
       originalCurrency: currency,
       chargedAmount: isOutbound ? -txn.eventAmount : txn.eventAmount,
@@ -497,7 +490,7 @@ async function getInvestmentAccounts(
     const XSRFCookie = cookies.find(cookie => cookie.name === 'XSRF-TOKEN');
 
     // Use captured session or fallback to generated ones
-    const sessionId = capturedSession || uuid4();
+    const sessionId = capturedSession || randomUUID();
     const csession = capturedCsession || Math.random().toString();
 
     const headers: Record<string, any> = {
@@ -510,8 +503,6 @@ async function getInvestmentAccounts(
       headers['X-XSRF-TOKEN'] = XSRFCookie.value;
       debug('  - Using XSRF token: %s', XSRFCookie.value.substring(0, 10) + '...');
     }
-
-    debug('  - Request headers: csession=%s, session=%s', csession, sessionId);
 
     const investmentData = await fetchPostWithinPage<InvestmentAccountData>(page, investmentUrl, {}, headers);
 
@@ -635,32 +626,20 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOpt
     debug('getting information for account %s', account.accountNumber);
     const accountNumber = `${account.bankNumber}-${account.branchNumber}-${account.accountNumber}`;
 
-    let balance;
-    const isActiveAccount = account.accountClosingReasonCode === 0;
-    if (isActiveAccount) {
-      balance = await getAccountBalance(apiSiteUrl, page, accountNumber);
-    } else {
-      debug('Skipping balance for a closed account, balance will be undefined');
-    }
+    // Fetch regular chequing accounts for this account number
+    const balance = await getAccountBalance(apiSiteUrl, page, accountNumber);
+    const txns = await getAccountTransactions(
+      baseUrl,
+      apiSiteUrl,
+      page,
+      accountNumber,
+      startDateStr,
+      endDateStr,
+      additionalTransactionInformation,
+      options,
+    );
 
-    let txns: Transaction[] = [];
-    try {
-      txns = await getAccountTransactions(
-        baseUrl,
-        apiSiteUrl,
-        page,
-        accountNumber,
-        startDateStr,
-        endDateStr,
-        additionalTransactionInformation,
-        options,
-      );
-    } catch (error) {
-      debug('Error fetching transactions for %s (possibly closed account): %s', accountNumber, error);
-      // Continue with empty transactions
-    }
-
-    // Add regular checking account
+    // Add regular chequing account
     accounts.push({
       accountNumber,
       balance,
