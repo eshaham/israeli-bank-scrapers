@@ -6,7 +6,13 @@ import { getDebug } from '../helpers/debug';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
 import { waitForRedirect } from '../helpers/navigation';
 import { waitUntil } from '../helpers/waiting';
-import { type Transaction, TransactionStatuses, TransactionTypes, type TransactionsAccount, type Security } from '../transactions';
+import {
+  type Transaction,
+  TransactionStatuses,
+  TransactionTypes,
+  type TransactionsAccount,
+  type Security,
+} from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { type ScraperOptions } from './interface';
 import { getRawTransaction } from '../helpers/transactions';
@@ -422,97 +428,144 @@ async function getInvestmentAccounts(
   account: { bankNumber: string; branchNumber: string; accountNumber: string },
 ): Promise<TransactionsAccount[]> {
   debug('========== FETCHING INVESTMENT ACCOUNTS ==========');
-  const accounts: TransactionsAccount[] = [];
   const accountNumber = `${account.branchNumber}-${account.accountNumber}`; // Don't include bankNumber here because investment API doesn't use it
+  const mytradeUrl = `${baseUrl}/mytrade/app`;
+  const homepageUrl = `${baseUrl}/ng-portals/rb/he/homepage`;
+  const MAX_RETRIES = 3;
 
-  // Set up request interception to capture session headers
-  let capturedSession: string | null = null;
-  let capturedCsession: string | null = null;
-
-  const requestHandler = (request: any) => {
+  const navigateToHomepage = async () => {
     try {
-      const headers = request.headers();
-      if (headers.session && !capturedSession) {
-        capturedSession = headers.session;
-        debug('  - Captured session from network request');
-      }
-      if (headers.csession && !capturedCsession) {
-        capturedCsession = headers.csession;
-        debug('  - Captured csession from network request');
-      }
-      request.continue();
-    } catch (e) {
-      debug('  - Error in request handler: %s', e);
-      // Try to continue anyway
-      try {
-        request.continue();
-      } catch (continueError) {
-        // Ignore if already handled
-      }
+      debug('Navigating back to homepage: %s', homepageUrl);
+      await page.goto(homepageUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      debug('Homepage restored');
+    } catch (navError) {
+      debug('  - Failed to navigate back to homepage: %s', navError);
     }
   };
 
-  try {
-    // Navigate to mytrade section to establish session
-    const mytradeUrl = `${baseUrl}/mytrade/app`;
-    debug('Navigating to mytrade section: %s', mytradeUrl);
+  // Try to scrape investment accounts multiple times
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 1) {
+      debug('  - Retry attempt %d/%d, waiting 3s...', attempt, MAX_RETRIES);
+      await new Promise(resolve => setTimeout(resolve, 3000));
+    }
 
-    await page.setRequestInterception(true);
-    page.on('request', requestHandler);
+    // Set up request interception to capture session headers
+    let capturedSession: string | null = null;
+    let capturedCsession: string | null = null;
 
-    // Try to navigate, but if it fails (e.g., MyTrade not enabled), clean up and return empty
+    const requestHandler = (request: any) => {
+      try {
+        const headers = request.headers();
+        if (headers.session && !capturedSession) {
+          capturedSession = headers.session;
+          debug('  - Captured session from network request');
+        }
+        if (headers.csession && !capturedCsession) {
+          capturedCsession = headers.csession;
+          debug('  - Captured csession from network request');
+        }
+        request.continue();
+      } catch (e) {
+        debug('  - Error in request handler: %s', e);
+        // Try to continue anyway
+        try {
+          request.continue();
+        } catch (continueError) {
+          // Ignore if already handled
+        }
+      }
+    };
+
     try {
-      await page.goto(mytradeUrl, { waitUntil: 'networkidle2', timeout: 60000 });
-      // Wait longer for the page to fully load and establish session
-      await new Promise(resolve => setTimeout(resolve, 5000));
-    } catch (navError) {
-      debug('  - Navigation to MyTrade failed (likely not enabled): %s', navError);
-      // Clean up request interception
+      // Navigate to mytrade section to establish session
+      debug('Navigating to mytrade section (attempt %d/%d): %s', attempt, MAX_RETRIES, mytradeUrl);
+      await page.setRequestInterception(true);
+      page.on('request', requestHandler);
+
+      // Try to navigate, but if it fails (e.g., MyTrade not enabled), clean up and return empty
+      try {
+        await page.goto(mytradeUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+        // Wait longer for the page to fully load and establish session
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      } catch (navError) {
+        debug('  - Navigation to MyTrade failed (likely not enabled): %s', navError);
+        page.off('request', requestHandler);
+        await page.setRequestInterception(false);
+        await navigateToHomepage();
+        debug('Returning 0 investment accounts (MyTrade not accessible)');
+        return [];
+      }
+
       page.off('request', requestHandler);
       await page.setRequestInterception(false);
-      debug('Returning 0 investment accounts (MyTrade not accessible)');
-      return accounts;
-    }
 
-    // Now turn off request interception before we make API calls
-    page.off('request', requestHandler);
-    await page.setRequestInterception(false);
+      // Session headers are required for the investment API - without them the call will fail.
+      // If they weren't captured (e.g. page loaded from cache before the handler was ready), retry.
+      if (!capturedSession || !capturedCsession) {
+        debug(
+          '  - Session headers not captured on attempt %d/%d (session=%s, csession=%s)',
+          attempt,
+          MAX_RETRIES,
+          !!capturedSession,
+          !!capturedCsession,
+        );
+        if (attempt < MAX_RETRIES) {
+          await navigateToHomepage();
+          continue;
+        }
+        debug('  - Could not capture session headers after %d attempts, skipping investment accounts', MAX_RETRIES);
+        break;
+      }
 
-    debug('Mytrade page loaded, session established');
+      debug('Mytrade page loaded, session established');
 
-    const fields =
-      'EngName,EngSymbol,HebName,HebSymbol,Symbol,ExpirationDate,ItemType,StockType,IsEtf,IsForeign,CurrencyCode,Exchange,CreationEquityNum,EquityType,ContractType,AllowedOrderDirection,EquitySubType';
-    const investmentUrl = `${baseUrl}/ServerServices/mytrade/api/v2/json2/account/view?account=${accountNumber}&fields=${fields}`;
-    debug('Trying investment account URL: %s', investmentUrl);
+      const fields =
+        'EngName,EngSymbol,HebName,HebSymbol,Symbol,ExpirationDate,ItemType,StockType,IsEtf,IsForeign,CurrencyCode,Exchange,CreationEquityNum,EquityType,ContractType,AllowedOrderDirection,EquitySubType';
+      const investmentUrl = `${baseUrl}/ServerServices/mytrade/api/v2/json2/account/view?account=${accountNumber}&fields=${fields}`;
+      debug('Fetching investment account data (attempt %d/%d): %s', attempt, MAX_RETRIES, investmentUrl);
 
-    // Get XSRF token and session data from cookies
-    const cookies = await page.cookies();
-    const XSRFCookie = cookies.find(cookie => cookie.name === 'XSRF-TOKEN');
+      // Get XSRF token and session data from cookies
+      const cookies = await page.cookies();
+      const XSRFCookie = cookies.find(cookie => cookie.name === 'XSRF-TOKEN');
 
-    // Use captured session or fallback to generated ones
-    const sessionId = capturedSession || randomUUID();
-    const csession = capturedCsession || Math.random().toString();
+      // Use captured session or fallback to generated ones
+      const headers: Record<string, any> = {
+        'Content-Type': 'application/json; charset=utf-8',
+        csession: capturedCsession,
+        session: capturedSession,
+        Referer: mytradeUrl,
+      };
+      if (XSRFCookie != null) {
+        headers['X-XSRF-TOKEN'] = XSRFCookie.value;
+        debug('  - Using XSRF token: %s', `${XSRFCookie.value.substring(0, 10)}...`);
+      }
 
-    const headers: Record<string, any> = {
-      'Content-Type': 'application/json; charset=utf-8',
-      csession,
-      session: sessionId,
-      Referer: mytradeUrl,
-    };
-    if (XSRFCookie != null) {
-      headers['X-XSRF-TOKEN'] = XSRFCookie.value;
-      debug('  - Using XSRF token: %s', XSRFCookie.value.substring(0, 10) + '...');
-    }
+      const investmentData = await fetchPostWithinPage<InvestmentAccountData>(page, investmentUrl, {}, headers);
 
-    const investmentData = await fetchPostWithinPage<InvestmentAccountData>(page, investmentUrl, {}, headers);
+      debug('  - Response received: %s', investmentData ? 'YES' : 'NO');
+      if (investmentData) {
+        debug('  - Response has View: %s', investmentData.View ? 'YES' : 'NO');
+        debug('  - Response has View.Account: %s', investmentData.View?.Account ? 'YES' : 'NO');
+      }
 
-    debug('  - Response received: %s', investmentData ? 'YES' : 'NO');
-    if (investmentData) {
-      debug('  - Response has View: %s', investmentData.View ? 'YES' : 'NO');
-      debug('  - Response has View.Account: %s', investmentData.View?.Account ? 'YES' : 'NO');
-    }
+      if (!investmentData) {
+        debug('  - No data returned from investment API on attempt %d/%d', attempt, MAX_RETRIES);
+        if (attempt < MAX_RETRIES) {
+          await navigateToHomepage();
+          continue;
+        }
+        debug('  - No data returned after %d attempts, skipping investment accounts', MAX_RETRIES);
+        break;
+      }
 
-    if (investmentData?.View?.Account) {
+      if (!investmentData.View?.Account) {
+        // Valid response but no investment account — don't retry
+        debug('  - No investment account data found');
+        break;
+      }
+
       debug('✓ Found investment account data');
 
       const accountData = investmentData.View.Account;
@@ -549,53 +602,44 @@ async function getInvestmentAccounts(
 
       if (balance !== 0 || securities.length > 0) {
         const investmentAccountNumber = `${account.bankNumber}-${account.branchNumber}-${account.accountNumber}-investment`;
-        accounts.push({
+        const result: TransactionsAccount = {
           accountNumber: investmentAccountNumber,
           balance,
           currency,
           savingsAccount: true,
           txns: [],
           securities,
-        });
-
+        };
         debug('  ✓ Added investment account: %s with %d securities', investmentAccountNumber, securities.length);
-      } else {
-        debug('  - Skipping (zero balance and no securities)');
+        await navigateToHomepage();
+        debug('Returning 1 investment account');
+        return [result];
       }
-    } else {
-      debug('  - No investment account data found');
-    }
-  } catch (error) {
-    debug('  - Error fetching investment account: %s', error);
-    // Log more details about the error
-    if (error instanceof Error) {
-      debug('    Error message: %s', error.message);
-      debug('    Error stack: %s', error.stack);
-    }
-  } finally {
-    // Clean up request interception (in case it wasn't already done)
-    try {
-      page.off('request', requestHandler);
-      await page.setRequestInterception(false);
-    } catch (e) {
-      // Ignore cleanup errors
-    }
 
-    // Navigate back to the main homepage to restore the session for subsequent scraping
-    try {
-      const homepageUrl = `${baseUrl}/ng-portals/rb/he/homepage`;
-      debug('Navigating back to homepage: %s', homepageUrl);
-      await page.goto(homepageUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      debug('Homepage restored');
-    } catch (navError) {
-      debug('  - Failed to navigate back to homepage: %s', navError);
-      // Continue anyway, the outer try-catch in fetchAccountData will handle it
+      debug('  - Skipping (zero balance and no securities)');
+      break;
+    } catch (error) {
+      debug('  - Error fetching investment account (attempt %d/%d): %s', attempt, MAX_RETRIES, error);
+      // Log more details about the error
+      if (error instanceof Error) {
+        debug('    Error message: %s', error.message);
+        debug('    Error stack: %s', error.stack);
+      }
+    } finally {
+      // Clean up request interception (in case it wasn't already done)
+      try {
+        page.off('request', requestHandler);
+        await page.setRequestInterception(false);
+      } catch (e) {
+        // Ignore cleanup errors
+      }
     }
   }
 
-  debug('Returning %d investment accounts', accounts.length);
-  return accounts;
+  // Navigate back to the main homepage to restore the session for subsequent scraping
+  await navigateToHomepage();
+  debug('Returning 0 investment accounts');
+  return [];
 }
 
 async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOptions) {
