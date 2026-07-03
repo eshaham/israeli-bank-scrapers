@@ -167,11 +167,17 @@ interface CardLevelFrame {
   nextTotalDebit?: number;
 }
 
+interface IssuedCardsGroup {
+  nextTotalDebitForAccount?: number;
+  nextTotalDebitDateForAccount?: string | null;
+  frameLimitForCardAmount?: number;
+  cardLevelFrames?: CardLevelFrame[];
+}
+
 interface FramesResponse {
   result?: {
-    bankIssuedCards?: {
-      cardLevelFrames?: CardLevelFrame[];
-    };
+    calIssuedCards?: IssuedCardsGroup;
+    bankIssuedCards?: IssuedCardsGroup;
   };
 }
 
@@ -500,26 +506,42 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
     const futureMonthsToScrape = this.options.futureMonthsToScrape ?? 1;
 
-    debug('fetch frames (misgarot) of cards');
-    const frames = await fetchPost<FramesResponse>(
-      FRAMES_REQUEST_ENDPOINT,
-      { cardsForFrameData: cards.map(({ cardUniqueId }) => ({ cardUniqueId })) },
-      {
-        Authorization,
-        'X-Site-Id': xSiteId,
-        'Content-Type': 'application/json',
-        ...apiHeaders,
-      },
-    );
-
     const accounts = await Promise.all(
       cards.map(async card => {
+        debug('fetch frames (misgarot) for card %s', card.cardUniqueId);
+        const frames = await fetchPost<FramesResponse>(
+          FRAMES_REQUEST_ENDPOINT,
+          { cardsForFrameData: [{ cardUniqueId: card.cardUniqueId }] },
+          {
+            Authorization,
+            'X-Site-Id': xSiteId,
+            'Content-Type': 'application/json',
+            ...apiHeaders,
+          },
+        );
+
+        debug('frames response for card %s: %O', card.cardUniqueId, frames);
+
+        // Look for card-level frame in both calIssuedCards and bankIssuedCards
+        let frame = frames.result?.bankIssuedCards?.cardLevelFrames?.find(
+          (f: CardLevelFrame) => f.cardUniqueId === card.cardUniqueId,
+        );
+
+        if (!frame) {
+          frame = frames.result?.calIssuedCards?.cardLevelFrames?.find(
+            (f: CardLevelFrame) => f.cardUniqueId === card.cardUniqueId,
+          );
+        }
+
+        debug('searching for frame for card %s, found: %O', card.cardUniqueId, frame);
+
+        // Determine which group this card belongs to for account-level balance fallback
+        const accountGroup = frames.result?.bankIssuedCards || frames.result?.calIssuedCards;
+        const balanceDate: string | null | undefined = accountGroup?.nextTotalDebitDateForAccount;
+
         const finalMonthToFetchMoment = moment().add(futureMonthsToScrape, 'month');
         const months = finalMonthToFetchMoment.diff(startMoment, 'months');
         const allMonthsData: CardTransactionDetails[] = [];
-        const frame = frames.result?.bankIssuedCards?.cardLevelFrames?.find(
-          (f: CardLevelFrame) => f.cardUniqueId === card.cardUniqueId,
-        );
 
         debug(`fetch pending transactions for card ${card.cardUniqueId}`);
         let pendingData = await fetchPost(
@@ -577,11 +599,17 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
             ? filterOldTransactions(transactions, moment(startDate), this.options.combineInstallments || false)
             : transactions;
 
-        return {
+        // Use card-level balance if available, otherwise fall back to account-level balance
+        const balanceAmount = frame?.nextTotalDebit ?? accountGroup?.nextTotalDebitForAccount;
+        const result: TransactionsAccount = {
           txns,
-          balance: frame?.nextTotalDebit != null ? -frame.nextTotalDebit : undefined,
+          balance: balanceAmount != null ? -balanceAmount : undefined,
+          balanceDate: balanceDate != null ? balanceDate : undefined,
           accountNumber: card.last4Digits,
-        } as TransactionsAccount;
+          cardFrame: accountGroup?.frameLimitForCardAmount,
+        };
+
+        return result;
       }),
     );
 
