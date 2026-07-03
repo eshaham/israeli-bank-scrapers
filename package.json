@@ -28,6 +28,7 @@
     "postbuild": "rimraf lib/tests",
     "prepare:core": "git reset --hard && node utils/prepare-israeli-bank-scrapers-core.js && npm i --package-lock-only && npm ci && npm run lint:fix && npm run build",
     "prepare:default": "git reset --hard && npm ci && npm run build",
+    "prepare": "npm run build:types && npm run build:js",
     "reset": "git reset --hard && npm ci"
   },
   "repository": {
@@ -55,6 +56,7 @@
     "@types/jest": "^29.5.12",
     "@types/node": "^25.5.2",
     "@types/source-map-support": "^0.5.1",
+    "@typescript-eslint/parser": "^8.58.0",
     "cross-env": "^6.0.3",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
@@ -78,7 +80,8 @@
     "debug": "^4.3.2",
     "moment": "^2.22.2",
     "moment-timezone": "^0.5.37",
-    "puppeteer": "^24.40.0"
+    "puppeteer": "^24.40.0",
+    "xlsx": "^0.18.5"
   },
   "files": [
     "lib/**/*"

@@ -18,7 +18,7 @@ import {
 import { BaseScraperWithBrowser } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
 import { type ScraperOptions, type ScraperScrapingResult } from './interface';
-import { interceptionPriorities, maskHeadlessUserAgent } from '../helpers/browser';
+import { interceptionPriorities } from '../helpers/browser';
 
 const RATE_LIMIT = {
   SLEEP_BETWEEN: 1000,
@@ -400,17 +400,51 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
   }
 
   async login(credentials: ScraperSpecificCredentials): Promise<ScraperScrapingResult> {
+    // Bypass Cloudflare WAF: set a realistic User-Agent with sec-ch-ua client
+    // hints and JS-level stealth overrides.
+    // See: https://github.com/eshaham/israeli-bank-scrapers/issues/1057
+    const chromeVersion = await this.page
+      .browser()
+      .version()
+      .then(v => {
+        const match = v.match(/Chrome\/(\d+)/);
+        return match ? match[1] : '127';
+      });
+    const fullVersion = `${chromeVersion}.0.0.0`;
+    const userAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${fullVersion} Safari/537.36`;
+    const secChUa = `"Chromium";v="${chromeVersion}", "Not)A;Brand";v="99", "Google Chrome";v="${chromeVersion}"`;
+
+    await this.page.setUserAgent(userAgent);
+
+    await this.page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => false });
+      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+      Object.defineProperty(navigator, 'languages', { get: () => ['he-IL', 'he', 'en-US', 'en'] });
+      if (!(window as any).chrome) (window as any).chrome = {};
+      if (!(window as any).chrome.runtime) {
+        (window as any).chrome.runtime = { connect: () => {}, sendMessage: () => {} };
+      }
+    });
+
+    const antiWafHeaders: Record<string, string> = {
+      'sec-ch-ua': secChUa,
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      'accept-language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
+    };
+
     await this.page.setRequestInterception(true);
     this.page.on('request', request => {
       if (request.url().includes('detector-dom.min.js')) {
         debug('force abort for request do download detector-dom.min.js resource');
         void request.abort(undefined, interceptionPriorities.abort);
       } else {
-        void request.continue(undefined, interceptionPriorities.continue);
+        void request.continue(
+          { headers: { ...request.headers(), ...antiWafHeaders } },
+          interceptionPriorities.continue,
+        );
       }
     });
-
-    await maskHeadlessUserAgent(this.page);
 
     await this.navigateTo(`${this.baseUrl}/personalarea/Login`);
 
