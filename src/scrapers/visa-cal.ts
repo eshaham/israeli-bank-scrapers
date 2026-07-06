@@ -492,6 +492,118 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     };
   }
 
+  private async fetchCardData(
+    card: { cardUniqueId: string; last4Digits: string },
+    startMoment: moment.Moment,
+    startDate: Date,
+    futureMonthsToScrape: number,
+    Authorization: string,
+    xSiteId: string,
+  ): Promise<TransactionsAccount> {
+    debug('fetch frames (misgarot) for card %s', card.cardUniqueId);
+    const frames = await fetchPost<FramesResponse>(
+      FRAMES_REQUEST_ENDPOINT,
+      { cardsForFrameData: [{ cardUniqueId: card.cardUniqueId }] },
+      {
+        Authorization,
+        'X-Site-Id': xSiteId,
+        'Content-Type': 'application/json',
+        ...apiHeaders,
+      },
+    );
+
+    debug('frames response for card %s: %O', card.cardUniqueId, frames);
+
+    // Look for card-level frame in both calIssuedCards and bankIssuedCards
+    let frame = frames.result?.bankIssuedCards?.cardLevelFrames?.find(
+      (f: CardLevelFrame) => f.cardUniqueId === card.cardUniqueId,
+    );
+
+    if (!frame) {
+      frame = frames.result?.calIssuedCards?.cardLevelFrames?.find(
+        (f: CardLevelFrame) => f.cardUniqueId === card.cardUniqueId,
+      );
+    }
+
+    debug('searching for frame for card %s, found: %O', card.cardUniqueId, frame);
+
+    // Determine which group this card belongs to for account-level balance fallback
+    const accountGroup = frames.result?.bankIssuedCards || frames.result?.calIssuedCards;
+    const balanceDate: string | null | undefined = accountGroup?.nextTotalDebitDateForAccount;
+
+    const finalMonthToFetchMoment = moment().add(futureMonthsToScrape, 'month');
+    const months = finalMonthToFetchMoment.diff(startMoment, 'months');
+    const allMonthsData: CardTransactionDetails[] = [];
+
+    debug(`fetch pending transactions for card ${card.cardUniqueId}`);
+    let pendingData = await fetchPost(
+      PENDING_TRANSACTIONS_REQUEST_ENDPOINT,
+      { cardUniqueIDArray: [card.cardUniqueId] },
+      {
+        Authorization,
+        'X-Site-Id': xSiteId,
+        'Content-Type': 'application/json',
+        ...apiHeaders,
+      },
+    );
+
+    debug(`fetch completed transactions for card ${card.cardUniqueId}`);
+    for (let i = 0; i <= months; i++) {
+      const month = finalMonthToFetchMoment.clone().subtract(i, 'months');
+      const monthData = await fetchPost(
+        TRANSACTIONS_REQUEST_ENDPOINT,
+        { cardUniqueId: card.cardUniqueId, month: month.format('M'), year: month.format('YYYY') },
+        {
+          Authorization,
+          'X-Site-Id': xSiteId,
+          'Content-Type': 'application/json',
+          ...apiHeaders,
+        },
+      );
+
+      if (monthData?.statusCode !== 1)
+        throw new Error(
+          `failed to fetch transactions for card ${card.last4Digits}. Message: ${monthData?.title || ''}`,
+        );
+
+      if (!isCardTransactionDetails(monthData)) {
+        throw new Error('monthData is not of type CardTransactionDetails');
+      }
+
+      allMonthsData.push(monthData);
+    }
+
+    if (pendingData?.statusCode !== 1 && pendingData?.statusCode !== 96) {
+      debug(
+        `failed to fetch pending transactions for card ${card.last4Digits}. Message: ${pendingData?.title || ''}`,
+      );
+      pendingData = null;
+    } else if (!isCardPendingTransactionDetails(pendingData)) {
+      debug('pendingData is not of type CardTransactionDetails');
+      pendingData = null;
+    }
+
+    const transactions = convertParsedDataToTransactions(allMonthsData, pendingData, this.options);
+
+    debug('filter out old transactions');
+    const txns =
+      (this.options.outputData?.enableTransactionsFilterByDate ?? true)
+        ? filterOldTransactions(transactions, moment(startDate), this.options.combineInstallments || false)
+        : transactions;
+
+    // Use card-level balance if available, otherwise fall back to account-level balance
+    const balanceAmount = frame?.nextTotalDebit ?? accountGroup?.nextTotalDebitForAccount;
+    const result: TransactionsAccount = {
+      txns,
+      balance: balanceAmount != null ? -balanceAmount : undefined,
+      balanceDate: balanceDate != null ? balanceDate : undefined,
+      accountNumber: card.last4Digits,
+      cardFrame: accountGroup?.frameLimitForCardAmount,
+    };
+
+    return result;
+  }
+
   async fetchData(): Promise<ScraperScrapingResult> {
     const defaultStartMoment = moment().subtract(1, 'years').subtract(6, 'months').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
@@ -507,110 +619,9 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     const futureMonthsToScrape = this.options.futureMonthsToScrape ?? 1;
 
     const accounts = await Promise.all(
-      cards.map(async card => {
-        debug('fetch frames (misgarot) for card %s', card.cardUniqueId);
-        const frames = await fetchPost<FramesResponse>(
-          FRAMES_REQUEST_ENDPOINT,
-          { cardsForFrameData: [{ cardUniqueId: card.cardUniqueId }] },
-          {
-            Authorization,
-            'X-Site-Id': xSiteId,
-            'Content-Type': 'application/json',
-            ...apiHeaders,
-          },
-        );
-
-        debug('frames response for card %s: %O', card.cardUniqueId, frames);
-
-        // Look for card-level frame in both calIssuedCards and bankIssuedCards
-        let frame = frames.result?.bankIssuedCards?.cardLevelFrames?.find(
-          (f: CardLevelFrame) => f.cardUniqueId === card.cardUniqueId,
-        );
-
-        if (!frame) {
-          frame = frames.result?.calIssuedCards?.cardLevelFrames?.find(
-            (f: CardLevelFrame) => f.cardUniqueId === card.cardUniqueId,
-          );
-        }
-
-        debug('searching for frame for card %s, found: %O', card.cardUniqueId, frame);
-
-        // Determine which group this card belongs to for account-level balance fallback
-        const accountGroup = frames.result?.bankIssuedCards || frames.result?.calIssuedCards;
-        const balanceDate: string | null | undefined = accountGroup?.nextTotalDebitDateForAccount;
-
-        const finalMonthToFetchMoment = moment().add(futureMonthsToScrape, 'month');
-        const months = finalMonthToFetchMoment.diff(startMoment, 'months');
-        const allMonthsData: CardTransactionDetails[] = [];
-
-        debug(`fetch pending transactions for card ${card.cardUniqueId}`);
-        let pendingData = await fetchPost(
-          PENDING_TRANSACTIONS_REQUEST_ENDPOINT,
-          { cardUniqueIDArray: [card.cardUniqueId] },
-          {
-            Authorization,
-            'X-Site-Id': xSiteId,
-            'Content-Type': 'application/json',
-            ...apiHeaders,
-          },
-        );
-
-        debug(`fetch completed transactions for card ${card.cardUniqueId}`);
-        for (let i = 0; i <= months; i++) {
-          const month = finalMonthToFetchMoment.clone().subtract(i, 'months');
-          const monthData = await fetchPost(
-            TRANSACTIONS_REQUEST_ENDPOINT,
-            { cardUniqueId: card.cardUniqueId, month: month.format('M'), year: month.format('YYYY') },
-            {
-              Authorization,
-              'X-Site-Id': xSiteId,
-              'Content-Type': 'application/json',
-              ...apiHeaders,
-            },
-          );
-
-          if (monthData?.statusCode !== 1)
-            throw new Error(
-              `failed to fetch transactions for card ${card.last4Digits}. Message: ${monthData?.title || ''}`,
-            );
-
-          if (!isCardTransactionDetails(monthData)) {
-            throw new Error('monthData is not of type CardTransactionDetails');
-          }
-
-          allMonthsData.push(monthData);
-        }
-
-        if (pendingData?.statusCode !== 1 && pendingData?.statusCode !== 96) {
-          debug(
-            `failed to fetch pending transactions for card ${card.last4Digits}. Message: ${pendingData?.title || ''}`,
-          );
-          pendingData = null;
-        } else if (!isCardPendingTransactionDetails(pendingData)) {
-          debug('pendingData is not of type CardTransactionDetails');
-          pendingData = null;
-        }
-
-        const transactions = convertParsedDataToTransactions(allMonthsData, pendingData, this.options);
-
-        debug('filter out old transactions');
-        const txns =
-          (this.options.outputData?.enableTransactionsFilterByDate ?? true)
-            ? filterOldTransactions(transactions, moment(startDate), this.options.combineInstallments || false)
-            : transactions;
-
-        // Use card-level balance if available, otherwise fall back to account-level balance
-        const balanceAmount = frame?.nextTotalDebit ?? accountGroup?.nextTotalDebitForAccount;
-        const result: TransactionsAccount = {
-          txns,
-          balance: balanceAmount != null ? -balanceAmount : undefined,
-          balanceDate: balanceDate != null ? balanceDate : undefined,
-          accountNumber: card.last4Digits,
-          cardFrame: accountGroup?.frameLimitForCardAmount,
-        };
-
-        return result;
-      }),
+      cards.map(card =>
+        this.fetchCardData(card, startMoment, startDate, futureMonthsToScrape, Authorization, xSiteId),
+      ),
     );
 
     debug('return the scraped accounts');
