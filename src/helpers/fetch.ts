@@ -107,7 +107,7 @@ export async function fetchPostWithinPage<TResult>(
   extraHeaders: Record<string, any> = {},
   ignoreErrors = false,
 ): Promise<TResult | null> {
-  const result = await page.evaluate(
+  const [resultText, status] = await page.evaluate(
     async (innerUrl: string, innerData: Record<string, any>, innerExtraHeaders: Record<string, any>) => {
       const response = await fetch(innerUrl, {
         method: 'POST',
@@ -128,8 +128,6 @@ export async function fetchPostWithinPage<TResult>(
     data,
     extraHeaders,
   );
-
-  const [resultText, status] = result;
 
   if (!ignoreErrors) {
     assertAutomationNotBlocked(status, resultText, url);
