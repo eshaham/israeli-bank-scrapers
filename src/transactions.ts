@@ -3,7 +3,13 @@ export interface TransactionsAccount {
   balance?: number;
   balanceDate?: string;
   cardFrame?: number;
+  cardType?: CardType;
   txns: Transaction[];
+}
+
+export enum CardType {
+  BankIssued = 'bankIssued',
+  CompanyIssued = 'companyIssued',
 }
 
 export enum TransactionTypes {

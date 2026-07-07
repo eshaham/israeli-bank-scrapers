@@ -7,7 +7,13 @@ import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { getFromSessionStorage } from '../helpers/storage';
 import { filterOldTransactions, getRawTransaction } from '../helpers/transactions';
 import { waitUntil } from '../helpers/waiting';
-import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
+import {
+  CardType,
+  TransactionStatuses,
+  TransactionTypes,
+  type Transaction,
+  type TransactionsAccount,
+} from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
 import { type ScraperScrapingResult, type ScraperOptions } from './interface';
 
@@ -515,20 +521,31 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     debug('frames response for card %s: %O', card.cardUniqueId, frames);
 
     // Look for card-level frame in both calIssuedCards and bankIssuedCards
-    let frame = frames.result?.bankIssuedCards?.cardLevelFrames?.find(
+    const bankIssuedFrame = frames.result?.bankIssuedCards?.cardLevelFrames?.find(
       (f: CardLevelFrame) => f.cardUniqueId === card.cardUniqueId,
     );
 
-    if (!frame) {
-      frame = frames.result?.calIssuedCards?.cardLevelFrames?.find(
-        (f: CardLevelFrame) => f.cardUniqueId === card.cardUniqueId,
-      );
+    const calIssuedFrame = frames.result?.calIssuedCards?.cardLevelFrames?.find(
+      (f: CardLevelFrame) => f.cardUniqueId === card.cardUniqueId,
+    );
+
+    let frame: CardLevelFrame | undefined;
+    let cardType: CardType;
+    let accountGroup: IssuedCardsGroup | undefined;
+
+    if (bankIssuedFrame) {
+      frame = bankIssuedFrame;
+      cardType = CardType.BankIssued;
+      accountGroup = frames.result?.bankIssuedCards;
+    } else {
+      frame = calIssuedFrame;
+      cardType = CardType.CompanyIssued;
+      accountGroup = frames.result?.calIssuedCards;
     }
 
     debug('searching for frame for card %s, found: %O', card.cardUniqueId, frame);
+    debug('card type for card %s: %s', card.cardUniqueId, cardType);
 
-    // Determine which group this card belongs to for account-level balance fallback
-    const accountGroup = frames.result?.bankIssuedCards || frames.result?.calIssuedCards;
     const balanceDate: string | null | undefined = accountGroup?.nextTotalDebitDateForAccount;
 
     const finalMonthToFetchMoment = moment().add(futureMonthsToScrape, 'month');
@@ -574,9 +591,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     }
 
     if (pendingData?.statusCode !== 1 && pendingData?.statusCode !== 96) {
-      debug(
-        `failed to fetch pending transactions for card ${card.last4Digits}. Message: ${pendingData?.title || ''}`,
-      );
+      debug(`failed to fetch pending transactions for card ${card.last4Digits}. Message: ${pendingData?.title || ''}`);
       pendingData = null;
     } else if (!isCardPendingTransactionDetails(pendingData)) {
       debug('pendingData is not of type CardTransactionDetails');
@@ -598,6 +613,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
       balance: balanceAmount != null ? -balanceAmount : undefined,
       balanceDate: balanceDate != null ? balanceDate : undefined,
       accountNumber: card.last4Digits,
+      cardType,
       cardFrame: accountGroup?.frameLimitForCardAmount,
     };
 
@@ -619,9 +635,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     const futureMonthsToScrape = this.options.futureMonthsToScrape ?? 1;
 
     const accounts = await Promise.all(
-      cards.map(card =>
-        this.fetchCardData(card, startMoment, startDate, futureMonthsToScrape, Authorization, xSiteId),
-      ),
+      cards.map(card => this.fetchCardData(card, startMoment, startDate, futureMonthsToScrape, Authorization, xSiteId)),
     );
 
     debug('return the scraped accounts');
