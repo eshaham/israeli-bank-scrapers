@@ -171,6 +171,7 @@ interface CardPendingTransactionDetails extends CardTransactionDetailsError {
 interface CardLevelFrame {
   cardUniqueId: string;
   nextTotalDebit?: number;
+  nextDebitDate?: string;
 }
 
 interface IssuedCardsGroup {
@@ -546,7 +547,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     debug('searching for frame for card %s, found: %O', card.cardUniqueId, frame);
     debug('card type for card %s: %s', card.cardUniqueId, cardType);
 
-    const balanceDate: string | null | undefined = accountGroup?.nextTotalDebitDateForAccount;
+    const balanceDate: string | null | undefined = frame?.nextDebitDate ?? accountGroup?.nextTotalDebitDateForAccount;
 
     const finalMonthToFetchMoment = moment().add(futureMonthsToScrape, 'month');
     const months = finalMonthToFetchMoment.diff(startMoment, 'months');
