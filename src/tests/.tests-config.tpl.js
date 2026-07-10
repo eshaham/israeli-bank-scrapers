@@ -19,6 +19,7 @@ module.exports = {
     // leumi: { username: '', password: '' },
     // hapoalimBeOnline: { userCode: '', password: '' },
     // discount: { id: '', password: '', num: '' },
+    // discountBusiness: { id: '', password: '' },
     // otsarHahayal: { username: '', password: '' },
     // max: { username: '', password: '' },
     // visaCal: { username: '', password: '' },

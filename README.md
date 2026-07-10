@@ -17,6 +17,7 @@ Currently only the following banks are supported:
 - Bank Hapoalim (thanks [@sebikaplun](https://github.com/sebikaplun))
 - Leumi Bank (thanks [@esakal](https://github.com/esakal))
 - Discount Bank
+- Discount Bank for Business (SME)
 - Mercantile Bank (thanks [@ezzatq](https://github.com/ezzatq) and [@kfirarad](https://github.com/kfirarad)))
 - Mizrahi Bank (thanks [@baruchiro](https://github.com/baruchiro))
 - Otsar Hahayal Bank (thanks [@matanelgabsi](https://github.com/matanelgabsi))
@@ -296,6 +297,16 @@ const credentials = {
   id: <user identification number>,
   password: <user password>,
   num: <user identificaiton code>
+};
+```
+This scraper supports fetching transaction from up to one year (minus 1 day).
+
+## Discount Business scraper
+This scraper logs into the Discount Bank for Business (SME) site and expects the following credentials object:
+```node
+const credentials = {
+  id: <user identification number>,
+  password: <user password>
 };
 ```
 This scraper supports fetching transaction from up to one year (minus 1 day).
