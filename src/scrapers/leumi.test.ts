@@ -51,22 +51,9 @@ describe('Leumi legacy scraper', () => {
     expect(result.success).toBeTruthy();
 
     exportTransactions(COMPANY_ID, result.accounts || []);
-  });
 
-  maybeTestCompanyAPI(COMPANY_ID)('should include savings accounts', async () => {
-    const options = {
-      ...testsConfig.options,
-      companyId: COMPANY_ID,
-    };
-
-    const scraper = new LeumiScraper(options);
-    const result = await scraper.scrape(testsConfig.credentials.leumi);
-
-    expect(result).toBeDefined();
-    expect(result.success).toBeTruthy();
+    // Validate savings accounts if they exist
     expect(result.accounts).toBeDefined();
-
-    // Check if any savings accounts are present
     const savingsAccounts = result.accounts?.filter(account => account.savingsAccount === true);
 
     debug('Total accounts:', result.accounts?.length);

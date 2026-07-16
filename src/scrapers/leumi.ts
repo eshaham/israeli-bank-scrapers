@@ -15,6 +15,7 @@ const BASE_URL = 'https://hb2.bankleumi.co.il';
 const LOGIN_URL = 'https://www.leumi.co.il/he';
 const TRANSACTIONS_URL = `${BASE_URL}/eBanking/SO/SPA.aspx#/ts/BusinessAccountTrx?WidgetPar=1`;
 const FILTERED_TRANSACTIONS_URL = `${BASE_URL}/ChannelWCF/Broker.svc/ProcessRequest?moduleName=UC_SO_27_GetBusinessAccountTrx`;
+const SAVINGS_URL = `${BASE_URL}/uiapiproxy/v1/digital-retails/mobile/accounts/1/Deposits?operationList=true`;
 
 const DATE_FORMAT = 'DD.MM.YY';
 const ACCOUNT_BLOCKED_MSG = 'המנוי חסום';
@@ -204,6 +205,16 @@ async function fetchTransactionsForAccount(
   };
 }
 
+async function fetchRegularAccounts(
+  scraper: LeumiScraper,
+  page: Page,
+  startDate: Moment,
+  options: ScraperOptions,
+): Promise<TransactionsAccount[]> {
+  await scraper.navigateTo(TRANSACTIONS_URL);
+  return fetchTransactions(page, startDate, options);
+}
+
 async function getSavingsAccounts(page: Page, accountId: string): Promise<TransactionsAccount[]> {
   debug('========== FETCHING SAVINGS ACCOUNTS ==========');
   debug('Account: %s', accountId);
@@ -211,10 +222,9 @@ async function getSavingsAccounts(page: Page, accountId: string): Promise<Transa
   const accounts: TransactionsAccount[] = [];
 
   try {
-    const savingsUrl = `${BASE_URL}/uiapiproxy/v1/digital-retails/mobile/accounts/1/Deposits?operationList=true`;
-    debug('Trying savings URL: %s', savingsUrl);
+    debug('Trying savings URL: %s', SAVINGS_URL);
 
-    const savingsData = await fetchGetWithinPage<SavingsAccountData>(page, savingsUrl);
+    const savingsData = await fetchGetWithinPage<SavingsAccountData>(page, SAVINGS_URL);
     if (!savingsData || !savingsData.depositsAndSavingsItems || savingsData.depositsAndSavingsItems.length === 0) {
       debug('No savings accounts found for account %s', accountId);
       return [];
@@ -282,6 +292,26 @@ async function fetchTransactions(
   return accounts;
 }
 
+async function fetchSavingsAccounts(
+  page: Page,
+  regularAccounts: TransactionsAccount[],
+): Promise<TransactionsAccount[]> {
+  const allSavingsAccounts: TransactionsAccount[] = [];
+  const regularAccountCount = regularAccounts.length;
+
+  for (let i = 0; i < regularAccountCount; i++) {
+    try {
+      const savingsAccounts = await getSavingsAccounts(page, regularAccounts[i].accountNumber);
+      allSavingsAccounts.push(...savingsAccounts);
+      debug('Added %d savings accounts to results', savingsAccounts.length);
+    } catch (error) {
+      debug('Error fetching savings accounts for %s: %s', regularAccounts[i].accountNumber, error);
+    }
+  }
+
+  return allSavingsAccounts;
+}
+
 async function navigateToLogin(page: Page): Promise<void> {
   debug('navigating directly to login page');
   await page.goto('https://hb2.bankleumi.co.il/authenticate/logon');
@@ -324,22 +354,9 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(minimumStartMoment, moment(startDate));
 
-    await this.navigateTo(TRANSACTIONS_URL);
-
-    // Fetch regular accounts
-    const accounts = await fetchTransactions(this.page, startMoment, this.options);
-
-    // Fetch savings accounts for each regular account
-    const regularAccountCount = accounts.length;
-    for (let i = 0; i < regularAccountCount; i++) {
-      try {
-        const savingsAccounts = await getSavingsAccounts(this.page, accounts[i].accountNumber);
-        accounts.push(...savingsAccounts);
-        debug('Added %d savings accounts to results', savingsAccounts.length);
-      } catch (error) {
-        debug('Error fetching savings accounts for %s: %s', accounts[i].accountNumber, error);
-      }
-    }
+    const accounts = await fetchRegularAccounts(this, this.page, startMoment, this.options);
+    const savingsAccounts = await fetchSavingsAccounts(this.page, accounts);
+    accounts.push(...savingsAccounts);
 
     return {
       success: true,
