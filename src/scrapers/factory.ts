@@ -7,6 +7,7 @@ import BeyahadBishvilhaScraper from './beyahad-bishvilha';
 import DiscountScraper from './discount';
 import HapoalimScraper from './hapoalim';
 import { type Scraper, type ScraperCredentials, type ScraperOptions } from './interface';
+import HvrScraper from './hvr';
 import IsracardScraper from './isracard';
 import LeumiScraper from './leumi';
 import MassadScraper from './massad';
@@ -58,6 +59,8 @@ export default function createScraper(options: ScraperOptions): Scraper<ScraperC
       return new BehatsdaaScraper(options);
     case CompanyTypes.pagi:
       return new PagiScraper(options);
+    case CompanyTypes.hvr:
+      return new HvrScraper(options);
     default:
       return assertNever(options.companyId, `unknown company id ${options.companyId}`);
   }
