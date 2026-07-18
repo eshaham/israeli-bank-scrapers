@@ -78,7 +78,8 @@
     "debug": "^4.3.2",
     "moment": "^2.22.2",
     "moment-timezone": "^0.5.37",
-    "puppeteer": "^24.40.0"
+    "puppeteer": "^24.40.0",
+    "undici": "^6.27.0"
   },
   "files": [
     "lib/**/*"
