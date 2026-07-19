@@ -12,6 +12,7 @@ export enum CompanyTypes {
   max = 'max',
   otsarHahayal = 'otsarHahayal',
   discount = 'discount',
+  discountBusiness = 'discountBusiness',
   mercantile = 'mercantile',
   mizrahi = 'mizrahi',
   leumi = 'leumi',
@@ -39,6 +40,10 @@ export const SCRAPERS = {
   [CompanyTypes.discount]: {
     name: 'Discount Bank',
     loginFields: ['id', PASSWORD_FIELD, 'num'],
+  },
+  [CompanyTypes.discountBusiness]: {
+    name: 'Discount Bank Business',
+    loginFields: ['id', PASSWORD_FIELD],
   },
   [CompanyTypes.mercantile]: {
     name: 'Mercantile Bank',

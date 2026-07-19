@@ -5,6 +5,7 @@ import BehatsdaaScraper from './behatsdaa';
 import BeinleumiScraper from './beinleumi';
 import BeyahadBishvilhaScraper from './beyahad-bishvilha';
 import DiscountScraper from './discount';
+import DiscountBusinessScraper from './discount-business';
 import HapoalimScraper from './hapoalim';
 import { type Scraper, type ScraperCredentials, type ScraperOptions } from './interface';
 import IsracardScraper from './isracard';
@@ -32,6 +33,8 @@ export default function createScraper(options: ScraperOptions): Scraper<ScraperC
       return new MizrahiScraper(options);
     case CompanyTypes.discount:
       return new DiscountScraper(options);
+    case CompanyTypes.discountBusiness:
+      return new DiscountBusinessScraper(options);
     case CompanyTypes.mercantile:
       return new MercantileScraper(options);
     case CompanyTypes.otsarHahayal:
