@@ -12,6 +12,7 @@ import { randomDelay, runSerial, sleep } from '../helpers/waiting';
 import {
   TransactionStatuses,
   TransactionTypes,
+  type BillingPeriod,
   type Transaction,
   type TransactionInstallments,
   type TransactionsAccount,
@@ -62,6 +63,8 @@ interface ScrapedAccount {
   index: number;
   accountNumber: string;
   processedDate: string;
+  period: string;
+  billingTotal: number;
 }
 
 interface ScrapedLoginValidation {
@@ -83,6 +86,8 @@ interface ScrapedAccountsWithinPageResponse {
       cardIndex: string;
       cardNumber: string;
       billingDate: string;
+      period: string;
+      billingSumSekel: string;
     }[];
   };
 }
@@ -135,6 +140,8 @@ async function fetchAccounts(page: Page, servicesUrl: string, monthMoment: Momen
           index: parseInt(cardCharge.cardIndex, 10),
           accountNumber: cardCharge.cardNumber,
           processedDate: moment(cardCharge.billingDate, DATE_FORMAT).toISOString(),
+          period: cardCharge.period,
+          billingTotal: parseFloat(cardCharge.billingSumSekel),
         };
       });
     }
@@ -203,6 +210,7 @@ function convertTransactions(
       identifier: parseInt(isOutbound ? txn.voucherNumberRatzOutbound : txn.voucherNumberRatz, 10),
       date: txnMoment.toISOString(),
       processedDate: currentProcessedDate,
+      billingDate: processedDate,
       originalAmount: isOutbound ? -txn.dealSumOutbound : -txn.dealSum,
       originalCurrency: convertCurrency(txn.currentPaymentCurrency ?? txn.currencyId),
       chargedAmount: isOutbound ? -txn.paymentSumOutbound : -txn.paymentSum,
@@ -240,18 +248,23 @@ async function fetchTransactions(
   if (dataResult && dataResult.Header?.Status === '1' && dataResult.CardsTransactionsListBean) {
     const accountTxns: ScrapedAccountsWithIndex = {};
     accounts.forEach(account => {
+      const billingPeriod: BillingPeriod = {
+        billingDate: account.processedDate,
+        status: account.period === 'Next' ? 'current' : 'previous',
+        total: account.billingTotal,
+      };
+
       const txnGroups: ScrapedCurrentCardTransactions[] | undefined =
         dataResult.CardsTransactionsListBean?.[`Index${account.index}`]?.CurrentCardTransactions;
+
+      let allTxns: Transaction[] = [];
       if (txnGroups) {
-        let allTxns: Transaction[] = [];
         txnGroups.forEach(txnGroup => {
           if (txnGroup.txnIsrael) {
-            const txns = convertTransactions(txnGroup.txnIsrael, account.processedDate, options);
-            allTxns.push(...txns);
+            allTxns.push(...convertTransactions(txnGroup.txnIsrael, account.processedDate, options));
           }
           if (txnGroup.txnAbroad) {
-            const txns = convertTransactions(txnGroup.txnAbroad, account.processedDate, options);
-            allTxns.push(...txns);
+            allTxns.push(...convertTransactions(txnGroup.txnAbroad, account.processedDate, options));
           }
         });
 
@@ -261,10 +274,17 @@ async function fetchTransactions(
         if (options.outputData?.enableTransactionsFilterByDate ?? true) {
           allTxns = filterOldTransactions(allTxns, startMoment, options.combineInstallments || false);
         }
+      }
+
+      if (accountTxns[account.accountNumber]) {
+        accountTxns[account.accountNumber].txns.push(...allTxns);
+        accountTxns[account.accountNumber].billingPeriods!.push(billingPeriod);
+      } else {
         accountTxns[account.accountNumber] = {
           accountNumber: account.accountNumber,
           index: account.index,
           txns: allTxns,
+          billingPeriods: [billingPeriod],
         };
       }
     });
@@ -369,23 +389,29 @@ async function fetchAllTransactions(
     allMonths,
   );
   const combinedTxns: Record<string, Transaction[]> = {};
+  const combinedBillingPeriods: Record<string, BillingPeriod[]> = {};
 
   finalResult.forEach(result => {
     Object.keys(result).forEach(accountNumber => {
-      let txnsForAccount = combinedTxns[accountNumber];
-      if (!txnsForAccount) {
-        txnsForAccount = [];
-        combinedTxns[accountNumber] = txnsForAccount;
+      if (!combinedTxns[accountNumber]) {
+        combinedTxns[accountNumber] = [];
       }
-      const toBeAddedTxns = result[accountNumber].txns;
-      combinedTxns[accountNumber].push(...toBeAddedTxns);
+      combinedTxns[accountNumber].push(...result[accountNumber].txns);
+
+      if (!combinedBillingPeriods[accountNumber]) {
+        combinedBillingPeriods[accountNumber] = [];
+      }
+      combinedBillingPeriods[accountNumber].push(...(result[accountNumber].billingPeriods ?? []));
     });
   });
 
-  const accounts = Object.keys(combinedTxns).map(accountNumber => {
+  const allAccountNumbers = new Set([...Object.keys(combinedTxns), ...Object.keys(combinedBillingPeriods)]);
+
+  const accounts = Array.from(allAccountNumbers).map(accountNumber => {
     return {
       accountNumber,
-      txns: combinedTxns[accountNumber],
+      txns: combinedTxns[accountNumber] ?? [],
+      billingPeriods: combinedBillingPeriods[accountNumber],
     };
   });
 
