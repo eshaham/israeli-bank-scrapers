@@ -354,6 +354,18 @@ const credentials = {
 ```
 This scraper supports fetching transaction from up to one year.
 
+### OTP (quick-login) mode
+Cal's "quick login" (כניסה מהירה), keyed on the national ID, returns **all** cards linked
+to it — including PayBox, Diners and other co-branded cards that username login hides. Pass
+an `otpCodeRetriever` callback instead of a password:
+```node
+const credentials = {
+  id: <national ID>,
+  last4Digits: <last 4 digits of any card on the account>,
+  otpCodeRetriever: async () => '123456', // return the SMS code once it arrives
+};
+```
+
 ## Max scraper (Formerly Leumi-Card)
 This scraper expects the following credentials object:
 ```node
