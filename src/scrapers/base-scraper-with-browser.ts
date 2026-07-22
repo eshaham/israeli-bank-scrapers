@@ -5,7 +5,7 @@ import { clickButton, fillInput, waitUntilElementFound } from '../helpers/elemen
 import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { BaseScraper } from './base-scraper';
 import { ScraperErrorTypes } from './errors';
-import { type ScraperCredentials, type ScraperScrapingResult } from './interface';
+import { type DeviceTrustData, type ScraperCredentials, type ScraperScrapingResult } from './interface';
 
 const debug = getDebug('base-scraper-with-browser');
 
@@ -82,8 +82,19 @@ async function safeCleanup(cleanup: () => Promise<void>) {
   }
 }
 
+function isValidHttpOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    return url.origin === origin && (url.protocol === 'https:' || url.protocol === 'http:');
+  } catch {
+    return false;
+  }
+}
+
 class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends BaseScraper<TCredentials> {
   private cleanups: Array<() => Promise<void>> = [];
+
+  private extractedDeviceTrustData?: DeviceTrustData;
 
   private defaultViewportSize = {
     width: 1024,
@@ -134,6 +145,14 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     this.page.on('requestfailed', request => {
       debug('Request failed: %s %s', request.failure()?.errorText, request.url());
     });
+
+    if (this.options.deviceTrustData) {
+      try {
+        await this.injectDeviceTrustData(this.options.deviceTrustData);
+      } catch (e) {
+        debug(`failed to inject device trust data, continuing without it: ${(e as Error).message}`);
+      }
+    }
   }
 
   private async initializePage() {
@@ -286,6 +305,15 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
     return this.handleLoginResult(loginResult);
   }
 
+  async scrape(credentials: TCredentials): Promise<ScraperScrapingResult> {
+    this.extractedDeviceTrustData = undefined;
+    const result = await super.scrape(credentials);
+    if (result.success && this.extractedDeviceTrustData) {
+      result.deviceTrustData = this.extractedDeviceTrustData;
+    }
+    return result;
+  }
+
   async terminate(_success: boolean) {
     debug(`terminating browser with success = ${_success}`);
     this.emitProgress(ScraperProgressTypes.Terminating);
@@ -298,8 +326,81 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
       });
     }
 
+    if (_success && this.page) {
+      try {
+        this.extractedDeviceTrustData = await this.extractDeviceTrustData();
+        debug(
+          'extracted device trust data: %d cookies, %d localStorage entries',
+          this.extractedDeviceTrustData.cookies.length,
+          Object.keys(this.extractedDeviceTrustData.localStorage).length,
+        );
+      } catch (e) {
+        debug(`failed to extract device trust data: ${(e as Error).message}`);
+      }
+    }
+
     await Promise.all(this.cleanups.reverse().map(safeCleanup));
     this.cleanups = [];
+  }
+
+  private async injectDeviceTrustData(data: DeviceTrustData) {
+    debug('injecting device trust data');
+    if (data.cookies?.length) {
+      await this.page.setCookie(...data.cookies);
+      debug(`injected ${data.cookies.length} cookies`);
+    }
+    if (data.localStorage && Object.keys(data.localStorage).length) {
+      // localStorage is origin-scoped; it must be restored on the same origin it was captured
+      // from, otherwise the bank's login JS reads an empty device-trust id and re-challenges 2FA.
+      // Prefer the recorded origin; fall back (for older trust data) to the most specific
+      // host-only cookie domain rather than the first cookie's (often a wildcard parent) domain.
+      const fallbackDomain = (data.cookies ?? [])
+        .map(c => c.domain)
+        .filter((d): d is string => !!d && !d.startsWith('.'))
+        .sort((a, b) => b.length - a.length)[0];
+      const origin =
+        data.origin && isValidHttpOrigin(data.origin)
+          ? data.origin
+          : fallbackDomain
+            ? `https://${fallbackDomain}`
+            : undefined;
+      if (origin) {
+        await this.page.goto(origin, { waitUntil: 'domcontentloaded' });
+        await this.page.evaluate((items: Record<string, string>) => {
+          for (const [key, value] of Object.entries(items)) {
+            window.localStorage.setItem(key, value);
+          }
+        }, data.localStorage);
+        debug(`injected ${Object.keys(data.localStorage).length} localStorage entries at ${origin}`);
+      }
+    }
+  }
+
+  private async extractDeviceTrustData(): Promise<DeviceTrustData> {
+    const rawCookies = await this.page.cookies();
+    const cookies = rawCookies.map(({ name, value, domain, path, expires, httpOnly, secure, sameSite }) => ({
+      name,
+      value,
+      domain,
+      path,
+      expires,
+      httpOnly,
+      secure,
+      sameSite,
+    }));
+
+    const localStorage = await this.page.evaluate(() => {
+      const items: Record<string, string> = {};
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i)!;
+        items[key] = window.localStorage.getItem(key)!;
+      }
+      return items;
+    });
+
+    const origin = await this.page.evaluate(() => window.location.origin);
+
+    return { cookies, localStorage, origin };
   }
 
   private handleLoginResult(loginResult: LoginResults) {
@@ -323,6 +424,12 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
         return {
           success: false,
           errorType: ScraperErrorTypes.ChangePassword,
+        };
+      case LoginResults.TwoFactorRetrieverMissing:
+        this.emitProgress(ScraperProgressTypes.LoginFailed);
+        return {
+          success: false,
+          errorType: ScraperErrorTypes.TwoFactorRetrieverMissing,
         };
       default:
         throw new Error(`unexpected login result "${loginResult}"`);
