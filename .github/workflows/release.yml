@@ -23,7 +23,14 @@ jobs:
           node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org/
       - name: Upgrade npm for OIDC support
-        run: npm install -g npm@^11.5.1
+        # Node 22 bundles npm 10.9.7, which cannot self-upgrade to npm 11:
+        # `npm install -g npm@11` overwrites the running npm mid-reify and then
+        # fails with "Cannot find module 'promise-retry'". Install npm 11 into a
+        # separate prefix and prepend it to PATH instead of overwriting the
+        # bundled npm.
+        run: |
+          npm install -g npm@^11.5.1 --prefix "$HOME/.npm-global"
+          echo "$HOME/.npm-global/bin" >> "$GITHUB_PATH"
       - name: Verify npm version
         run: |
           echo "Node version: $(node -v)"
