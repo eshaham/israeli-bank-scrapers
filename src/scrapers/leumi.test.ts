@@ -1,10 +1,12 @@
-import LeumiScraper from './leumi';
-import { maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions } from '../tests/tests-utils';
-import { SCRAPERS } from '../definitions';
 import { LoginResults } from './base-scraper-with-browser';
+import LeumiScraper from './leumi';
+import { SCRAPERS } from '../definitions';
+import { getDebug } from '../helpers/debug';
+import { exportTransactions, extendAsyncTimeout, getTestsConfig, maybeTestCompanyAPI } from '../tests/tests-utils';
 
 const COMPANY_ID = 'leumi'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
+const debug = getDebug('leumi-test');
 
 describe('Leumi legacy scraper', () => {
   beforeAll(() => {
@@ -49,5 +51,29 @@ describe('Leumi legacy scraper', () => {
     expect(result.success).toBeTruthy();
 
     exportTransactions(COMPANY_ID, result.accounts || []);
+
+    // Validate savings accounts if they exist
+    expect(result.accounts).toBeDefined();
+    const savingsAccounts = result.accounts?.filter(account => account.savingsAccount === true);
+
+    debug('Total accounts:', result.accounts?.length);
+    debug('Savings accounts found:', savingsAccounts?.length);
+
+    if (savingsAccounts && savingsAccounts.length > 0) {
+      debug('Savings account details:');
+      savingsAccounts.forEach(account => {
+        debug(`  - Account: ${account.accountNumber}, Balance: ${account.balance}`);
+      });
+
+      // Verify savings account properties
+      savingsAccounts.forEach(account => {
+        expect(account.savingsAccount).toBe(true);
+        expect(account.accountNumber).toMatch(/ID/);
+        expect(account.balance).toBeDefined();
+        expect(account.txns).toBeDefined();
+      });
+    } else {
+      debug('No savings accounts found - this may be expected if the test account has no deposits');
+    }
   });
 });

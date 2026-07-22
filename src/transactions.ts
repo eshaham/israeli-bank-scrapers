@@ -4,6 +4,8 @@ export interface TransactionsAccount {
   balanceDate?: string;
   cardFrame?: number;
   cardType?: CardType;
+  currency?: string;
+  savingsAccount?: boolean;
   txns: Transaction[];
 }
 

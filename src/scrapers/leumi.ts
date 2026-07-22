@@ -2,7 +2,8 @@ import moment, { type Moment } from 'moment';
 import { type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import { getDebug } from '../helpers/debug';
-import { clickButton, fillInput, pageEval, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
+import { clickButton, fillInput, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
+import { fetchGetWithinPage } from '../helpers/fetch';
 import { getRawTransaction } from '../helpers/transactions';
 import { waitForNavigation } from '../helpers/navigation';
 import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
@@ -14,11 +15,48 @@ const BASE_URL = 'https://hb2.bankleumi.co.il';
 const LOGIN_URL = 'https://www.leumi.co.il/he';
 const TRANSACTIONS_URL = `${BASE_URL}/eBanking/SO/SPA.aspx#/ts/BusinessAccountTrx?WidgetPar=1`;
 const FILTERED_TRANSACTIONS_URL = `${BASE_URL}/ChannelWCF/Broker.svc/ProcessRequest?moduleName=UC_SO_27_GetBusinessAccountTrx`;
+const SAVINGS_URL = `${BASE_URL}/uiapiproxy/v1/digital-retails/mobile/accounts/1/Deposits?operationList=true`;
 
 const DATE_FORMAT = 'DD.MM.YY';
 const ACCOUNT_BLOCKED_MSG = 'המנוי חסום';
 const INVALID_PASSWORD_MSG = 'אחד או יותר מפרטי ההזדהות שמסרת שגויים. ניתן לנסות שוב';
 const CHANGE_PASSWORD_MODAL_SELECTOR = 'form input[name="newPwd"]';
+
+interface SavingsDepositItem {
+  index: string;
+  depositId: string;
+  depositIndex: number;
+  depositSourceId: string;
+  type: number;
+  displayName: string;
+  productName: string;
+  friendlyAccountName: string;
+  deepLink: string;
+  isForeclosed: boolean;
+  asOfDate: string;
+  createDate: string;
+  exitPointDate: string;
+  currentBalance: number;
+  initialAmount: number | null;
+  installmentsSavingFlag: boolean;
+  marginRate: string;
+  productInterestType: string | null;
+  productLinkageType: string | null;
+  sourceSystem: string;
+  depositNumber: string;
+  relatedAccountNumber: string;
+  withdrawalRequestText: string | null;
+  WithdrawalAvailableFrequency: string | null;
+  depositOperationsItems: any[];
+}
+
+interface SavingsAccountData {
+  totalDepositsAndSavingsBalance: number;
+  previousBusinessDayDate: string;
+  depositsAndSavingsItems: SavingsDepositItem[];
+  operationsItemsTotal: string;
+  operationsListItems: any[];
+}
 
 function getPossibleLoginResults() {
   const urls: LoginOptions['possibleResults'] = {
@@ -167,6 +205,59 @@ async function fetchTransactionsForAccount(
   };
 }
 
+async function fetchRegularAccounts(
+  scraper: LeumiScraper,
+  page: Page,
+  startDate: Moment,
+  options: ScraperOptions,
+): Promise<TransactionsAccount[]> {
+  await scraper.navigateTo(TRANSACTIONS_URL);
+  return fetchTransactions(page, startDate, options);
+}
+
+async function getSavingsAccounts(page: Page, accountId: string): Promise<TransactionsAccount[]> {
+  debug('========== FETCHING SAVINGS ACCOUNTS ==========');
+  debug('Account: %s', accountId);
+
+  const accounts: TransactionsAccount[] = [];
+
+  try {
+    debug('Trying savings URL: %s', SAVINGS_URL);
+
+    const savingsData = await fetchGetWithinPage<SavingsAccountData>(page, SAVINGS_URL);
+    if (!savingsData || !savingsData.depositsAndSavingsItems || savingsData.depositsAndSavingsItems.length === 0) {
+      debug('No savings accounts found for account %s', accountId);
+      return [];
+    }
+    debug('✓ Found %d savings deposits', savingsData.depositsAndSavingsItems.length);
+
+    // Create a separate account for each individual deposit
+    for (const deposit of savingsData.depositsAndSavingsItems) {
+      const balance = deposit.currentBalance;
+      const savingsAccountNumber = `${accountId}-${deposit.depositId}`;
+
+      accounts.push({
+        accountNumber: savingsAccountNumber,
+        savingsAccount: true,
+        balance,
+        txns: [],
+      });
+
+      debug(
+        'Added savings account %s with balance %s (product: %s)',
+        savingsAccountNumber,
+        balance,
+        deposit.productName,
+      );
+    }
+  } catch (error) {
+    debug('  - Error fetching savings accounts: %s', error);
+  }
+
+  debug('Returning %d savings accounts', accounts.length);
+  return accounts;
+}
+
 async function fetchTransactions(
   page: Page,
   startDate: Moment,
@@ -201,16 +292,29 @@ async function fetchTransactions(
   return accounts;
 }
 
+async function fetchSavingsAccounts(
+  page: Page,
+  regularAccounts: TransactionsAccount[],
+): Promise<TransactionsAccount[]> {
+  const allSavingsAccounts: TransactionsAccount[] = [];
+  const regularAccountCount = regularAccounts.length;
+
+  for (let i = 0; i < regularAccountCount; i++) {
+    try {
+      const savingsAccounts = await getSavingsAccounts(page, regularAccounts[i].accountNumber);
+      allSavingsAccounts.push(...savingsAccounts);
+      debug('Added %d savings accounts to results', savingsAccounts.length);
+    } catch (error) {
+      debug('Error fetching savings accounts for %s: %s', regularAccounts[i].accountNumber, error);
+    }
+  }
+
+  return allSavingsAccounts;
+}
+
 async function navigateToLogin(page: Page): Promise<void> {
-  const loginButtonSelector = '.enter_account';
-  debug('wait for homepage to click on login button');
-  await waitUntilElementFound(page, loginButtonSelector);
-  debug('navigate to login page');
-  const loginUrl = await pageEval(page, loginButtonSelector, null, element => {
-    return (element as any).href;
-  });
-  debug(`navigating to page (${loginUrl})`);
-  await page.goto(loginUrl);
+  debug('navigating directly to login page');
+  await page.goto('https://hb2.bankleumi.co.il/authenticate/logon');
   debug('waiting for page to be loaded (networkidle2)');
   await waitForNavigation(page, { waitUntil: 'networkidle2' });
   debug('waiting for components of login to enter credentials');
@@ -250,9 +354,9 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(minimumStartMoment, moment(startDate));
 
-    await this.navigateTo(TRANSACTIONS_URL);
-
-    const accounts = await fetchTransactions(this.page, startMoment, this.options);
+    const accounts = await fetchRegularAccounts(this, this.page, startMoment, this.options);
+    const savingsAccounts = await fetchSavingsAccounts(this.page, accounts);
+    accounts.push(...savingsAccounts);
 
     return {
       success: true,
