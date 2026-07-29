@@ -36,6 +36,8 @@ const debug = getDebug('base-isracard-amex');
 type CompanyServiceOptions = {
   servicesUrl: string;
   companyCode: string;
+  cardListUrl?: string;
+  cardListPageUrl?: string;
 };
 
 type ScrapedAccountsWithIndex = Record<string, TransactionsAccount & { index: number }>;
@@ -107,6 +109,31 @@ interface ScrapedTransactionData {
     }
   >;
 }
+
+interface ScrapedCardListResponse {
+  data?: {
+    creditCardList?: {
+      staticData?: {
+        cardSuffix?: string;
+        cardLimitData?: {
+          creditLimitAmount?: string;
+        };
+      };
+      initialChargeData?: {
+        cardChargeNext?: {
+          billingDate?: string;
+          billingSumSekel?: string;
+        };
+      };
+    }[];
+  };
+}
+
+type ScrapedCardBalance = {
+  balance: number;
+  balanceDate: string;
+  cardFrame: number;
+};
 
 function getAccountsUrl(servicesUrl: string, monthMoment: Moment) {
   const billingDate = monthMoment.format('YYYY-MM-DD');
@@ -274,6 +301,75 @@ async function fetchTransactions(
   return {};
 }
 
+async function fetchCardBalances(
+  page: Page,
+  cardListUrl?: string,
+  cardListPageUrl?: string,
+): Promise<Map<string, ScrapedCardBalance>> {
+  if (!cardListUrl) {
+    debug('card balance fetch skipped: no card list URL configured');
+    return new Map();
+  }
+
+  let data: ScrapedCardListResponse | null;
+  try {
+    if (!cardListPageUrl) {
+      debug(`fetching card balances from ${cardListUrl}`);
+      data = await fetchPostWithinPage<ScrapedCardListResponse>(
+        page,
+        cardListUrl,
+        {},
+        {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        true,
+      );
+    } else {
+      debug(`opening card balance page ${cardListPageUrl}`);
+      const responsePromise = page.waitForResponse(
+        response => response.url() === cardListUrl && response.request().method() === 'POST',
+        { timeout: 15000 },
+      );
+      await page.goto(cardListPageUrl, { waitUntil: 'domcontentloaded' });
+      debug(`card balance page loaded at ${page.url()}`);
+      const response = await responsePromise;
+      debug(`card balance response status: ${response.status()}`);
+      data = (await response.json()) as ScrapedCardListResponse;
+    }
+    debug(`card balance response received: ${data ? 'JSON data' : 'empty or invalid response'}`);
+  } catch (error) {
+    debug(`failed to fetch card balances from ${cardListUrl}`, error);
+    return new Map();
+  }
+  const cards = data?.data?.creditCardList ?? [];
+  debug(`card balance response contains ${cards.length} cards`);
+  const balances = new Map<string, ScrapedCardBalance>();
+
+  cards.forEach(card => {
+    const balance = Number(card.initialChargeData?.cardChargeNext?.billingSumSekel);
+    const balanceDate = card.initialChargeData?.cardChargeNext?.billingDate;
+    const cardFrame = Number(card.staticData?.cardLimitData?.creditLimitAmount);
+    const cardSuffix = card.staticData?.cardSuffix;
+    debug(
+      `card balance candidate suffix=${cardSuffix ?? '<missing>'}, ` +
+        `balance=${Number.isFinite(balance) ? balance : '<invalid>'}, ` +
+        `balanceDate=${balanceDate ?? '<missing>'}, ` +
+        `cardFrame=${Number.isFinite(cardFrame) ? cardFrame : '<invalid>'}`,
+    );
+    if (cardSuffix && balanceDate && Number.isFinite(balance) && Number.isFinite(cardFrame)) {
+      balances.set(cardSuffix, {
+        balance: -balance,
+        balanceDate: moment(balanceDate, DATE_FORMAT).format('YYYY-MM-DD[T]HH:mm:ss'),
+        cardFrame,
+      });
+    }
+  });
+
+  debug(`parsed card balances for ${balances.size} cards: ${Array.from(balances.keys()).join(', ') || '<none>'}`);
+  return balances;
+}
+
 async function getExtraScrapTransaction(
   page: Page,
   options: CompanyServiceOptions,
@@ -368,6 +464,11 @@ async function fetchAllTransactions(
     companyServiceOptions,
     allMonths,
   );
+  const cardBalances = await fetchCardBalances(
+    page,
+    companyServiceOptions.cardListUrl,
+    companyServiceOptions.cardListPageUrl,
+  );
   const combinedTxns: Record<string, Transaction[]> = {};
 
   finalResult.forEach(result => {
@@ -383,9 +484,16 @@ async function fetchAllTransactions(
   });
 
   const accounts = Object.keys(combinedTxns).map(accountNumber => {
+    const balance = cardBalances.get(accountNumber);
+    debug(
+      `account ${accountNumber} balance ${balance ? 'matched' : 'not matched'}${balance ? `: ${balance.balance}` : ''}`,
+    );
     return {
       accountNumber,
       txns: combinedTxns[accountNumber],
+      balance: balance?.balance,
+      balanceDate: balance?.balanceDate,
+      cardFrame: balance?.cardFrame,
     };
   });
 
@@ -405,12 +513,24 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
 
   private servicesUrl: string;
 
-  constructor(options: ScraperOptions, baseUrl: string, companyCode: string) {
+  private cardListUrl?: string;
+
+  private cardListPageUrl?: string;
+
+  constructor(
+    options: ScraperOptions,
+    baseUrl: string,
+    companyCode: string,
+    cardListUrl?: string,
+    cardListPageUrl?: string,
+  ) {
     super(options);
 
     this.baseUrl = baseUrl;
     this.companyCode = companyCode;
     this.servicesUrl = `${baseUrl}/services/ProxyRequestHandler.ashx`;
+    this.cardListUrl = cardListUrl;
+    this.cardListPageUrl = cardListPageUrl;
   }
 
   async login(credentials: ScraperSpecificCredentials): Promise<ScraperScrapingResult> {
@@ -516,6 +636,8 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
       {
         servicesUrl: this.servicesUrl,
         companyCode: this.companyCode,
+        cardListUrl: this.cardListUrl,
+        cardListPageUrl: this.cardListPageUrl,
       },
       startMoment,
     );
