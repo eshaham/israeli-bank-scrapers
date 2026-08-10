@@ -30,14 +30,25 @@ const ID_TYPE = '1';
 const INSTALLMENTS_KEYWORD = 'תשלום';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
+const BALANCE_DATE_OUTPUT_FORMAT = 'YYYY-MM-DD[T]HH:mm:ss';
+
+const CARD_LIST_PAGE_PATH = '/personalarea/cardlist/?WebPage=true';
+const CARD_LIST_BALANCE_READY_MARKERS = ['עבור כרטיס שמסתיים ב', 'נותר לניצול:'];
+const CARD_SUFFIX_PATTERN = '(\\d{4})';
+const AMEX_CARD_SECTION_SEPARATOR = new RegExp('עבור כרטיס שמסתיים ב\\s*');
+const AMEX_CARD_BALANCE_PATTERN =
+  /ניצלת עד כה\s*([\d,.]+)\s*(?:₪)?\s*מתוך מסגרת האשראי\s*([\d,.]+).*?נכון לתאריך\s*:?[\s]*(\d{2}[/\.\-]\d{2}[/\.\-]\d{4})/s;
+const ISRACARD_CARD_BALANCE_PATTERN = new RegExp(
+  `${CARD_SUFFIX_PATTERN}[\\s\\S]*?מסגרת:\\s*₪?\\s*([\\d,.]+)[\\s\\S]*?נותר לניצול:\\s*₪?\\s*([\\d,.]+)`,
+  'g',
+);
 
 const debug = getDebug('base-isracard-amex');
 
 type CompanyServiceOptions = {
   servicesUrl: string;
   companyCode: string;
-  cardListUrl?: string;
-  cardListPageUrl?: string;
+  cardListPageUrl: string;
 };
 
 type ScrapedAccountsWithIndex = Record<string, TransactionsAccount & { index: number }>;
@@ -110,30 +121,54 @@ interface ScrapedTransactionData {
   >;
 }
 
-interface ScrapedCardListResponse {
-  data?: {
-    creditCardList?: {
-      staticData?: {
-        cardSuffix?: string;
-        cardLimitData?: {
-          creditLimitAmount?: string;
-        };
-      };
-      initialChargeData?: {
-        cardChargeNext?: {
-          billingDate?: string;
-          billingSumSekel?: string;
-        };
-      };
-    }[];
-  };
-}
-
 type ScrapedCardBalance = {
   balance: number;
-  balanceDate: string;
+  balanceDate?: string;
   cardFrame: number;
 };
+
+export function parseCardListBalances(pageText: string): Map<string, ScrapedCardBalance> {
+  const balances = new Map<string, ScrapedCardBalance>();
+  const cardSections = pageText.split(AMEX_CARD_SECTION_SEPARATOR).slice(1);
+
+  cardSections.forEach(cardSection => {
+    const cardSuffix = cardSection.match(new RegExp(`^${CARD_SUFFIX_PATTERN}`))?.[1];
+    const balanceMatch = cardSection.match(AMEX_CARD_BALANCE_PATTERN);
+    if (!cardSuffix || !balanceMatch) {
+      return;
+    }
+
+    const balance = Number(balanceMatch[1].replace(/,/g, ''));
+    const cardFrame = Number(balanceMatch[2].replace(/,/g, ''));
+    const balanceDate = moment(balanceMatch[3].replace(/[.-]/g, '/'), DATE_FORMAT, true);
+    if (!Number.isFinite(balance) || !Number.isFinite(cardFrame) || !balanceDate.isValid()) {
+      return;
+    }
+
+    balances.set(cardSuffix, {
+      balance: -balance,
+      balanceDate: balanceDate.format(BALANCE_DATE_OUTPUT_FORMAT),
+      cardFrame,
+    });
+  });
+
+  const isracardCards = pageText.matchAll(ISRACARD_CARD_BALANCE_PATTERN);
+  for (const isracardCard of isracardCards) {
+    const [, cardSuffix, cardFrameValue, remainingCreditValue] = isracardCard;
+    const cardFrame = Number(cardFrameValue.replace(/,/g, ''));
+    const remainingCredit = Number(remainingCreditValue.replace(/,/g, ''));
+    if (!Number.isFinite(cardFrame) || !Number.isFinite(remainingCredit)) {
+      continue;
+    }
+
+    balances.set(cardSuffix, {
+      balance: -(cardFrame - remainingCredit),
+      cardFrame,
+    });
+  }
+
+  return balances;
+}
 
 function getAccountsUrl(servicesUrl: string, monthMoment: Moment) {
   const billingDate = monthMoment.format('YYYY-MM-DD');
@@ -301,73 +336,24 @@ async function fetchTransactions(
   return {};
 }
 
-async function fetchCardBalances(
-  page: Page,
-  cardListUrl?: string,
-  cardListPageUrl?: string,
-): Promise<Map<string, ScrapedCardBalance>> {
-  if (!cardListUrl) {
-    debug('card balance fetch skipped: no card list URL configured');
-    return new Map();
-  }
-
-  let data: ScrapedCardListResponse | null;
+async function fetchCardBalances(page: Page, cardListPageUrl: string): Promise<Map<string, ScrapedCardBalance>> {
   try {
-    if (!cardListPageUrl) {
-      debug(`fetching card balances from ${cardListUrl}`);
-      data = await fetchPostWithinPage<ScrapedCardListResponse>(
-        page,
-        cardListUrl,
-        {},
-        {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        true,
-      );
-    } else {
-      debug(`opening card balance page ${cardListPageUrl}`);
-      const responsePromise = page.waitForResponse(
-        response => response.url() === cardListUrl && response.request().method() === 'POST',
-        { timeout: 15000 },
-      );
-      await page.goto(cardListPageUrl, { waitUntil: 'domcontentloaded' });
-      debug(`card balance page loaded at ${page.url()}`);
-      const response = await responsePromise;
-      debug(`card balance response status: ${response.status()}`);
-      data = (await response.json()) as ScrapedCardListResponse;
-    }
-    debug(`card balance response received: ${data ? 'JSON data' : 'empty or invalid response'}`);
+    debug(`opening card balance page ${cardListPageUrl}`);
+
+    await page.goto(cardListPageUrl, { waitUntil: 'domcontentloaded' });
+    debug(`card balance page loaded at ${page.url()}`);
+    await page.waitForFunction(
+      (markers: string[]) => markers.some(marker => document.body.innerText.includes(marker)),
+      {},
+      CARD_LIST_BALANCE_READY_MARKERS,
+    );
+    const balances = parseCardListBalances(await page.evaluate(() => document.body.innerText));
+    debug(`parsed card balances for ${balances.size} cards from card list page`);
+    return balances;
   } catch (error) {
-    debug(`failed to fetch card balances from ${cardListUrl}`, error);
+    debug(`failed to fetch card balances from ${cardListPageUrl}`, error);
     return new Map();
   }
-  const cards = data?.data?.creditCardList ?? [];
-  debug(`card balance response contains ${cards.length} cards`);
-  const balances = new Map<string, ScrapedCardBalance>();
-
-  cards.forEach(card => {
-    const balance = Number(card.initialChargeData?.cardChargeNext?.billingSumSekel);
-    const balanceDate = card.initialChargeData?.cardChargeNext?.billingDate;
-    const cardFrame = Number(card.staticData?.cardLimitData?.creditLimitAmount);
-    const cardSuffix = card.staticData?.cardSuffix;
-    debug(
-      `card balance candidate suffix=${cardSuffix ?? '<missing>'}, ` +
-        `balance=${Number.isFinite(balance) ? balance : '<invalid>'}, ` +
-        `balanceDate=${balanceDate ?? '<missing>'}, ` +
-        `cardFrame=${Number.isFinite(cardFrame) ? cardFrame : '<invalid>'}`,
-    );
-    if (cardSuffix && balanceDate && Number.isFinite(balance) && Number.isFinite(cardFrame)) {
-      balances.set(cardSuffix, {
-        balance: -balance,
-        balanceDate: moment(balanceDate, DATE_FORMAT).format('YYYY-MM-DD[T]HH:mm:ss'),
-        cardFrame,
-      });
-    }
-  });
-
-  debug(`parsed card balances for ${balances.size} cards: ${Array.from(balances.keys()).join(', ') || '<none>'}`);
-  return balances;
 }
 
 async function getExtraScrapTransaction(
@@ -464,11 +450,7 @@ async function fetchAllTransactions(
     companyServiceOptions,
     allMonths,
   );
-  const cardBalances = await fetchCardBalances(
-    page,
-    companyServiceOptions.cardListUrl,
-    companyServiceOptions.cardListPageUrl,
-  );
+  const cardBalances = await fetchCardBalances(page, companyServiceOptions.cardListPageUrl);
   const combinedTxns: Record<string, Transaction[]> = {};
 
   finalResult.forEach(result => {
@@ -513,24 +495,15 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
 
   private servicesUrl: string;
 
-  private cardListUrl?: string;
+  private cardListPageUrl: string;
 
-  private cardListPageUrl?: string;
-
-  constructor(
-    options: ScraperOptions,
-    baseUrl: string,
-    companyCode: string,
-    cardListUrl?: string,
-    cardListPageUrl?: string,
-  ) {
+  constructor(options: ScraperOptions, baseUrl: string, companyCode: string) {
     super(options);
 
     this.baseUrl = baseUrl;
     this.companyCode = companyCode;
     this.servicesUrl = `${baseUrl}/services/ProxyRequestHandler.ashx`;
-    this.cardListUrl = cardListUrl;
-    this.cardListPageUrl = cardListPageUrl;
+    this.cardListPageUrl = `${baseUrl}${CARD_LIST_PAGE_PATH}`;
   }
 
   async login(credentials: ScraperSpecificCredentials): Promise<ScraperScrapingResult> {
@@ -636,7 +609,6 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
       {
         servicesUrl: this.servicesUrl,
         companyCode: this.companyCode,
-        cardListUrl: this.cardListUrl,
         cardListPageUrl: this.cardListPageUrl,
       },
       startMoment,
