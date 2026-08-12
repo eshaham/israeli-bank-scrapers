@@ -42,6 +42,7 @@ const ISRACARD_CARD_BALANCE_PATTERN = new RegExp(
   `${CARD_SUFFIX_PATTERN}[\\s\\S]*?מסגרת:\\s*₪?\\s*([\\d,.]+)[\\s\\S]*?נותר לניצול:\\s*₪?\\s*([\\d,.]+)`,
   'g',
 );
+const ISRACARD_CARD_BALANCE_DATE_PATTERN = /לחיוב ב-(\d{2}[/.\-]\d{2})/;
 
 const debug = getDebug('base-isracard-amex');
 
@@ -152,18 +153,35 @@ export function parseCardListBalances(pageText: string): Map<string, ScrapedCard
     });
   });
 
-  const isracardCards = pageText.matchAll(ISRACARD_CARD_BALANCE_PATTERN);
+  const isracardBalanceDates = [...pageText.matchAll(new RegExp(ISRACARD_CARD_BALANCE_DATE_PATTERN, 'g'))].map(
+    ([, date]) => date,
+  );
+  const uniqueIsracardBalanceDates = [...new Set(isracardBalanceDates)];
+  const fallbackIsracardBalanceDate =
+    uniqueIsracardBalanceDates.length === 1 ? uniqueIsracardBalanceDates[0] : undefined;
+  const isracardCards = [...pageText.matchAll(ISRACARD_CARD_BALANCE_PATTERN)];
+
   for (const isracardCard of isracardCards) {
     const [, cardSuffix, cardFrameValue, remainingCreditValue] = isracardCard;
+    const cardBalanceDateValue = isracardCard[0].match(ISRACARD_CARD_BALANCE_DATE_PATTERN)?.[1];
     const cardFrame = Number(cardFrameValue.replace(/,/g, ''));
     const remainingCredit = Number(remainingCreditValue.replace(/,/g, ''));
-    if (!Number.isFinite(cardFrame) || !Number.isFinite(remainingCredit)) {
+    // Cancelled cards have no usable frame and should not inherit another card's date.
+    const canUseFallbackBalanceDate = cardFrame > 0;
+    // Some active cards omit the date from their own block but share one page-level billing date.
+    const balanceDateValue =
+      cardBalanceDateValue ?? (canUseFallbackBalanceDate ? fallbackIsracardBalanceDate : undefined);
+    const balanceDate = balanceDateValue ? moment(balanceDateValue.replace(/[.-]/g, '/'), 'DD/MM', true) : undefined;
+    if (!Number.isFinite(cardFrame) || !Number.isFinite(remainingCredit) || (balanceDate && !balanceDate.isValid())) {
       continue;
     }
 
+    const balance = remainingCredit - cardFrame;
+    const formattedBalanceDate = balanceDate?.format(BALANCE_DATE_OUTPUT_FORMAT);
     balances.set(cardSuffix, {
-      balance: -(cardFrame - remainingCredit),
+      balance,
       cardFrame,
+      ...(formattedBalanceDate ? { balanceDate: formattedBalanceDate } : {}),
     });
   }
 
