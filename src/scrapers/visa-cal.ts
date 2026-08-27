@@ -1,5 +1,6 @@
 import moment from 'moment';
 import { type HTTPRequest, type Frame, type Page } from 'puppeteer';
+import { maskBrowserAutomation } from '../helpers/browser';
 import { getDebug } from '../helpers/debug';
 import { clickButton, elementPresentOnPage, pageEval, waitUntilElementFound } from '../helpers/elements-interactions';
 import { fetchPost } from '../helpers/fetch';
@@ -17,9 +18,11 @@ import {
 import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
 import { type ScraperScrapingResult, type ScraperOptions } from './interface';
 
-const apiHeaders = {
-  'User-Agent':
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
+// Static (non-fingerprint) headers for the CAL REST API. User-Agent / sec-ch-ua are deliberately
+// NOT hardcoded here: they're derived at runtime from the real browser instance (see
+// VisaCalScraper.getApiHeaders), because a stale/mismatched Chrome version in these values vs. the
+// actual Chromium build driving the page is a known bot-detection tell (see maskBrowserAutomation).
+const staticApiHeaders = {
   Origin: 'https://digital-web.cal-online.co.il',
   Referer: 'https://digital-web.cal-online.co.il',
   'Accept-Language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
@@ -27,6 +30,7 @@ const apiHeaders = {
   'Sec-Fetch-Mode': 'cors',
   'Sec-Fetch-Dest': 'empty',
 };
+const FALLBACK_CHROME_MAJOR_VERSION = '127';
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_REQUEST_ENDPOINT =
   'https://api.cal-online.co.il/Transactions/api/transactionsDetails/getCardTransactionsDetails';
@@ -419,6 +423,33 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
   private authRequestPromise: Promise<HTTPRequest | undefined> | undefined;
 
+  // Populated in initialize() from the real browser instance, so headers on the direct REST
+  // calls below always match the fingerprint maskBrowserAutomation set on the page itself.
+  private userAgent = '';
+
+  private chromeMajorVersion = FALLBACK_CHROME_MAJOR_VERSION;
+
+  async initialize() {
+    await super.initialize();
+    debug('mask automation fingerprint before navigating to the login page');
+    await maskBrowserAutomation(this.page);
+    this.userAgent = await this.page.evaluate(() => navigator.userAgent);
+    const browserVersion = await this.page.browser().version();
+    this.chromeMajorVersion = browserVersion.match(/Chrome\/(\d+)/)?.[1] ?? FALLBACK_CHROME_MAJOR_VERSION;
+  }
+
+  private getApiHeaders() {
+    return {
+      'User-Agent': this.userAgent,
+      'sec-ch-ua':
+        `"Chromium";v="${this.chromeMajorVersion}", "Not)A;Brand";v="99", ` +
+        `"Google Chrome";v="${this.chromeMajorVersion}"`,
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      ...staticApiHeaders,
+    };
+  }
+
   openLoginPopup = async () => {
     debug('open login popup, wait until login button available');
     await waitUntilElementFound(this.page, '#ccLoginDesktopBtn', true);
@@ -512,7 +543,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
           throw e;
         }
       },
-      userAgent: apiHeaders['User-Agent'],
+      userAgent: this.userAgent,
     };
   }
 
@@ -532,7 +563,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         Authorization,
         'X-Site-Id': xSiteId,
         'Content-Type': 'application/json',
-        ...apiHeaders,
+        ...this.getApiHeaders(),
       },
     );
 
@@ -586,7 +617,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         Authorization,
         'X-Site-Id': xSiteId,
         'Content-Type': 'application/json',
-        ...apiHeaders,
+        ...this.getApiHeaders(),
       },
     );
 
@@ -600,7 +631,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
           Authorization,
           'X-Site-Id': xSiteId,
           'Content-Type': 'application/json',
-          ...apiHeaders,
+          ...this.getApiHeaders(),
         },
       );
 

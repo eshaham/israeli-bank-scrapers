@@ -49,7 +49,15 @@ export async function fetchPost<TResult = any>(
     body: JSON.stringify(data),
   };
   const result = await fetch(url, request);
-  return result.json();
+  const responseText = await result.text();
+  assertAutomationNotBlocked(result.status, responseText, url);
+  try {
+    return JSON.parse(responseText);
+  } catch (e) {
+    throw new Error(
+      `fetchPost parse error: ${e instanceof Error ? e.message : String(e)}, url: ${url}, status: ${result.status}, dataFields: ${JSON.stringify(Object.keys(data ?? {}))}, extraHeaderFields: ${JSON.stringify(Object.keys(extraHeaders ?? {}))}, result: ${responseText}`,
+    );
+  }
 }
 
 export async function fetchGraphql<TResult>(
