@@ -1,7 +1,13 @@
 import moment from 'moment';
 import { type HTTPRequest, type Frame, type Page } from 'puppeteer';
 import { getDebug } from '../helpers/debug';
-import { clickButton, elementPresentOnPage, pageEval, waitUntilElementFound } from '../helpers/elements-interactions';
+import {
+  clickButton,
+  elementPresentOnPage,
+  fillInput,
+  pageEval,
+  waitUntilElementFound,
+} from '../helpers/elements-interactions';
 import { fetchPost } from '../helpers/fetch';
 import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { getFromSessionStorage } from '../helpers/storage';
@@ -326,12 +332,25 @@ function getPossibleLoginResults() {
   return urls;
 }
 
-function createLoginFields(credentials: ScraperSpecificCredentials) {
+function createLoginFields(credentials: PasswordCredentials) {
   debug('create login fields for username and password');
   return [
     { selector: '[formcontrolname="userName"]', value: credentials.username },
     { selector: '[formcontrolname="password"]', value: credentials.password },
   ];
+}
+
+// The OTP form's buttons have no stable id/selector, so match on their text.
+async function clickButtonByText(frame: Frame, matcher: RegExp): Promise<boolean> {
+  return frame.evaluate((source: string) => {
+    const re = new RegExp(source);
+    const button = Array.from(document.querySelectorAll('button')).find(el => re.test(el.textContent || ''));
+    if (button) {
+      (button as HTMLElement).click();
+      return true;
+    }
+    return false;
+  }, matcher.source);
 }
 
 function convertParsedDataToTransactions(
@@ -395,29 +414,40 @@ function convertParsedDataToTransactions(
   });
 }
 
-type ScraperSpecificCredentials = { username: string; password: string };
+type PasswordCredentials = { username: string; password: string };
+
+// OTP ("quick login") credentials: national ID + last 4 digits of any card + an SMS code.
+// Unlike username/password, this exposes ALL cards linked to the ID (PayBox, Diners, etc.).
+type OtpCredentials = { id: string; last4Digits: string; otpCodeRetriever: () => Promise<string> };
+
+type ScraperSpecificCredentials = PasswordCredentials | OtpCredentials;
+
+function isOtpCredentials(credentials: ScraperSpecificCredentials): credentials is OtpCredentials {
+  return 'otpCodeRetriever' in credentials;
+}
 
 class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   private authorization: string | undefined = undefined;
 
   private authRequestPromise: Promise<HTTPRequest | undefined> | undefined;
 
-  openLoginPopup = async () => {
+  // Open the login popup and switch to a tab: `#regular-login` (password) or `#send-otp` (OTP).
+  private openLoginTab = async (tabSelector: string, readySelector: string): Promise<Frame> => {
     debug('open login popup, wait until login button available');
     await waitUntilElementFound(this.page, '#ccLoginDesktopBtn', true);
     debug('click on the login button');
     await clickButton(this.page, '#ccLoginDesktopBtn');
-    debug('get the frame that holds the login');
     const frame = await getLoginFrame(this.page);
-    debug('wait until the password login tab header is available');
-    await waitUntilElementFound(frame, '#regular-login');
-    debug('navigate to the password login tab');
-    await clickButton(frame, '#regular-login');
-    debug('wait until the password login tab is active');
-    await waitUntilElementFound(frame, 'regular-login');
-
+    debug(`navigate to the ${tabSelector} login tab`);
+    await waitUntilElementFound(frame, tabSelector);
+    await clickButton(frame, tabSelector);
+    await waitUntilElementFound(frame, readySelector);
     return frame;
   };
+
+  openLoginPopup = () => this.openLoginTab('#regular-login', 'regular-login');
+
+  openOtpLoginPopup = () => this.openLoginTab('#send-otp', '[formcontrolname="id"]');
 
   async getCards() {
     const initData = await waitUntil(
@@ -464,6 +494,18 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     return Promise.resolve('09031987-273E-2311-906C-8AF85B17C8D9');
   }
 
+  // OTP flow: request an SMS code, wait for the caller to supply it, then enter + submit.
+  private async submitOtp(otpCodeRetriever: () => Promise<string>): Promise<void> {
+    const frame = await getLoginFrame(this.page);
+    if (!(await clickButtonByText(frame, /שלחו לי סיסמה/))) {
+      throw new Error('could not find the "send OTP via SMS" button');
+    }
+    await fillInput(frame, '[formcontrolname="otp"]', await otpCodeRetriever());
+    if (!(await clickButtonByText(frame, /כניסה|אישור|המשך/))) {
+      throw new Error('could not find the OTP submit button');
+    }
+  }
+
   getLoginOptions(credentials: ScraperSpecificCredentials): LoginOptions {
     this.authRequestPromise = this.page
       .waitForRequest(SSO_AUTHORIZATION_REQUEST_ENDPOINT, { timeout: 10_000 })
@@ -473,11 +515,18 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
       });
     return {
       loginUrl: `${LOGIN_URL}`,
-      fields: createLoginFields(credentials),
-      submitButtonSelector: 'button[type="submit"]',
+      fields: isOtpCredentials(credentials)
+        ? [
+            { selector: '[formcontrolname="id"]', value: credentials.id },
+            { selector: '[formcontrolname="secondOtpParam"]', value: credentials.last4Digits },
+          ]
+        : createLoginFields(credentials),
+      submitButtonSelector: isOtpCredentials(credentials)
+        ? () => this.submitOtp(credentials.otpCodeRetriever)
+        : 'button[type="submit"]',
       possibleResults: getPossibleLoginResults(),
       checkReadiness: async () => waitUntilElementFound(this.page, '#ccLoginDesktopBtn'),
-      preAction: this.openLoginPopup,
+      preAction: isOtpCredentials(credentials) ? this.openOtpLoginPopup : this.openLoginPopup,
       postAction: async () => {
         try {
           await waitForNavigation(this.page);

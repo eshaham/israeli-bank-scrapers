@@ -17,6 +17,12 @@ describe('VisaCal legacy scraper', () => {
     expect(SCRAPERS.visaCal.loginFields).toContain('password');
   });
 
+  test('should expose OTP (quick-login) fields in scrapers constant', () => {
+    expect(SCRAPERS.visaCal.loginFields).toContain('id');
+    expect(SCRAPERS.visaCal.loginFields).toContain('last4Digits');
+    expect(SCRAPERS.visaCal.loginFields).toContain('otpCodeRetriever');
+  });
+
   maybeTestCompanyAPI(COMPANY_ID, config => config.companyAPI.invalidPassword)(
     'should fail on invalid user/password"',
     async () => {
