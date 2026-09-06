@@ -64,3 +64,6 @@ lib/
 .idea
 .vscode
 .DS_Store
+
+# skill-creator eval workspaces (scratch, not part of the skill itself)
+.claude/skills/*-workspace/

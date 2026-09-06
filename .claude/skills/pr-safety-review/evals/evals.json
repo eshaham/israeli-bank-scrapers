@@ -1,0 +1,45 @@
+{
+  "skill_name": "pr-safety-review",
+  "evals": [
+    {
+      "id": 1,
+      "name": "visa-cal-safe-fallback-fix",
+      "prompt": "Can you review https://github.com/eshaham/israeli-bank-scrapers/pull/1153 for me? I don't have time to dig into every PR myself — just give me the important part before I approve.",
+      "expected_output": "A short SAFE verdict block (not RISKY/BREAKING). Findings should note that the diff only changes what happens in the previously-broken fallback branch (neither bankIssuedFrame nor calIssuedFrame matched) and leaves the two already-working branches (bank frame found, cal frame found) untouched -- so it's a [compat] SAFE case, not risky. Should flag as a finding (feature-safety or compat) that the new balance fallback formula (frameLimitForCardAmount - fictiveMaxAccAmt) is not exercised/verified by the author's own posted test log, since that log's nextTotalDebitForAccount was already present. Output must be short (verdict + a handful of tagged bullets), not a long essay.",
+      "files": [],
+      "expectations": [
+        "The verdict line reads SAFE",
+        "There is at least one [compat] tagged finding explaining that only the previously-unreached fallback branch changes behavior, while the bank-frame-found and cal-frame-found branches are untouched",
+        "There is a finding (tagged compat or feature-safety) calling out that the frameLimitForCardAmount - fictiveMaxAccAmt fallback formula is untested/unverified against real data",
+        "The response is a short verdict block with file:line references, not a multi-paragraph research writeup"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "isracard-amex-graceful-degradation",
+      "prompt": "What about https://github.com/eshaham/israeli-bank-scrapers/pull/1154 in the same repo -- does it introduce a change to existing behavior?",
+      "expected_output": "A short SAFE verdict. Should note under [compat] that balance/balanceDate/cardFrame were already optional fields on TransactionsAccount (added in an earlier PR) that were always undefined for isracard/amex, so populating them now isn't a break for existing consumers. Should note under [feature-safety] that the new card-list page fetch (fetchCardBalances) is wrapped in try/catch and degrades to an empty Map / undefined fields on failure rather than throwing, and that it runs as the last step of fetchData so no later core logic depends on the page's prior state. Should be short, not exhaustive.",
+      "files": [],
+      "expectations": [
+        "The verdict line reads SAFE",
+        "There is a [compat] tagged finding noting balance/cardFrame/balanceDate were already optional and previously undefined for isracard/amex, so no existing consumer sees a breaking shape change",
+        "There is a [feature-safety] tagged finding noting the new card-balance fetch is guarded by try/catch and fails soft (empty map / undefined fields) rather than throwing and aborting the scrape",
+        "The response is a short verdict block with file:line references, not a long essay"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "synthetic-breaking-and-unsafe-feature",
+      "prompt": "I put together this diff for a new loyalty-points feature on our example-bank scraper. Before I open the PR, can you do a quick safety review? The diff is at evals/fixtures/bad-diff.txt relative to the skill directory -- read it and review it the way you would a real PR diff.",
+      "expected_output": "A BREAKING verdict. Must catch that `ScrapedAccountSummary.balanceDate` was renamed to `balanceUpdatedAt` on an exported/public interface -- a breaking shape change existing consumers would notice. Must also flag under feature-safety that the new loyalty-points fetch (page.goto + fetchGetWithinPage inside fetchAccountSummary) is NOT wrapped in try/catch, so a failure there throws and would abort the whole account summary -- including the core balance/accountNumber data that used to succeed on its own -- rather than degrading gracefully; bonus if it also notes the page navigation isn't restored/accounted for before the next loop iteration. Should flag at least the 2-3 comments that just restate the code or reference issue #482 instead of explaining a non-obvious why.",
+      "files": ["evals/fixtures/bad-diff.txt"],
+      "expectations": [
+        "The verdict line reads BREAKING",
+        "A [compat] finding identifies the balanceDate -> balanceUpdatedAt rename on the exported ScrapedAccountSummary interface as a breaking change",
+        "A [feature-safety] finding identifies that the new loyalty-points await (page.goto / fetchGetWithinPage) inside fetchAccountSummary is not wrapped in try/catch and can throw, aborting the core balance-fetching that previously worked",
+        "At least one [comments] finding flags the 'since users asked for it in issue #482' comment, or the restated increment/loop comments, as unnecessary",
+        "The response is a short verdict block with file:line references, not a long essay"
+      ]
+    }
+  ]
+}
