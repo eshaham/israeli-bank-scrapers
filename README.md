@@ -408,6 +408,7 @@ const credentials = {
 
 # Known projects
 These are the projects known to be using this module:
+- [Scipio](https://github.com/t0mer/scipio) - A self-hosted RESTful API wrapper for fetching Israeli bank and credit card transactions over HTTP.
 - [Israeli YNAB updater](https://github.com/eshaham/israeli-ynab-updater) - A command line tool for exporting banks data to CSVs, formatted specifically for [YNAB](https://www.youneedabudget.com)
 - [Caspion](https://github.com/brafdlog/caspion) - An app for automatically sending transactions from Israeli banks and credit cards to budget tracking apps
 - [Finance Notifier](https://github.com/LiranBri/finance-notifier) - A simple script with the ability to send custom financial alerts to multiple contacts and platforms
@@ -416,7 +417,6 @@ These are the projects known to be using this module:
 - [Actual Budget Importer](https://github.com/tomerh2001/israeli-banks-actual-budget-importer) - A tool to import your banks data into [Actual Budget](https://actualbudget.com/), a free and open source financial manager.
 - [Clarify](https://github.com/tomyweiss/clarify-expences) - A full-stack personal finance app for tracking income and expenses.
 - [Asher MCP](https://github.com/shlomiuziel/asher-mcp) - Scrape & access your financial data with LLM using the Model Context Protocol.
-- [Scipio](https://github.com/t0mer/scipio) - A self-hosted RESTful API wrapper for fetching Israeli bank and credit card transactions over HTTP.
 
 Built something interesting you want to share here? [Let me know](https://goo.gl/forms/5Fb9JAjvzMIpmzqo2).
 
