@@ -19,7 +19,8 @@ const SAVINGS_URL = `${BASE_URL}/uiapiproxy/v1/digital-retails/mobile/accounts/1
 
 const DATE_FORMAT = 'DD.MM.YY';
 const ACCOUNT_BLOCKED_MSG = 'המנוי חסום';
-const INVALID_PASSWORD_MSG = 'אחד או יותר מפרטי ההזדהות שמסרת שגויים. ניתן לנסות שוב';
+// Leumi rewords the suffix of this message occasionally (שמסרת/שהוקלדו); match the stable prefix only.
+const INVALID_PASSWORD_MSG = 'אחד או יותר מפרטי ההזדהות';
 const CHANGE_PASSWORD_MODAL_SELECTOR = 'form input[name="newPwd"]';
 
 interface SavingsDepositItem {
@@ -66,11 +67,10 @@ function getPossibleLoginResults() {
         if (!options || !options.page) {
           throw new Error('missing page options argument');
         }
-        const errorMessage = await pageEvalAll(options.page, 'svg#Capa_1', '', element => {
-          return (element[0]?.parentElement?.children[1] as HTMLDivElement)?.innerText;
-        });
-
-        return errorMessage?.startsWith(INVALID_PASSWORD_MSG);
+        // The svg#Capa_1 icon anchor no longer exists on the redesigned
+        // logon page; detect the failure message anywhere in the page text.
+        const bodyText = await options.page.evaluate(() => document.body?.innerText ?? '');
+        return bodyText.includes(INVALID_PASSWORD_MSG);
       },
     ],
     [LoginResults.AccountBlocked]: [
@@ -329,7 +329,7 @@ async function waitForPostLogin(page: Page): Promise<void> {
   await Promise.race([
     waitUntilElementFound(page, 'a[title="דלג לחשבון"]', true, 60000),
     waitUntilElementFound(page, 'div.main-content', false, 60000),
-    page.waitForSelector(`xpath//div[contains(string(),"${INVALID_PASSWORD_MSG}")]`),
+    page.waitForSelector(`xpath///div[contains(string(),"${INVALID_PASSWORD_MSG}")]`),
     waitUntilElementFound(page, CHANGE_PASSWORD_MODAL_SELECTOR, true, 60000),
   ]);
 }
