@@ -221,6 +221,22 @@ function isCardPendingTransactionDetails(
   return (result as CardPendingTransactionDetails).result !== undefined;
 }
 
+function getBalanceAmount(frame: CardLevelFrame | undefined, accountGroup: IssuedCardsGroup | undefined) {
+  if (frame?.nextTotalDebit != null) {
+    return frame.nextTotalDebit;
+  }
+
+  if (accountGroup?.nextTotalDebitForAccount != null) {
+    return accountGroup.nextTotalDebitForAccount;
+  }
+
+  if (accountGroup?.frameLimitForCardAmount == null || accountGroup.fictiveMaxAccAmt == null) {
+    return undefined;
+  }
+
+  return accountGroup.frameLimitForCardAmount - accountGroup.fictiveMaxAccAmt;
+}
+
 async function getLoginFrame(page: Page) {
   let frame: Frame | null = null;
   debug('wait until login frame found');
@@ -616,14 +632,7 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
         ? filterOldTransactions(transactions, moment(startDate), this.options.combineInstallments || false)
         : transactions;
 
-    // Use card-level balance if available, otherwise fall back to account-level balance
-    // As a last resort, calculate balance from frame limit - fictive max account amount
-    const balanceAmount =
-      frame?.nextTotalDebit ??
-      accountGroup?.nextTotalDebitForAccount ??
-      (accountGroup?.frameLimitForCardAmount != null && accountGroup?.fictiveMaxAccAmt != null
-        ? accountGroup.frameLimitForCardAmount - accountGroup.fictiveMaxAccAmt
-        : undefined);
+    const balanceAmount = getBalanceAmount(frame, accountGroup);
 
     const result: TransactionsAccount = {
       txns,
