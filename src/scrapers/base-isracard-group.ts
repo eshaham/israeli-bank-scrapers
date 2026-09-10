@@ -45,7 +45,7 @@ interface ScrapedLoginValidation {
   };
 }
 
-interface ScrapedCard {
+export interface ScrapedCard {
   companyCode: string;
   cardStatus: string;
   cardSuffix: string;
@@ -80,7 +80,7 @@ interface ScrapedMonthlyBillingResponse {
   isSuccess: boolean;
 }
 
-interface ScrapedApprovedTransaction {
+export interface ScrapedApprovedTransaction {
   purchaseDate: string;
   israelTransactionTime: string;
   businessName: string;
@@ -92,7 +92,7 @@ interface ScrapedApprovedTransaction {
   branchCodeDescription: string | null;
 }
 
-interface ScrapedVoucher {
+export interface ScrapedVoucher {
   purchaseDate: string;
   purchaseTime: string | null;
   businessName: string;
@@ -128,7 +128,7 @@ interface ScrapedTransactionsResponse {
   isSuccess: boolean;
 }
 
-function getCardBalance(card: ScrapedCard): number | undefined {
+export function getCardBalance(card: ScrapedCard): number | undefined {
   if (!card.limitData) {
     return undefined;
   }
@@ -136,7 +136,7 @@ function getCardBalance(card: ScrapedCard): number | undefined {
   return Number.isNaN(limitUsed) ? undefined : -limitUsed;
 }
 
-function getCardFrame(card: ScrapedCard): number | undefined {
+export function getCardFrame(card: ScrapedCard): number | undefined {
   if (!card.limitData) {
     return undefined;
   }
@@ -144,7 +144,7 @@ function getCardFrame(card: ScrapedCard): number | undefined {
   return Number.isNaN(creditLimit) ? undefined : creditLimit;
 }
 
-function getCardBalanceDate(card: ScrapedCard): string | undefined {
+export function getCardBalanceDate(card: ScrapedCard): string | undefined {
   if (!card.cardChargeNext?.billingDate) {
     return undefined;
   }
@@ -209,7 +209,7 @@ async function fetchEffectiveBillingDate(
   return billing ? moment(billing.billingDate, DATE_FORMAT).toISOString() : undefined;
 }
 
-function convertApprovedTransaction(txn: ScrapedApprovedTransaction, options?: ScraperOptions): Transaction {
+export function convertApprovedTransaction(txn: ScrapedApprovedTransaction, options?: ScraperOptions): Transaction {
   const isoDate = moment(`${txn.purchaseDate} ${txn.israelTransactionTime}`, `${DATE_FORMAT} HH:mm`).toISOString();
 
   const result: Transaction = {
@@ -234,7 +234,7 @@ function convertApprovedTransaction(txn: ScrapedApprovedTransaction, options?: S
   return result;
 }
 
-function getVoucherInstallments(voucher: ScrapedVoucher): TransactionInstallments | undefined {
+export function getVoucherInstallments(voucher: ScrapedVoucher): TransactionInstallments | undefined {
   if (!voucher.numberOfInstallment || !voucher.currentInstallmentNum) {
     return undefined;
   }
@@ -244,7 +244,11 @@ function getVoucherInstallments(voucher: ScrapedVoucher): TransactionInstallment
   };
 }
 
-function convertVoucher(voucher: ScrapedVoucher, processedDateIso: string, options?: ScraperOptions): Transaction {
+export function convertVoucher(
+  voucher: ScrapedVoucher,
+  processedDateIso: string,
+  options?: ScraperOptions,
+): Transaction {
   const dateMoment = moment(`${voucher.purchaseDate} ${voucher.purchaseTime || '00:00:00'}`, `${DATE_FORMAT} HH:mm:ss`);
   const installments = getVoucherInstallments(voucher);
 
