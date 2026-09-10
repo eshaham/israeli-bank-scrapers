@@ -1,8 +1,8 @@
 import moment, { type Moment } from 'moment';
-import { type HTTPResponse, type Page } from 'puppeteer';
+import { type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../../constants';
 import { getDebug } from '../../helpers/debug';
-import { waitUntilElementFound } from '../../helpers/elements-interactions';
+import { fetchGetWithinPage } from '../../helpers/fetch';
 import { getRawTransaction } from '../../helpers/transactions';
 import {
   TransactionStatuses,
@@ -15,10 +15,14 @@ import { type ScraperOptions } from '../interface';
 
 const debug = getDebug('leumi-investments');
 const BASE_URL = 'https://hb2.bankleumi.co.il';
-const TRADING_URL = `${BASE_URL}/lti/lti-app/trade/portfolio`;
-const TRADING_HISTORY_URL = `${BASE_URL}/lti/lti-app/trade/orders/history`;
+const CONFIG_URL = `${BASE_URL}/lti/lti-app/api/config`;
+const STATEMENT_URL = `${BASE_URL}/lti/lti-app/api/Trade/Statement`;
+const ORDERS_HISTORY_URL = `${BASE_URL}/lti/lti-app/api/Trade/GetOrdersHistory`;
 
-const PORTFOLIO_TABLE_SELECTOR = '.portfolio-tbl-sticky-native';
+const API_DATE_FORMAT = 'YYYY-MM-DD';
+const ORDER_DATE_FORMAT = 'YYYY-MM-DD HH:mm';
+const OPERATION_BUY = 1;
+const OPERATION_SELL = 2;
 
 interface RawPortfolio {
   PortfolioId: string;
@@ -54,14 +58,10 @@ interface RawOrder {
   CurrencyACode?: string;
 }
 
-const ORDER_DATE_FORMAT = 'YYYY-MM-DD HH:mm';
-const OPERATION_BUY = 1;
-const OPERATION_SELL = 2;
-
 /**
- * Extracted, unverified against a live response, from an earlier WIP branch. The response
- * shape is inferred from that code rather than freshly captured, so field names here should
- * be double-checked against a real `lti-app/api/config` payload before this ships.
+ * Verified against a live `lti-app/api/config` response. Portfolios are addressed by their
+ * position in this array elsewhere (see `buildStatementUrl`/`buildOrdersHistoryUrl`), which is
+ * how the live Statement/GetOrdersHistory requests identify a portfolio (`PortfolioIndex`).
  */
 export function parsePortfoliosResponse(data: any): RawPortfolio[] {
   return data?.data?.user?.Portfolios ?? [];
@@ -157,90 +157,77 @@ export function parseOrderHistoryResponse(data: any, options?: ScraperOptions): 
   });
 }
 
-async function fetchHoldings(
+/**
+ * Query params verified against a live request. `ViewID`/`SubView`/`FromCache`/
+ * `AlwaysChangePercent`/`IsMain`/`RegionId`/`CurrencyCode`/`rt` are reproduced verbatim from that
+ * request rather than understood - only `PortfolioIndex` and `ViewDate` vary per call here.
+ */
+function buildStatementUrl(portfolioIndex: number, asOfDate: string): string {
+  const params = new URLSearchParams({
+    PortfolioIndex: String(portfolioIndex),
+    StatementType: 'ByDate',
+    ViewDate: asOfDate,
+    ViewID: '7',
+    SubView: '16',
+    FromCache: 'false',
+    AlwaysChangePercent: 'false',
+    IsMain: 'false',
+    RegionId: '-1',
+    CurrencyCode: '0',
+    rt: 'true',
+  });
+  return `${STATEMENT_URL}?${params.toString()}`;
+}
+
+/** Query params verified against a live request. */
+function buildOrdersHistoryUrl(portfolioIndex: number, fromDate: string, toDate: string): string {
+  const params = new URLSearchParams({
+    portfolioIndex: String(portfolioIndex),
+    FromDate: fromDate,
+    Todate: toDate,
+    IsCryptoOnly: 'false',
+    rt: 'false',
+  });
+  return `${ORDERS_HISTORY_URL}?${params.toString()}`;
+}
+
+async function fetchPortfolioAccount(
   page: Page,
-): Promise<{ portfolioId: string; securities: Security[]; balance: number } | null> {
-  const configResponsePromise = waitForXhr(page, 'lti-app/api/config');
-  const statementResponsePromise = waitForXhr(page, 'Statement');
+  portfolioIndex: number,
+  portfolio: RawPortfolio,
+  startDate: Moment,
+  options: ScraperOptions,
+): Promise<TransactionsAccount | null> {
+  const today = moment().format(API_DATE_FORMAT);
 
-  await page.goto(TRADING_URL, { waitUntil: 'networkidle2' });
-  await waitUntilElementFound(page, PORTFOLIO_TABLE_SELECTOR, true);
+  const statementData = await fetchGetWithinPage<any>(page, buildStatementUrl(portfolioIndex, today));
+  const securities = parseHoldingsResponse(statementData);
+  const balance = parsePortfolioValue(statementData) ?? securities.reduce((sum, security) => sum + security.value, 0);
 
-  const [configResponse, statementResponse] = await Promise.all([configResponsePromise, statementResponsePromise]);
+  let txns: Transaction[] = [];
+  try {
+    const ordersUrl = buildOrdersHistoryUrl(portfolioIndex, startDate.format(API_DATE_FORMAT), today);
+    const ordersData = await fetchGetWithinPage<any>(page, ordersUrl);
+    txns = parseOrderHistoryResponse(ordersData, options);
+  } catch (error) {
+    debug('error fetching order history for portfolio %s: %s', portfolio.PortfolioId, error);
+  }
 
-  const portfolios = parsePortfoliosResponse(await configResponse.json());
-  if (!portfolios.length) {
-    debug('no portfolios found on the trading page');
+  if (balance === 0 && securities.length === 0 && txns.length === 0) {
+    debug('skipping empty portfolio %s', portfolio.PortfolioId);
     return null;
   }
-  if (portfolios.length > 1) {
-    // Only the currently-displayed portfolio's holdings are captured below; switching between
-    // portfolios in the UI to attribute holdings per-portfolio is not implemented yet.
-    debug('found %d portfolios, only %s is supported for now', portfolios.length, portfolios[0].PortfolioId);
-  }
 
-  const statementJson = await statementResponse.json();
-  const securities = parseHoldingsResponse(statementJson);
-  const balance = parsePortfolioValue(statementJson) ?? securities.reduce((sum, security) => sum + security.value, 0);
+  debug('found portfolio %s with %d securities and %d orders', portfolio.PortfolioId, securities.length, txns.length);
 
-  return { portfolioId: portfolios[0].PortfolioId, securities, balance };
-}
-
-function waitForXhr(page: Page, urlSubstring: string): Promise<HTTPResponse> {
-  return page.waitForResponse(
-    response =>
-      (response.request().resourceType() === 'xhr' || response.request().resourceType() === 'fetch') &&
-      response.url().includes(urlSubstring),
-  );
-}
-
-async function clickByXPath(page: Page, xpath: string): Promise<void> {
-  await page.waitForSelector(xpath, { timeout: 30000, visible: true });
-  const elements = await page.$$(xpath);
-  await elements[0].click();
-}
-
-/**
- * Drives the Angular Material date picker on the order-history page to select a custom start
- * date. Selectors carried over, unverified today, from an earlier WIP branch that exercised
- * this flow against a live account.
- */
-async function selectHistoryStartDate(page: Page, startDate: Moment): Promise<void> {
-  await page.waitForSelector('div.select-period-block');
-  await clickByXPath(page, 'xpath///div[contains(@class, "select-period-block")]');
-
-  await page.waitForSelector('div.mat-select-panel-wrap');
-  await clickByXPath(page, 'xpath///mat-option[last()]');
-
-  await page.waitForSelector('div#chooseByDatesBlock');
-  await clickByXPath(page, 'xpath///div[@id="chooseByDatesBlock"]//input[@id="mat-input-0"]');
-
-  await page.waitForSelector('mat-calendar');
-  await clickByXPath(page, 'xpath///mat-calendar//button[contains(@class, "mat-calendar-period-button")]');
-
-  const year = startDate.get('year');
-  await page.waitForSelector(`mat-calendar td[aria-label="${year}"]`);
-  await clickByXPath(page, `xpath///mat-calendar//td[contains(@aria-label, "${year}")]`);
-
-  const month = `01/${startDate.format('MM/YY')}`;
-  await page.waitForSelector(`mat-calendar td[aria-label="${month}"]`);
-  await clickByXPath(page, `xpath///mat-calendar//td[contains(@aria-label, "${month}")]`);
-
-  const day = startDate.format('DD/MM/YY');
-  await page.waitForSelector(`mat-calendar td[aria-label="${day}"]`);
-  await clickByXPath(page, `xpath///mat-calendar//td[contains(@aria-label, "${day}")]`);
-}
-
-async function fetchOrderHistory(page: Page, startDate: Moment, options: ScraperOptions): Promise<Transaction[]> {
-  await page.goto(TRADING_HISTORY_URL, { waitUntil: 'networkidle2' });
-
-  await selectHistoryStartDate(page, startDate);
-
-  const responsePromise = waitForXhr(page, 'GetOrdersHistory');
-  await clickByXPath(page, 'xpath///div[@id="chooseByDatesBlock"]//button[contains(@class, "btn-primary")]');
-  const response = await responsePromise;
-
-  return parseOrderHistoryResponse(await response.json(), options);
+  return {
+    accountNumber: `${portfolio.PortfolioId}-investment`,
+    balance,
+    currency: SHEKEL_CURRENCY,
+    savingsAccount: true,
+    securities,
+    txns,
+  };
 }
 
 export async function fetchInvestmentAccounts(
@@ -251,34 +238,27 @@ export async function fetchInvestmentAccounts(
   debug('========== FETCHING INVESTMENT ACCOUNTS ==========');
 
   try {
-    const portfolio = await fetchHoldings(page);
-    if (!portfolio) {
+    const configData = await fetchGetWithinPage<any>(page, CONFIG_URL);
+    const portfolios = parsePortfoliosResponse(configData);
+    if (!portfolios.length) {
+      debug('no portfolios found');
       return [];
     }
 
-    let txns: Transaction[] = [];
-    try {
-      txns = await fetchOrderHistory(page, startDate, options);
-    } catch (error) {
-      debug('error fetching order history, returning holdings without transactions: %s', error);
+    const accounts: TransactionsAccount[] = [];
+    for (let index = 0; index < portfolios.length; index += 1) {
+      try {
+        const account = await fetchPortfolioAccount(page, index, portfolios[index], startDate, options);
+        if (account) {
+          accounts.push(account);
+        }
+      } catch (error) {
+        debug('error fetching portfolio %s: %s', portfolios[index].PortfolioId, error);
+      }
     }
 
-    const account: TransactionsAccount = {
-      accountNumber: `${portfolio.portfolioId}-investment`,
-      balance: portfolio.balance,
-      currency: SHEKEL_CURRENCY,
-      savingsAccount: true,
-      securities: portfolio.securities,
-      txns,
-    };
-
-    debug(
-      'found portfolio %s with %d securities and %d orders',
-      portfolio.portfolioId,
-      portfolio.securities.length,
-      txns.length,
-    );
-    return [account];
+    debug('returning %d investment accounts', accounts.length);
+    return accounts;
   } catch (error) {
     debug('error fetching investment accounts: %s', error);
     return [];
