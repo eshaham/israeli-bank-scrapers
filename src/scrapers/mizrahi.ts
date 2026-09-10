@@ -322,6 +322,38 @@ async function extractPendingTransactions(page: Frame): Promise<Transaction[]> {
   });
 }
 
+function describeError(error: unknown): string {
+  if (error instanceof AggregateError) {
+    if (error.errors.length === 0) {
+      return String(error);
+    }
+    return error.errors.map(describeError).join('; ');
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
+export async function scrapeAccounts(
+  numOfAccounts: number,
+  selectAccount: (index: number) => Promise<void>,
+  fetchAccount: (index: number) => Promise<TransactionsAccount>,
+): Promise<{ accounts: TransactionsAccount[]; errors: string[] }> {
+  const accounts: TransactionsAccount[] = [];
+  const errors: string[] = [];
+
+  for (let i = 0; i < numOfAccounts; i += 1) {
+    try {
+      await selectAccount(i);
+      accounts.push(await fetchAccount(i));
+    } catch (e) {
+      const message = `account #${i + 1}: ${describeError(e)}`;
+      debug(`Failed to fetch account: ${message}`);
+      errors.push(message);
+    }
+  }
+
+  return { accounts, errors };
+}
+
 async function postLogin(page: Page) {
   await Promise.race([
     waitUntilElementFound(page, afterLoginSelector),
@@ -349,29 +381,31 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
     const numOfAccounts = (await this.page.$$(accountDropDownItemSelector)).length;
 
-    try {
-      const results: TransactionsAccount[] = [];
-
-      for (let i = 0; i < numOfAccounts; i += 1) {
-        if (i > 0) {
+    const { accounts, errors } = await scrapeAccounts(
+      numOfAccounts,
+      async index => {
+        if (index > 0) {
           await this.page.$eval('#dropdownBasic, .item', el => (el as HTMLElement).click());
         }
+        await this.page.$eval(`${accountDropDownItemSelector}:nth-child(${index + 1})`, el =>
+          (el as HTMLElement).click(),
+        );
+      },
+      () => this.fetchAccount(),
+    );
 
-        await this.page.$eval(`${accountDropDownItemSelector}:nth-child(${i + 1})`, el => (el as HTMLElement).click());
-        results.push(await this.fetchAccount());
-      }
-
-      return {
-        success: true,
-        accounts: results,
-      };
-    } catch (e) {
+    if (accounts.length === 0 && errors.length > 0) {
       return {
         success: false,
         errorType: ScraperErrorTypes.Generic,
-        errorMessage: (e as Error).message,
+        errorMessage: errors.join('; '),
       };
     }
+
+    return {
+      success: true,
+      accounts,
+    };
   }
 
   private async getPendingTransactions(): Promise<Transaction[]> {
