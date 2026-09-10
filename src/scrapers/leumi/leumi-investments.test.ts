@@ -1,3 +1,4 @@
+import moment from 'moment';
 import { type ScraperOptions } from '../interface';
 import { parseHoldingsResponse, parseOrderHistoryResponse, parsePortfoliosResponse } from './leumi-investments';
 
@@ -43,47 +44,92 @@ describe('parseHoldingsResponse', () => {
 });
 
 describe('parseOrderHistoryResponse', () => {
-  const row = {
-    PaperId: '662577',
-    PaperName: 'טבע',
-    Symbol: 'TEVA',
-    Amount: '10',
-    ExecutableTotal: '1234.5',
-    ExecutablePrice: '123.45',
-    ExecutionDate: '18.06.26',
+  // Real rows observed on a live account's order history (a fund switch: sell one money-market
+  // fund, buy another). The response body is a plain array of rows, no wrapper object.
+  const sellRow = {
+    PaperName: 'ברק כספית',
+    Symbol: '',
+    TypeOfOperation: 2,
+    TypeOfOperationDesc: 'מכירה',
+    ExecutableTotal: -20023.91,
+    ExecutionDate: '2026-08-07 00:00',
+    DateOfFinancialVal: '2026-08-09 00:00',
+    TaxSum: -5.86,
+    BasicReferenceNo: 68096048524,
+    CurrencyACode: 'ILS',
+  };
+  const buyRow = {
+    PaperName: 'ברק כספית',
+    Symbol: '',
+    TypeOfOperation: 1,
+    TypeOfOperationDesc: 'קניה',
+    ExecutableTotal: 20000.48,
+    ExecutionDate: '2026-07-14 00:00',
+    DateOfFinancialVal: '2026-07-15 00:00',
+    TaxSum: 0,
+    BasicReferenceNo: 68096043916,
+    CurrencyACode: 'ILS',
   };
 
-  test('maps an order row to a transaction', () => {
-    const data = { data: { GetOrdersHistory: { ordersHistory: { records: [row] } } } };
+  test('maps a sell to a positive (credit) amount using its own sign, not the raw field sign', () => {
+    const [transaction] = parseOrderHistoryResponse([sellRow]);
 
-    const [transaction] = parseOrderHistoryResponse(data);
-
-    expect(transaction.originalAmount).toBe(1234.5);
-    expect(transaction.chargedAmount).toBe(1234.5);
+    // ExecutableTotal is itself negative for a sell (it tracks quantity direction), so the
+    // magnitude is what matters here - the sign comes from TypeOfOperation.
+    expect(transaction.originalAmount).toBe(20023.91);
+    expect(transaction.chargedAmount).toBe(20023.91);
     expect(transaction.originalCurrency).toBe('ILS');
-    expect(transaction.description).toBe('טבע TEVA');
+    expect(transaction.identifier).toBe(68096048524);
+  });
+
+  test('maps a buy to a negative (debit) amount', () => {
+    const [transaction] = parseOrderHistoryResponse([buyRow]);
+
+    expect(transaction.originalAmount).toBe(-20000.48);
+    expect(transaction.chargedAmount).toBe(-20000.48);
+  });
+
+  test('uses the execution date and the value date separately', () => {
+    const [transaction] = parseOrderHistoryResponse([sellRow]);
+
+    expect(transaction.date).toBe(moment('2026-08-07 00:00', 'YYYY-MM-DD HH:mm').milliseconds(0).toISOString());
+    expect(transaction.processedDate).toBe(
+      moment('2026-08-09 00:00', 'YYYY-MM-DD HH:mm').milliseconds(0).toISOString(),
+    );
+  });
+
+  test('describes the transaction using the paper name', () => {
+    const [transaction] = parseOrderHistoryResponse([sellRow]);
+
+    expect(transaction.description).toBe('ברק כספית');
   });
 
   test('falls back to a generic description when paper name and symbol are missing', () => {
-    const data = {
-      data: { GetOrdersHistory: { ordersHistory: { records: [{ ...row, PaperName: '', Symbol: '' }] } } },
-    };
-
-    const [transaction] = parseOrderHistoryResponse(data);
+    const [transaction] = parseOrderHistoryResponse([{ ...sellRow, PaperName: '', Symbol: '' }]);
 
     expect(transaction.description).toBe('עסקה בתיק ניירות ערך');
   });
 
-  test('returns an empty array when there is no order history', () => {
-    expect(parseOrderHistoryResponse({ data: {} })).toEqual([]);
+  test('notes a non-zero tax charge in the memo', () => {
+    const [transaction] = parseOrderHistoryResponse([sellRow]);
+
+    expect(transaction.memo).toBe('מס: 5.86 ₪');
+  });
+
+  test('omits the memo when there is no tax charge', () => {
+    const [transaction] = parseOrderHistoryResponse([buyRow]);
+
+    expect(transaction.memo).toBeUndefined();
+  });
+
+  test('returns an empty array when the response is not an array', () => {
     expect(parseOrderHistoryResponse({})).toEqual([]);
+    expect(parseOrderHistoryResponse(null)).toEqual([]);
   });
 
   test('includes the raw transaction only when requested', () => {
-    const data = { data: { GetOrdersHistory: { ordersHistory: { records: [row] } } } };
-
-    const withRaw = parseOrderHistoryResponse(data, { includeRawTransaction: true } as ScraperOptions);
-    const withoutRaw = parseOrderHistoryResponse(data, { includeRawTransaction: false } as ScraperOptions);
+    const withRaw = parseOrderHistoryResponse([sellRow], { includeRawTransaction: true } as ScraperOptions);
+    const withoutRaw = parseOrderHistoryResponse([sellRow], { includeRawTransaction: false } as ScraperOptions);
 
     expect(withRaw[0].rawTransaction).toBeDefined();
     expect(withoutRaw[0].rawTransaction).toBeUndefined();

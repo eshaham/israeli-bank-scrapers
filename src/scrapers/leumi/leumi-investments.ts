@@ -19,7 +19,6 @@ const TRADING_URL = `${BASE_URL}/lti/lti-app/trade/portfolio`;
 const TRADING_HISTORY_URL = `${BASE_URL}/lti/lti-app/trade/orders/history`;
 
 const PORTFOLIO_TABLE_SELECTOR = '.portfolio-tbl-sticky-native';
-const DATE_FORMAT = 'DD.MM.YY';
 
 interface RawPortfolio {
   PortfolioId: string;
@@ -34,15 +33,31 @@ interface RawHolding {
   Value: string;
 }
 
+/**
+ * One row of a live `GetOrdersHistory` response - the response body itself is a plain array
+ * of these, with no wrapper object.
+ */
 interface RawOrder {
-  PaperId: string;
+  BasicReferenceNo: number;
   PaperName?: string;
   Symbol?: string;
-  Amount: string;
-  ExecutableTotal: string;
-  ExecutablePrice: string;
+  /** 1 = buy (קניה), 2 = sell (מכירה); other values are unmapped. */
+  TypeOfOperation: number;
+  TypeOfOperationDesc?: string;
+  /**
+   * Signed by quantity direction (positive on a buy, negative on a sell) rather than by cash
+   * flow, so it is not used directly - see {@link parseOrderHistoryResponse}.
+   */
+  ExecutableTotal: number;
   ExecutionDate: string;
+  DateOfFinancialVal?: string;
+  TaxSum?: number;
+  CurrencyACode?: string;
 }
+
+const ORDER_DATE_FORMAT = 'YYYY-MM-DD HH:mm';
+const OPERATION_BUY = 1;
+const OPERATION_SELL = 2;
 
 /**
  * Extracted, unverified against a live response, from an earlier WIP branch. The response
@@ -54,10 +69,11 @@ export function parsePortfoliosResponse(data: any): RawPortfolio[] {
 }
 
 /**
- * Same provenance note as {@link parsePortfoliosResponse}: field names are carried over from
- * an earlier WIP branch, not freshly observed. The earlier branch also always reported ILS
- * regardless of the source `CurrencyRate` field, which is assumed here to mean Leumi's trading
- * platform prices holdings in ILS - that assumption needs confirming against a live account.
+ * Field names are carried over from an earlier WIP branch, not freshly observed, and still need
+ * confirming against a real `Statement` response before this ships. Holdings are hardcoded to
+ * ILS, which matches a live account's holdings and the live `GetOrdersHistory` order rows (both
+ * confirmed via {@link parseOrderHistoryResponse}'s `CurrencyACode`), but is not itself read
+ * from a field here since the corresponding holdings field name hasn't been observed yet.
  */
 export function parseHoldingsResponse(data: any): Security[] {
   const rows: RawHolding[] = data?.data?.UserStatement?.DataSource ?? [];
@@ -72,29 +88,56 @@ export function parseHoldingsResponse(data: any): Security[] {
 }
 
 /**
- * Same provenance note as {@link parsePortfoliosResponse}. Additionally, the earlier branch
- * never captured a buy/sell direction field for orders, so `chargedAmount` here is the
- * unsigned trade value rather than a signed debit/credit - that needs a real order-history
- * response to fix properly.
+ * Verified against a live `GetOrdersHistory` response. `chargedAmount`/`originalAmount` are
+ * derived from `TypeOfOperation` rather than `ExecutableTotal`'s own sign, because that sign
+ * tracks quantity direction (positive on a buy, negative on a sell) - the opposite of a
+ * debit/credit convention, where a buy should be a negative (money leaving the account) and a
+ * sell a positive (money coming in).
  */
 export function parseOrderHistoryResponse(data: any, options?: ScraperOptions): Transaction[] {
-  const rows: RawOrder[] = data?.data?.GetOrdersHistory?.ordersHistory?.records ?? [];
+  const rows: RawOrder[] = Array.isArray(data) ? data : [];
 
   return rows.map(row => {
-    const date = moment(row.ExecutionDate, DATE_FORMAT).milliseconds(0).toISOString();
-    const amount = parseFloat(row.ExecutableTotal);
+    const date = moment(row.ExecutionDate, ORDER_DATE_FORMAT).milliseconds(0).toISOString();
+    const processedDate = row.DateOfFinancialVal
+      ? moment(row.DateOfFinancialVal, ORDER_DATE_FORMAT).milliseconds(0).toISOString()
+      : date;
+
+    const magnitude = Math.abs(row.ExecutableTotal);
+    let amount: number;
+    if (row.TypeOfOperation === OPERATION_BUY) {
+      amount = -magnitude;
+    } else if (row.TypeOfOperation === OPERATION_SELL) {
+      amount = magnitude;
+    } else {
+      debug(
+        'unrecognised operation type %s (%s) for order %s, using the raw signed amount',
+        row.TypeOfOperation,
+        row.TypeOfOperationDesc,
+        row.BasicReferenceNo,
+      );
+      amount = row.ExecutableTotal;
+    }
+
+    const currency = row.CurrencyACode || SHEKEL_CURRENCY;
     const paperLabel = [row.PaperName, row.Symbol].filter(Boolean).join(' ');
 
     const transaction: Transaction = {
       type: TransactionTypes.Normal,
+      identifier: row.BasicReferenceNo,
       date,
-      processedDate: date,
+      processedDate,
       originalAmount: amount,
-      originalCurrency: SHEKEL_CURRENCY,
+      originalCurrency: currency,
       chargedAmount: amount,
+      chargedCurrency: currency,
       description: paperLabel || 'עסקה בתיק ניירות ערך',
       status: TransactionStatuses.Completed,
     };
+
+    if (row.TaxSum) {
+      transaction.memo = `מס: ${Math.abs(row.TaxSum).toFixed(2)} ₪`;
+    }
 
     if (options?.includeRawTransaction) {
       transaction.rawTransaction = getRawTransaction(row);
