@@ -1,8 +1,9 @@
-import { LoginResults } from './base-scraper-with-browser';
+import { LoginResults } from '../base-scraper-with-browser';
 import LeumiScraper from './leumi';
-import { SCRAPERS } from '../definitions';
-import { getDebug } from '../helpers/debug';
-import { exportTransactions, extendAsyncTimeout, getTestsConfig, maybeTestCompanyAPI } from '../tests/tests-utils';
+import { SHEKEL_CURRENCY } from '../../constants';
+import { SCRAPERS } from '../../definitions';
+import { getDebug } from '../../helpers/debug';
+import { exportTransactions, extendAsyncTimeout, getTestsConfig, maybeTestCompanyAPI } from '../../tests/tests-utils';
 
 const COMPANY_ID = 'leumi'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
@@ -74,6 +75,37 @@ describe('Leumi legacy scraper', () => {
       });
     } else {
       debug('No savings accounts found - this may be expected if the test account has no deposits');
+    }
+
+    // Validate foreign currency accounts if they exist
+    const foreignCurrencyAccounts = result.accounts?.filter(
+      account => !!account.currency && account.currency !== SHEKEL_CURRENCY,
+    );
+
+    debug('Foreign currency accounts found:', foreignCurrencyAccounts?.length);
+
+    if (foreignCurrencyAccounts && foreignCurrencyAccounts.length > 0) {
+      debug('Foreign currency account details:');
+      foreignCurrencyAccounts.forEach(account => {
+        debug(
+          `  - Account: ${account.accountNumber}, Currency: ${account.currency}, Balance: ${account.balance}, Transactions: ${account.txns.length}`,
+        );
+      });
+
+      foreignCurrencyAccounts.forEach(account => {
+        expect(account.accountNumber).toMatch(new RegExp(`-${account.currency}$`));
+        expect(account.balance).toBeDefined();
+        expect(account.txns).toBeDefined();
+
+        account.txns.forEach(txn => {
+          expect(txn.originalCurrency).toBe(account.currency);
+          expect(txn.chargedCurrency).toBe(account.currency);
+          expect(txn.date).toBeDefined();
+          expect(Number.isNaN(txn.originalAmount)).toBe(false);
+        });
+      });
+    } else {
+      debug('No foreign currency accounts found - this may be expected if the test account has none');
     }
   });
 });
