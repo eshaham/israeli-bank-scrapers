@@ -34,8 +34,8 @@ interface RawHolding {
 }
 
 /**
- * One row of a live `GetOrdersHistory` response - the response body itself is a plain array
- * of these, with no wrapper object.
+ * One row of `data.GetOrdersHistory.ordersHistory.records` in a live `GetOrdersHistory`
+ * response - the old WIP branch's guess at this wrapper path was actually correct.
  */
 interface RawOrder {
   BasicReferenceNo: number;
@@ -95,7 +95,7 @@ export function parseHoldingsResponse(data: any): Security[] {
  * sell a positive (money coming in).
  */
 export function parseOrderHistoryResponse(data: any, options?: ScraperOptions): Transaction[] {
-  const rows: RawOrder[] = Array.isArray(data) ? data : [];
+  const rows: RawOrder[] = data?.data?.GetOrdersHistory?.ordersHistory?.records ?? [];
 
   return rows.map(row => {
     const date = moment(row.ExecutionDate, ORDER_DATE_FORMAT).milliseconds(0).toISOString();

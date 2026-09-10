@@ -45,7 +45,9 @@ describe('parseHoldingsResponse', () => {
 
 describe('parseOrderHistoryResponse', () => {
   // Real rows observed on a live account's order history (a fund switch: sell one money-market
-  // fund, buy another). The response body is a plain array of rows, no wrapper object.
+  // fund, buy another). `wrap` reproduces the envelope a live GetOrdersHistory response uses.
+  const wrap = (records: unknown[]) => ({ data: { GetOrdersHistory: { ordersHistory: { records } } } });
+
   const sellRow = {
     PaperName: 'ברק כספית',
     Symbol: '',
@@ -72,7 +74,7 @@ describe('parseOrderHistoryResponse', () => {
   };
 
   test('maps a sell to a positive (credit) amount using its own sign, not the raw field sign', () => {
-    const [transaction] = parseOrderHistoryResponse([sellRow]);
+    const [transaction] = parseOrderHistoryResponse(wrap([sellRow]));
 
     // ExecutableTotal is itself negative for a sell (it tracks quantity direction), so the
     // magnitude is what matters here - the sign comes from TypeOfOperation.
@@ -83,14 +85,14 @@ describe('parseOrderHistoryResponse', () => {
   });
 
   test('maps a buy to a negative (debit) amount', () => {
-    const [transaction] = parseOrderHistoryResponse([buyRow]);
+    const [transaction] = parseOrderHistoryResponse(wrap([buyRow]));
 
     expect(transaction.originalAmount).toBe(-20000.48);
     expect(transaction.chargedAmount).toBe(-20000.48);
   });
 
   test('uses the execution date and the value date separately', () => {
-    const [transaction] = parseOrderHistoryResponse([sellRow]);
+    const [transaction] = parseOrderHistoryResponse(wrap([sellRow]));
 
     expect(transaction.date).toBe(moment('2026-08-07 00:00', 'YYYY-MM-DD HH:mm').milliseconds(0).toISOString());
     expect(transaction.processedDate).toBe(
@@ -99,37 +101,39 @@ describe('parseOrderHistoryResponse', () => {
   });
 
   test('describes the transaction using the paper name', () => {
-    const [transaction] = parseOrderHistoryResponse([sellRow]);
+    const [transaction] = parseOrderHistoryResponse(wrap([sellRow]));
 
     expect(transaction.description).toBe('ברק כספית');
   });
 
   test('falls back to a generic description when paper name and symbol are missing', () => {
-    const [transaction] = parseOrderHistoryResponse([{ ...sellRow, PaperName: '', Symbol: '' }]);
+    const [transaction] = parseOrderHistoryResponse(wrap([{ ...sellRow, PaperName: '', Symbol: '' }]));
 
     expect(transaction.description).toBe('עסקה בתיק ניירות ערך');
   });
 
   test('notes a non-zero tax charge in the memo', () => {
-    const [transaction] = parseOrderHistoryResponse([sellRow]);
+    const [transaction] = parseOrderHistoryResponse(wrap([sellRow]));
 
     expect(transaction.memo).toBe('מס: 5.86 ₪');
   });
 
   test('omits the memo when there is no tax charge', () => {
-    const [transaction] = parseOrderHistoryResponse([buyRow]);
+    const [transaction] = parseOrderHistoryResponse(wrap([buyRow]));
 
     expect(transaction.memo).toBeUndefined();
   });
 
-  test('returns an empty array when the response is not an array', () => {
+  test('returns an empty array when there is no order history', () => {
+    expect(parseOrderHistoryResponse(wrap([]))).toEqual([]);
+    expect(parseOrderHistoryResponse({ data: {} })).toEqual([]);
     expect(parseOrderHistoryResponse({})).toEqual([]);
     expect(parseOrderHistoryResponse(null)).toEqual([]);
   });
 
   test('includes the raw transaction only when requested', () => {
-    const withRaw = parseOrderHistoryResponse([sellRow], { includeRawTransaction: true } as ScraperOptions);
-    const withoutRaw = parseOrderHistoryResponse([sellRow], { includeRawTransaction: false } as ScraperOptions);
+    const withRaw = parseOrderHistoryResponse(wrap([sellRow]), { includeRawTransaction: true } as ScraperOptions);
+    const withoutRaw = parseOrderHistoryResponse(wrap([sellRow]), { includeRawTransaction: false } as ScraperOptions);
 
     expect(withRaw[0].rawTransaction).toBeDefined();
     expect(withoutRaw[0].rawTransaction).toBeUndefined();
