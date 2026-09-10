@@ -1,14 +1,15 @@
 import moment, { type Moment } from 'moment';
 import { type Page } from 'puppeteer';
-import { SHEKEL_CURRENCY } from '../constants';
-import { getDebug } from '../helpers/debug';
-import { clickButton, fillInput, pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
-import { fetchGetWithinPage } from '../helpers/fetch';
-import { getRawTransaction } from '../helpers/transactions';
-import { waitForNavigation } from '../helpers/navigation';
-import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
-import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
-import { type ScraperOptions, type ScraperScrapingResult } from './interface';
+import { SHEKEL_CURRENCY } from '../../constants';
+import { getDebug } from '../../helpers/debug';
+import { clickButton, fillInput, pageEvalAll, waitUntilElementFound } from '../../helpers/elements-interactions';
+import { fetchGetWithinPage } from '../../helpers/fetch';
+import { getRawTransaction } from '../../helpers/transactions';
+import { waitForNavigation } from '../../helpers/navigation';
+import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../../transactions';
+import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from '../base-scraper-with-browser';
+import { type ScraperOptions, type ScraperScrapingResult } from '../interface';
+import { fetchForeignCurrencyAccounts } from './leumi-forex';
 
 const debug = getDebug('leumi');
 const BASE_URL = 'https://hb2.bankleumi.co.il';
@@ -357,6 +358,9 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
     const accounts = await fetchRegularAccounts(this, this.page, startMoment, this.options);
     const savingsAccounts = await fetchSavingsAccounts(this.page, accounts);
     accounts.push(...savingsAccounts);
+
+    const foreignCurrencyAccounts = await fetchForeignCurrencyAccounts(this.page, startMoment, this.options);
+    accounts.push(...foreignCurrencyAccounts);
 
     return {
       success: true,

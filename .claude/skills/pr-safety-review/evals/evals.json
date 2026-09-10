@@ -4,9 +4,9 @@
     {
       "id": 1,
       "name": "visa-cal-safe-fallback-fix",
-      "prompt": "Can you review https://github.com/eshaham/israeli-bank-scrapers/pull/1153 for me? I don't have time to dig into every PR myself — just give me the important part before I approve.",
+      "prompt": "I made this fix for Cal credit card balances/frames not loading for some accounts. The diff is at evals/fixtures/visa-cal-diff.txt relative to the skill directory -- read it and review it the way you would a real PR diff. I don't have time to dig into every PR myself -- just give me the important part before I approve.\n\nLocal debug log from testing (this is the input shape the new fallback logic sees for one affected account):\n```\nresult: {\n  calIssuedCards: null,\n  bankIssuedCards: {\n    fictiveMaxAccAmt: 7075,\n    frameLimitForCardAmount: 7500,\n    totalUsageAmountForAccountManagementLevel: 327,\n    usageAmountForExternalCards: 98,\n    nextTotalDebitDateForAccount: '2026-09-02T00:00:00',\n    nextTotalDebitForAccount: 327,\n    currencyCode: 3,\n    currencySymbol: '₪',\n    accountLevelFrames: [],\n    cardLevelFrames: [],\n  }\n},\nstatusCode: 1\n```",
       "expected_output": "A short verdict block (SAFE or RISKY are both defensible here -- see reasoning below). The diff's first two fallback branches (bank frame found, cal frame found) are byte-for-byte unchanged from before, so a good review should say so explicitly. The two new branches only fire when neither of those matched: one adds a bankIssuedCards-before-calIssuedCards priority check that changes which account group is used *if* an account can ever have both groups populated at once for a single-card request -- a real, if unconfirmed, compat risk worth flagging as RISKY with that reachability caveat spelled out (SAFE is only correct if the response explicitly argues the per-card request shape rules this out). The other new branch is a last-resort balance formula (frameLimitForCardAmount - fictiveMaxAccAmt) that the author's own posted debug log never actually exercises (it hit the branch above it instead, per that log's nextTotalDebitForAccount already being present) -- that should be flagged as unverified regardless of the overall verdict. Output must be short (verdict + a handful of tagged bullets), not a long essay.",
-      "files": [],
+      "files": ["evals/fixtures/visa-cal-diff.txt"],
       "expectations": [
         "The verdict line is SAFE or RISKY (not BREAKING) -- either is acceptable as long as the reasoning below is present",
         "There is a [compat] tagged finding that explicitly states the bank-frame-found and cal-frame-found branches are unchanged from before",
@@ -18,9 +18,9 @@
     {
       "id": 2,
       "name": "isracard-amex-graceful-degradation",
-      "prompt": "What about https://github.com/eshaham/israeli-bank-scrapers/pull/1154 in the same repo -- does it introduce a change to existing behavior?",
+      "prompt": "Does this diff at evals/fixtures/isracard-amex-diff.txt (relative to the skill directory) introduce a change to existing behavior? Read it and review it the way you would a real PR diff against this repo.",
       "expected_output": "A short SAFE verdict. Should note under [compat] that balance/balanceDate/cardFrame were already optional fields on TransactionsAccount (added in an earlier PR) that were always undefined for isracard/amex, so populating them now isn't a break for existing consumers. Should note under [feature-safety] that the new card-list page fetch (fetchCardBalances) is wrapped in try/catch and degrades to an empty Map / undefined fields on failure rather than throwing, and that it runs as the last step of fetchData so no later core logic depends on the page's prior state. Should be short, not exhaustive.",
-      "files": [],
+      "files": ["evals/fixtures/isracard-amex-diff.txt"],
       "expectations": [
         "The verdict line reads SAFE",
         "There is a [compat] tagged finding noting balance/cardFrame/balanceDate were already optional and previously undefined for isracard/amex, so no existing consumer sees a breaking shape change",

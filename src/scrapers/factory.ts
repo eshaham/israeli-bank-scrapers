@@ -8,7 +8,7 @@ import DiscountScraper from './discount';
 import HapoalimScraper from './hapoalim';
 import { type Scraper, type ScraperCredentials, type ScraperOptions } from './interface';
 import IsracardScraper from './isracard';
-import LeumiScraper from './leumi';
+import LeumiScraper from './leumi/leumi';
 import MassadScraper from './massad';
 import MaxScraper from './max';
 import MercantileScraper from './mercantile';

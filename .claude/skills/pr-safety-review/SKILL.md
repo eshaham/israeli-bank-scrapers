@@ -19,6 +19,20 @@ Don't review from the PR title/description alone — authors describe intent, no
 
 If given only a PR number/URL, resolve owner/repo from the current git remote unless told otherwise.
 
+### Conversation state — is this even ready to be (re-)reviewed?
+
+Before spending effort on the three code checks, work out where the PR actually sits in its own conversation. A full fresh review is wasted effort — and misleading to the reviewer — if the PR is simply sitting idle waiting on the author, or if a prior reviewer's ask was never actually addressed despite the branch looking "active."
+
+Fetch `get_comments`, `get_review_comments` (threads), and `get_commits`, and line them up by timestamp. Then:
+
+1. **Filter out noise.** Discard bot housekeeping (stale-bot, labeler comments), the PR author's own comments (pings, "any update?", apologies for delay), and reactions/threads with no actionable ask. What's left is the substantive asks: a maintainer/collaborator requesting a change (split the PR, rebase, fix X, provide evidence for Y), or a review-bot/human finding on a specific line.
+
+2. **Find the most recent substantive ask and compare its timestamp to the most recent commit:**
+   - **No commit since that ask** → say so plainly, and say it *first*, before anything else. This is a strong signal the PR is stalled waiting on the author, not something to hand back a fresh SAFE/RISKY/BREAKING verdict on as if it just landed. Name who asked, what they asked for, and since when nothing has moved.
+   - **Commits exist since that ask** → don't assume they're a response just because they exist. Check whether the new commits actually touch what was asked (same file/function for a code fix; an actual rebase for a "please rebase" ask; the PR literally split for a "split this into N PRs" ask — check `mergeable_state` too, since "please rebase" isn't satisfied by unrelated new commits on top of an still-unresolved conflict). If the new activity is unrelated to the ask, say so explicitly: the ask is still open despite the branch looking active. If it does address the ask, treat it as being actively iterated on and proceed normally.
+
+3. **Apply the same logic per review-comment thread**, not just to the top-level conversation. GitHub marks a thread `is_outdated` once the diff at that location has changed since the comment — but that only means the code moved, not that the concern was resolved. Read the current code at that location yourself and decide whether it actually addresses the finding, rather than trusting `is_outdated`/`is_resolved` at face value. A thread can be simultaneously "outdated" and still perfectly valid (the code moved but the same bug is still there), or outdated and genuinely fixed by later work — only reading the current lines tells you which.
+
 ## Step 2 — Run the three checks
 
 Do these as an analysis pass over the diff you just read, not as separate tool-heavy investigations. Each check below produces zero or more findings; a clean check produces none, and that's a fine outcome — don't invent a finding to look thorough.
@@ -61,7 +75,9 @@ Isolation from *failure* isn't the only cost worth naming, though — it's just 
 
 ## Step 3 — Output
 
-Keep this to what a reviewer reads in ten seconds plus a skimmable list. Use exactly this shape:
+Keep this to what a reviewer reads in ten seconds plus a skimmable list. If the conversation-state check above found that nothing has changed since the last substantive reviewer ask, lead with that — one or two plain-text sentences, before the verdict block, naming who asked, for what, and since when. That's a process fact, not a code finding, so it never becomes a bullet inside the verdict. Still produce the verdict block after it if the code itself is worth characterizing, but don't let it read like a routine "go ahead and merge" — the staleness is the headline.
+
+Otherwise, use exactly this shape:
 
 ```
 ## Verdict: SAFE | RISKY | BREAKING

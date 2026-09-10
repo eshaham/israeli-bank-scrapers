@@ -1,0 +1,56 @@
+diff --git a/src/scrapers/visa-cal.ts b/src/scrapers/visa-cal.ts
+index a240d9d74..dfe5e6b46 100644
+--- a/src/scrapers/visa-cal.ts
++++ b/src/scrapers/visa-cal.ts
+@@ -178,6 +178,7 @@ interface IssuedCardsGroup {
+   nextTotalDebitForAccount?: number;
+   nextTotalDebitDateForAccount?: string | null;
+   frameLimitForCardAmount?: number;
++  fictiveMaxAccAmt?: number;
+   cardLevelFrames?: CardLevelFrame[];
+ }
+
+@@ -531,17 +532,25 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials>
+     );
+
+     let frame: CardLevelFrame | undefined;
+-    let cardType: CardType;
++    let cardType: CardType = CardType.CompanyIssued;
+     let accountGroup: IssuedCardsGroup | undefined;
+
+     if (bankIssuedFrame) {
+       frame = bankIssuedFrame;
+       cardType = CardType.BankIssued;
+       accountGroup = frames.result?.bankIssuedCards;
+-    } else {
++    } else if (calIssuedFrame) {
+       frame = calIssuedFrame;
+       cardType = CardType.CompanyIssued;
+       accountGroup = frames.result?.calIssuedCards;
++    } else if (frames.result?.bankIssuedCards) {
++      // No card-level frame found, but account has bankIssuedCards data
++      cardType = CardType.BankIssued;
++      accountGroup = frames.result.bankIssuedCards;
++    } else if (frames.result?.calIssuedCards) {
++      // No card-level frame found, but account has calIssuedCards data
++      cardType = CardType.CompanyIssued;
++      accountGroup = frames.result.calIssuedCards;
+     }
+
+     debug('searching for frame for card %s, found: %O', card.cardUniqueId, frame);
+@@ -608,7 +617,14 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials>
+         : transactions;
+
+     // Use card-level balance if available, otherwise fall back to account-level balance
+-    const balanceAmount = frame?.nextTotalDebit ?? accountGroup?.nextTotalDebitForAccount;
++    // As a last resort, calculate balance from frame limit - fictive max account amount
++    const balanceAmount =
++      frame?.nextTotalDebit ??
++      accountGroup?.nextTotalDebitForAccount ??
++      (accountGroup?.frameLimitForCardAmount != null && accountGroup?.fictiveMaxAccAmt != null
++        ? accountGroup.frameLimitForCardAmount - accountGroup.fictiveMaxAccAmt
++        : undefined);
++
+     const result: TransactionsAccount = {
+       txns,
+       balance: balanceAmount != null ? -balanceAmount : undefined,
