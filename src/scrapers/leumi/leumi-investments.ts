@@ -26,11 +26,10 @@ interface RawPortfolio {
 }
 
 interface RawHolding {
-  PaperId: string;
   PaperName?: string;
   Symbol?: string;
-  Amount: string;
-  Value: string;
+  Amount: number;
+  Value: number;
 }
 
 /**
@@ -69,11 +68,12 @@ export function parsePortfoliosResponse(data: any): RawPortfolio[] {
 }
 
 /**
- * Field names are carried over from an earlier WIP branch, not freshly observed, and still need
- * confirming against a real `Statement` response before this ships. Holdings are hardcoded to
- * ILS, which matches a live account's holdings and the live `GetOrdersHistory` order rows (both
- * confirmed via {@link parseOrderHistoryResponse}'s `CurrencyACode`), but is not itself read
- * from a field here since the corresponding holdings field name hasn't been observed yet.
+ * Verified against live responses, both empty (`DataSource: null`) and holding one fund
+ * (`DataSource: [{ PaperName: 'ברק כספית', Symbol: '', Amount: 19526, Value: 20023.91, ... }]`).
+ * `Amount`/`Value` are native numbers, unlike the string fields the old WIP branch's guess
+ * assumed. Currency is hardcoded to ILS, confirmed against a live account (and against the live
+ * `GetOrdersHistory` order rows' `CurrencyACode` in {@link parseOrderHistoryResponse}) - there is
+ * no per-holding currency field to read instead, since the observed holding is itself ILS-priced.
  */
 export function parseHoldingsResponse(data: any): Security[] {
   const rows: RawHolding[] = data?.data?.UserStatement?.DataSource ?? [];
@@ -81,10 +81,20 @@ export function parseHoldingsResponse(data: any): Security[] {
   return rows.map(row => ({
     name: row.PaperName || undefined,
     symbol: row.Symbol || '',
-    volume: parseFloat(row.Amount),
-    value: parseFloat(row.Value),
+    volume: row.Amount,
+    value: row.Value,
     currency: SHEKEL_CURRENCY,
   }));
+}
+
+/**
+ * `data.UserStatement.PortfolioValue` - verified against live responses (0 on an empty
+ * portfolio, and exactly matching the single holding's `Value` on a non-empty one) - is the
+ * account's own total, and is preferred over summing individual holdings' values since it also
+ * covers any uninvested cash sitting in the portfolio.
+ */
+export function parsePortfolioValue(data: any): number | undefined {
+  return data?.data?.UserStatement?.PortfolioValue;
 }
 
 /**
@@ -147,7 +157,9 @@ export function parseOrderHistoryResponse(data: any, options?: ScraperOptions): 
   });
 }
 
-async function fetchHoldings(page: Page): Promise<{ portfolioId: string; securities: Security[] } | null> {
+async function fetchHoldings(
+  page: Page,
+): Promise<{ portfolioId: string; securities: Security[]; balance: number } | null> {
   const configResponsePromise = waitForXhr(page, 'lti-app/api/config');
   const statementResponsePromise = waitForXhr(page, 'Statement');
 
@@ -167,8 +179,11 @@ async function fetchHoldings(page: Page): Promise<{ portfolioId: string; securit
     debug('found %d portfolios, only %s is supported for now', portfolios.length, portfolios[0].PortfolioId);
   }
 
-  const securities = parseHoldingsResponse(await statementResponse.json());
-  return { portfolioId: portfolios[0].PortfolioId, securities };
+  const statementJson = await statementResponse.json();
+  const securities = parseHoldingsResponse(statementJson);
+  const balance = parsePortfolioValue(statementJson) ?? securities.reduce((sum, security) => sum + security.value, 0);
+
+  return { portfolioId: portfolios[0].PortfolioId, securities, balance };
 }
 
 function waitForXhr(page: Page, urlSubstring: string): Promise<HTTPResponse> {
@@ -248,11 +263,9 @@ export async function fetchInvestmentAccounts(
       debug('error fetching order history, returning holdings without transactions: %s', error);
     }
 
-    const balance = portfolio.securities.reduce((sum, security) => sum + security.value, 0);
-
     const account: TransactionsAccount = {
       accountNumber: `${portfolio.portfolioId}-investment`,
-      balance,
+      balance: portfolio.balance,
       currency: SHEKEL_CURRENCY,
       savingsAccount: true,
       securities: portfolio.securities,

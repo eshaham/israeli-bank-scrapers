@@ -1,6 +1,11 @@
 import moment from 'moment';
 import { type ScraperOptions } from '../interface';
-import { parseHoldingsResponse, parseOrderHistoryResponse, parsePortfoliosResponse } from './leumi-investments';
+import {
+  parseHoldingsResponse,
+  parseOrderHistoryResponse,
+  parsePortfolioValue,
+  parsePortfoliosResponse,
+} from './leumi-investments';
 
 describe('parsePortfoliosResponse', () => {
   test('extracts portfolios from the config response', () => {
@@ -23,23 +28,36 @@ describe('parsePortfoliosResponse', () => {
 });
 
 describe('parseHoldingsResponse', () => {
+  // Real row observed on a live account holding a single money-market fund.
+  const holdingRow = { PaperId: 5141692, PaperName: 'ברק כספית', Symbol: '', Amount: 19526, Value: 20023.91 };
+
   test('maps a holdings row to a Security', () => {
-    const data = {
-      data: {
-        UserStatement: {
-          DataSource: [{ PaperId: '662577', PaperName: 'טבע', Symbol: 'TEVA', Amount: '10', Value: '1234.5' }],
-        },
-      },
-    };
+    const data = { data: { UserStatement: { DataSource: [holdingRow] } } };
 
     expect(parseHoldingsResponse(data)).toEqual([
-      { name: 'טבע', symbol: 'TEVA', volume: 10, value: 1234.5, currency: 'ILS' },
+      { name: 'ברק כספית', symbol: '', volume: 19526, value: 20023.91, currency: 'ILS' },
     ]);
   });
 
-  test('returns an empty array when there is no statement data', () => {
+  test('returns an empty array when the portfolio is empty (DataSource is null)', () => {
+    expect(parseHoldingsResponse({ data: { UserStatement: { DataSource: null } } })).toEqual([]);
     expect(parseHoldingsResponse({ data: {} })).toEqual([]);
     expect(parseHoldingsResponse({})).toEqual([]);
+  });
+});
+
+describe('parsePortfolioValue', () => {
+  test('reads the portfolio total from a non-empty statement', () => {
+    expect(parsePortfolioValue({ data: { UserStatement: { PortfolioValue: 20023.91 } } })).toBe(20023.91);
+  });
+
+  test('reads zero from an empty statement', () => {
+    expect(parsePortfolioValue({ data: { UserStatement: { PortfolioValue: 0 } } })).toBe(0);
+  });
+
+  test('returns undefined when there is no statement data', () => {
+    expect(parsePortfolioValue({ data: {} })).toBeUndefined();
+    expect(parsePortfolioValue({})).toBeUndefined();
   });
 });
 
