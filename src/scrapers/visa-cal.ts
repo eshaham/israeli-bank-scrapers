@@ -395,6 +395,47 @@ function convertParsedDataToTransactions(
   });
 }
 
+/**
+ * Visa Cal can report the same charge twice: once from the "pending authorizations" endpoint
+ * and once from the completed monthly-transactions endpoint, when a charge clears around the
+ * time of the fetch. The amount can differ between the two - a gas-station pending hold is a
+ * placeholder until the pump total is known, and other merchants adjust slightly on settlement -
+ * so this matches on description + calendar day + closest timestamp rather than an exact amount,
+ * and drops the pending entry once a completed counterpart is found. Matching is 1:1 so a second,
+ * still-genuinely-pending charge at the same merchant on the same day isn't dropped incorrectly.
+ */
+export function dedupePendingTransactions(transactions: Transaction[]): Transaction[] {
+  const pending = transactions.filter(t => t.status === TransactionStatuses.Pending);
+  const completed = transactions.filter(t => t.status !== TransactionStatuses.Pending);
+  const usedCompletedIndexes = new Set<number>();
+  const keptPending: Transaction[] = [];
+
+  for (const p of pending) {
+    const pendingDay = p.date.slice(0, 10);
+    let matchIndex = -1;
+    let matchGapMs = Infinity;
+
+    completed.forEach((c, idx) => {
+      if (usedCompletedIndexes.has(idx)) return;
+      if (c.description !== p.description) return;
+      if (c.date.slice(0, 10) !== pendingDay) return;
+      const gapMs = Math.abs(new Date(c.date).getTime() - new Date(p.date).getTime());
+      if (gapMs < matchGapMs) {
+        matchGapMs = gapMs;
+        matchIndex = idx;
+      }
+    });
+
+    if (matchIndex !== -1) {
+      usedCompletedIndexes.add(matchIndex);
+    } else {
+      keptPending.push(p);
+    }
+  }
+
+  return [...keptPending, ...completed];
+}
+
 type ScraperSpecificCredentials = { username: string; password: string };
 
 class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
@@ -599,7 +640,9 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
       pendingData = null;
     }
 
-    const transactions = convertParsedDataToTransactions(allMonthsData, pendingData, this.options);
+    const transactions = dedupePendingTransactions(
+      convertParsedDataToTransactions(allMonthsData, pendingData, this.options),
+    );
 
     debug('filter out old transactions');
     const txns =
