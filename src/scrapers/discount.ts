@@ -9,7 +9,7 @@ import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from 
 import { ScraperErrorTypes } from './errors';
 import { type ScraperOptions, type ScraperScrapingResult } from './interface';
 
-const BASE_URL = 'https://start.telebank.co.il';
+export const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
 
 interface ScrapedTransaction {
@@ -75,10 +75,16 @@ function convertTransactions(
   });
 }
 
-async function fetchAccountData(page: Page, options: ScraperOptions): Promise<ScraperScrapingResult> {
+export async function fetchAccountData(
+  page: Page,
+  options: ScraperOptions,
+  // The business (SME) portal exposes accounts under a different path than the retail site,
+  // though the response shape and the transactions endpoint are identical.
+  accountsEndpoint = 'userAccountsData',
+): Promise<ScraperScrapingResult> {
   const apiSiteUrl = `${BASE_URL}/Titan/gatewayAPI`;
 
-  const accountDataUrl = `${apiSiteUrl}/userAccountsData`;
+  const accountDataUrl = `${apiSiteUrl}/${accountsEndpoint}`;
   const accountInfo = await fetchGetWithinPage<ScrapedAccountData>(page, accountDataUrl);
 
   if (!accountInfo) {
@@ -133,7 +139,7 @@ async function fetchAccountData(page: Page, options: ScraperOptions): Promise<Sc
   return accountData;
 }
 
-async function navigateOrErrorLabel(page: Page) {
+export async function navigateOrErrorLabel(page: Page) {
   try {
     await waitForNavigation(page);
   } catch (e) {
