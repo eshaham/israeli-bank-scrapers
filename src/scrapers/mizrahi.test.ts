@@ -1,4 +1,10 @@
-import MizrahiScraper, { parseAmount, scrapeAccounts, convertPendingRow } from './mizrahi';
+import moment from 'moment';
+import MizrahiScraper, {
+  parseAmount,
+  scrapeAccounts,
+  convertPendingRow,
+  convertForeignCurrencyAccounts,
+} from './mizrahi';
 import { maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions } from '../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
 import { ISO_DATE_REGEX } from '../constants';
@@ -212,7 +218,7 @@ describe('scrapeAccounts', () => {
       if (index === 1) {
         return Promise.reject(new Error('boom'));
       }
-      return Promise.resolve(makeAccount(`acc-${index}`));
+      return Promise.resolve([makeAccount(`acc-${index}`)]);
     });
 
     const { accounts, errors } = await scrapeAccounts(3, selectAccount, fetchAccount);
@@ -274,4 +280,238 @@ describe('scrapeAccounts', () => {
     expect(errors[0]).toBe(`account #1: ${String(aggregate)}`);
     expect(errors[0]).not.toMatch(/account #1: $/);
   });
+});
+
+describe('convertForeignCurrencyAccounts', () => {
+  const placeholderTransaction = {
+    TRANSACTION_DATE: '',
+    ERECH_DATE: '',
+    SUG_ISKA_CODE: '',
+    SUG_ISKA_DESC: '',
+    TNUA_AMT: '',
+    ASMACHTA: '',
+    ITRA_CURRENT_AMT: '',
+    MATBEA_CODE: '',
+    TNUA_NUM: '',
+    KABAH_CODE: '',
+    KABAH_NAME: '',
+  };
+
+  function makeResponse(rows: Record<string, unknown>) {
+    return {
+      header: { success: null, messages: [] },
+      body: {
+        table: {
+          rows: {
+            RET_MESSAGE: 'תקין',
+            RET_CODE: '1',
+            FCR_AGG_DATA_ARR: [],
+            FCR_TRANS_DATA_ARR: [placeholderTransaction],
+            FCR_PENDING_TRANS_ARR: [placeholderTransaction],
+            ...rows,
+          },
+        },
+      },
+    };
+  }
+
+  test('maps the exact sample response from the discovery note', () => {
+    const response = makeResponse({
+      FCR_AGG_DATA_ARR: [
+        {
+          ITRAT_FCR_BOOKED: '104.96',
+          ITRAT_FCR_PENDING: '104.96',
+          MATBEA_CODE: '1',
+          MATBEA_NAME: 'דולר ארה"ב',
+          MATBEA_SHORT_NAME: 'דולר',
+          MATBEA_SYMBOL: 'USD',
+          ITRA_NIS: '317.29',
+          KVUTZAT_CHESHBON_CODE: '225',
+          KVUTZAT_CHESHBON_NAME: 'פמ"ח יחיד עו"ש',
+        },
+      ],
+      FCR_TRANS_DATA_ARR: [
+        {
+          TRANSACTION_DATE: '2026-09-06 00:00:00',
+          ERECH_DATE: '2026-09-03 00:00:00',
+          TEUR_TNUA_DESC: 'תקבול מט"ח',
+          SUG_ISKA_CODE: '442',
+          SUG_ISKA_DESC: 'פקודת יומן במט"ח',
+          ASMACHTA: '381',
+          TNUA_AMT: '104.96',
+          ITRA_CURRENT_AMT: '104.96',
+          MATBEA_CODE: '1',
+          TNUA_NUM: '1',
+          KABAH_CODE: '225',
+          KABAH_NAME: 'פמ"ח יחיד עו"ש',
+        },
+        placeholderTransaction,
+      ],
+      FCR_PENDING_TRANS_ARR: [placeholderTransaction],
+    });
+
+    const accounts = convertForeignCurrencyAccounts('12345', response);
+
+    expect(accounts).toHaveLength(1);
+    expect(accounts[0].accountNumber).toBe('12345-USD');
+    expect(accounts[0].currency).toBe('USD');
+    expect(accounts[0].balance).toBe(104.96);
+    expect(accounts[0].txns).toHaveLength(1);
+    expect(accounts[0].txns[0]).toMatchObject({
+      identifier: 't1-381',
+      originalAmount: 104.96,
+      chargedAmount: 104.96,
+      originalCurrency: 'USD',
+      chargedCurrency: 'USD',
+      status: 'completed',
+    });
+    const expectedDate = moment('2026-09-06 00:00:00', 'YYYY-MM-DD HH:mm:ss').toISOString();
+    expect(accounts[0].txns[0].date).toBe(expectedDate);
+  });
+
+  test('parses a negative TNUA_AMT as a negative chargedAmount', () => {
+    const response = makeResponse({
+      FCR_AGG_DATA_ARR: [usdAggregate()],
+      FCR_TRANS_DATA_ARR: [{ ...usdTransaction(), TNUA_AMT: '-50.25' }],
+    });
+
+    const accounts = convertForeignCurrencyAccounts('12345', response);
+
+    expect(accounts[0].txns[0].chargedAmount).toBe(-50.25);
+  });
+
+  test('falls back processedDate to date when ERECH_DATE is empty', () => {
+    const response = makeResponse({
+      FCR_AGG_DATA_ARR: [usdAggregate()],
+      FCR_TRANS_DATA_ARR: [{ ...usdTransaction(), ERECH_DATE: '' }],
+    });
+
+    const accounts = convertForeignCurrencyAccounts('12345', response);
+
+    expect(accounts[0].txns[0].processedDate).toBe(accounts[0].txns[0].date);
+  });
+
+  test('returns no accounts for an empty aggregate array with only placeholder rows', () => {
+    const response = makeResponse({});
+
+    expect(convertForeignCurrencyAccounts('12345', response)).toEqual([]);
+  });
+
+  test('splits transactions across two currencies', () => {
+    const response = makeResponse({
+      FCR_AGG_DATA_ARR: [
+        { ...usdAggregate() },
+        {
+          ITRAT_FCR_BOOKED: '50',
+          ITRAT_FCR_PENDING: '50',
+          MATBEA_CODE: '2',
+          MATBEA_NAME: 'אירו',
+          MATBEA_SHORT_NAME: 'אירו',
+          MATBEA_SYMBOL: 'EUR',
+          ITRA_NIS: '200',
+          KVUTZAT_CHESHBON_CODE: '226',
+          KVUTZAT_CHESHBON_NAME: 'פמ"ח יחיד עו"ש',
+        },
+      ],
+      FCR_TRANS_DATA_ARR: [usdTransaction(), eurTransaction()],
+      FCR_PENDING_TRANS_ARR: [usdPendingTransaction()],
+    });
+
+    const accounts = convertForeignCurrencyAccounts('12345', response);
+
+    expect(accounts).toHaveLength(2);
+    const usdAccount = accounts.find(a => a.currency === 'USD');
+    const eurAccount = accounts.find(a => a.currency === 'EUR');
+    expect(usdAccount?.txns).toHaveLength(2);
+    expect(usdAccount?.txns[1].status).toBe('pending');
+    expect(usdAccount?.txns[1].identifier).toBeUndefined();
+    expect(eurAccount?.txns).toHaveLength(1);
+    expect(eurAccount?.txns[0].originalCurrency).toBe('EUR');
+  });
+
+  test('drops a transaction row with an unparsable amount', () => {
+    const response = makeResponse({
+      FCR_AGG_DATA_ARR: [usdAggregate()],
+      FCR_TRANS_DATA_ARR: [{ ...usdTransaction(), TNUA_AMT: 'abc' }],
+    });
+
+    const accounts = convertForeignCurrencyAccounts('12345', response);
+
+    expect(accounts[0].txns).toEqual([]);
+  });
+
+  test('drops a transaction row with an empty TRANSACTION_DATE', () => {
+    const response = makeResponse({
+      FCR_AGG_DATA_ARR: [usdAggregate()],
+      FCR_TRANS_DATA_ARR: [{ ...usdTransaction(), TRANSACTION_DATE: '' }],
+    });
+
+    const accounts = convertForeignCurrencyAccounts('12345', response);
+
+    expect(accounts[0].txns).toEqual([]);
+  });
+
+  function usdAggregate() {
+    return {
+      ITRAT_FCR_BOOKED: '104.96',
+      ITRAT_FCR_PENDING: '104.96',
+      MATBEA_CODE: '1',
+      MATBEA_NAME: 'דולר ארה"ב',
+      MATBEA_SHORT_NAME: 'דולר',
+      MATBEA_SYMBOL: 'USD',
+      ITRA_NIS: '317.29',
+      KVUTZAT_CHESHBON_CODE: '225',
+      KVUTZAT_CHESHBON_NAME: 'פמ"ח יחיד עו"ש',
+    };
+  }
+
+  function usdTransaction() {
+    return {
+      TRANSACTION_DATE: '2026-09-06 00:00:00',
+      ERECH_DATE: '2026-09-03 00:00:00',
+      TEUR_TNUA_DESC: 'תקבול מט"ח',
+      SUG_ISKA_CODE: '442',
+      SUG_ISKA_DESC: 'פקודת יומן במט"ח',
+      ASMACHTA: '381',
+      TNUA_AMT: '104.96',
+      ITRA_CURRENT_AMT: '104.96',
+      MATBEA_CODE: '1',
+      TNUA_NUM: '1',
+      KABAH_CODE: '225',
+      KABAH_NAME: 'פמ"ח יחיד עו"ש',
+    };
+  }
+
+  function usdPendingTransaction() {
+    return {
+      TRANSACTION_DATE: '2026-09-07 00:00:00',
+      ERECH_DATE: '',
+      SUG_ISKA_CODE: '442',
+      SUG_ISKA_DESC: 'המחאה בהמתנה',
+      ASMACHTA: '382',
+      TNUA_AMT: '10',
+      ITRA_CURRENT_AMT: '114.96',
+      MATBEA_CODE: '1',
+      TNUA_NUM: '1',
+      KABAH_CODE: '225',
+      KABAH_NAME: 'פמ"ח יחיד עו"ש',
+    };
+  }
+
+  function eurTransaction() {
+    return {
+      TRANSACTION_DATE: '2026-09-08 00:00:00',
+      ERECH_DATE: '2026-09-08 00:00:00',
+      TEUR_TNUA_DESC: 'תקבול מט"ח',
+      SUG_ISKA_CODE: '442',
+      SUG_ISKA_DESC: 'פקודת יומן במט"ח',
+      ASMACHTA: '500',
+      TNUA_AMT: '50',
+      ITRA_CURRENT_AMT: '50',
+      MATBEA_CODE: '2',
+      TNUA_NUM: '2',
+      KABAH_CODE: '226',
+      KABAH_NAME: 'פמ"ח יחיד עו"ש',
+    };
+  }
 });
