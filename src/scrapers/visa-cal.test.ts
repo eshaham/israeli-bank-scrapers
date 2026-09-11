@@ -71,11 +71,11 @@ describe('VisaCal legacy scraper', () => {
 describe('dedupePendingTransactions', () => {
   test('drops a pending transaction once an identical completed counterpart exists', () => {
     const transactions = [
-      makeTransaction({ status: TransactionStatuses.Pending, date: '2024-05-10T07:20:05.000Z', chargedAmount: -450 }),
+      makeTransaction({ status: TransactionStatuses.Pending, date: '2024-05-10T07:20:05.000Z', chargedAmount: -120 }),
       makeTransaction({
         status: TransactionStatuses.Completed,
         date: '2024-05-10T07:20:05.000Z',
-        chargedAmount: -450,
+        chargedAmount: -120,
         identifier: 'abc123',
       }),
     ];
@@ -92,12 +92,12 @@ describe('dedupePendingTransactions', () => {
       makeTransaction({
         status: TransactionStatuses.Pending,
         date: '2024-05-10T05:09:27.000Z',
-        chargedAmount: -299, // placeholder hold amount
+        chargedAmount: -200, // placeholder hold amount
       }),
       makeTransaction({
         status: TransactionStatuses.Completed,
         date: '2024-05-10T05:12:18.000Z', // a few minutes later, once the pump total is known
-        chargedAmount: -152.72,
+        chargedAmount: -84.3,
         identifier: 'abc456',
       }),
     ];
@@ -106,16 +106,16 @@ describe('dedupePendingTransactions', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].status).toBe(TransactionStatuses.Completed);
-    expect(result[0].chargedAmount).toBe(-152.72);
+    expect(result[0].chargedAmount).toBe(-84.3);
   });
 
   test('drops the pending side when the amount differs by a small settlement adjustment', () => {
     const transactions = [
-      makeTransaction({ status: TransactionStatuses.Pending, date: '2024-05-10T07:29:25.000Z', chargedAmount: -250.3 }),
+      makeTransaction({ status: TransactionStatuses.Pending, date: '2024-05-10T07:29:25.000Z', chargedAmount: -75.5 }),
       makeTransaction({
         status: TransactionStatuses.Completed,
         date: '2024-05-10T07:29:25.000Z',
-        chargedAmount: -251,
+        chargedAmount: -76,
         identifier: 'abc789',
       }),
     ];
@@ -123,7 +123,7 @@ describe('dedupePendingTransactions', () => {
     const result = dedupePendingTransactions(transactions);
 
     expect(result).toHaveLength(1);
-    expect(result[0].chargedAmount).toBe(-251);
+    expect(result[0].chargedAmount).toBe(-76);
   });
 
   test('keeps a pending transaction with no completed counterpart', () => {
