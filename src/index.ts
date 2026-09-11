@@ -1,5 +1,7 @@
 export { CompanyTypes, SCRAPERS } from './definitions';
 export { default as createScraper } from './scrapers/factory';
+export { AssetType } from './portfolio';
+export type { PortfolioAccount, Position } from './portfolio';
 
 // Note: the typo ScaperScrapingResult & ScraperLoginResult (sic) are exported here for backward compatibility
 export {
