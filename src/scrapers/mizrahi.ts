@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { type Frame, type HTTPRequest, type Page } from 'puppeteer';
+import { type Frame, type Page } from 'puppeteer';
 import { SHEKEL_CURRENCY } from '../constants';
 import {
   pageEvalAll,
@@ -77,13 +77,7 @@ type MoreDetails = {
 const BASE_WEBSITE_URL = 'https://www.mizrahi-tefahot.co.il';
 const LOGIN_URL = `${BASE_WEBSITE_URL}/login/index.html#/auth-page-he`;
 const BASE_APP_URL = 'https://mto.mizrahi-tefahot.co.il';
-const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/OnlineApp\/.*/;
-const OSH_PAGE = '/osh/legacy/legacy-Osh-Main';
-const TRANSACTIONS_PAGE = '/osh/legacy/root-main-osh-p428New';
-const TRANSACTIONS_REQUEST_URLS = [
-  `${BASE_APP_URL}/OnlinePilot/api/SkyOSH/get428Index`,
-  `${BASE_APP_URL}/Online/api/SkyOSH/get428Index`,
-];
+const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/OnlineApp(Pilot)?\/.*/;
 const PENDING_TRANSACTIONS_PAGE = '/osh/legacy/legacy-Osh-p420';
 const PENDING_TRANSACTIONS_IFRAME = 'p420.aspx';
 const MORE_DETAILS_URL = `${BASE_APP_URL}/Online/api/OSH/getMaherBerurimSMF`;
@@ -137,6 +131,7 @@ async function getExtraTransactionDetails(
   page: Page,
   item: ScrapedTransaction,
   apiHeaders: Record<string, string>,
+  moreDetailsUrl: string = MORE_DETAILS_URL,
 ): Promise<MoreDetails> {
   try {
     debug('getExtraTransactionDetails for item:', item);
@@ -158,7 +153,7 @@ async function getExtraTransactionDetails(
         inTransactionNumber: item.TransactionNumber,
       };
 
-      const response = await fetchPostWithinPage<MoreDetailsResponse>(page, MORE_DETAILS_URL, params, apiHeaders);
+      const response = await fetchPostWithinPage<MoreDetailsResponse>(page, moreDetailsUrl, params, apiHeaders);
       const details = response?.body.fields?.[0]?.[0]?.Records?.[0].Fields;
       debug('fetch details for', params, 'details:', details);
       if (Array.isArray(details) && details.length > 0) {
@@ -179,23 +174,6 @@ async function getExtraTransactionDetails(
   return {
     entries: {},
     memo: undefined,
-  };
-}
-
-function createDataFromRequest(request: HTTPRequest, optionsStartDate: Date) {
-  const data = JSON.parse(request.postData() || '{}');
-
-  data.inFromDate = getStartMoment(optionsStartDate).format(DATE_FORMAT);
-  data.inToDate = moment().format(DATE_FORMAT);
-  data.table.maxRow = MAX_ROWS_PER_REQUEST;
-
-  return data;
-}
-
-function createHeadersFromRequest(request: HTTPRequest) {
-  return {
-    mizrahixsrftoken: request.headers().mizrahixsrftoken,
-    'Content-Type': request.headers()['content-type'],
   };
 }
 
@@ -341,10 +319,20 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
   }
 
   private async fetchAccount() {
-    await this.page.waitForSelector(`a[href*="${OSH_PAGE}"]`);
-    await this.page.$eval(`a[href*="${OSH_PAGE}"]`, el => (el as HTMLElement).click());
-    await waitUntilElementFound(this.page, `a[href*="${TRANSACTIONS_PAGE}"]`);
-    await this.page.$eval(`a[href*="${TRANSACTIONS_PAGE}"]`, el => (el as HTMLElement).click());
+    // Key on the token header + /api/ ONLY — never on the OnlineApp/OnlineAppPilot segment name —
+    // and derive the api base from the request that carried the token, so this works on either door
+    // and survives a future rename of the segment.
+    const tokenRequest = await this.page.waitForRequest(
+      req => !!req.headers().mizrahixsrftoken && /\/[^/]+\/api\//.test(req.url()),
+    );
+    const apiHeaders = {
+      mizrahixsrftoken: tokenRequest.headers().mizrahixsrftoken,
+      'Content-Type': 'application/json',
+    };
+    const derivedApiBase = tokenRequest.url().match(/^(https?:\/\/[^/]+\/[^/]+)\/api\//)?.[1];
+    const apiBaseCandidates = [
+      ...new Set([derivedApiBase, `${BASE_APP_URL}/Online`, `${BASE_APP_URL}/OnlinePilot`].filter(Boolean)),
+    ] as string[];
 
     const accountNumberElement = await this.page.$('#dropdownBasic b span');
     const accountNumberHandle = await accountNumberElement?.getProperty('title');
@@ -353,27 +341,43 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
       throw new Error('Account number not found');
     }
 
-    const [response, apiHeaders] = await Promise.any(
-      TRANSACTIONS_REQUEST_URLS.map(async url => {
-        const request = await this.page.waitForRequest(url);
-        const data = createDataFromRequest(request, this.options.startDate);
-        const headers = createHeadersFromRequest(request);
+    const data = {
+      inFromDate: getStartMoment(this.options.startDate).format(DATE_FORMAT),
+      inToDate: moment().format(DATE_FORMAT),
+      inSugTnua: '',
+      table: {
+        sortExpression: 'MC02PeulaTaaEZ DESC',
+        sortOrder: 'DESC',
+        startRowIndex: 0,
+        maxRow: MAX_ROWS_PER_REQUEST,
+        actionGuid: '',
+      },
+      isFromSearch: false,
+    };
 
-        return [await fetchPostWithinPage<ScrapedTransactionsResult>(this.page, url, data, headers), headers] as const;
-      }),
-    );
-
-    if (!response || response.header.success === false) {
-      throw new Error(
-        `Error fetching transaction. Response message: ${response ? response.header.messages[0].text : ''}`,
-      );
+    // POST get428Index to the derived base; fall back to the known variants if that base is wrong.
+    let response: ScrapedTransactionsResult | undefined;
+    let apiBase: string | undefined;
+    let lastError = '';
+    for (const base of apiBaseCandidates) {
+      try {
+        const r = await fetchPostWithinPage<ScrapedTransactionsResult>(this.page, `${base}/api/SkyOSH/get428Index`, data, apiHeaders);
+        if (r && r.header.success !== false) { response = r; apiBase = base; break; }
+        lastError = r ? r.header.messages?.[0]?.text : 'empty response';
+      } catch (e) {
+        lastError = (e as Error).message;
+      }
     }
+    if (!response || !apiBase) {
+      throw new Error(`Error fetching transaction (tried: ${apiBaseCandidates.join(', ')}). Last: ${lastError}`);
+    }
+    const moreDetailsUrl = `${apiBase}/api/OSH/getMaherBerurimSMF`;
 
     const relevantRows = response.body.table.rows.filter(row => row.RecTypeSpecified);
     const oshTxn = await convertTransactions(
       relevantRows,
       this.options.additionalTransactionInformation
-        ? row => getExtraTransactionDetails(this.page, row, apiHeaders)
+        ? row => getExtraTransactionDetails(this.page, row, apiHeaders, moreDetailsUrl)
         : () => Promise.resolve({ entries: {}, memo: undefined }),
       this.options.optInFeatures?.includes('mizrahi:pendingIfTodayTransaction'),
       this.options,
