@@ -13,6 +13,7 @@ export {
 } from './scrapers/interface';
 
 export { default as OneZeroScraper } from './scrapers/one-zero';
+export { type InvestmentHolding, type Transaction, type TransactionsAccount } from './transactions';
 
 export function getPuppeteerConfig() {
   return { chromiumRevision: '1250580' }; // https://github.com/puppeteer/puppeteer/releases/tag/puppeteer-core-v22.5.0

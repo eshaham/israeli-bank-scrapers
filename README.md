@@ -89,7 +89,25 @@ The structure of the result object is as follows:
   success: boolean,
   accounts: [{
     accountNumber: string,
+    name?: string,
     balance?: number, // Account balance. Not implemented for all accounts.
+    balanceDate?: string, // ISO date string for the reported balance.
+    investmentAccount?: boolean,
+    holdings?: [{ // Present for investment accounts such as Leumi Trade portfolios.
+      identifier: string | number,
+      name: string,
+      symbol?: string,
+      quantity: number,
+      averagePrice: number,
+      lastPrice: number,
+      value: number,
+      valueCurrency: string,
+      profit: number,
+      profitCurrency: string,
+      profitPercent: number,
+      dailyChangePercent: number,
+      portfolioPercent: number,
+    }],
     txns: [{
       type: string, // can be either 'normal' or 'installments'
       identifier: int, // only if exists
@@ -288,6 +306,9 @@ const credentials = {
 };
 ```
 This scraper supports fetching transaction from up to one year.
+
+The scraper also returns current Leumi Trade portfolios when they are available. These accounts have
+`investmentAccount: true`, an empty `txns` array, and a `holdings` array containing the current positions.
 
 ## Discount scraper
 This scraper expects the following credentials object:

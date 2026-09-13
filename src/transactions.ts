@@ -1,12 +1,36 @@
 export interface TransactionsAccount {
   accountNumber: string;
+  name?: string;
   balance?: number;
   balanceDate?: string;
   cardFrame?: number;
   cardType?: CardType;
   currency?: string;
   savingsAccount?: boolean;
+  investmentAccount?: boolean;
+  holdings?: InvestmentHolding[];
   txns: Transaction[];
+}
+
+export interface InvestmentHolding {
+  identifier: string | number;
+  name: string;
+  symbol?: string;
+  quantity: number;
+  averagePrice: number;
+  lastPrice: number;
+  value: number;
+  valueCurrency: string;
+  profit: number;
+  profitCurrency: string;
+  profitPercent: number;
+  dailyChangePercent: number;
+  portfolioPercent: number;
+  securityType?: string;
+  regionId?: number;
+  countryId?: number;
+  currencyRate?: number;
+  rawHolding?: unknown;
 }
 
 export enum CardType {

@@ -107,5 +107,26 @@ describe('Leumi legacy scraper', () => {
     } else {
       debug('No foreign currency accounts found - this may be expected if the test account has none');
     }
+
+    // Validate Leumi Trade portfolios if the customer has access to the trading application
+    const investmentAccounts = result.accounts?.filter(account => account.investmentAccount === true);
+
+    debug('Leumi Trade portfolios found:', investmentAccounts?.length);
+
+    investmentAccounts?.forEach(account => {
+      expect(account.accountNumber).toBeDefined();
+      expect(account.balance).toBeDefined();
+      expect(account.balanceDate).toBeDefined();
+      expect(account.currency).toBeDefined();
+      expect(account.holdings).toBeDefined();
+      expect(account.txns).toEqual([]);
+
+      account.holdings?.forEach(holding => {
+        expect(holding.identifier).toBeDefined();
+        expect(holding.name).toBeDefined();
+        expect(Number.isNaN(holding.quantity)).toBe(false);
+        expect(Number.isNaN(holding.value)).toBe(false);
+      });
+    });
   });
 });
