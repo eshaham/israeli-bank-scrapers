@@ -33,7 +33,7 @@ Currently only the following banks are supported:
 - Behatsdaa - [בהצדעה](behatsdaa.org.il) (thanks [@daniel-hauser](https://github.com/daniel-hauser))
 
 # Prerequisites
-To use this you will need to have [Node.js](https://nodejs.org) >= 22.12.0 installed.
+To use this you will need to have [Node.js](https://nodejs.org) >= 22.22.2 installed.
 
 # Getting started
 To use these scrapers you'll need to install the package from npm:
@@ -408,6 +408,7 @@ const credentials = {
 
 # Known projects
 These are the projects known to be using this module:
+- [Scipio](https://github.com/t0mer/scipio) - A self-hosted RESTful API wrapper for fetching Israeli bank and credit card transactions over HTTP.
 - [Israeli YNAB updater](https://github.com/eshaham/israeli-ynab-updater) - A command line tool for exporting banks data to CSVs, formatted specifically for [YNAB](https://www.youneedabudget.com)
 - [Caspion](https://github.com/brafdlog/caspion) - An app for automatically sending transactions from Israeli banks and credit cards to budget tracking apps
 - [Finance Notifier](https://github.com/LiranBri/finance-notifier) - A simple script with the ability to send custom financial alerts to multiple contacts and platforms

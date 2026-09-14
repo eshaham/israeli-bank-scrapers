@@ -30,12 +30,26 @@ const ID_TYPE = '1';
 const INSTALLMENTS_KEYWORD = 'תשלום';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
+const BALANCE_DATE_OUTPUT_FORMAT = 'YYYY-MM-DD[T]HH:mm:ss';
+
+const CARD_LIST_PAGE_PATH = '/personalarea/cardlist/?WebPage=true';
+const CARD_LIST_BALANCE_READY_MARKERS = ['עבור כרטיס שמסתיים ב', 'נותר לניצול:'];
+const CARD_SUFFIX_PATTERN = '(\\d{4})';
+const AMEX_CARD_SECTION_SEPARATOR = new RegExp('עבור כרטיס שמסתיים ב\\s*');
+const AMEX_CARD_BALANCE_PATTERN =
+  /ניצלת עד כה\s*([\d,.]+)\s*(?:₪)?\s*מתוך מסגרת האשראי\s*([\d,.]+).*?נכון לתאריך\s*:?[\s]*(\d{2}[/\.\-]\d{2}[/\.\-]\d{4})/s;
+const ISRACARD_CARD_BALANCE_PATTERN = new RegExp(
+  `${CARD_SUFFIX_PATTERN}[\\s\\S]*?מסגרת:\\s*₪?\\s*([\\d,.]+)[\\s\\S]*?נותר לניצול:\\s*₪?\\s*([\\d,.]+)`,
+  'g',
+);
+const ISRACARD_CARD_BALANCE_DATE_PATTERN = /לחיוב ב-(\d{2}[/.\-]\d{2})/;
 
 const debug = getDebug('base-isracard-amex');
 
 type CompanyServiceOptions = {
   servicesUrl: string;
   companyCode: string;
+  cardListPageUrl: string;
 };
 
 type ScrapedAccountsWithIndex = Record<string, TransactionsAccount & { index: number }>;
@@ -106,6 +120,72 @@ interface ScrapedTransactionData {
       CurrentCardTransactions: ScrapedCurrentCardTransactions[];
     }
   >;
+}
+
+type ScrapedCardBalance = {
+  balance: number;
+  balanceDate?: string;
+  cardFrame: number;
+};
+
+export function parseCardListBalances(pageText: string): Map<string, ScrapedCardBalance> {
+  const balances = new Map<string, ScrapedCardBalance>();
+  const cardSections = pageText.split(AMEX_CARD_SECTION_SEPARATOR).slice(1);
+
+  cardSections.forEach(cardSection => {
+    const cardSuffix = cardSection.match(new RegExp(`^${CARD_SUFFIX_PATTERN}`))?.[1];
+    const balanceMatch = cardSection.match(AMEX_CARD_BALANCE_PATTERN);
+    if (!cardSuffix || !balanceMatch) {
+      return;
+    }
+
+    const balance = Number(balanceMatch[1].replace(/,/g, ''));
+    const cardFrame = Number(balanceMatch[2].replace(/,/g, ''));
+    const balanceDate = moment(balanceMatch[3].replace(/[.-]/g, '/'), DATE_FORMAT, true);
+    if (!Number.isFinite(balance) || !Number.isFinite(cardFrame) || !balanceDate.isValid()) {
+      return;
+    }
+
+    balances.set(cardSuffix, {
+      balance: -balance,
+      balanceDate: balanceDate.format(BALANCE_DATE_OUTPUT_FORMAT),
+      cardFrame,
+    });
+  });
+
+  const isracardBalanceDates = [...pageText.matchAll(new RegExp(ISRACARD_CARD_BALANCE_DATE_PATTERN, 'g'))].map(
+    ([, date]) => date,
+  );
+  const uniqueIsracardBalanceDates = [...new Set(isracardBalanceDates)];
+  const fallbackIsracardBalanceDate =
+    uniqueIsracardBalanceDates.length === 1 ? uniqueIsracardBalanceDates[0] : undefined;
+  const isracardCards = [...pageText.matchAll(ISRACARD_CARD_BALANCE_PATTERN)];
+
+  for (const isracardCard of isracardCards) {
+    const [, cardSuffix, cardFrameValue, remainingCreditValue] = isracardCard;
+    const cardBalanceDateValue = isracardCard[0].match(ISRACARD_CARD_BALANCE_DATE_PATTERN)?.[1];
+    const cardFrame = Number(cardFrameValue.replace(/,/g, ''));
+    const remainingCredit = Number(remainingCreditValue.replace(/,/g, ''));
+    // Cancelled cards have no usable frame and should not inherit another card's date.
+    const canUseFallbackBalanceDate = cardFrame > 0;
+    // Some active cards omit the date from their own block but share one page-level billing date.
+    const balanceDateValue =
+      cardBalanceDateValue ?? (canUseFallbackBalanceDate ? fallbackIsracardBalanceDate : undefined);
+    const balanceDate = balanceDateValue ? moment(balanceDateValue.replace(/[.-]/g, '/'), 'DD/MM', true) : undefined;
+    if (!Number.isFinite(cardFrame) || !Number.isFinite(remainingCredit) || (balanceDate && !balanceDate.isValid())) {
+      continue;
+    }
+
+    const balance = remainingCredit - cardFrame;
+    const formattedBalanceDate = balanceDate?.format(BALANCE_DATE_OUTPUT_FORMAT);
+    balances.set(cardSuffix, {
+      balance,
+      cardFrame,
+      ...(formattedBalanceDate ? { balanceDate: formattedBalanceDate } : {}),
+    });
+  }
+
+  return balances;
 }
 
 function getAccountsUrl(servicesUrl: string, monthMoment: Moment) {
@@ -274,6 +354,26 @@ async function fetchTransactions(
   return {};
 }
 
+async function fetchCardBalances(page: Page, cardListPageUrl: string): Promise<Map<string, ScrapedCardBalance>> {
+  try {
+    debug(`opening card balance page ${cardListPageUrl}`);
+
+    await page.goto(cardListPageUrl, { waitUntil: 'domcontentloaded' });
+    debug(`card balance page loaded at ${page.url()}`);
+    await page.waitForFunction(
+      (markers: string[]) => markers.some(marker => document.body.innerText.includes(marker)),
+      {},
+      CARD_LIST_BALANCE_READY_MARKERS,
+    );
+    const balances = parseCardListBalances(await page.evaluate(() => document.body.innerText));
+    debug(`parsed card balances for ${balances.size} cards from card list page`);
+    return balances;
+  } catch (error) {
+    debug(`failed to fetch card balances from ${cardListPageUrl}`, error);
+    return new Map();
+  }
+}
+
 async function getExtraScrapTransaction(
   page: Page,
   options: CompanyServiceOptions,
@@ -368,6 +468,7 @@ async function fetchAllTransactions(
     companyServiceOptions,
     allMonths,
   );
+  const cardBalances = await fetchCardBalances(page, companyServiceOptions.cardListPageUrl);
   const combinedTxns: Record<string, Transaction[]> = {};
 
   finalResult.forEach(result => {
@@ -383,9 +484,16 @@ async function fetchAllTransactions(
   });
 
   const accounts = Object.keys(combinedTxns).map(accountNumber => {
+    const balance = cardBalances.get(accountNumber);
+    debug(
+      `account ${accountNumber} balance ${balance ? 'matched' : 'not matched'}${balance ? `: ${balance.balance}` : ''}`,
+    );
     return {
       accountNumber,
       txns: combinedTxns[accountNumber],
+      balance: balance?.balance,
+      balanceDate: balance?.balanceDate,
+      cardFrame: balance?.cardFrame,
     };
   });
 
@@ -405,12 +513,15 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
 
   private servicesUrl: string;
 
+  private cardListPageUrl: string;
+
   constructor(options: ScraperOptions, baseUrl: string, companyCode: string) {
     super(options);
 
     this.baseUrl = baseUrl;
     this.companyCode = companyCode;
     this.servicesUrl = `${baseUrl}/services/ProxyRequestHandler.ashx`;
+    this.cardListPageUrl = `${baseUrl}${CARD_LIST_PAGE_PATH}`;
   }
 
   async login(credentials: ScraperSpecificCredentials): Promise<ScraperScrapingResult> {
@@ -516,6 +627,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
       {
         servicesUrl: this.servicesUrl,
         companyCode: this.companyCode,
+        cardListPageUrl: this.cardListPageUrl,
       },
       startMoment,
     );

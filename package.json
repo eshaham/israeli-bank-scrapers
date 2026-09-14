@@ -4,7 +4,7 @@
   "private": true,
   "description": "Provide scrapers for all major Israeli banks and credit card companies",
   "engines": {
-    "node": ">= 22.13.0"
+    "node": ">= 22.22.2"
   },
   "publishConfig": {
     "access": "public",

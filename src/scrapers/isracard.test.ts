@@ -36,7 +36,7 @@ describe('Isracard legacy scraper', () => {
     },
   );
 
-  maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions"', async () => {
+  maybeTestCompanyAPI(COMPANY_ID)('should scrape transactions and balances', async () => {
     const options = {
       ...testsConfig.options,
       companyId: COMPANY_ID,
@@ -48,6 +48,10 @@ describe('Isracard legacy scraper', () => {
     const error = `${result.errorType || ''} ${result.errorMessage || ''}`.trim();
     expect(error).toBe('');
     expect(result.success).toBeTruthy();
+    result.accounts?.forEach(account => {
+      expect(account.balance).toBeDefined();
+      expect(account.cardFrame).toBeDefined();
+    });
 
     exportTransactions(COMPANY_ID, result.accounts || []);
   });

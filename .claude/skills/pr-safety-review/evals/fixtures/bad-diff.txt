@@ -1,0 +1,49 @@
+diff --git a/src/scrapers/example-bank.ts b/src/scrapers/example-bank.ts
+index 1111111..2222222 100644
+--- a/src/scrapers/example-bank.ts
++++ b/src/scrapers/example-bank.ts
+@@ -12,7 +12,7 @@ export interface ScrapedAccountSummary {
+   accountNumber: string;
+   balance: number;
+-  balanceDate: string;
++  balanceUpdatedAt: string;
+ }
+
+ export interface FetchOptions {
+@@ -40,20 +40,31 @@ async function fetchAccountSummary(page: Page, accountId: string): Promise<Scr
+   const raw = await fetchGetWithinPage<RawAccountSummary>(page, `${BASE_URL}/accounts/${accountId}/summary`);
+
+-  return {
++  const summary: ScrapedAccountSummary = {
+     accountNumber: raw.accountNumber,
+     balance: raw.balance,
+-    balanceDate: raw.asOfDate,
++    balanceUpdatedAt: raw.asOfDate,
+   };
++
++  // fetch the loyalty points balance too, since users asked for it in issue #482
++  await page.goto(`${BASE_URL}/accounts/${accountId}/loyalty`, { waitUntil: 'domcontentloaded' });
++  const loyaltyRaw = await fetchGetWithinPage<{ points: number }>(page, `${BASE_URL}/api/loyalty/${accountId}`);
++  summary.loyaltyPoints = loyaltyRaw.points;
++
++  // increment the fetched-accounts counter
++  fetchedAccountsCount += 1;
++
++  return summary;
+ }
+
+ export async function fetchAllAccountSummaries(
+   page: Page,
+   accountIds: string[],
+   options: FetchOptions,
+ ): Promise<ScrapedAccountSummary[]> {
+   const summaries: ScrapedAccountSummary[] = [];
+   for (const accountId of accountIds) {
+-    const summary = await fetchAccountSummary(page, accountId);
+-    summaries.push(summary);
++    // loop over every account id and fetch its summary
++    const summary = await fetchAccountSummary(page, accountId);
++    summaries.push(summary);
+   }
+   return summaries;
+ }
