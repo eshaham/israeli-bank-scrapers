@@ -64,3 +64,6 @@ lib/
 .idea
 .vscode
 .DS_Store
+
+# PR walkthrough state
+.pr-walkthrough/
