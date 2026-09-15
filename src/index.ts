@@ -5,6 +5,7 @@ export { default as createScraper } from './scrapers/factory';
 export {
   ScraperLoginResult as ScaperLoginResult,
   ScraperScrapingResult as ScaperScrapingResult,
+  DeviceTrustData,
   Scraper,
   ScraperCredentials,
   ScraperLoginResult,

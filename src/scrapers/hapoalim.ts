@@ -3,11 +3,12 @@ import { type Page } from 'puppeteer';
 import { randomUUID } from 'crypto';
 import { getDebug } from '../helpers/debug';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
-import { waitForRedirect } from '../helpers/navigation';
-import { waitUntil } from '../helpers/waiting';
+import { getCurrentUrl } from '../helpers/navigation';
+import { sleep, waitUntil } from '../helpers/waiting';
 import { type Transaction, TransactionStatuses, TransactionTypes, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
-import { type ScraperOptions } from './interface';
+import { ScraperErrorTypes } from './errors';
+import { type ScraperLoginResult, type ScraperOptions } from './interface';
 import { getRawTransaction } from '../helpers/transactions';
 
 const debug = getDebug('hapoalim');
@@ -255,6 +256,10 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOpt
   return accountData;
 }
 
+const OTP_FORM_SELECTOR = 'form.auth-otp-login';
+const OTP_SUBMIT_SELECTOR = '.btn-red_1';
+const OTP_ERROR_SELECTOR = '.errors-rb .error-message, .auth-otp-login .error';
+
 function getPossibleLoginResults(baseUrl: string) {
   const urls: PossibleLoginResults = {};
   urls[LoginResults.Success] = [
@@ -269,6 +274,12 @@ function getPossibleLoginResults(baseUrl: string) {
     `${baseUrl}/MCP/START?flow=MCP&state=START&expiredDate=null`,
     /\/ABOUTTOEXPIRE\/START/i,
   ];
+  urls[LoginResults.TwoFactorRetrieverMissing] = [
+    async (options?: { page?: Page }) => {
+      if (!options?.page) return false;
+      return !!(await options.page.$(OTP_FORM_SELECTOR));
+    },
+  ];
   return urls;
 }
 
@@ -279,7 +290,11 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
   ];
 }
 
-type ScraperSpecificCredentials = { userCode: string; password: string };
+type ScraperSpecificCredentials = {
+  userCode: string;
+  password: string;
+  otpCodeRetriever?: (options?: { attempt: number }) => Promise<string>;
+};
 
 class HapoalimScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   get baseUrl() {
@@ -291,8 +306,135 @@ class HapoalimScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials>
       loginUrl: `${this.baseUrl}/cgi-bin/poalwwwc?reqName=getLogonPage`,
       fields: createLoginFields(credentials),
       submitButtonSelector: '.login-btn',
-      postAction: async () => waitForRedirect(this.page),
+      postAction: async () => {
+        const initialUrl = await getCurrentUrl(this.page, true);
+        await waitUntil(
+          async () => {
+            try {
+              const currentUrl = await getCurrentUrl(this.page, true);
+              if (currentUrl !== initialUrl) return true;
+              return !!(await this.page.$(OTP_FORM_SELECTOR));
+            } catch {
+              // Navigation destroyed the execution context — page is redirecting, which is progress
+              return true;
+            }
+          },
+          'waiting for redirect or OTP form',
+          20000,
+          1000,
+        );
+      },
       possibleResults: getPossibleLoginResults(this.baseUrl),
+    };
+  }
+
+  async login(credentials: ScraperSpecificCredentials): Promise<ScraperLoginResult> {
+    const result = await super.login(credentials);
+
+    if (result.success || result.errorType !== ScraperErrorTypes.TwoFactorRetrieverMissing) {
+      return result;
+    }
+
+    // 2FA page detected — need OTP
+    if (!credentials.otpCodeRetriever) {
+      debug('2FA required but no otpCodeRetriever provided');
+      return {
+        success: false,
+        errorType: ScraperErrorTypes.TwoFactorRetrieverMissing,
+        errorMessage: 'OTP code retriever is required for Hapoalim 2FA',
+      };
+    }
+
+    const MAX_OTP_ATTEMPTS = 3;
+    for (let attempt = 1; attempt <= MAX_OTP_ATTEMPTS; attempt++) {
+      debug(`2FA page detected, requesting OTP from caller (attempt ${attempt}/${MAX_OTP_ATTEMPTS})`);
+      const otpCode = await credentials.otpCodeRetriever({ attempt });
+
+      debug('entering OTP code');
+      const otpInputs = await this.page.$$(`${OTP_FORM_SELECTOR} input[type="text"]`);
+      debug('found %d OTP digit inputs', otpInputs.length);
+
+      for (let i = 0; i < otpInputs.length; i++) {
+        await otpInputs[i].click();
+        await otpInputs[i].evaluate(el => {
+          el.value = '';
+        });
+        if (i < otpCode.length) {
+          await otpInputs[i].type(otpCode[i], { delay: 50 });
+        }
+        await sleep(100);
+      }
+
+      debug('submitting OTP');
+      // Use page.click() for proper mouse events — clickButton uses synthetic el.click()
+      // which Angular ignores.
+      await this.page.click(OTP_SUBMIT_SELECTOR);
+
+      try {
+        await waitUntil(
+          async () => {
+            const otpForm = await this.page.$(OTP_FORM_SELECTOR);
+            const errorEl = await this.page.$(OTP_ERROR_SELECTOR);
+            const url = await getCurrentUrl(this.page, true);
+            debug('OTP poll: form=%s, error=%s, url=%s', !!otpForm, !!errorEl, url);
+            if (!otpForm) return 'success';
+            if (errorEl) return 'error';
+            return false;
+          },
+          'waiting for OTP result',
+          20000,
+          1000,
+        );
+      } catch {
+        // Timeout: error selector didn't match but form is still showing — treat as wrong OTP
+        debug('OTP waitUntil timed out — treating as wrong OTP');
+      }
+
+      if (!(await this.page.$(OTP_FORM_SELECTOR))) {
+        // OTP form closed — wait for the bank to navigate to homepage
+        const successPatterns = [
+          '/portalserver/HomePage',
+          '/ng-portals-bt/rb/he/homepage',
+          '/ng-portals/rb/he/homepage',
+        ];
+        try {
+          await waitUntil(
+            async () => {
+              const url = await getCurrentUrl(this.page, true);
+              debug('post-OTP navigation poll: url=%s', url);
+              return successPatterns.some(p => url.includes(p));
+            },
+            'waiting for post-OTP navigation',
+            10000,
+            1000,
+          );
+          debug('OTP verification succeeded');
+          return { success: true };
+        } catch {
+          const current = await getCurrentUrl(this.page, true);
+          debug('OTP verification failed, current url: %s', current);
+          return {
+            success: false,
+            errorType: ScraperErrorTypes.General,
+            errorMessage: 'OTP verification failed',
+          };
+        }
+      }
+
+      debug(`OTP attempt ${attempt} failed — inline error detected`);
+      if (attempt === MAX_OTP_ATTEMPTS) {
+        return {
+          success: false,
+          errorType: ScraperErrorTypes.General,
+          errorMessage: `OTP verification failed after ${MAX_OTP_ATTEMPTS} attempts`,
+        };
+      }
+    }
+
+    return {
+      success: false,
+      errorType: ScraperErrorTypes.General,
+      errorMessage: 'OTP verification failed',
     };
   }
 
