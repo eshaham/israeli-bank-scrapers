@@ -1,3 +1,4 @@
+import https from 'https';
 import { type Page } from 'puppeteer';
 
 const JSON_CONTENT_TYPE = 'application/json';
@@ -35,18 +36,48 @@ export async function fetchGet<TResult>(url: string, extraHeaders: Record<string
   return fetchResult.json();
 }
 
+export interface ClientCertificate {
+  cert: string;
+  key: string;
+}
+
+function fetchPostWithMtls(url: string, headers: Record<string, string>, body: string, clientCert: ClientCertificate) {
+  return new Promise<{ status: number; text: string }>((resolve, reject) => {
+    const request = https.request(
+      url,
+      { method: 'POST', headers: { ...headers, 'Content-Length': Buffer.byteLength(body) }, ...clientCert },
+      response => {
+        const chunks: Buffer[] = [];
+        response.on('data', chunk => chunks.push(chunk));
+        response.on('end', () => resolve({ status: response.statusCode ?? 0, text: Buffer.concat(chunks).toString() }));
+      },
+    );
+    request.on('error', reject);
+    request.end(body);
+  });
+}
+
 export async function fetchPost<TResult = any>(
   url: string,
   data: Record<string, any>,
   extraHeaders: Record<string, any> = {},
+  clientCert?: ClientCertificate,
 ): Promise<TResult> {
-  const request = {
-    method: 'POST',
-    headers: { ...getJsonHeaders(), ...extraHeaders },
-    body: JSON.stringify(data),
-  };
-  const result = await fetch(url, request);
-  return result.json();
+  const headers = { ...getJsonHeaders(), ...extraHeaders };
+  const body = JSON.stringify(data);
+  const { status, text } = clientCert
+    ? await fetchPostWithMtls(url, headers, body, clientCert)
+    : await fetch(url, { method: 'POST', headers, body }).then(async result => ({
+        status: result.status,
+        text: await result.text(),
+      }));
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(
+      `sending a request to the institute server returned with status code ${status} and a non-JSON body`,
+    );
+  }
 }
 
 export async function fetchGraphql<TResult>(
@@ -54,8 +85,9 @@ export async function fetchGraphql<TResult>(
   query: string,
   variables: Record<string, unknown> = {},
   extraHeaders: Record<string, any> = {},
+  clientCert?: ClientCertificate,
 ): Promise<TResult> {
-  const result = await fetchPost(url, { operationName: null, query, variables }, extraHeaders);
+  const result = await fetchPost(url, { operationName: null, query, variables }, extraHeaders, clientCert);
   if (result.errors?.length) {
     throw new Error(result.errors[0].message);
   }

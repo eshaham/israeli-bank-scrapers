@@ -1,6 +1,7 @@
 import moment from 'moment/moment';
 import { getDebug } from '../helpers/debug';
 import { fetchGraphql, fetchPost } from '../helpers/fetch';
+import { ONE_ZERO_CLIENT_CERT } from './one-zero-client-cert';
 import { getRawTransaction } from '../helpers/transactions';
 import {
   type Transaction as ScrapingTransaction,
@@ -108,10 +109,15 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
     }
 
     debug('Fetching device token');
-    const deviceTokenResponse = await fetchPost(`${IDENTITY_SERVER_URL}/devices/token`, {
-      extClientId: 'mobile',
-      os: 'Android',
-    });
+    const deviceTokenResponse = await fetchPost(
+      `${IDENTITY_SERVER_URL}/devices/token`,
+      {
+        extClientId: 'mobile',
+        os: 'Android',
+      },
+      {},
+      ONE_ZERO_CLIENT_CERT,
+    );
 
     const {
       resultData: { deviceToken },
@@ -119,11 +125,16 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
 
     debug(`Sending OTP to phone number ${phoneNumber}`);
 
-    const otpPrepareResponse = await fetchPost(`${IDENTITY_SERVER_URL}/otp/prepare`, {
-      factorValue: phoneNumber,
-      deviceToken,
-      otpChannel: 'SMS_OTP',
-    });
+    const otpPrepareResponse = await fetchPost(
+      `${IDENTITY_SERVER_URL}/otp/prepare`,
+      {
+        factorValue: phoneNumber,
+        deviceToken,
+        otpChannel: 'SMS_OTP',
+      },
+      {},
+      ONE_ZERO_CLIENT_CERT,
+    );
 
     const {
       resultData: { otpContext },
@@ -142,10 +153,15 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
     }
 
     debug('Requesting OTP token');
-    const otpVerifyResponse = await fetchPost(`${IDENTITY_SERVER_URL}/otp/verify`, {
-      otpContext: this.otpContext,
-      otpCode,
-    });
+    const otpVerifyResponse = await fetchPost(
+      `${IDENTITY_SERVER_URL}/otp/verify`,
+      {
+        otpContext: this.otpContext,
+        otpCode,
+      },
+      {},
+      ONE_ZERO_CLIENT_CERT,
+    );
 
     const {
       resultData: { otpToken },
@@ -199,12 +215,17 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
     }
 
     debug('Requesting id token');
-    const getIdTokenResponse = await fetchPost(`${IDENTITY_SERVER_URL}/getIdToken`, {
-      otpSmsToken: otpTokenResult.longTermTwoFactorAuthToken,
-      email: credentials.email,
-      pass: credentials.password,
-      pinCode: '',
-    });
+    const getIdTokenResponse = await fetchPost(
+      `${IDENTITY_SERVER_URL}/getIdToken`,
+      {
+        otpSmsToken: otpTokenResult.longTermTwoFactorAuthToken,
+        email: credentials.email,
+        pass: credentials.password,
+        pinCode: '',
+      },
+      {},
+      ONE_ZERO_CLIENT_CERT,
+    );
 
     const {
       resultData: { idToken },
@@ -212,10 +233,15 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
 
     debug('Requesting session token');
 
-    const getSessionTokenResponse = await fetchPost(`${IDENTITY_SERVER_URL}/sessions/token`, {
-      idToken,
-      pass: credentials.password,
-    });
+    const getSessionTokenResponse = await fetchPost(
+      `${IDENTITY_SERVER_URL}/sessions/token`,
+      {
+        idToken,
+        pass: credentials.password,
+      },
+      {},
+      ONE_ZERO_CLIENT_CERT,
+    );
 
     const {
       resultData: { accessToken },
@@ -252,6 +278,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
           },
         },
         { authorization: `Bearer ${this.accessToken}` },
+        ONE_ZERO_CLIENT_CERT,
       );
 
       movements.unshift(...newMovements);
@@ -335,6 +362,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
       GET_CUSTOMER,
       {},
       { authorization: `Bearer ${this.accessToken}` },
+      ONE_ZERO_CLIENT_CERT,
     );
     const portfolios = result.customer.flatMap(customer => customer.portfolios || []);
 
