@@ -1,4 +1,4 @@
-import IsracardGroupScraper from './base-isracard-group';
+import IsracardGroupScraper from './base-isracard/base-isracard';
 import { type ScraperOptions } from './interface';
 
 const LOGIN_BASE_URL = 'https://he.americanexpress.co.il';

@@ -9,8 +9,8 @@ import {
   type ScrapedApprovedTransaction,
   type ScrapedCard,
   type ScrapedVoucher,
-} from './base-isracard-group';
-import { type ScraperOptions } from './interface';
+} from './base-isracard-utils';
+import { type ScraperOptions } from '../interface';
 
 describe('getCardBalance', () => {
   test('negates limitUsed (a positive "amount used" becomes a negative balance)', () => {
