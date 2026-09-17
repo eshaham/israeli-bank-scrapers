@@ -64,3 +64,6 @@ lib/
 .idea
 .vscode
 .DS_Store
+
+# Playwright MCP capture artifacts (may contain private session tokens / account data)
+.playwright-mcp/
