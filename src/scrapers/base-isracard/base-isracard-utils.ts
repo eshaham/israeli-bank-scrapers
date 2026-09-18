@@ -128,6 +128,19 @@ export function getCardBalanceDate(card: ScrapedCard): string | undefined {
   return moment(card.cardChargeNext.billingDate, DATE_FORMAT).toISOString();
 }
 
+export function isApprovedTransactionSettled(
+  approved: ScrapedApprovedTransaction,
+  vouchers: ScrapedVoucher[],
+): boolean {
+  return vouchers.some(
+    voucher =>
+      voucher.purchaseDate === approved.purchaseDate &&
+      voucher.originalAmount === approved.originalAmount &&
+      voucher.originalCurrencyIso === approved.currencyIso &&
+      (voucher.businessName || '').trim() === (approved.businessName || '').trim(),
+  );
+}
+
 export function convertApprovedTransaction(txn: ScrapedApprovedTransaction, options?: ScraperOptions): Transaction {
   const isoDate = moment(`${txn.purchaseDate} ${txn.israelTransactionTime}`, `${DATE_FORMAT} HH:mm`).toISOString();
 

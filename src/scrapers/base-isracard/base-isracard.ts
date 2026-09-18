@@ -19,6 +19,7 @@ import {
   getCardBalance,
   getCardBalanceDate,
   getCardFrame,
+  isApprovedTransactionSettled,
   type ScrapedCard,
   type ScrapedCardListResponse,
   type ScrapedLoginValidation,
@@ -134,13 +135,22 @@ async function fetchMonthTransactions(
 
   const txns: Transaction[] = [];
 
-  const approvedTxns = response.data.approvals?.approvedTransactions ?? [];
+  const voucherList = response.data.israelAbroadVouchers?.vouchers?.israelAbroadVouchersList ?? [];
+  const outOfStatementGroups = response.data.israelAbroadVouchers?.outOfStatementChargeDateVouchers ?? [];
+  const allVouchers = [
+    ...voucherList,
+    ...outOfStatementGroups.flatMap(group => group.immediateVouchersCurrencyDate ?? []),
+  ];
+
+  // The same response can list a charge in both `approvals` (pending) and the voucher lists
+  // (settled) at once, so drop the approval entry in favor of the richer, settled voucher.
+  const approvedTxns = (response.data.approvals?.approvedTransactions ?? []).filter(
+    txn => !isApprovedTransactionSettled(txn, allVouchers),
+  );
   txns.push(...approvedTxns.map(txn => convertApprovedTransaction(txn, options)));
 
-  const voucherList = response.data.israelAbroadVouchers?.vouchers?.israelAbroadVouchersList ?? [];
   txns.push(...voucherList.map(voucher => convertVoucher(voucher, processedDateIso, options)));
 
-  const outOfStatementGroups = response.data.israelAbroadVouchers?.outOfStatementChargeDateVouchers ?? [];
   outOfStatementGroups.forEach(group => {
     const groupDateStr = group.totalVouchersCurrencyDate?.dateImmediateVouchers;
     const groupIso = groupDateStr ? moment(groupDateStr, DATE_FORMAT).toISOString() : processedDateIso;

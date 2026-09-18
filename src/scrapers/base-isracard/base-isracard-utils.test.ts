@@ -6,6 +6,7 @@ import {
   getCardBalanceDate,
   getCardFrame,
   getVoucherInstallments,
+  isApprovedTransactionSettled,
   type ScrapedApprovedTransaction,
   type ScrapedCard,
   type ScrapedVoucher,
@@ -108,6 +109,57 @@ describe('convertApprovedTransaction', () => {
 
     expect(withRaw.rawTransaction).toBeDefined();
     expect(withoutRaw.rawTransaction).toBeUndefined();
+  });
+});
+
+describe('isApprovedTransactionSettled', () => {
+  const approved: ScrapedApprovedTransaction = {
+    purchaseDate: '10/08/2026',
+    israelTransactionTime: '14:30',
+    businessName: '  שופרסל  ',
+    originalAmount: 120,
+    currencyIso: 'ILS',
+    ilsBillingAmount: 120,
+    extraDetails: null,
+    seqConfirmationNumber: 'REF123',
+    branchCodeDescription: null,
+  };
+  const matchingVoucher: ScrapedVoucher = {
+    purchaseDate: '10/08/2026',
+    purchaseTime: null,
+    businessName: 'שופרסל',
+    originalAmount: 120,
+    originalCurrencyIso: 'ILS',
+    billingAmount: 120,
+    moreInfo: null,
+    seqVoucherNumber: 'V999',
+    currentInstallmentNum: null,
+    numberOfInstallment: null,
+    transactionDescription: 'מזון',
+  };
+
+  test('matches a voucher for the same date/amount/currency/business name, ignoring surrounding whitespace', () => {
+    expect(isApprovedTransactionSettled(approved, [matchingVoucher])).toBe(true);
+  });
+
+  test('does not match when the amount differs', () => {
+    expect(isApprovedTransactionSettled(approved, [{ ...matchingVoucher, originalAmount: 121 }])).toBe(false);
+  });
+
+  test('does not match when the purchase date differs', () => {
+    expect(isApprovedTransactionSettled(approved, [{ ...matchingVoucher, purchaseDate: '11/08/2026' }])).toBe(false);
+  });
+
+  test('does not match when the currency differs', () => {
+    expect(isApprovedTransactionSettled(approved, [{ ...matchingVoucher, originalCurrencyIso: 'USD' }])).toBe(false);
+  });
+
+  test('does not match when the business name differs', () => {
+    expect(isApprovedTransactionSettled(approved, [{ ...matchingVoucher, businessName: 'Other' }])).toBe(false);
+  });
+
+  test('returns false when there are no vouchers', () => {
+    expect(isApprovedTransactionSettled(approved, [])).toBe(false);
   });
 });
 
