@@ -74,6 +74,51 @@ type MoreDetails = {
   memo: string | undefined;
 };
 
+interface ForeignCurrencyAggregate {
+  ITRAT_FCR_BOOKED: string;
+  ITRAT_FCR_PENDING: string;
+  MATBEA_CODE: string;
+  MATBEA_NAME: string;
+  MATBEA_SHORT_NAME: string;
+  MATBEA_SYMBOL: string;
+  ITRA_NIS: string;
+  KVUTZAT_CHESHBON_CODE: string;
+  KVUTZAT_CHESHBON_NAME: string;
+}
+
+interface ForeignCurrencyTransaction {
+  TRANSACTION_DATE: string;
+  ERECH_DATE: string;
+  TEUR_TNUA_DESC?: string;
+  SUG_ISKA_CODE: string;
+  SUG_ISKA_DESC: string;
+  ASMACHTA: string;
+  TNUA_AMT: string;
+  ITRA_CURRENT_AMT: string;
+  MATBEA_CODE: string;
+  TNUA_NUM: string;
+  KABAH_CODE: string;
+  KABAH_NAME: string;
+}
+
+interface ForeignCurrencyResponse {
+  header: {
+    success: boolean | null;
+    messages: { text: string }[];
+  };
+  body: {
+    table: {
+      rows: {
+        RET_MESSAGE: string;
+        RET_CODE: string;
+        FCR_AGG_DATA_ARR: ForeignCurrencyAggregate[];
+        FCR_TRANS_DATA_ARR: ForeignCurrencyTransaction[];
+        FCR_PENDING_TRANS_ARR: ForeignCurrencyTransaction[];
+      };
+    };
+  };
+}
+
 const BASE_WEBSITE_URL = 'https://www.mizrahi-tefahot.co.il';
 const LOGIN_URL = `${BASE_WEBSITE_URL}/login/index.html#/auth-page-he`;
 const BASE_APP_URL = 'https://mto.mizrahi-tefahot.co.il';
@@ -86,9 +131,16 @@ const TRANSACTIONS_REQUEST_URLS = [
 ];
 const PENDING_TRANSACTIONS_PAGE = '/osh/legacy/legacy-Osh-p420';
 const PENDING_TRANSACTIONS_IFRAME = 'p420.aspx';
+const FOREIGN_CURRENCY_PAGE = '/osh/matachYetrotVeTnuot';
+const FOREIGN_CURRENCY_REQUEST_URLS = [
+  `${BASE_APP_URL}/Online/api/mth/getMatachTnuotYetrot`,
+  `${BASE_APP_URL}/OnlinePilot/api/mth/getMatachTnuotYetrot`,
+];
 const MORE_DETAILS_URL = `${BASE_APP_URL}/Online/api/OSH/getMaherBerurimSMF`;
 const CHANGE_PASSWORD_URL = /https:\/\/www\.mizrahi-tefahot\.co\.il\/login\/index\.html#\/change-pass/;
 const DATE_FORMAT = 'DD/MM/YYYY';
+const FOREIGN_CURRENCY_DATE_FORMAT = 'YYYY-MM-DD HH:mm:ss';
+const ALL_CURRENCIES_CODE = '999';
 const MAX_ROWS_PER_REQUEST = 10000000000;
 
 const usernameSelector = '#userNumberDesktopHeb';
@@ -199,6 +251,42 @@ function createHeadersFromRequest(request: HTTPRequest) {
   };
 }
 
+const STRIP_REGEX = /[,\s\u20aa$\u20ac\u200e\u200f\u202a-\u202e]/g;
+const PAREN_REGEX = /^\((.+)\)$/;
+const UNSIGNED_AMOUNT_REGEX = /^\d*\.?\d+$/;
+
+export function parseAmount(raw: string | undefined | null): number | undefined {
+  if (!raw) {
+    return undefined;
+  }
+
+  const cleaned = raw.replace(STRIP_REGEX, '').replace(/\u2212/g, '-');
+  if (!cleaned) {
+    return undefined;
+  }
+
+  const parenMatch = cleaned.match(PAREN_REGEX);
+  let unsigned = cleaned;
+  let isNegative = false;
+  if (parenMatch) {
+    isNegative = true;
+    unsigned = parenMatch[1];
+  } else if (cleaned.startsWith('-')) {
+    isNegative = true;
+    unsigned = cleaned.slice(1);
+  } else if (cleaned.endsWith('-')) {
+    isNegative = true;
+    unsigned = cleaned.slice(0, -1);
+  }
+
+  if (!UNSIGNED_AMOUNT_REGEX.test(unsigned)) {
+    return undefined;
+  }
+
+  const value = parseFloat(unsigned);
+  return isNegative ? -value : value;
+}
+
 function getTransactionIdentifier(row: ScrapedTransaction): string | number | undefined {
   if (!row.MC02AsmahtaMekoritEZ) {
     return undefined;
@@ -249,29 +337,166 @@ async function convertTransactions(
   );
 }
 
+export function convertPendingRow(cells: string[]): Transaction | undefined {
+  const [dateStr, description, , creditStr, debitStr] = cells;
+  const date = moment(dateStr, 'DD/MM/YY').toISOString();
+  const debit = parseAmount(debitStr);
+  const credit = parseAmount(creditStr);
+  const amount = debit !== undefined ? -debit : credit;
+
+  if (!date || amount === undefined) {
+    debug(
+      `Dropping pending transaction with unparsable date or amount. dateStr: ${dateStr}, description: ${description}, creditStr: ${creditStr}, debitStr: ${debitStr}`,
+    );
+    return undefined;
+  }
+
+  return {
+    type: TransactionTypes.Normal,
+    date,
+    processedDate: date,
+    originalAmount: amount,
+    originalCurrency: SHEKEL_CURRENCY,
+    chargedAmount: amount,
+    description,
+    status: TransactionStatuses.Pending,
+  };
+}
+
 async function extractPendingTransactions(page: Frame): Promise<Transaction[]> {
   const pendingTxn = await pageEvalAll(page, 'tr.rgRow, tr.rgAltRow', [], trs => {
     return trs.map(tr => Array.from(tr.querySelectorAll('td'), td => td.textContent || ''));
   });
 
-  return pendingTxn
-    .map(([dateStr, description, incomeAmountStr, amountStr]) => ({
-      date: moment(dateStr, 'DD/MM/YY').toISOString(),
-      amount: parseFloat(amountStr.replaceAll(',', '')),
-      description,
-      incomeAmountStr, // TODO: handle incomeAmountStr once we know the sign of it
-    }))
-    .filter(txn => txn.date)
-    .map(({ date, description, amount }) => ({
-      type: TransactionTypes.Normal,
-      date,
-      processedDate: date,
-      originalAmount: amount,
-      originalCurrency: SHEKEL_CURRENCY,
-      chargedAmount: amount,
-      description,
-      status: TransactionStatuses.Pending,
-    }));
+  return pendingTxn.flatMap(cells => {
+    const txn = convertPendingRow(cells);
+    return txn ? [txn] : [];
+  });
+}
+
+function buildForeignCurrencyTransaction(
+  row: ForeignCurrencyTransaction,
+  currency: string,
+  identifier: string | undefined,
+  description: string,
+  status: TransactionStatuses,
+  options?: ScraperOptions,
+): Transaction | undefined {
+  const amount = parseAmount(row.TNUA_AMT);
+  if (amount === undefined) {
+    debug(`Dropping foreign currency transaction with unparsable amount. TNUA_AMT: ${row.TNUA_AMT}`);
+    return undefined;
+  }
+
+  const date = moment(row.TRANSACTION_DATE, FOREIGN_CURRENCY_DATE_FORMAT).toISOString();
+  if (!date) {
+    debug(`Dropping foreign currency transaction with unparsable date. TRANSACTION_DATE: ${row.TRANSACTION_DATE}`);
+    return undefined;
+  }
+
+  const processedDate = row.ERECH_DATE ? moment(row.ERECH_DATE, FOREIGN_CURRENCY_DATE_FORMAT).toISOString() : date;
+
+  const transaction: Transaction = {
+    type: TransactionTypes.Normal,
+    identifier,
+    date,
+    processedDate,
+    originalAmount: amount,
+    originalCurrency: currency,
+    chargedAmount: amount,
+    chargedCurrency: currency,
+    description,
+    status,
+  };
+
+  if (options?.includeRawTransaction) {
+    transaction.rawTransaction = getRawTransaction(row);
+  }
+
+  return transaction;
+}
+
+export function convertForeignCurrencyAccounts(
+  accountNumber: string,
+  response: ForeignCurrencyResponse,
+  options?: ScraperOptions,
+): TransactionsAccount[] {
+  const rows = response.body?.table?.rows;
+  const aggregates = rows?.FCR_AGG_DATA_ARR ?? [];
+
+  return aggregates
+    .filter(aggregate => !!aggregate.MATBEA_SYMBOL)
+    .map(aggregate => {
+      const currency = aggregate.MATBEA_SYMBOL;
+
+      const bookedTxns = (rows.FCR_TRANS_DATA_ARR ?? [])
+        .filter(row => row.MATBEA_CODE === aggregate.MATBEA_CODE)
+        .flatMap(row => {
+          const txn = buildForeignCurrencyTransaction(
+            row,
+            currency,
+            `t${row.TNUA_NUM}-${row.ASMACHTA}`,
+            row.TEUR_TNUA_DESC || row.SUG_ISKA_DESC || '',
+            TransactionStatuses.Completed,
+            options,
+          );
+          return txn ? [txn] : [];
+        });
+
+      const pendingTxns = (rows.FCR_PENDING_TRANS_ARR ?? [])
+        .filter(row => row.MATBEA_CODE === aggregate.MATBEA_CODE)
+        .flatMap(row => {
+          const txn = buildForeignCurrencyTransaction(
+            row,
+            currency,
+            undefined,
+            row.TEUR_TNUA_DESC || row.SUG_ISKA_DESC || '',
+            TransactionStatuses.Pending,
+            options,
+          );
+          return txn ? [txn] : [];
+        });
+
+      return {
+        accountNumber: `${accountNumber}-${currency}`,
+        currency,
+        balance: parseAmount(aggregate.ITRAT_FCR_BOOKED),
+        txns: bookedTxns.concat(pendingTxns),
+      };
+    });
+}
+
+function describeError(error: unknown): string {
+  if (error instanceof AggregateError) {
+    if (error.errors.length === 0) {
+      return String(error);
+    }
+    return error.errors.map(describeError).join('; ');
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
+export async function scrapeAccounts(
+  numOfAccounts: number,
+  selectAccount: (index: number) => Promise<void>,
+  fetchAccount: (index: number) => Promise<TransactionsAccount[]>,
+): Promise<{ accounts: TransactionsAccount[]; errors: string[] }> {
+  const accounts: TransactionsAccount[] = [];
+  const errors: string[] = [];
+
+  for (let i = 0; i < numOfAccounts; i += 1) {
+    try {
+      await selectAccount(i);
+      const result = await fetchAccount(i);
+      accounts.push(...result);
+    } catch (e) {
+      const message = `account #${i + 1}: ${describeError(e)}`;
+      debug(`Failed to fetch account: ${message}`);
+      errors.push(message);
+    }
+  }
+
+  return { accounts, errors };
 }
 
 async function postLogin(page: Page) {
@@ -301,29 +526,35 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
     const numOfAccounts = (await this.page.$$(accountDropDownItemSelector)).length;
 
-    try {
-      const results: TransactionsAccount[] = [];
-
-      for (let i = 0; i < numOfAccounts; i += 1) {
-        if (i > 0) {
+    const { accounts, errors } = await scrapeAccounts(
+      numOfAccounts,
+      async index => {
+        if (index > 0) {
           await this.page.$eval('#dropdownBasic, .item', el => (el as HTMLElement).click());
         }
+        await this.page.$eval(`${accountDropDownItemSelector}:nth-child(${index + 1})`, el =>
+          (el as HTMLElement).click(),
+        );
+      },
+      async () => {
+        const account = await this.fetchAccount();
+        const foreignCurrencyAccounts = await this.fetchForeignCurrencyAccounts(account.accountNumber);
+        return [account, ...foreignCurrencyAccounts];
+      },
+    );
 
-        await this.page.$eval(`${accountDropDownItemSelector}:nth-child(${i + 1})`, el => (el as HTMLElement).click());
-        results.push(await this.fetchAccount());
-      }
-
-      return {
-        success: true,
-        accounts: results,
-      };
-    } catch (e) {
+    if (accounts.length === 0 && errors.length > 0) {
       return {
         success: false,
         errorType: ScraperErrorTypes.Generic,
-        errorMessage: (e as Error).message,
+        errorMessage: errors.join('; '),
       };
     }
+
+    return {
+      success: true,
+      accounts,
+    };
   }
 
   private async getPendingTransactions(): Promise<Transaction[]> {
@@ -395,8 +626,54 @@ class MizrahiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     return {
       accountNumber,
       txns: allTxn,
-      balance: +response.body.fields?.Yitra,
+      balance: parseAmount(response.body.fields?.Yitra),
     };
+  }
+
+  private async fetchForeignCurrencyAccounts(accountNumber: string): Promise<TransactionsAccount[]> {
+    try {
+      const linkSelector = `a[href*="${FOREIGN_CURRENCY_PAGE}"]`;
+      if (!(await this.page.$(linkSelector))) {
+        debug('no foreign currency link, skipping');
+        return [];
+      }
+
+      const requestPromise = Promise.any(
+        FOREIGN_CURRENCY_REQUEST_URLS.map(async url => ({
+          url,
+          request: await this.page.waitForRequest(url, { timeout: 15000 }),
+        })),
+      );
+      requestPromise.catch(() => undefined);
+
+      await this.page.$eval(linkSelector, el => (el as HTMLElement).click());
+
+      const { url, request } = await requestPromise;
+      const data = JSON.parse(request.postData() || '{}');
+      data.startDate = getStartMoment(this.options.startDate).format(DATE_FORMAT);
+      data.endDate = moment().format(DATE_FORMAT);
+      data.codeMatbea = ALL_CURRENCIES_CODE;
+      const headers = createHeadersFromRequest(request);
+
+      const response = await fetchPostWithinPage<ForeignCurrencyResponse>(this.page, url, data, headers);
+
+      const rows = response?.body?.table?.rows;
+      if (response?.header.messages?.length) {
+        debug('foreign currency accounts response messages:', response.header.messages);
+      }
+      if (!response || rows?.RET_CODE !== '1') {
+        throw new Error(
+          `Error fetching foreign currency accounts. Response message: ${
+            response?.header.messages?.[0]?.text ?? rows?.RET_MESSAGE ?? ''
+          }`,
+        );
+      }
+
+      return convertForeignCurrencyAccounts(accountNumber, response, this.options);
+    } catch (error) {
+      debug(`Failed to fetch foreign currency accounts for account ${accountNumber}: ${describeError(error)}`);
+      return [];
+    }
   }
 
   private shouldMarkAsPending(txn: Transaction): boolean {
