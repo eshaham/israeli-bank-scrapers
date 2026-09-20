@@ -94,12 +94,24 @@ type ScraperSpecificCredentials = { email: string; password: string } & (
   | {
       otpLongTermToken: string;
     }
+  | {
+      idToken: string;
+    }
 );
 
 export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentials> {
   private otpContext?: string;
 
   private accessToken?: string;
+
+  /**
+   * The idToken minted by getIdToken() has a ~10 year expiry, unlike the
+   * otpToken (single-use, tied to one SMS verification) or the accessToken
+   * (~1 hour). Save this and pass it back as `credentials.idToken` to skip
+   * SMS verification entirely on future runs — login() will go straight to
+   * sessions/token with it.
+   */
+  public idToken?: string;
 
   async triggerTwoFactorAuth(phoneNumber: string): Promise<ScraperTwoFactorAuthTriggerResult> {
     if (!phoneNumber.startsWith('+')) {
@@ -170,7 +182,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
   }
 
   private async resolveOtpToken(
-    credentials: ScraperSpecificCredentials,
+    credentials: Exclude<ScraperSpecificCredentials, { idToken: string }>,
   ): Promise<ScraperGetLongTermTwoFactorTokenResult> {
     if ('otpLongTermToken' in credentials) {
       if (!credentials.otpLongTermToken) {
@@ -209,27 +221,34 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
   }
 
   async login(credentials: ScraperSpecificCredentials): Promise<ScraperLoginResult> {
-    const otpTokenResult = await this.resolveOtpToken(credentials);
-    if (!otpTokenResult.success) {
-      return otpTokenResult;
+    let idToken: string;
+
+    if ('idToken' in credentials) {
+      debug('Reusing saved idToken, skipping SMS verification');
+      idToken = credentials.idToken;
+    } else {
+      const otpTokenResult = await this.resolveOtpToken(credentials);
+      if (!otpTokenResult.success) {
+        return otpTokenResult;
+      }
+
+      debug('Requesting id token');
+      const getIdTokenResponse = await fetchPost(
+        `${IDENTITY_SERVER_URL}/getIdToken`,
+        {
+          otpSmsToken: otpTokenResult.longTermTwoFactorAuthToken,
+          email: credentials.email,
+          pass: credentials.password,
+          pinCode: '',
+        },
+        {},
+        ONE_ZERO_CLIENT_CERT,
+      );
+
+      idToken = getIdTokenResponse.resultData.idToken;
     }
 
-    debug('Requesting id token');
-    const getIdTokenResponse = await fetchPost(
-      `${IDENTITY_SERVER_URL}/getIdToken`,
-      {
-        otpSmsToken: otpTokenResult.longTermTwoFactorAuthToken,
-        email: credentials.email,
-        pass: credentials.password,
-        pinCode: '',
-      },
-      {},
-      ONE_ZERO_CLIENT_CERT,
-    );
-
-    const {
-      resultData: { idToken },
-    } = getIdTokenResponse;
+    this.idToken = idToken;
 
     debug('Requesting session token');
 
@@ -251,7 +270,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
 
     return {
       success: true,
-      persistentOtpToken: otpTokenResult.longTermTwoFactorAuthToken,
+      persistentOtpToken: idToken,
     };
   }
 

@@ -1,7 +1,10 @@
 import { maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions } from '../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
+import { fetchPost } from '../helpers/fetch';
 import { LoginResults } from './base-scraper-with-browser';
 import OneZeroScraper from './one-zero';
+
+jest.mock('../helpers/fetch');
 
 const COMPANY_ID = 'oneZero'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
@@ -18,6 +21,36 @@ describe('OneZero scraper', () => {
     expect(SCRAPERS.oneZero.loginFields).toContain('otpCodeRetriever');
     expect(SCRAPERS.oneZero.loginFields).toContain('phoneNumber');
     expect(SCRAPERS.oneZero.loginFields).toContain('otpLongTermToken');
+  });
+
+  test('login() with a saved idToken skips SMS verification and goes straight to sessions/token', async () => {
+    const options = {
+      ...testsConfig.options,
+      companyId: COMPANY_ID,
+    };
+
+    (fetchPost as jest.Mock).mockResolvedValue({
+      resultData: { accessToken: 'fake-access-token' },
+    });
+
+    const scraper = new OneZeroScraper(options);
+    const loginResult = await scraper.login({
+      email: 'e10s12@gmail.com',
+      password: 'some-password',
+      idToken: 'saved-id-token',
+    });
+
+    expect(loginResult.success).toBeTruthy();
+    expect(scraper.idToken).toBe('saved-id-token');
+    // Only sessions/token should be called — devices/token, otp/prepare,
+    // otp/verify and getIdToken must all be skipped.
+    expect(fetchPost).toHaveBeenCalledTimes(1);
+    expect(fetchPost).toHaveBeenCalledWith(
+      expect.stringContaining('/sessions/token'),
+      expect.objectContaining({ idToken: 'saved-id-token' }),
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
   maybeTestCompanyAPI(COMPANY_ID, config => config.companyAPI.invalidPassword)(
