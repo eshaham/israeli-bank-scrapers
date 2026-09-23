@@ -27,6 +27,7 @@ Currently only the following banks are supported:
 - Union Bank (Thanks to Intuit FDP OpenSource Team [@dratler](https://github.com/dratler),[@kalinoy](https://github.com/kalinoy),[@shanigad](https://github.com/shanigad),[@dudiventura](https://github.com/dudiventura) and [@NoamGoren](https://github.com/NoamGoren))
 - Beinleumi (Thanks to [@dudiventura](https://github.com/dudiventura) from the Intuit FDP OpenSource Team)
 - Massad
+- Pagi - [פאג"י](https://www.pagi.co.il/) (thanks [@Avrhamwales](https://github.com/Avrhamwales))
 - Yahav (Thanks to [@gczobel](https://github.com/gczobel))
 - Beyhad Bishvilha - [ביחד בשבילך](https://www.hist.org.il/) (thanks [@esakal](https://github.com/esakal))
 - OneZero (Experimental) (thanks [@orzarchi](https://github.com/orzarchi))
@@ -325,7 +326,7 @@ const credentials = {
 ```
 This scraper supports fetching transaction from up to one year.
 
-## Beinleumi & Massad
+## Beinleumi, Massad & Pagi
 These scrapers are essentially identical and expect the following credentials object:
 ```node
 const credentials = {
