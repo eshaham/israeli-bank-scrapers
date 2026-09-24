@@ -98,7 +98,7 @@ export const SCRAPERS = {
     loginFields: ['username', PASSWORD_FIELD],
   },
   [CompanyTypes.hvr]: {
-    name: 'HVR',
+    name: 'Hever',
     loginFields: ['id', PASSWORD_FIELD],
   },
 };

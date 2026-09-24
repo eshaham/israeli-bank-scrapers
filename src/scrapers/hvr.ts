@@ -1,7 +1,5 @@
 import moment from 'moment';
-import {
-  SHEKEL_CURRENCY,
-} from '../constants';
+import { SHEKEL_CURRENCY } from '../constants';
 import { getDebug } from '../helpers/debug';
 import { pageEvalAll, waitUntilElementFound } from '../helpers/elements-interactions';
 import { getRawTransaction, filterOldTransactions } from '../helpers/transactions';
@@ -41,7 +39,7 @@ function parseAmount(amountStr: string) {
 
 function convertTransactions(txns: ScrapedTransaction[], options?: ScraperOptions): Transaction[] {
   const dateFormat = (options as any)?.DATE_FORMAT || DATE_FORMAT;
-  return txns.map((txn) => {
+  return txns.map(txn => {
     const amount = parseAmount(txn.amount);
     const txnDate = moment(txn.date, dateFormat);
 
@@ -68,7 +66,7 @@ function convertTransactions(txns: ScrapedTransaction[], options?: ScraperOption
 
 function convertOrders(orders: ScrapedOrder[], options?: ScraperOptions): Transaction[] {
   const dateFormat = (options as any)?.DATE_FORMAT || DATE_FORMAT;
-  return orders.map((order) => {
+  return orders.map(order => {
     const amount = parseAmount(order.amount);
     const txnDate = moment(order.date, dateFormat);
 
@@ -99,7 +97,7 @@ function getPossibleLoginResults(): PossibleLoginResults {
   urls[LoginResults.Success] = [
     `${BASE_URL}/default.aspx`,
     `${BASE_URL}/site/pg/?page=hvr_home`,
-    async (options) => {
+    async options => {
       const page = options?.page;
       if (!page) return false;
       const logoutLink = await page.$('a[href*="logout"]');
@@ -107,7 +105,7 @@ function getPossibleLoginResults(): PossibleLoginResults {
     },
   ];
   urls[LoginResults.InvalidPassword] = [
-    async (options) => {
+    async options => {
       const page = options?.page;
       if (!page) return false;
       const errorMsg = await page.$('#msg3');
@@ -132,9 +130,16 @@ class HvrScraper extends BaseScraperWithBrowser<HvrCredentials> {
     };
   }
 
+  private async assertAuthenticated() {
+    if (/\/signin\.aspx/i.test(this.page.url()) || (await this.page.$('#tz, #password'))) {
+      throw new Error('HVR session expired or was redirected to sign-in');
+    }
+  }
+
   private async fetchCardTransactions(url: string) {
     await this.navigateTo(url);
-    
+    await this.assertAuthenticated();
+
     // Check if we are on the right page and if the card exists
     const hasHistoryButton = await this.page.$('button[data-target="#collapseTwo"]');
     if (!hasHistoryButton) {
@@ -149,18 +154,20 @@ class HvrScraper extends BaseScraperWithBrowser<HvrCredentials> {
       this.page,
       '#collapseTwo table.table-striped tr:not(:first-child)',
       [],
-      (rows) => {
-        return rows.map((row) => {
-          const columns = row.querySelectorAll('td');
-          if (columns.length >= 4) {
-            return {
-              date: columns[0].innerText.trim(),
-              description: columns[2].innerText.trim(),
-              amount: columns[3].innerText.trim(),
-            };
-          }
-          return null;
-        }).filter((t): t is ScrapedTransaction => !!t);
+      rows => {
+        return rows
+          .map(row => {
+            const columns = row.querySelectorAll('td');
+            if (columns.length >= 4) {
+              return {
+                date: columns[0].innerText.trim(),
+                description: columns[2].innerText.trim(),
+                amount: columns[3].innerText.trim(),
+              };
+            }
+            return null;
+          })
+          .filter((t): t is ScrapedTransaction => !!t);
       },
     );
 
@@ -169,7 +176,8 @@ class HvrScraper extends BaseScraperWithBrowser<HvrCredentials> {
 
   private async fetchOrderList() {
     await this.navigateTo(ORDER_LIST_URL);
-    
+    await this.assertAuthenticated();
+
     const hasOrdersTable = await this.page.$('table#orders');
     if (!hasOrdersTable) {
       debug('No orders table found, skipping');
@@ -181,19 +189,18 @@ class HvrScraper extends BaseScraperWithBrowser<HvrCredentials> {
     if (await this.page.$(pageSizeSelector)) {
       await this.page.select(pageSizeSelector, '100');
       // Wait for the table to update
-      await new Promise((resolve) => { setTimeout(resolve, 1000); });
+      await new Promise(resolve => {
+        setTimeout(resolve, 1000);
+      });
     }
 
     const allRawOrders: ScrapedOrder[] = [];
     let hasNextPage = true;
 
     while (hasNextPage) {
-      const rawOrders = await pageEvalAll<ScrapedOrder[]>(
-        this.page,
-        'table#orders tbody tr',
-        [],
-        (rows) => {
-          return rows.map((row) => {
+      const rawOrders = await pageEvalAll<ScrapedOrder[]>(this.page, 'table#orders tbody tr', [], rows => {
+        return rows
+          .map(row => {
             const columns = row.querySelectorAll('td');
             if (columns.length >= 7) {
               const dateText = columns[1].innerText.trim().split('\n')[0].split(' ')[0];
@@ -205,20 +212,20 @@ class HvrScraper extends BaseScraperWithBrowser<HvrCredentials> {
               };
             }
             return null;
-          }).filter((o): o is ScrapedOrder => !!o);
-        },
-      );
+          })
+          .filter((o): o is ScrapedOrder => !!o);
+      });
 
       allRawOrders.push(...rawOrders);
 
       const nextButtonSelector = '.paginate_button.next:not(.disabled)';
       const nextButton = await this.page.$(nextButtonSelector);
       if (nextButton) {
-        const currentInfo = await this.page.$eval('#orders_info', (el) => (el as HTMLElement).innerText);
+        const currentInfo = await this.page.$eval('#orders_info', el => (el as HTMLElement).innerText);
         await nextButton.click();
         // Wait for the pagination info to change
         await this.page.waitForFunction(
-          (oldInfo) => {
+          oldInfo => {
             const el = document.querySelector('#orders_info');
             return el && (el as HTMLElement).innerText !== oldInfo;
           },
@@ -239,24 +246,16 @@ class HvrScraper extends BaseScraperWithBrowser<HvrCredentials> {
     const startDate = this.options.startDate || defaultStartMoment.toDate();
     const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
-    const shelKevaTxns = await this.fetchCardTransactions(SHEL_KEVA_URL).catch((e) => {
-      debug(`Failed to fetch Shel Keva transactions: ${e.message}`);
-      return [];
-    });
-    const teamimTxns = await this.fetchCardTransactions(TEAMIM_URL).catch((e) => {
-      debug(`Failed to fetch Teamim transactions: ${e.message}`);
-      return [];
-    });
-    const orderListTxns = await this.fetchOrderList().catch((e) => {
-      debug(`Failed to fetch Order List: ${e.message}`);
-      return [];
-    });
+    const shelKevaTxns = await this.fetchCardTransactions(SHEL_KEVA_URL);
+    const teamimTxns = await this.fetchCardTransactions(TEAMIM_URL);
+    const orderListTxns = await this.fetchOrderList();
 
     const allTxns = [...shelKevaTxns, ...teamimTxns, ...orderListTxns];
-    
-    const filteredTxns = (this.options.outputData?.enableTransactionsFilterByDate ?? true)
-      ? filterOldTransactions(allTxns, startMoment, false)
-      : allTxns;
+
+    const filteredTxns =
+      (this.options.outputData?.enableTransactionsFilterByDate ?? true)
+        ? filterOldTransactions(allTxns, startMoment, false)
+        : allTxns;
 
     return {
       success: true,

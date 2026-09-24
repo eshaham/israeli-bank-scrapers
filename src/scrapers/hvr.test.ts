@@ -10,14 +10,26 @@ describe('HVR scraper', () => {
     extendAsyncTimeout();
   });
 
-  it('should expose login fields in scrapers constant', () => {
+  it('should expose Hever login fields in scrapers constant', () => {
     expect(SCRAPERS[CompanyTypes.hvr]).toBeDefined();
+    expect(SCRAPERS[CompanyTypes.hvr].name).toBe('Hever');
     expect(SCRAPERS[CompanyTypes.hvr].loginFields).toContain('id');
     expect(SCRAPERS[CompanyTypes.hvr].loginFields).toContain('password');
   });
 
+  it('should fail rather than return a partial success after a card navigation failure', async () => {
+    const scraper = new HvrScraper({
+      ...testsConfig.options,
+      companyId: CompanyTypes.hvr,
+    });
+    jest.spyOn(scraper as any, 'fetchCardTransactions').mockRejectedValue(new Error('redirected to sign-in'));
+    jest.spyOn(scraper as any, 'fetchOrderList').mockResolvedValue([]);
+
+    await expect(scraper.fetchData()).rejects.toThrow('redirected to sign-in');
+  });
+
   maybeTestCompanyAPI(CompanyTypes.hvr, config => config.companyAPI.invalidPassword)(
-    'should fail on invalid user/password"',
+    'should fail on invalid user/password',
     async () => {
       const scraper = new HvrScraper({
         ...testsConfig.options,
@@ -45,8 +57,6 @@ describe('HVR scraper', () => {
     expect(result.success).toBeTruthy();
     expect(result.accounts).toBeDefined();
     expect(result.accounts).toHaveLength(1);
-    const txns = result.accounts![0].txns;
-    console.log(`Found ${txns.length} transactions for HVR`);
     exportTransactions(CompanyTypes.hvr, result.accounts || []);
   });
 });
