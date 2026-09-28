@@ -9,6 +9,14 @@ function getJsonHeaders() {
   };
 }
 
+function assertAutomationNotBlocked(status: number, responseText: string | null, url: string) {
+  if (status === 429 || (responseText && /block automation|bot detection/i.test(responseText))) {
+    throw new Error(
+      `Automation detected and blocked by server. Status: ${status}, URL: ${url}. The site is actively blocking automated access. Consider: 1) Using showBrowser:true, 2) Adding longer delays, 3) Using residential proxies, 4) Running at different times of day`,
+    );
+  }
+}
+
 export async function fetchGet<TResult>(url: string, extraHeaders: Record<string, any>): Promise<TResult> {
   let headers = getJsonHeaders();
   if (extraHeaders) {
@@ -73,6 +81,11 @@ export async function fetchGetWithinPage<TResult>(
       );
     }
   }, url);
+
+  if (!ignoreErrors) {
+    assertAutomationNotBlocked(status, result, url);
+  }
+
   if (result !== null) {
     try {
       return JSON.parse(result);
@@ -94,7 +107,7 @@ export async function fetchPostWithinPage<TResult>(
   extraHeaders: Record<string, any> = {},
   ignoreErrors = false,
 ): Promise<TResult | null> {
-  const result = await page.evaluate(
+  const [resultText, status] = await page.evaluate(
     async (innerUrl: string, innerData: Record<string, any>, innerExtraHeaders: Record<string, any>) => {
       const response = await fetch(innerUrl, {
         method: 'POST',
@@ -107,23 +120,27 @@ export async function fetchPostWithinPage<TResult>(
         ),
       });
       if (response.status === 204) {
-        return null;
+        return [null, response.status] as const;
       }
-      return response.text();
+      return [await response.text(), response.status] as const;
     },
     url,
     data,
     extraHeaders,
   );
 
+  if (!ignoreErrors) {
+    assertAutomationNotBlocked(status, resultText, url);
+  }
+
   try {
-    if (result !== null) {
-      return JSON.parse(result);
+    if (resultText !== null) {
+      return JSON.parse(resultText);
     }
   } catch (e) {
     if (!ignoreErrors) {
       throw new Error(
-        `fetchPostWithinPage parse error: ${e instanceof Error ? `${e.message}\n${e.stack}` : String(e)}, url: ${url}, data: ${JSON.stringify(data)}, extraHeaders: ${JSON.stringify(extraHeaders)}, result: ${result}`,
+        `fetchPostWithinPage parse error: ${e instanceof Error ? `${e.message}\n${e.stack}` : String(e)}, url: ${url}, data: ${JSON.stringify(data)}, extraHeaders: ${JSON.stringify(extraHeaders)}, result: ${resultText}`,
       );
     }
   }

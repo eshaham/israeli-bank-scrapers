@@ -7,7 +7,13 @@ import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { getFromSessionStorage } from '../helpers/storage';
 import { filterOldTransactions, getRawTransaction } from '../helpers/transactions';
 import { waitUntil } from '../helpers/waiting';
-import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
+import {
+  CardType,
+  TransactionStatuses,
+  TransactionTypes,
+  type Transaction,
+  type TransactionsAccount,
+} from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from './base-scraper-with-browser';
 import { type ScraperScrapingResult, type ScraperOptions } from './interface';
 
@@ -31,6 +37,8 @@ const SSO_AUTHORIZATION_REQUEST_ENDPOINT = 'https://connect.cal-online.co.il/col
 
 const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו שגויים';
 const ChangePasswordMessage = 'להחליף סיסמה';
+const ChangePasswordSubtitle = 'הגיע הזמן לסיסמה חדשה';
+const ChangePasswordUrl = '/change-password';
 
 const debug = getDebug('visa-cal');
 
@@ -163,13 +171,21 @@ interface CardPendingTransactionDetails extends CardTransactionDetailsError {
 interface CardLevelFrame {
   cardUniqueId: string;
   nextTotalDebit?: number;
+  nextDebitDate?: string;
+}
+
+interface IssuedCardsGroup {
+  nextTotalDebitForAccount?: number;
+  nextTotalDebitDateForAccount?: string | null;
+  frameLimitForCardAmount?: number;
+  fictiveMaxAccAmt?: number;
+  cardLevelFrames?: CardLevelFrame[];
 }
 
 interface FramesResponse {
   result?: {
-    bankIssuedCards?: {
-      cardLevelFrames?: CardLevelFrame[];
-    };
+    calIssuedCards?: IssuedCardsGroup;
+    bankIssuedCards?: IssuedCardsGroup;
   };
 }
 
@@ -205,6 +221,22 @@ function isCardPendingTransactionDetails(
   return (result as CardPendingTransactionDetails).result !== undefined;
 }
 
+function getBalanceAmount(frame: CardLevelFrame | undefined, accountGroup: IssuedCardsGroup | undefined) {
+  if (frame?.nextTotalDebit != null) {
+    return frame.nextTotalDebit;
+  }
+
+  if (accountGroup?.nextTotalDebitForAccount != null) {
+    return accountGroup.nextTotalDebitForAccount;
+  }
+
+  if (accountGroup?.frameLimitForCardAmount == null || accountGroup.fictiveMaxAccAmt == null) {
+    return undefined;
+  }
+
+  return accountGroup.frameLimitForCardAmount - accountGroup.fictiveMaxAccAmt;
+}
+
 async function getLoginFrame(page: Page) {
   let frame: Frame | null = null;
   debug('wait until login frame found');
@@ -238,14 +270,48 @@ async function hasInvalidPasswordError(page: Page) {
 }
 
 async function hasChangePasswordForm(page: Page) {
-  const frame = await getLoginFrame(page);
-  // "כדי להחליף סיסמה יש ללחוץ על 'שכחתי שם משתמש / סיסמה' במסך הכניסה"
-  const errorFound = await elementPresentOnPage(frame, '.err-desc');
-  if (errorFound) {
-    const errText = await pageEval(frame, '.err-desc', '', item => {
-      return (item as HTMLElement).innerText.trim();
-    });
-    return errText.includes(ChangePasswordMessage);
+  // Check if any frame navigated to the change-password route
+  const changePasswordFrame = page.frames().find(f => {
+    const url = f.url();
+    return url.includes('connect.cal-online.co.il') && url.includes(ChangePasswordUrl);
+  });
+  if (changePasswordFrame) {
+    return true;
+  }
+
+  try {
+    const frame = await getLoginFrame(page);
+
+    // Check for the change-password Angular component
+    if (await elementPresentOnPage(frame, 'change-password')) {
+      return true;
+    }
+
+    // Check for the change password title element
+    if (await elementPresentOnPage(frame, '.change-password-title')) {
+      return true;
+    }
+
+    // Check for the change password subtitle text
+    if (await elementPresentOnPage(frame, '.change-password-subtitle')) {
+      const subtitleText = await pageEval(frame, '.change-password-subtitle', '', item => {
+        return (item as HTMLElement).innerText.trim();
+      });
+      if (subtitleText.includes(ChangePasswordSubtitle)) {
+        return true;
+      }
+    }
+
+    // Legacy: check for the old .err-desc based change password message
+    const errorFound = await elementPresentOnPage(frame, '.err-desc');
+    if (errorFound) {
+      const errText = await pageEval(frame, '.err-desc', '', item => {
+        return (item as HTMLElement).innerText.trim();
+      });
+      return errText.includes(ChangePasswordMessage);
+    }
+  } catch (e) {
+    debug('failed to check change password form in login frame: %s', (e as Error).message);
   }
   return false;
 }
@@ -450,6 +516,136 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     };
   }
 
+  private async fetchCardData(
+    card: { cardUniqueId: string; last4Digits: string },
+    startMoment: moment.Moment,
+    startDate: Date,
+    futureMonthsToScrape: number,
+    Authorization: string,
+    xSiteId: string,
+  ): Promise<TransactionsAccount> {
+    debug('fetch frames (misgarot) for card %s', card.cardUniqueId);
+    const frames = await fetchPost<FramesResponse>(
+      FRAMES_REQUEST_ENDPOINT,
+      { cardsForFrameData: [{ cardUniqueId: card.cardUniqueId }] },
+      {
+        Authorization,
+        'X-Site-Id': xSiteId,
+        'Content-Type': 'application/json',
+        ...apiHeaders,
+      },
+    );
+
+    debug('frames response for card %s: %O', card.cardUniqueId, frames);
+
+    // Look for card-level frame in both calIssuedCards and bankIssuedCards
+    const bankIssuedFrame = frames.result?.bankIssuedCards?.cardLevelFrames?.find(
+      (f: CardLevelFrame) => f.cardUniqueId === card.cardUniqueId,
+    );
+
+    const calIssuedFrame = frames.result?.calIssuedCards?.cardLevelFrames?.find(
+      (f: CardLevelFrame) => f.cardUniqueId === card.cardUniqueId,
+    );
+
+    let frame: CardLevelFrame | undefined;
+    let cardType: CardType = CardType.CompanyIssued;
+    let accountGroup: IssuedCardsGroup | undefined;
+
+    if (bankIssuedFrame) {
+      frame = bankIssuedFrame;
+      cardType = CardType.BankIssued;
+      accountGroup = frames.result?.bankIssuedCards;
+    } else if (calIssuedFrame) {
+      frame = calIssuedFrame;
+      cardType = CardType.CompanyIssued;
+      accountGroup = frames.result?.calIssuedCards;
+    } else if (frames.result?.bankIssuedCards) {
+      // No card-level frame found, but account has bankIssuedCards data
+      cardType = CardType.BankIssued;
+      accountGroup = frames.result.bankIssuedCards;
+    } else if (frames.result?.calIssuedCards) {
+      // No card-level frame found, but account has calIssuedCards data
+      cardType = CardType.CompanyIssued;
+      accountGroup = frames.result.calIssuedCards;
+    }
+
+    debug('searching for frame for card %s, found: %O', card.cardUniqueId, frame);
+    debug('card type for card %s: %s', card.cardUniqueId, cardType);
+
+    const balanceDate: string | null | undefined = frame?.nextDebitDate ?? accountGroup?.nextTotalDebitDateForAccount;
+
+    const finalMonthToFetchMoment = moment().add(futureMonthsToScrape, 'month');
+    const months = finalMonthToFetchMoment.diff(startMoment, 'months');
+    const allMonthsData: CardTransactionDetails[] = [];
+
+    debug(`fetch pending transactions for card ${card.cardUniqueId}`);
+    let pendingData = await fetchPost(
+      PENDING_TRANSACTIONS_REQUEST_ENDPOINT,
+      { cardUniqueIDArray: [card.cardUniqueId] },
+      {
+        Authorization,
+        'X-Site-Id': xSiteId,
+        'Content-Type': 'application/json',
+        ...apiHeaders,
+      },
+    );
+
+    debug(`fetch completed transactions for card ${card.cardUniqueId}`);
+    for (let i = 0; i <= months; i++) {
+      const month = finalMonthToFetchMoment.clone().subtract(i, 'months');
+      const monthData = await fetchPost(
+        TRANSACTIONS_REQUEST_ENDPOINT,
+        { cardUniqueId: card.cardUniqueId, month: month.format('M'), year: month.format('YYYY') },
+        {
+          Authorization,
+          'X-Site-Id': xSiteId,
+          'Content-Type': 'application/json',
+          ...apiHeaders,
+        },
+      );
+
+      if (monthData?.statusCode !== 1)
+        throw new Error(
+          `failed to fetch transactions for card ${card.last4Digits}. Message: ${monthData?.title || ''}`,
+        );
+
+      if (!isCardTransactionDetails(monthData)) {
+        throw new Error('monthData is not of type CardTransactionDetails');
+      }
+
+      allMonthsData.push(monthData);
+    }
+
+    if (pendingData?.statusCode !== 1 && pendingData?.statusCode !== 96) {
+      debug(`failed to fetch pending transactions for card ${card.last4Digits}. Message: ${pendingData?.title || ''}`);
+      pendingData = null;
+    } else if (!isCardPendingTransactionDetails(pendingData)) {
+      debug('pendingData is not of type CardTransactionDetails');
+      pendingData = null;
+    }
+
+    const transactions = convertParsedDataToTransactions(allMonthsData, pendingData, this.options);
+
+    debug('filter out old transactions');
+    const txns =
+      (this.options.outputData?.enableTransactionsFilterByDate ?? true)
+        ? filterOldTransactions(transactions, moment(startDate), this.options.combineInstallments || false)
+        : transactions;
+
+    const balanceAmount = getBalanceAmount(frame, accountGroup);
+
+    const result: TransactionsAccount = {
+      txns,
+      balance: balanceAmount != null ? -balanceAmount : undefined,
+      balanceDate: balanceDate != null ? balanceDate : undefined,
+      accountNumber: card.last4Digits,
+      cardType,
+      cardFrame: accountGroup?.frameLimitForCardAmount,
+    };
+
+    return result;
+  }
+
   async fetchData(): Promise<ScraperScrapingResult> {
     const defaultStartMoment = moment().subtract(1, 'years').subtract(6, 'months').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
@@ -464,89 +660,8 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
 
     const futureMonthsToScrape = this.options.futureMonthsToScrape ?? 1;
 
-    debug('fetch frames (misgarot) of cards');
-    const frames = await fetchPost<FramesResponse>(
-      FRAMES_REQUEST_ENDPOINT,
-      { cardsForFrameData: cards.map(({ cardUniqueId }) => ({ cardUniqueId })) },
-      {
-        Authorization,
-        'X-Site-Id': xSiteId,
-        'Content-Type': 'application/json',
-        ...apiHeaders,
-      },
-    );
-
     const accounts = await Promise.all(
-      cards.map(async card => {
-        const finalMonthToFetchMoment = moment().add(futureMonthsToScrape, 'month');
-        const months = finalMonthToFetchMoment.diff(startMoment, 'months');
-        const allMonthsData: CardTransactionDetails[] = [];
-        const frame = frames.result?.bankIssuedCards?.cardLevelFrames?.find(
-          (f: CardLevelFrame) => f.cardUniqueId === card.cardUniqueId,
-        );
-
-        debug(`fetch pending transactions for card ${card.cardUniqueId}`);
-        let pendingData = await fetchPost(
-          PENDING_TRANSACTIONS_REQUEST_ENDPOINT,
-          { cardUniqueIDArray: [card.cardUniqueId] },
-          {
-            Authorization,
-            'X-Site-Id': xSiteId,
-            'Content-Type': 'application/json',
-            ...apiHeaders,
-          },
-        );
-
-        debug(`fetch completed transactions for card ${card.cardUniqueId}`);
-        for (let i = 0; i <= months; i++) {
-          const month = finalMonthToFetchMoment.clone().subtract(i, 'months');
-          const monthData = await fetchPost(
-            TRANSACTIONS_REQUEST_ENDPOINT,
-            { cardUniqueId: card.cardUniqueId, month: month.format('M'), year: month.format('YYYY') },
-            {
-              Authorization,
-              'X-Site-Id': xSiteId,
-              'Content-Type': 'application/json',
-              ...apiHeaders,
-            },
-          );
-
-          if (monthData?.statusCode !== 1)
-            throw new Error(
-              `failed to fetch transactions for card ${card.last4Digits}. Message: ${monthData?.title || ''}`,
-            );
-
-          if (!isCardTransactionDetails(monthData)) {
-            throw new Error('monthData is not of type CardTransactionDetails');
-          }
-
-          allMonthsData.push(monthData);
-        }
-
-        if (pendingData?.statusCode !== 1 && pendingData?.statusCode !== 96) {
-          debug(
-            `failed to fetch pending transactions for card ${card.last4Digits}. Message: ${pendingData?.title || ''}`,
-          );
-          pendingData = null;
-        } else if (!isCardPendingTransactionDetails(pendingData)) {
-          debug('pendingData is not of type CardTransactionDetails');
-          pendingData = null;
-        }
-
-        const transactions = convertParsedDataToTransactions(allMonthsData, pendingData, this.options);
-
-        debug('filter out old transactions');
-        const txns =
-          (this.options.outputData?.enableTransactionsFilterByDate ?? true)
-            ? filterOldTransactions(transactions, moment(startDate), this.options.combineInstallments || false)
-            : transactions;
-
-        return {
-          txns,
-          balance: frame?.nextTotalDebit != null ? -frame.nextTotalDebit : undefined,
-          accountNumber: card.last4Digits,
-        } as TransactionsAccount;
-      }),
+      cards.map(card => this.fetchCardData(card, startMoment, startDate, futureMonthsToScrape, Authorization, xSiteId)),
     );
 
     debug('return the scraped accounts');

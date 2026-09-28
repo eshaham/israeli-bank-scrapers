@@ -147,6 +147,8 @@ function getPossibleLoginResults(): PossibleLoginResults {
     `${BASE_URL}/apollo/retail/#/MY_ACCOUNT_HOMEPAGE`,
     `${BASE_URL}/apollo/retail2/#/MY_ACCOUNT_HOMEPAGE`,
     `${BASE_URL}/apollo/retail2/`,
+    `${BASE_URL}/apollo/retail3/#/MY_ACCOUNT_HOMEPAGE`,
+    `${BASE_URL}/apollo/retail3/`,
   ];
   urls[LoginResults.InvalidPassword] = [`${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/LOGIN_PAGE`];
   urls[LoginResults.ChangePassword] = [`${BASE_URL}/apollo/core/templates/lobby/masterPage.html#/PWD_RENEW`];

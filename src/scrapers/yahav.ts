@@ -20,7 +20,10 @@ const INVALID_DETAILS_SELECTOR = '.ui-dialog-buttons';
 const CHANGE_PASSWORD_OLD_PASS = 'input#ef_req_parameter_old_credential';
 const BASE_WELCOME_URL = `${BASE_URL}main/home`;
 
-const ACCOUNT_ID_SELECTOR = 'span.portfolio-value[ng-if="mainController.data.portfolioList.length === 1"]';
+const PORTFOLIO_FORM = 'form[name="formPortfolioSelect"]';
+const ACCOUNT_ID_SELECTOR_SINGLE = 'span.portfolio-value';
+const ACCOUNT_ID_SELECTOR_MULTI = `${PORTFOLIO_FORM} .selected-item-top`;
+const PORTFOLIO_OPTION_SELECTOR = `${PORTFOLIO_FORM} .drop-down-item-list li.drop-down-item`;
 const ACCOUNT_DETAILS_SELECTOR = '.account-details';
 const DATE_FORMAT = 'DD/MM/YYYY';
 
@@ -56,21 +59,6 @@ function getPossibleLoginResults(page: Page): PossibleLoginResults {
   ];
 
   return urls;
-}
-
-async function getAccountID(page: Page): Promise<string> {
-  try {
-    const selectedSnifAccount = await page.$eval(ACCOUNT_ID_SELECTOR, (element: Element) => {
-      return element.textContent as string;
-    });
-
-    return selectedSnifAccount;
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `Failed to retrieve account ID. Possible outdated selector '${ACCOUNT_ID_SELECTOR}: ${errorMessage}`,
-    );
-  }
 }
 
 function getAmountData(amountStr: string) {
@@ -154,67 +142,30 @@ async function getAccountTransactions(page: Page, options?: ScraperOptions): Pro
   return convertTransactions(txns, options);
 }
 
-// Manipulate the calendar drop down to choose the txs start date.
+// All datepicker selectors are scoped to the "from date" control to avoid ambiguity with the "to date" picker.
+const FROM_PICKER = 'date-picker-access[btn-label="from"]';
+
 async function searchByDates(page: Page, startDate: Moment) {
-  // Get the day number from startDate. 1-31 (usually 1)
-  const startDateDay = startDate.format('D');
-  const startDateMonth = startDate.format('M');
-  const startDateYear = startDate.format('Y');
+  await waitUntilElementFound(page, `${FROM_PICKER} a.datepicker-button`, true);
+  await clickButton(page, `${FROM_PICKER} a.datepicker-button`);
+  await waitUntilElementFound(page, `${FROM_PICKER} .datepicker-calendar`, true);
 
-  // Open the calendar date picker
-  const dateFromPick =
-    'div.date-options-cell:nth-child(7) > date-picker:nth-child(1) > div:nth-child(1) > span:nth-child(2)';
-  await waitUntilElementFound(page, dateFromPick, true);
-  await clickButton(page, dateFromPick);
-
-  // Wait until first day appear.
-  await waitUntilElementFound(page, '.pmu-days > div:nth-child(1)', true);
-
-  // Open Months options.
-  const monthFromPick = '.pmu-month';
-  await waitUntilElementFound(page, monthFromPick, true);
-  await clickButton(page, monthFromPick);
-  await waitUntilElementFound(page, '.pmu-months > div:nth-child(1)', true);
-
-  // Open Year options.
-  // Use same selector... Yahav knows why...
-  await waitUntilElementFound(page, monthFromPick, true);
-  await clickButton(page, monthFromPick);
-  await waitUntilElementFound(page, '.pmu-years > div:nth-child(1)', true);
-
-  // Select year from a 12 year grid.
-  for (let i = 1; i < 13; i += 1) {
-    const selector = `.pmu-years > div:nth-child(${i})`;
-    const year = await page.$eval(selector, y => {
-      return (y as HTMLElement).innerText;
-    });
-    if (startDateYear === year) {
-      await clickButton(page, selector);
-      break;
-    }
+  // Read the input value (set by ng-value/textToDateFilter, always DD/MM/YYYY) to determine which
+  // month the calendar opened on — avoids parsing the header text which renders in the account's locale.
+  const inputValue = await page.$eval(`${FROM_PICKER} .date-picker-input`, el => (el as HTMLInputElement).value);
+  const displayedMoment = moment(inputValue, 'DD/MM/YYYY');
+  const monthsToGoBack =
+    (displayedMoment.year() - startDate.year()) * 12 + (displayedMoment.month() - startDate.month());
+  for (let i = 0; i < monthsToGoBack; i += 1) {
+    const prevMonthSelector = `${FROM_PICKER} .datepicker-month-prev.enabled`;
+    await waitUntilElementFound(page, prevMonthSelector, true);
+    await clickButton(page, prevMonthSelector);
   }
 
-  // Select Month.
-  await waitUntilElementFound(page, '.pmu-months > div:nth-child(1)', true);
-  // The first element (1) is January.
-  const monthSelector = `.pmu-months > div:nth-child(${startDateMonth})`;
-  await clickButton(page, monthSelector);
-
-  // Select Day.
-  // The calendar grid shows 7 days and 6 weeks = 42 days.
-  // In theory, the first day of the month will be in the first row.
-  // Let's check everything just in case...
-  for (let i = 1; i < 42; i += 1) {
-    const selector = `.pmu-days > div:nth-child(${i})`;
-    const day = await page.$eval(selector, d => {
-      return (d as HTMLElement).innerText;
-    });
-
-    if (startDateDay === day) {
-      await clickButton(page, selector);
-      break;
-    }
-  }
+  // :not(.other-month) avoids adjacent-month cells sharing the same day number.
+  const daySelector = `${FROM_PICKER} .datepicker-calendar td.day.selectable:not(.other-month)[data-value="${startDate.date()}"]`;
+  await waitUntilElementFound(page, daySelector, true);
+  await clickButton(page, daySelector);
 }
 
 async function fetchAccountData(
@@ -234,13 +185,68 @@ async function fetchAccountData(
   };
 }
 
-async function fetchAccounts(page: Page, startDate: Moment, options?: ScraperOptions): Promise<TransactionsAccount[]> {
-  const accounts: TransactionsAccount[] = [];
+// Multi-portfolio iteration contributed by @mamlukishay (https://github.com/gczobel/israeli-bank-scrapers/pull/1)
+// Multi-portfolio accounts render <inline-drop-down> inside form[name="formPortfolioSelect"]
+// (Angular ng-if="portfolioList.length > 1") with the current portfolio at .selected-item-top
+// and the unselected ones as <li>s; single-portfolio accounts render only the single selector.
+// Returned selected-first so fetchAccounts can skip re-selecting on the first iteration.
+async function getPortfolioIDs(page: Page): Promise<string[]> {
+  await Promise.any([
+    page.waitForSelector(ACCOUNT_ID_SELECTOR_MULTI, { timeout: 10000 }),
+    page.waitForSelector(ACCOUNT_ID_SELECTOR_SINGLE, { timeout: 10000 }),
+  ]).catch(() => null);
 
-  // TODO: get more accounts. Not sure is supported.
-  const accountID = await getAccountID(page);
-  const accountData = await fetchAccountData(page, startDate, accountID, options);
-  accounts.push(accountData);
+  return page.evaluate(
+    (multiSelector, optionSelector, singleSelector) => {
+      const selected = document.querySelector(multiSelector)?.textContent?.trim();
+      if (selected) {
+        const others = Array.from(document.querySelectorAll(optionSelector)).map(li => li.textContent?.trim() ?? '');
+        return [selected, ...others].filter(Boolean);
+      }
+      const single = document.querySelector(singleSelector)?.textContent?.trim();
+      return single ? [single] : [];
+    },
+    ACCOUNT_ID_SELECTOR_MULTI,
+    PORTFOLIO_OPTION_SELECTOR,
+    ACCOUNT_ID_SELECTOR_SINGLE,
+  );
+}
+
+// Angular's listItemAction navigates the page back to /main/home with the new portfolio
+// selected — callers must re-enter the statements flow after this returns.
+async function selectPortfolio(page: Page, targetID: string) {
+  const clicked = await page.$$eval(
+    PORTFOLIO_OPTION_SELECTOR,
+    (lis, id) => {
+      const target = (lis as HTMLElement[]).find(li => li.textContent?.trim() === id);
+      if (!target) return false;
+      target.click();
+      return true;
+    },
+    targetID,
+  );
+  if (!clicked) throw new Error(`Portfolio option not found for ID: ${targetID}`);
+  await waitUntilElementDisappear(page, '.loading-bar-spinner');
+}
+
+async function fetchAccounts(page: Page, startDate: Moment, options?: ScraperOptions): Promise<TransactionsAccount[]> {
+  // Snapshot up front: the dropdown only lists unselected portfolios, so after the first
+  // switch we would lose any not yet scraped.
+  const portfolioIDs = await getPortfolioIDs(page);
+  if (portfolioIDs.length === 0) {
+    throw new Error('No portfolios found on /main/home — Yahav DOM likely changed');
+  }
+  const accounts: TransactionsAccount[] = [];
+  for (let i = 0; i < portfolioIDs.length; i += 1) {
+    const portfolioID = portfolioIDs[i];
+    if (i > 0) {
+      await selectPortfolio(page, portfolioID);
+    }
+    await waitUntilElementFound(page, ACCOUNT_DETAILS_SELECTOR, true);
+    await clickButton(page, ACCOUNT_DETAILS_SELECTOR);
+    await waitUntilElementFound(page, '.statement-options .selected-item-top', true);
+    accounts.push(await fetchAccountData(page, startDate, portfolioID, options));
+  }
 
   return accounts;
 }
@@ -288,14 +294,11 @@ class YahavScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   }
 
   async fetchData() {
-    // Goto statements page
     await waitUntilElementFound(this.page, ACCOUNT_DETAILS_SELECTOR, true);
-    await clickButton(this.page, ACCOUNT_DETAILS_SELECTOR);
-    await waitUntilElementFound(this.page, '.statement-options .selected-item-top', true);
 
     const defaultStartMoment = moment().subtract(3, 'months').add(1, 'day');
     const startDate = this.options.startDate || defaultStartMoment.toDate();
-    const startMoment = moment.max(defaultStartMoment, moment(startDate));
+    const startMoment = moment.min(moment.max(defaultStartMoment, moment(startDate)), moment());
 
     const accounts = await fetchAccounts(this.page, startMoment, this.options);
 
