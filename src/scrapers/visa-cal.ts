@@ -258,8 +258,20 @@ async function getLoginFrame(page: Page) {
   return frame;
 }
 
+/**
+ * The current site shows a rejected login by routing the login iframe to
+ * /calconnect/error;...;error=<message> (a "לא נוכל להמשיך" screen) instead of the .general-error element.
+ */
+export function isInvalidPasswordErrorUrl(frameUrl: string) {
+  const url = safeDecodeURIComponent(frameUrl);
+  return url.includes('/calconnect/error') && url.includes(InvalidPasswordMessage);
+}
+
 async function hasInvalidPasswordError(page: Page) {
   const frame = await getLoginFrame(page);
+  if (isInvalidPasswordErrorUrl((frame as Frame).url())) {
+    return true;
+  }
   const errorFound = await elementPresentOnPage(frame, 'div.general-error > div');
   const errorMessage = errorFound
     ? await pageEval(frame, 'div.general-error > div', '', item => {
@@ -267,6 +279,14 @@ async function hasInvalidPasswordError(page: Page) {
       })
     : '';
   return errorMessage === InvalidPasswordMessage;
+}
+
+function safeDecodeURIComponent(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 async function hasChangePasswordForm(page: Page) {
@@ -509,6 +529,10 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
           if (currentUrl.endsWith('dashboard')) return;
           const requiresChangePassword = await hasChangePasswordForm(this.page);
           if (requiresChangePassword) return;
+          // A rejected login only navigates the iframe, never the page, so the wait above times
+          // out. Return and let possibleResults report INVALID_PASSWORD instead of a timeout.
+          const invalidPassword = await hasInvalidPasswordError(this.page).catch(() => false);
+          if (invalidPassword) return;
           throw e;
         }
       },
