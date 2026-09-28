@@ -59,9 +59,16 @@ interface SavingsAccountData {
   operationsListItems: any[];
 }
 
+const PRIVATE_ACCOUNT_URL = /ebanking\/SO\/SPA.aspx/i;
+const BUSINESS_ACCOUNT_URL = /staticcontent\/digitalfront/i;
+
+export function isPostLoginUrl(url: string) {
+  return PRIVATE_ACCOUNT_URL.test(url) || BUSINESS_ACCOUNT_URL.test(url);
+}
+
 function getPossibleLoginResults() {
   const urls: LoginOptions['possibleResults'] = {
-    [LoginResults.Success]: [/ebanking\/SO\/SPA.aspx/i],
+    [LoginResults.Success]: [PRIVATE_ACCOUNT_URL, BUSINESS_ACCOUNT_URL],
     [LoginResults.InvalidPassword]: [
       async options => {
         if (!options || !options.page) {
@@ -327,12 +334,24 @@ async function navigateToLogin(page: Page): Promise<void> {
 }
 
 async function waitForPostLogin(page: Page): Promise<void> {
+  // Business accounts land on /staticcontent/digitalfront, where none of the private-account
+  // selectors below ever appear, so success is detected by URL too. Every branch gets the same
+  // 60s timeout: one rejecting at the 30s default would fail the race before the others match.
   await Promise.race([
+    page.waitForFunction(
+      (privateUrl: string, businessUrl: string) =>
+        new RegExp(privateUrl, 'i').test(window.location.href) ||
+        new RegExp(businessUrl, 'i').test(window.location.href),
+      { timeout: 60000 },
+      PRIVATE_ACCOUNT_URL.source,
+      BUSINESS_ACCOUNT_URL.source,
+    ),
     waitUntilElementFound(page, 'a[title="דלג לחשבון"]', true, 60000),
     waitUntilElementFound(page, 'div.main-content', false, 60000),
-    page.waitForSelector(`xpath//div[contains(string(),"${INVALID_PASSWORD_MSG}")]`),
+    page.waitForSelector(`xpath//div[contains(string(),"${INVALID_PASSWORD_MSG}")]`, { timeout: 60000 }),
     waitUntilElementFound(page, CHANGE_PASSWORD_MODAL_SELECTOR, true, 60000),
   ]);
+  debug('post-login detected at %s', page.url());
 }
 
 type ScraperSpecificCredentials = { username: string; password: string };
