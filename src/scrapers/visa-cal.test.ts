@@ -1,10 +1,25 @@
 import { SCRAPERS } from '../definitions';
 import { exportTransactions, extendAsyncTimeout, getTestsConfig, maybeTestCompanyAPI } from '../tests/tests-utils';
+import { TransactionStatuses, TransactionTypes, type Transaction } from '../transactions';
 import { LoginResults } from './base-scraper-with-browser';
-import VisaCalScraper from './visa-cal';
+import VisaCalScraper, { dedupePendingTransactions } from './visa-cal';
 
 const COMPANY_ID = 'visaCal'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
+
+function makeTransaction(overrides: Partial<Transaction>): Transaction {
+  return {
+    type: TransactionTypes.Normal,
+    date: '2024-05-10T07:00:00.000Z',
+    processedDate: '2024-05-10T07:00:00.000Z',
+    originalAmount: -100,
+    originalCurrency: '₪',
+    chargedAmount: -100,
+    description: 'Test Merchant',
+    status: TransactionStatuses.Completed,
+    ...overrides,
+  };
+}
 
 describe('VisaCal legacy scraper', () => {
   beforeAll(() => {
@@ -50,5 +65,131 @@ describe('VisaCal legacy scraper', () => {
     // uncomment to test multiple accounts
     // expect(result?.accounts?.length).toEqual(2)
     exportTransactions(COMPANY_ID, result.accounts || []);
+  });
+});
+
+describe('dedupePendingTransactions', () => {
+  test('drops a pending transaction once an identical completed counterpart exists', () => {
+    const transactions = [
+      makeTransaction({ status: TransactionStatuses.Pending, date: '2024-05-10T07:20:05.000Z', chargedAmount: -120 }),
+      makeTransaction({
+        status: TransactionStatuses.Completed,
+        date: '2024-05-10T07:20:05.000Z',
+        chargedAmount: -120,
+        identifier: 'abc123',
+      }),
+    ];
+
+    const result = dedupePendingTransactions(transactions);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].status).toBe(TransactionStatuses.Completed);
+    expect(result[0].identifier).toBe('abc123');
+  });
+
+  test('drops the pending side even when the amount differs (e.g. a gas-station pending hold)', () => {
+    const transactions = [
+      makeTransaction({
+        status: TransactionStatuses.Pending,
+        date: '2024-05-10T05:09:27.000Z',
+        chargedAmount: -200, // placeholder hold amount
+      }),
+      makeTransaction({
+        status: TransactionStatuses.Completed,
+        date: '2024-05-10T05:12:18.000Z', // a few minutes later, once the pump total is known
+        chargedAmount: -84.3,
+        identifier: 'abc456',
+      }),
+    ];
+
+    const result = dedupePendingTransactions(transactions);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].status).toBe(TransactionStatuses.Completed);
+    expect(result[0].chargedAmount).toBe(-84.3);
+  });
+
+  test('drops the pending side when the amount differs by a small settlement adjustment', () => {
+    const transactions = [
+      makeTransaction({ status: TransactionStatuses.Pending, date: '2024-05-10T07:29:25.000Z', chargedAmount: -75.5 }),
+      makeTransaction({
+        status: TransactionStatuses.Completed,
+        date: '2024-05-10T07:29:25.000Z',
+        chargedAmount: -76,
+        identifier: 'abc789',
+      }),
+    ];
+
+    const result = dedupePendingTransactions(transactions);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].chargedAmount).toBe(-76);
+  });
+
+  test('keeps a pending transaction with no completed counterpart', () => {
+    const transactions = [
+      makeTransaction({
+        status: TransactionStatuses.Pending,
+        date: '2024-05-11T09:00:00.000Z',
+        description: 'Coffee Shop',
+      }),
+    ];
+
+    const result = dedupePendingTransactions(transactions);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].status).toBe(TransactionStatuses.Pending);
+  });
+
+  test('pairs two same-day pending transactions at the same merchant with their own closest completed counterpart', () => {
+    const transactions = [
+      makeTransaction({
+        status: TransactionStatuses.Pending,
+        date: '2024-05-05T08:00:00.000Z',
+        description: 'Supermarket',
+        chargedAmount: -50,
+      }),
+      makeTransaction({
+        status: TransactionStatuses.Pending,
+        date: '2024-05-05T18:00:00.000Z',
+        description: 'Supermarket',
+        chargedAmount: -80,
+      }),
+      makeTransaction({
+        status: TransactionStatuses.Completed,
+        date: '2024-05-05T08:00:05.000Z',
+        description: 'Supermarket',
+        chargedAmount: -50,
+        identifier: 'morning',
+      }),
+      makeTransaction({
+        status: TransactionStatuses.Completed,
+        date: '2024-05-05T18:00:10.000Z',
+        description: 'Supermarket',
+        chargedAmount: -80,
+        identifier: 'evening',
+      }),
+    ];
+
+    const result = dedupePendingTransactions(transactions);
+
+    expect(result).toHaveLength(2);
+    expect(result.map(t => t.identifier).sort()).toEqual(['evening', 'morning']);
+  });
+
+  test('does not match pending and completed transactions on different days', () => {
+    const transactions = [
+      makeTransaction({ status: TransactionStatuses.Pending, date: '2024-05-10T23:59:00.000Z', chargedAmount: -50 }),
+      makeTransaction({
+        status: TransactionStatuses.Completed,
+        date: '2024-05-11T00:01:00.000Z',
+        chargedAmount: -50,
+        identifier: 'nextday',
+      }),
+    ];
+
+    const result = dedupePendingTransactions(transactions);
+
+    expect(result).toHaveLength(2);
   });
 });
