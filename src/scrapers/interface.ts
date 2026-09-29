@@ -137,6 +137,14 @@ export type ScraperOptions = ScraperBrowserOptions & {
   defaultTimeout?: number;
 
   /**
+   * Maximum time in milliseconds to wait for the login to complete after the credentials are submitted.
+   * Useful together with `showBrowser: true` when the bank asks for a 2FA/SMS code that is typed manually
+   * in the opened browser window.
+   * Currently supported by: hapoalim. When not set, the scraper's built-in timeout is used (20 seconds).
+   */
+  loginTimeout?: number;
+
+  /**
    * Options for manipulation of output data
    */
   outputData?: OutputDataOptions;
