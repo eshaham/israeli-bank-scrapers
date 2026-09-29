@@ -2,7 +2,7 @@ import moment from 'moment';
 import { type Page } from 'puppeteer';
 import { waitUntilElementFound } from '../helpers/elements-interactions';
 import { fetchGetWithinPage } from '../helpers/fetch';
-import { waitForNavigation } from '../helpers/navigation';
+import { waitForNavigationAndDomLoad } from '../helpers/navigation';
 import { getRawTransaction } from '../helpers/transactions';
 import { type Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
@@ -135,7 +135,9 @@ async function fetchAccountData(page: Page, options: ScraperOptions): Promise<Sc
 
 async function navigateOrErrorLabel(page: Page) {
   try {
-    await waitForNavigation(page);
+    await waitForNavigationAndDomLoad(page);
+    // Wait for network idle to ensure SPA is fully initialized (fixes retail3 race condition)
+    await page.waitForNavigation({ waitUntil: 'networkidle2' }).catch(() => {});
   } catch (e) {
     await waitUntilElementFound(page, '#general-error', false, 100);
   }
