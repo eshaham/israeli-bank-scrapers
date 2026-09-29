@@ -1,4 +1,4 @@
-import { type BrowserContext, type Browser, type Page } from 'puppeteer';
+import { type BrowserContext, type Browser, type CookieData, type Page } from 'puppeteer';
 import { type CompanyTypes, type ScraperProgressTypes } from '../definitions';
 import { type TransactionsAccount } from '../transactions';
 import { type ErrorResult, type ScraperErrorTypes } from './errors';
@@ -6,7 +6,7 @@ import { type ErrorResult, type ScraperErrorTypes } from './errors';
 // TODO: Remove this type when the scraper 'factory' will return concrete scraper types
 // Instead of a generic interface (which in turn uses this type)
 export type ScraperCredentials =
-  | { userCode: string; password: string }
+  | { userCode: string; password: string; otpCodeRetriever?: (options?: { attempt: number }) => Promise<string> }
   | { username: string; password: string }
   | { id: string; password: string }
   | { id: string; password: string; num: string }
@@ -14,7 +14,7 @@ export type ScraperCredentials =
   | { username: string; nationalID: string; password: string }
   | ({ email: string; password: string } & (
       | {
-          otpCodeRetriever: () => Promise<string>;
+          otpCodeRetriever: (options?: { attempt: number }) => Promise<string>;
           phoneNumber: string;
         }
       | {
@@ -27,6 +27,17 @@ export type OptInFeatures =
   | 'mizrahi:pendingIfNoIdentifier'
   | 'mizrahi:pendingIfHasGenericDescription'
   | 'mizrahi:pendingIfTodayTransaction';
+
+export interface DeviceTrustData {
+  cookies: CookieData[];
+  localStorage: Record<string, string>;
+  /**
+   * The origin (e.g. https://login.bankhapoalim.co.il) the localStorage was captured from.
+   * localStorage is origin-scoped, so it must be restored on the same origin or the bank's
+   * login JS won't see the device-trust identifier and will re-challenge for 2FA.
+   */
+  origin?: string;
+}
 
 export interface FutureDebit {
   amount: number;
@@ -171,6 +182,13 @@ export type ScraperOptions = ScraperBrowserOptions & {
    * Opt-in features for the scrapers, allowing safe rollout of new breaking changes.
    */
   optInFeatures?: Array<OptInFeatures>;
+
+  /**
+   * Device trust data from a previous session. When provided, cookies and localStorage
+   * are injected into the browser before login to avoid repeated 2FA challenges.
+   * Only used by browser-based scrapers.
+   */
+  deviceTrustData?: DeviceTrustData;
 };
 
 export interface OutputDataOptions {
@@ -186,6 +204,13 @@ export interface ScraperScrapingResult {
   futureDebits?: FutureDebit[];
   errorType?: ScraperErrorTypes;
   errorMessage?: string; // only on success=false
+
+  /**
+   * Device trust data extracted after a successful browser-based scrape.
+   * Callers should persist this and pass it back via `ScraperOptions.deviceTrustData`
+   * on subsequent scrapes to avoid repeated 2FA challenges.
+   */
+  deviceTrustData?: DeviceTrustData;
 }
 
 export interface Scraper<TCredentials extends ScraperCredentials> {

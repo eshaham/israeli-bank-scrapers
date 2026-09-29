@@ -185,9 +185,10 @@ See the [OptInFeatures](https://github.com/eshaham/israeli-bank-scrapers/blob/ma
 
 ## Two-Factor Authentication Scrapers
 
-Some companies require two-factor authentication, and as such the scraper cannot be fully automated. When using the relevant scrapers, you have two options:
+Some companies require two-factor authentication, and as such the scraper cannot be fully automated. When using the relevant scrapers, you have three options:
 1. Provide an async callback that knows how to retrieve real time secrets like OTP codes.
 2. When supported by the scraper - provide a "long term token". These are usually available if the financial provider only requires Two-Factor authentication periodically, and not on every login. You can retrieve your long term token from the relevant credit/banking app using reverse engineering and a MITM proxy, or use helper functions that are provided by some Two-Factor Auth scrapers (e.g. OneZero).
+3. Use `deviceTrustData` to persist and restore device identity (cookies and localStorage). After a successful login with OTP, the scraper returns `deviceTrustData` in the result. On subsequent runs, pass it back via the `deviceTrustData` option to skip OTP entirely — the bank recognizes the device and doesn't prompt for verification. Currently supported by Hapoalim (see [Bank Hapoalim scraper](#bank-hapoalim-scraper) for a full example).
 
 
 ```node
@@ -278,6 +279,38 @@ const credentials = {
 };
 ```
 This scraper supports fetching transaction from up to one year.
+
+### Two-Factor Authentication (OTP)
+Hapoalim may require SMS OTP verification when logging in from an unrecognized device. You can handle this by providing an `otpCodeRetriever` callback and optionally persisting device trust data to skip OTP on subsequent runs:
+
+```typescript
+import { createScraper, CompanyTypes } from 'israeli-bank-scrapers';
+
+const scraper = createScraper({
+  companyId: CompanyTypes.hapoalim,
+  startDate: new Date('2024-01-01'),
+  // Optionally inject previously saved trust data to skip OTP
+  deviceTrustData: savedTrustData, // or undefined on first run
+});
+
+const result = await scraper.scrape({
+  userCode: '...',
+  password: '...',
+  otpCodeRetriever: async ({ attempt }) => {
+    // Called when OTP is required. `attempt` starts at 1 (max 3).
+    return await promptUserForOtpCode();
+  },
+});
+
+if (result.success && result.deviceTrustData) {
+  // Save trust data (cookies + localStorage) for next time.
+  // When injected via the deviceTrustData option, the bank recognizes
+  // the device and skips OTP verification.
+  await saveTrustData(result.deviceTrustData);
+}
+```
+
+The `deviceTrustData` option is available for all browser-based scrapers, but the OTP flow is currently specific to Hapoalim.
 
 ## Bank Leumi scraper
 This scraper expects the following credentials object:
