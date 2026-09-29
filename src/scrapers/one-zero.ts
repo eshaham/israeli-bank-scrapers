@@ -1,6 +1,7 @@
 import moment from 'moment/moment';
 import { getDebug } from '../helpers/debug';
 import { fetchGraphql, fetchPost } from '../helpers/fetch';
+import { ONE_ZERO_CLIENT_CERT } from './one-zero-client-cert';
 import { getRawTransaction } from '../helpers/transactions';
 import {
   type Transaction as ScrapingTransaction,
@@ -93,12 +94,24 @@ type ScraperSpecificCredentials = { email: string; password: string } & (
   | {
       otpLongTermToken: string;
     }
+  | {
+      idToken: string;
+    }
 );
 
 export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentials> {
   private otpContext?: string;
 
   private accessToken?: string;
+
+  /**
+   * The idToken minted by getIdToken() has a ~10 year expiry, unlike the
+   * otpToken (single-use, tied to one SMS verification) or the accessToken
+   * (~1 hour). Save this and pass it back as `credentials.idToken` to skip
+   * SMS verification entirely on future runs — login() will go straight to
+   * sessions/token with it.
+   */
+  public idToken?: string;
 
   async triggerTwoFactorAuth(phoneNumber: string): Promise<ScraperTwoFactorAuthTriggerResult> {
     if (!phoneNumber.startsWith('+')) {
@@ -108,10 +121,15 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
     }
 
     debug('Fetching device token');
-    const deviceTokenResponse = await fetchPost(`${IDENTITY_SERVER_URL}/devices/token`, {
-      extClientId: 'mobile',
-      os: 'Android',
-    });
+    const deviceTokenResponse = await fetchPost(
+      `${IDENTITY_SERVER_URL}/devices/token`,
+      {
+        extClientId: 'mobile',
+        os: 'Android',
+      },
+      {},
+      ONE_ZERO_CLIENT_CERT,
+    );
 
     const {
       resultData: { deviceToken },
@@ -119,11 +137,16 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
 
     debug(`Sending OTP to phone number ${phoneNumber}`);
 
-    const otpPrepareResponse = await fetchPost(`${IDENTITY_SERVER_URL}/otp/prepare`, {
-      factorValue: phoneNumber,
-      deviceToken,
-      otpChannel: 'SMS_OTP',
-    });
+    const otpPrepareResponse = await fetchPost(
+      `${IDENTITY_SERVER_URL}/otp/prepare`,
+      {
+        factorValue: phoneNumber,
+        deviceToken,
+        otpChannel: 'SMS_OTP',
+      },
+      {},
+      ONE_ZERO_CLIENT_CERT,
+    );
 
     const {
       resultData: { otpContext },
@@ -142,10 +165,15 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
     }
 
     debug('Requesting OTP token');
-    const otpVerifyResponse = await fetchPost(`${IDENTITY_SERVER_URL}/otp/verify`, {
-      otpContext: this.otpContext,
-      otpCode,
-    });
+    const otpVerifyResponse = await fetchPost(
+      `${IDENTITY_SERVER_URL}/otp/verify`,
+      {
+        otpContext: this.otpContext,
+        otpCode,
+      },
+      {},
+      ONE_ZERO_CLIENT_CERT,
+    );
 
     const {
       resultData: { otpToken },
@@ -154,7 +182,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
   }
 
   private async resolveOtpToken(
-    credentials: ScraperSpecificCredentials,
+    credentials: Exclude<ScraperSpecificCredentials, { idToken: string }>,
   ): Promise<ScraperGetLongTermTwoFactorTokenResult> {
     if ('otpLongTermToken' in credentials) {
       if (!credentials.otpLongTermToken) {
@@ -193,29 +221,46 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
   }
 
   async login(credentials: ScraperSpecificCredentials): Promise<ScraperLoginResult> {
-    const otpTokenResult = await this.resolveOtpToken(credentials);
-    if (!otpTokenResult.success) {
-      return otpTokenResult;
+    let idToken: string;
+
+    if ('idToken' in credentials) {
+      debug('Reusing saved idToken, skipping SMS verification');
+      idToken = credentials.idToken;
+    } else {
+      const otpTokenResult = await this.resolveOtpToken(credentials);
+      if (!otpTokenResult.success) {
+        return otpTokenResult;
+      }
+
+      debug('Requesting id token');
+      const getIdTokenResponse = await fetchPost(
+        `${IDENTITY_SERVER_URL}/getIdToken`,
+        {
+          otpSmsToken: otpTokenResult.longTermTwoFactorAuthToken,
+          email: credentials.email,
+          pass: credentials.password,
+          pinCode: '',
+        },
+        {},
+        ONE_ZERO_CLIENT_CERT,
+      );
+
+      idToken = getIdTokenResponse.resultData.idToken;
     }
 
-    debug('Requesting id token');
-    const getIdTokenResponse = await fetchPost(`${IDENTITY_SERVER_URL}/getIdToken`, {
-      otpSmsToken: otpTokenResult.longTermTwoFactorAuthToken,
-      email: credentials.email,
-      pass: credentials.password,
-      pinCode: '',
-    });
-
-    const {
-      resultData: { idToken },
-    } = getIdTokenResponse;
+    this.idToken = idToken;
 
     debug('Requesting session token');
 
-    const getSessionTokenResponse = await fetchPost(`${IDENTITY_SERVER_URL}/sessions/token`, {
-      idToken,
-      pass: credentials.password,
-    });
+    const getSessionTokenResponse = await fetchPost(
+      `${IDENTITY_SERVER_URL}/sessions/token`,
+      {
+        idToken,
+        pass: credentials.password,
+      },
+      {},
+      ONE_ZERO_CLIENT_CERT,
+    );
 
     const {
       resultData: { accessToken },
@@ -225,7 +270,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
 
     return {
       success: true,
-      persistentOtpToken: otpTokenResult.longTermTwoFactorAuthToken,
+      persistentOtpToken: idToken,
     };
   }
 
@@ -252,6 +297,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
           },
         },
         { authorization: `Bearer ${this.accessToken}` },
+        ONE_ZERO_CLIENT_CERT,
       );
 
       movements.unshift(...newMovements);
@@ -335,6 +381,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
       GET_CUSTOMER,
       {},
       { authorization: `Bearer ${this.accessToken}` },
+      ONE_ZERO_CLIENT_CERT,
     );
     const portfolios = result.customer.flatMap(customer => customer.portfolios || []);
 
