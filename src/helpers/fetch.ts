@@ -10,7 +10,10 @@ function getJsonHeaders() {
 }
 
 function assertAutomationNotBlocked(status: number, responseText: string | null, url: string) {
-  if (status === 429 || (responseText && /block automation|bot detection/i.test(responseText))) {
+  if (
+    status === 429 ||
+    (responseText && /block automation|bot detection|sorry, you have been blocked|cloudflare/i.test(responseText))
+  ) {
     throw new Error(
       `Automation detected and blocked by server. Status: ${status}, URL: ${url}. The site is actively blocking automated access. Consider: 1) Using showBrowser:true, 2) Adding longer delays, 3) Using residential proxies, 4) Running at different times of day`,
     );
@@ -46,7 +49,15 @@ export async function fetchPost<TResult = any>(
     body: JSON.stringify(data),
   };
   const result = await fetch(url, request);
-  return result.json();
+  const responseText = await result.text();
+  assertAutomationNotBlocked(result.status, responseText, url);
+  try {
+    return JSON.parse(responseText);
+  } catch (e) {
+    throw new Error(
+      `fetchPost parse error: ${e instanceof Error ? e.message : String(e)}, url: ${url}, status: ${result.status}, dataFields: ${JSON.stringify(Object.keys(data ?? {}))}, extraHeaderFields: ${JSON.stringify(Object.keys(extraHeaders ?? {}))}, result: ${responseText}`,
+    );
+  }
 }
 
 export async function fetchGraphql<TResult>(
@@ -140,7 +151,7 @@ export async function fetchPostWithinPage<TResult>(
   } catch (e) {
     if (!ignoreErrors) {
       throw new Error(
-        `fetchPostWithinPage parse error: ${e instanceof Error ? `${e.message}\n${e.stack}` : String(e)}, url: ${url}, data: ${JSON.stringify(data)}, extraHeaders: ${JSON.stringify(extraHeaders)}, result: ${resultText}`,
+        `fetchPostWithinPage parse error: ${e instanceof Error ? `${e.message}\n${e.stack}` : String(e)}, url: ${url}, dataFields: ${JSON.stringify(Object.keys(data ?? {}))}, extraHeaderFields: ${JSON.stringify(Object.keys(extraHeaders ?? {}))}, result: ${resultText}`,
       );
     }
   }
