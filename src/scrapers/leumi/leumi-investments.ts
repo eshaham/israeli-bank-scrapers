@@ -191,6 +191,17 @@ function buildOrdersHistoryUrl(portfolioIndex: number, fromDate: string, toDate:
   return `${ORDERS_HISTORY_URL}?${params.toString()}`;
 }
 
+/**
+ * Live Statement responses always carry `data.UserStatement`, for empty portfolios
+ * too (`DataSource: null`, `PortfolioValue: 0`). Without it the request failed (an
+ * error body is still JSON), and parsing it would silently look like an empty portfolio.
+ */
+export function assertStatementResponse(data: any, portfolio: { PortfolioId: string }): void {
+  if (!data?.data?.UserStatement) {
+    throw new Error(`Leumi investments: unexpected statement response for portfolio ${portfolio.PortfolioId}`);
+  }
+}
+
 async function fetchPortfolioAccount(
   page: Page,
   portfolioIndex: number,
@@ -201,17 +212,15 @@ async function fetchPortfolioAccount(
   const today = moment().format(API_DATE_FORMAT);
 
   const statementData = await fetchGetWithinPage<any>(page, buildStatementUrl(portfolioIndex, today));
+  assertStatementResponse(statementData, portfolio);
   const securities = parseHoldingsResponse(statementData);
   const balance = parsePortfolioValue(statementData) ?? securities.reduce((sum, security) => sum + security.value, 0);
 
-  let txns: Transaction[] = [];
-  try {
-    const ordersUrl = buildOrdersHistoryUrl(portfolioIndex, startDate.format(API_DATE_FORMAT), today);
-    const ordersData = await fetchGetWithinPage<any>(page, ordersUrl);
-    txns = parseOrderHistoryResponse(ordersData, options);
-  } catch (error) {
-    debug('error fetching order history for portfolio %s: %s', portfolio.PortfolioId, error);
-  }
+  // Not caught: a listed portfolio whose orders can't be read must fail the scrape
+  // rather than come back looking like a portfolio without orders.
+  const ordersUrl = buildOrdersHistoryUrl(portfolioIndex, startDate.format(API_DATE_FORMAT), today);
+  const ordersData = await fetchGetWithinPage<any>(page, ordersUrl);
+  const txns = parseOrderHistoryResponse(ordersData, options);
 
   if (balance === 0 && securities.length === 0 && txns.length === 0) {
     debug('skipping empty portfolio %s', portfolio.PortfolioId);
@@ -237,30 +246,32 @@ export async function fetchInvestmentAccounts(
 ): Promise<TransactionsAccount[]> {
   debug('========== FETCHING INVESTMENT ACCOUNTS ==========');
 
+  // A customer without the investments service may not get a usable config response,
+  // so failing to list portfolios still means "no investment accounts".
+  let portfolios: RawPortfolio[];
   try {
     const configData = await fetchGetWithinPage<any>(page, CONFIG_URL);
-    const portfolios = parsePortfoliosResponse(configData);
-    if (!portfolios.length) {
-      debug('no portfolios found');
-      return [];
-    }
-
-    const accounts: TransactionsAccount[] = [];
-    for (let index = 0; index < portfolios.length; index += 1) {
-      try {
-        const account = await fetchPortfolioAccount(page, index, portfolios[index], startDate, options);
-        if (account) {
-          accounts.push(account);
-        }
-      } catch (error) {
-        debug('error fetching portfolio %s: %s', portfolios[index].PortfolioId, error);
-      }
-    }
-
-    debug('returning %d investment accounts', accounts.length);
-    return accounts;
+    portfolios = parsePortfoliosResponse(configData);
   } catch (error) {
-    debug('error fetching investment accounts: %s', error);
+    debug('could not list portfolios, assuming there are none: %s', error);
     return [];
   }
+
+  if (!portfolios.length) {
+    debug('no portfolios found');
+    return [];
+  }
+
+  // Once Leumi has listed a portfolio, failing to read it fails the scrape: returning
+  // the remaining accounts would make the missing one look closed to the caller.
+  const accounts: TransactionsAccount[] = [];
+  for (let index = 0; index < portfolios.length; index += 1) {
+    const account = await fetchPortfolioAccount(page, index, portfolios[index], startDate, options);
+    if (account) {
+      accounts.push(account);
+    }
+  }
+
+  debug('returning %d investment accounts', accounts.length);
+  return accounts;
 }

@@ -1,11 +1,19 @@
 import moment from 'moment';
+import { type Page } from 'puppeteer';
+import { fetchGetWithinPage } from '../../helpers/fetch';
 import { type ScraperOptions } from '../interface';
 import {
+  assertStatementResponse,
+  fetchInvestmentAccounts,
   parseHoldingsResponse,
   parseOrderHistoryResponse,
   parsePortfolioValue,
   parsePortfoliosResponse,
 } from './leumi-investments';
+
+jest.mock('../../helpers/fetch');
+
+const mockFetchGet = fetchGetWithinPage as jest.MockedFunction<typeof fetchGetWithinPage>;
 
 describe('parsePortfoliosResponse', () => {
   test('extracts portfolios from the config response', () => {
@@ -155,5 +163,77 @@ describe('parseOrderHistoryResponse', () => {
 
     expect(withRaw[0].rawTransaction).toBeDefined();
     expect(withoutRaw[0].rawTransaction).toBeUndefined();
+  });
+});
+
+describe('assertStatementResponse', () => {
+  test('accepts an empty portfolio statement', () => {
+    expect(() =>
+      assertStatementResponse(
+        { data: { UserStatement: { DataSource: null, PortfolioValue: 0 } } },
+        { PortfolioId: '1' },
+      ),
+    ).not.toThrow();
+  });
+
+  test('rejects a response without a statement', () => {
+    expect(() => assertStatementResponse({ error: 'Unauthorized' }, { PortfolioId: '1' })).toThrow(
+      'unexpected statement response for portfolio 1',
+    );
+  });
+});
+
+describe('fetchInvestmentAccounts', () => {
+  const page = {} as Page;
+  const startDate = moment('2026-01-01');
+  const config = { data: { user: { Portfolios: [{ PortfolioId: 'P1', PortfolioName: 'Main' }] } } };
+  const statement = {
+    data: {
+      UserStatement: { PortfolioValue: 100, DataSource: [{ PaperName: 'Fund', Symbol: '', Amount: 1, Value: 100 }] },
+    },
+  };
+  const orders = { data: { GetOrdersHistory: { ordersHistory: { records: [] } } } };
+
+  const respondWith = (...responses: unknown[]) => {
+    responses.forEach(response => {
+      if (response instanceof Error) {
+        mockFetchGet.mockRejectedValueOnce(response);
+      } else {
+        mockFetchGet.mockResolvedValueOnce(response);
+      }
+    });
+  };
+
+  beforeEach(() => {
+    mockFetchGet.mockReset();
+  });
+
+  test('returns no accounts when portfolios cannot be listed', async () => {
+    respondWith(new Error('config unavailable'));
+
+    await expect(fetchInvestmentAccounts(page, startDate, {} as ScraperOptions)).resolves.toEqual([]);
+  });
+
+  test('returns the listed portfolio', async () => {
+    respondWith(config, statement, orders);
+
+    const accounts = await fetchInvestmentAccounts(page, startDate, {} as ScraperOptions);
+
+    expect(accounts).toHaveLength(1);
+    expect(accounts[0]).toMatchObject({ accountNumber: 'P1-investment', balance: 100 });
+  });
+
+  test('fails when a listed portfolio statement comes back without data', async () => {
+    respondWith(config, { error: 'Internal Server Error' });
+
+    await expect(fetchInvestmentAccounts(page, startDate, {} as ScraperOptions)).rejects.toThrow(
+      'unexpected statement response for portfolio P1',
+    );
+  });
+
+  test('fails when the order history of a listed portfolio cannot be fetched', async () => {
+    respondWith(config, statement, new Error('orders unavailable'));
+
+    await expect(fetchInvestmentAccounts(page, startDate, {} as ScraperOptions)).rejects.toThrow('orders unavailable');
   });
 });
