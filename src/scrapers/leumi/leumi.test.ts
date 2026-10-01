@@ -107,5 +107,41 @@ describe('Leumi legacy scraper', () => {
     } else {
       debug('No foreign currency accounts found - this may be expected if the test account has none');
     }
+
+    // Validate investment accounts if they exist
+    const investmentAccounts = result.accounts?.filter(account => account.accountNumber.endsWith('-investment'));
+
+    debug('Investment accounts found:', investmentAccounts?.length);
+
+    if (investmentAccounts && investmentAccounts.length > 0) {
+      debug('Investment account details:');
+      investmentAccounts.forEach(account => {
+        debug(
+          `  - Account: ${account.accountNumber}, Balance: ${account.balance}, Securities: ${account.securities?.length}, Transactions: ${account.txns.length}`,
+        );
+        account.securities?.forEach(security => {
+          debug(
+            `      - ${security.name} (${security.symbol}): ${security.volume} @ ${security.value} ${security.currency}`,
+          );
+        });
+        account.txns.forEach(txn => {
+          debug(`      - ${txn.date}: ${txn.description} ${txn.chargedAmount} ${txn.chargedCurrency}`);
+        });
+      });
+
+      investmentAccounts.forEach(account => {
+        expect(account.savingsAccount).toBe(true);
+        expect(account.balance).toBeDefined();
+        expect(account.securities).toBeDefined();
+        expect(account.txns).toBeDefined();
+
+        account.txns.forEach(txn => {
+          expect(Number.isNaN(txn.originalAmount)).toBe(false);
+          expect(txn.date).toBeDefined();
+        });
+      });
+    } else {
+      debug('No investment accounts found - this may be expected if the test account has none');
+    }
   });
 });
