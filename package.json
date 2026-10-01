@@ -76,7 +76,7 @@
   },
   "dependencies": {
     "debug": "^4.3.2",
-    "moment": "^2.22.2",
+    "moment": "^2.31.0",
     "moment-timezone": "^0.5.37",
     "puppeteer": "^24.40.0"
   },
