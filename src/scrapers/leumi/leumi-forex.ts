@@ -246,8 +246,10 @@ export async function fetchForeignCurrencyAccounts(
   options: ScraperOptions,
 ): Promise<TransactionsAccount[]> {
   debug('========== FETCHING FOREIGN CURRENCY ACCOUNTS ==========');
-  const accounts: TransactionsAccount[] = [];
 
+  // A customer without foreign currency accounts gets no account selector, so failing
+  // to reach or list it still means "no foreign currency accounts".
+  let accountOptions: { value: string; text: string }[];
   try {
     await page.goto(FOREIGN_CURRENCY_URL, { waitUntil: 'networkidle2' });
 
@@ -257,25 +259,25 @@ export async function fetchForeignCurrencyAccounts(
 
     await waitUntilElementFound(page, FOREIGN_ACCOUNTS_SELECTOR, true);
 
-    const accountOptions = await page.$$eval(`${FOREIGN_ACCOUNTS_SELECTOR} option`, elements =>
+    accountOptions = await page.$$eval(`${FOREIGN_ACCOUNTS_SELECTOR} option`, elements =>
       Array.from(elements, element => ({ value: element.value, text: element.text })).filter(option => !!option.value),
     );
-
-    debug('found %d foreign currency accounts', accountOptions.length);
-
-    // Each iteration drives the same page, so the accounts must be fetched sequentially.
-    for (const accountOption of accountOptions) {
-      try {
-        const account = await fetchForeignCurrencyAccount(page, startDate, accountOption, options);
-        if (account) {
-          accounts.push(account);
-        }
-      } catch (error) {
-        debug('error fetching foreign currency account %s: %s', accountOption.text, error);
-      }
-    }
   } catch (error) {
-    debug('error fetching foreign currency accounts: %s', error);
+    debug('could not list foreign currency accounts, assuming there are none: %s', error);
+    return [];
+  }
+
+  debug('found %d foreign currency accounts', accountOptions.length);
+
+  // Once an account is listed, failing to read it fails the scrape: returning the
+  // remaining accounts would make the missing one look closed to the caller.
+  // Each iteration drives the same page, so the accounts must be fetched sequentially.
+  const accounts: TransactionsAccount[] = [];
+  for (const accountOption of accountOptions) {
+    const account = await fetchForeignCurrencyAccount(page, startDate, accountOption, options);
+    if (account) {
+      accounts.push(account);
+    }
   }
 
   debug('returning %d foreign currency accounts', accounts.length);

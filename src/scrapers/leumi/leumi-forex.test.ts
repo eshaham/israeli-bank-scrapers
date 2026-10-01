@@ -1,11 +1,16 @@
 import moment from 'moment';
+import { type Page } from 'puppeteer';
+import { waitUntilElementFound } from '../../helpers/elements-interactions';
 import { type ScraperOptions } from '../interface';
 import {
+  fetchForeignCurrencyAccounts,
   getForeignTransactionAmount,
   mapForeignCurrency,
   mapForeignTransaction,
   parseForeignAmount,
 } from './leumi-forex';
+
+jest.mock('../../helpers/elements-interactions');
 
 describe('mapForeignCurrency', () => {
   test('matches a real double-quote label observed on the live page', () => {
@@ -121,5 +126,44 @@ describe('mapForeignTransaction', () => {
 
     expect(withRaw.rawTransaction).toBeDefined();
     expect(withoutRaw.rawTransaction).toBeUndefined();
+  });
+});
+
+describe('fetchForeignCurrencyAccounts', () => {
+  const startDate = moment('2026-01-01');
+
+  // Skips the fixed wait after navigation (see DEVELOPER NOTICE in fetchForeignCurrencyAccounts)
+  const run = async (page: Page) => {
+    const result = fetchForeignCurrencyAccounts(page, startDate, {} as ScraperOptions);
+    result.catch(() => {});
+    await jest.advanceTimersByTimeAsync(5000);
+    return result;
+  };
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.mocked(waitUntilElementFound).mockReset();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  test('returns no accounts when the account selector never appears', async () => {
+    jest.mocked(waitUntilElementFound).mockRejectedValue(new Error('timeout waiting for selector'));
+    const page = { goto: jest.fn().mockResolvedValue(null) } as unknown as Page;
+
+    await expect(run(page)).resolves.toEqual([]);
+  });
+
+  test('fails when a listed account cannot be read', async () => {
+    jest.mocked(waitUntilElementFound).mockResolvedValue(undefined);
+    const page = {
+      goto: jest.fn().mockResolvedValue(null),
+      $$eval: jest.fn().mockResolvedValue([{ value: '1', text: '680-12345 דולר' }]),
+      select: jest.fn().mockRejectedValue(new Error('detached frame')),
+    } as unknown as Page;
+
+    await expect(run(page)).rejects.toThrow('detached frame');
   });
 });
