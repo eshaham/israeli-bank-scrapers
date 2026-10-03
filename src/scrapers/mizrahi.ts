@@ -77,7 +77,7 @@ type MoreDetails = {
 const BASE_WEBSITE_URL = 'https://www.mizrahi-tefahot.co.il';
 const LOGIN_URL = `${BASE_WEBSITE_URL}/login/index.html#/auth-page-he`;
 const BASE_APP_URL = 'https://mto.mizrahi-tefahot.co.il';
-const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/OnlineApp\/.*/;
+const AFTER_LOGIN_BASE_URL = /https:\/\/mto\.mizrahi-tefahot\.co\.il\/OnlineApp(?:Pilot)?\/.*/;
 const OSH_PAGE = '/osh/legacy/legacy-Osh-Main';
 const TRANSACTIONS_PAGE = '/osh/legacy/root-main-osh-p428New';
 const TRANSACTIONS_REQUEST_URLS = [
@@ -115,7 +115,7 @@ async function isLoggedIn(options: { page?: Page | undefined } | undefined) {
     return false;
   }
   const oshXPath = `//a//span[contains(., "${checkingAccountTabHebrewName}") or contains(., "${checkingAccountTabEnglishName}")]`;
-  const oshTab = await options.page.$$(`xpath${oshXPath}`);
+  const oshTab = await options.page.$$(`xpath/${oshXPath}`);
   return oshTab.length > 0;
 }
 
