@@ -1,7 +1,9 @@
 import https from 'https';
 import { type Page } from 'puppeteer';
+import { SECOND, TimeoutError } from './waiting';
 
 const JSON_CONTENT_TYPE = 'application/json';
+const MTLS_INACTIVITY_TIMEOUT = 30 * SECOND;
 
 function getJsonHeaders() {
   return {
@@ -49,10 +51,14 @@ function fetchPostWithMtls(url: string, headers: Record<string, string>, body: s
       response => {
         const chunks: Buffer[] = [];
         response.on('data', chunk => chunks.push(chunk));
+        response.on('error', reject);
         response.on('end', () => resolve({ status: response.statusCode ?? 0, text: Buffer.concat(chunks).toString() }));
       },
     );
     request.on('error', reject);
+    request.setTimeout(MTLS_INACTIVITY_TIMEOUT, () => {
+      request.destroy(new TimeoutError(`request to ${url} timed out after ${MTLS_INACTIVITY_TIMEOUT}ms of inactivity`));
+    });
     request.end(body);
   });
 }
@@ -75,7 +81,7 @@ export async function fetchPost<TResult = any>(
     return JSON.parse(text);
   } catch {
     throw new Error(
-      `sending a request to the institute server returned with status code ${status} and a non-JSON body`,
+      `sending a request to the institute server returned with status code ${status} and a non-JSON body, url: ${url}`,
     );
   }
 }
