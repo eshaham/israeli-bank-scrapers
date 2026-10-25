@@ -39,6 +39,8 @@ const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו
 const ChangePasswordMessage = 'להחליף סיסמה';
 const ChangePasswordSubtitle = 'הגיע הזמן לסיסמה חדשה';
 const ChangePasswordUrl = '/change-password';
+// The username/password tab of the login iframe. The legacy #regular-login id is kept as a fallback.
+const PasswordLoginTabSelector = '[role="tab"][alt="כניסה עם שם משתמש"], #regular-login';
 
 const debug = getDebug('visa-cal');
 
@@ -427,11 +429,11 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     debug('get the frame that holds the login');
     const frame = await getLoginFrame(this.page);
     debug('wait until the password login tab header is available');
-    await waitUntilElementFound(frame, '#regular-login');
+    await waitUntilElementFound(frame, PasswordLoginTabSelector);
     debug('navigate to the password login tab');
-    await clickButton(frame, '#regular-login');
-    debug('wait until the password login tab is active');
-    await waitUntilElementFound(frame, 'regular-login');
+    await clickButton(frame, PasswordLoginTabSelector);
+    debug('wait until the password login form is visible');
+    await waitUntilElementFound(frame, '[formcontrolname="userName"]', true);
 
     return frame;
   };
