@@ -62,7 +62,7 @@ function getPossibleLoginResults(page: Page): PossibleLoginResults {
 }
 
 function getAmountData(amountStr: string) {
-  const amountStrCopy = amountStr.replace(',', '');
+  const amountStrCopy = amountStr.replace(/,/g, '');
   return parseFloat(amountStrCopy);
 }
 
@@ -118,7 +118,10 @@ function handleTransactionRow(txns: ScrapedTransaction[], txnRow: TransactionsTr
   txns.push(tx);
 }
 
-async function getAccountTransactions(page: Page, options?: ScraperOptions): Promise<Transaction[]> {
+async function getAccountTransactions(
+  page: Page,
+  options?: ScraperOptions,
+): Promise<{ txns: Transaction[]; balance?: number }> {
   // Wait for transactions.
   await waitUntilElementFound(page, '.under-line-txn-table-header', true);
 
@@ -139,7 +142,10 @@ async function getAccountTransactions(page: Page, options?: ScraperOptions): Pro
     handleTransactionRow(txns, txnRow);
   }
 
-  return convertTransactions(txns, options);
+  // Rows are newest first, and column 6 holds the running balance after each transaction.
+  const balance = transactionsDivs.length ? getAmountData(transactionsDivs[0].innerDivs[6] ?? '') : NaN;
+
+  return { txns: convertTransactions(txns, options), balance: Number.isNaN(balance) ? undefined : balance };
 }
 
 // All datepicker selectors are scoped to the "from date" control to avoid ambiguity with the "to date" picker.
@@ -177,10 +183,11 @@ async function fetchAccountData(
   await waitUntilElementDisappear(page, '.loading-bar-spinner');
   await searchByDates(page, startDate);
   await waitUntilElementDisappear(page, '.loading-bar-spinner');
-  const txns = await getAccountTransactions(page, options);
+  const { txns, balance } = await getAccountTransactions(page, options);
 
   return {
     accountNumber: accountID,
+    balance,
     txns,
   };
 }
