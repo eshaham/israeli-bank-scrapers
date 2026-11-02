@@ -59,6 +59,24 @@ describe('getMemo', () => {
     [{ comments: 'comment without funds' }, 'comment without funds'],
     [{ comments: '', fundsTransferReceiverOrTransfer: 'Daniel H' }, 'Daniel H'],
     [{ comments: '', fundsTransferReceiverOrTransfer: 'Daniel', fundsTransferComment: 'Foo bar' }, 'Daniel: Foo bar'],
+    [
+      { comments: '', promotionClub: 'הנחת מועדון: מועדון לדוגמה', promotionAmount: -12.34 },
+      'הנחת מועדון: מועדון לדוגמה: -12.34',
+    ],
+    [
+      {
+        comments: 'comment',
+        fundsTransferReceiverOrTransfer: 'Test recipient',
+        fundsTransferComment: 'Foo bar',
+        promotionClub: 'Club discount',
+        promotionAmount: -12.34,
+      },
+      'comment Test recipient: Foo bar | Club discount: -12.34',
+    ],
+    [{ comments: 'comment', promotionClub: null, promotionAmount: null }, 'comment'],
+    [{ comments: '', promotionClub: 'Club discount', promotionAmount: null }, 'Club discount'],
+    [{ comments: '', promotionClub: null, promotionAmount: -12.34 }, '-12.34'],
+    [{ comments: '', promotionClub: 'Club discount', promotionAmount: 0 }, 'Club discount: 0'],
   ])('%o should create memo: %s', (transaction, expected) => {
     const memo = getMemo(transaction);
     expect(memo).toBe(expected);
