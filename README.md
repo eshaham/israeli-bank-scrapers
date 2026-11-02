@@ -107,10 +107,18 @@ The structure of the result object is as follows:
       status: string //can either be 'completed' or 'pending'
     }],
   }],
+  loans?: BankLoan[], // Loan details when supported and enabled
+  loansError?: string, // Loan retrieval errors, including partial failures
   errorType: "INVALID_PASSWORD"|"CHANGE_PASSWORD"|"ACCOUNT_BLOCKED"|"UNKNOWN_ERROR"|"TIMEOUT"|"GENERIC", // only on success=false
   errorMessage: string, // only on success=false
 }
 ```
+
+Loan details are optional and available only for supported scrapers.
+See the [BankLoan interface](./src/loans.ts) for the normalized loan data structure.
+
+Loan retrieval errors are reported separately through `loansError`.
+Current-account data remains available when loan retrieval fails.
 
 You can also use the `SCRAPERS` list to get scraper metadata:
 ```node
@@ -299,6 +307,13 @@ const credentials = {
 };
 ```
 This scraper supports fetching transaction from up to one year (minus 1 day).
+
+The Discount scraper also supports optional loan retrieval using
+`includeLoans: true`. Set `includeRawLoan: true` to include the
+original bank response in each loan's `rawLoan` property.
+
+Loan retrieval is disabled by default and is not currently supported
+by the Mercantile scraper.
 
 ## Mercantile scraper
 This scraper expects the following credentials object:

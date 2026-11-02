@@ -8,6 +8,8 @@ import { type Transaction, TransactionStatuses, TransactionTypes } from '../tran
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
 import { type ScraperOptions, type ScraperScrapingResult } from './interface';
+import { CompanyTypes } from '../definitions';
+import { type BankLoan } from '../loans';
 
 const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
@@ -75,6 +77,125 @@ function convertTransactions(
   });
 }
 
+interface ScrapedLoan {
+  LoanAccount: string;
+  LoanName?: string;
+  LoanCurrency?: string;
+  LoanAmount?: number;
+  PrincipalBalance?: number;
+  InterestBalance?: number;
+  LoanBalance?: number;
+  TotalLoanBalance?: number;
+  PrepaymentPenaltyFee?: number;
+  TotalInterestRate?: number;
+  EffectiveInterstRate?: number;
+  BaseInterestRate?: number;
+  EarningsRate?: number;
+  NextPayment?: number;
+  NumOfPayments?: string;
+  NumOfPaymentsMade?: string;
+  NumOfPaymentsRemained?: string;
+  NextPaymentDate?: string;
+  LastPaymentDate?: string;
+}
+interface DiscountLoansResponse {
+  LoansQuery?: {
+    LoanDetailsBlock?: {
+      LoanEntry?: ScrapedLoan | ScrapedLoan[];
+    };
+  };
+}
+
+export function convertLoans(loans: ScrapedLoan[], accountNumber: string, options: ScraperOptions): BankLoan[] {
+  return loans.map(loan => {
+    const result: BankLoan = {
+      sourceAccountNumber: accountNumber,
+      loanAccountNumber: loan.LoanAccount,
+      name: loan.LoanName,
+      currency: loan.LoanCurrency,
+      originalAmount: loan.LoanAmount,
+      principalBalance: loan.PrincipalBalance,
+      accruedInterest: loan.InterestBalance,
+      outstandingBalance: loan.LoanBalance,
+      payoffEstimate: loan.TotalLoanBalance,
+      prepaymentPenaltyFee: loan.PrepaymentPenaltyFee,
+      interestRate: loan.TotalInterestRate,
+      effectiveInterestRate: loan.EffectiveInterstRate,
+      baseInterestRate: loan.BaseInterestRate,
+      interestSpread: loan.EarningsRate,
+      monthlyPayment: loan.NextPayment,
+      paymentsTotal: parsePaymentCount(loan.NumOfPayments),
+      paymentsMade: parsePaymentCount(loan.NumOfPaymentsMade),
+      paymentsRemaining: parsePaymentCount(loan.NumOfPaymentsRemained),
+      nextPaymentDate: parseLoanDate(loan.NextPaymentDate),
+      endDate: parseLoanDate(loan.LastPaymentDate),
+    };
+
+    if (options.includeRawLoan) {
+      result.rawLoan = loan;
+    }
+
+    return result;
+  });
+}
+
+function parsePaymentCount(value?: string): number | undefined {
+  if (!value || !/^\d+$/.test(value)) {
+    return undefined;
+  }
+
+  const count = Number(value);
+  return Number.isSafeInteger(count) ? count : undefined;
+}
+
+function parseLoanDate(value?: string): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const date = moment(value, DATE_FORMAT, true);
+
+  return date.isValid() ? date.format('YYYY-MM-DD') : undefined;
+}
+
+async function fetchLoansData(
+  page: Page,
+  accountNumbers: string[],
+  options: ScraperOptions,
+): Promise<{ loans: BankLoan[]; failedAccounts: number }> {
+  const loans: BankLoan[] = [];
+  let failedAccounts = 0;
+
+  for (const accountNumber of accountNumbers) {
+    try {
+      const url = `${BASE_URL}/Titan/gatewayAPI/onlineLoans/loansQuery/${encodeURIComponent(accountNumber)}`;
+
+      const response = await fetchGetWithinPage<DiscountLoansResponse>(page, url);
+
+      const details = response?.LoansQuery?.LoanDetailsBlock;
+
+      if (!details) {
+        throw new Error('Invalid Discount loans response');
+      }
+
+      const rawEntries = details.LoanEntry ?? [];
+      const entries = Array.isArray(rawEntries) ? rawEntries : [rawEntries];
+
+      if (entries.some(loan => typeof loan?.LoanAccount !== 'string' || !loan.LoanAccount.trim())) {
+        throw new Error('Invalid Discount loan entry');
+      }
+
+      loans.push(...convertLoans(entries, accountNumber, options));
+    } catch {
+      // Preserve successfully retrieved loans from other accounts.
+      // Do not expose sensitive bank data in errors.
+      failedAccounts++;
+    }
+  }
+
+  return { loans, failedAccounts };
+}
+
 async function fetchAccountData(page: Page, options: ScraperOptions): Promise<ScraperScrapingResult> {
   const apiSiteUrl = `${BASE_URL}/Titan/gatewayAPI`;
 
@@ -125,10 +246,20 @@ async function fetchAccountData(page: Page, options: ScraperOptions): Promise<Sc
     });
   }
 
-  const accountData = {
+  const accountData: ScraperScrapingResult = {
     success: true,
     accounts: accountsData,
   };
+
+  if (options.includeLoans && options.companyId === CompanyTypes.discount) {
+    const { loans, failedAccounts } = await fetchLoansData(page, accounts, options);
+
+    accountData.loans = loans;
+
+    if (failedAccounts > 0) {
+      accountData.loansError = `Could not retrieve loans for ${failedAccounts} account(s)`;
+    }
+  }
 
   return accountData;
 }

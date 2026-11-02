@@ -1,5 +1,6 @@
 export { CompanyTypes, SCRAPERS } from './definitions';
 export { default as createScraper } from './scrapers/factory';
+export type { BankLoan } from './loans';
 
 // Note: the typo ScaperScrapingResult & ScraperLoginResult (sic) are exported here for backward compatibility
 export {

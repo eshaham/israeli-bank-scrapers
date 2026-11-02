@@ -1,6 +1,7 @@
 import { type BrowserContext, type Browser, type Page } from 'puppeteer';
 import { type CompanyTypes, type ScraperProgressTypes } from '../definitions';
 import { type TransactionsAccount } from '../transactions';
+import { type BankLoan } from '../loans';
 import { type ErrorResult, type ScraperErrorTypes } from './errors';
 
 // TODO: Remove this type when the scraper 'factory' will return concrete scraper types
@@ -171,6 +172,18 @@ export type ScraperOptions = ScraperBrowserOptions & {
    * Opt-in features for the scrapers, allowing safe rollout of new breaking changes.
    */
   optInFeatures?: Array<OptInFeatures>;
+
+  /**
+   * Retrieve loan details when supported by the scraper.
+   * @default false
+   */
+  includeLoans?: boolean;
+
+  /**
+   * Include the original bank loan response.
+   * @default false
+   */
+  includeRawLoan?: boolean;
 };
 
 export interface OutputDataOptions {
@@ -186,6 +199,8 @@ export interface ScraperScrapingResult {
   futureDebits?: FutureDebit[];
   errorType?: ScraperErrorTypes;
   errorMessage?: string; // only on success=false
+  loans?: BankLoan[];
+  loansError?: string;
 }
 
 export interface Scraper<TCredentials extends ScraperCredentials> {
