@@ -2,7 +2,7 @@ import moment, { type Moment } from 'moment';
 import { type Page } from 'puppeteer';
 import { ALT_SHEKEL_CURRENCY, SHEKEL_CURRENCY, SHEKEL_CURRENCY_KEYWORD } from '../constants';
 import { ScraperProgressTypes } from '../definitions';
-import { interceptionPriorities, maskHeadlessUserAgent } from '../helpers/browser';
+import { interceptionPriorities, maskBrowserAutomation } from '../helpers/browser';
 import getAllMonthMoments from '../helpers/dates';
 import { getDebug } from '../helpers/debug';
 import { fetchGetWithinPage, fetchPostWithinPage } from '../helpers/fetch';
@@ -536,7 +536,7 @@ class IsracardAmexBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCred
       }
     });
 
-    await maskHeadlessUserAgent(this.page);
+    await maskBrowserAutomation(this.page);
 
     await this.navigateTo(`${this.baseUrl}/personalarea/Login`);
 
