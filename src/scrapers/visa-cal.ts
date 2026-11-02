@@ -39,6 +39,8 @@ const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו
 const ChangePasswordMessage = 'להחליף סיסמה';
 const ChangePasswordSubtitle = 'הגיע הזמן לסיסמה חדשה';
 const ChangePasswordUrl = '/change-password';
+// The username/password tab of the login iframe. The legacy #regular-login id is kept as a fallback.
+const PasswordLoginTabSelector = '[role="tab"][alt="כניסה עם שם משתמש"], #regular-login';
 
 const debug = getDebug('visa-cal');
 
@@ -427,13 +429,33 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     debug('get the frame that holds the login');
     const frame = await getLoginFrame(this.page);
     debug('wait until the password login tab header is available');
-    await waitUntilElementFound(frame, '#regular-login');
-    debug('navigate to the password login tab');
-    await clickButton(frame, '#regular-login');
-    debug('wait until the password login tab is active');
-    await waitUntilElementFound(frame, 'regular-login');
-
-    return frame;
+    await waitUntilElementFound(frame, PasswordLoginTabSelector);
+    // Clicking the tab navigates the iframe, and a click that lands before its app is ready is ignored.
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      debug(`navigate to the password login tab, attempt ${attempt}`);
+      const tabFrame = await getLoginFrame(this.page);
+      await clickButton(tabFrame, PasswordLoginTabSelector).catch(() => debug('password login tab not clickable'));
+      let loginFrame = null as Frame | null;
+      try {
+        await waitUntil(
+          async () => {
+            const current: Frame = await getLoginFrame(this.page);
+            const userName = await current.$('[formcontrolname="userName"]').catch(() => null);
+            loginFrame = userName && (await userName.isVisible().catch(() => false)) ? current : null;
+            return !!loginFrame;
+          },
+          'wait until the password login form is visible',
+          5000,
+          250,
+        );
+      } catch {
+        debug('password login form did not open');
+      }
+      if (loginFrame) {
+        return loginFrame;
+      }
+    }
+    throw new Error('failed to open the password login tab');
   };
 
   async getCards() {
