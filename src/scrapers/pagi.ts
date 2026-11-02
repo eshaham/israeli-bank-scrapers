@@ -1,7 +1,7 @@
 import BeinleumiGroupBaseScraper from './base-beinleumi-group';
 
 class PagiScraper extends BeinleumiGroupBaseScraper {
-  BASE_URL = 'https://online.pagi.co.il/';
+  BASE_URL = 'https://online.pagi.co.il';
 
   LOGIN_URL = `${this.BASE_URL}/MatafLoginService/MatafLoginServlet?bankId=PAGIPORTAL&site=Private&KODSAFA=HE`;
 
