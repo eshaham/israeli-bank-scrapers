@@ -16,6 +16,7 @@ import {
   type ScraperScrapingResult,
   type ScraperTwoFactorAuthTriggerResult,
 } from './interface';
+import { ONE_ZERO_CLIENT_CERT } from './one-zero-client-cert';
 import { GET_CUSTOMER, GET_MOVEMENTS } from './one-zero-queries';
 
 const HEBREW_WORDS_REGEX = /[\u0590-\u05FF][\u0590-\u05FF"'\-_ /\\]*[\u0590-\u05FF]/g;
@@ -81,9 +82,61 @@ type Movement = {
 
 type QueryPagination = { hasMore: boolean; cursor: string };
 
-const IDENTITY_SERVER_URL = 'https://identity.tfd-bank.com/v1/';
+const IDENTITY_SERVER_URL = 'https://identity.tfd-bank.com/v1';
 
 const GRAPHQL_API_URL = 'https://mobile.tfd-bank.com/mobile-graph/graphql';
+
+const ONE_ZERO_HEADERS = {
+  'User-Agent': 'ONEZEROIL/4.7.0(564) Lokalize/0 (Android 11 ; Pixel 3) MTLS',
+};
+
+function parseJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const [, payloadPart] = token.split('.');
+    if (!payloadPart) {
+      return null;
+    }
+    return JSON.parse(Buffer.from(payloadPart, 'base64url').toString('utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function isIdToken(token: string): boolean {
+  return parseJwtPayload(token)?.tokenType === 'idToken';
+}
+
+function mapIdentityError(errorType: string | undefined, isSavedJwtToken: boolean): ScraperLoginResult {
+  if (
+    errorType &&
+    ['ErrorPassLocked', 'ErrorFactorLocked', 'ErrorEPLocked', 'ErrorMaxRetryReached'].includes(errorType)
+  ) {
+    return {
+      success: false,
+      errorType: ScraperErrorTypes.AccountBlocked,
+      errorMessage: errorType,
+    };
+  }
+  if (errorType === 'ErrorForceChangePass') {
+    return {
+      success: false,
+      errorType: ScraperErrorTypes.ChangePassword,
+      errorMessage: errorType,
+    };
+  }
+  if (isSavedJwtToken && (errorType === 'ErrorInvalidToken' || errorType === 'ErrorIdTokenRevoke')) {
+    return {
+      success: false,
+      errorType: ScraperErrorTypes.TwoFactorRetrieverMissing,
+      errorMessage: 'Saved OneZero authentication token expired or was revoked; SMS OTP verification is required',
+    };
+  }
+  return {
+    success: false,
+    errorType: ScraperErrorTypes.InvalidPassword,
+    errorMessage: errorType || 'OneZero authentication failed',
+  };
+}
 
 type ScraperSpecificCredentials = { email: string; password: string } & (
   | {
@@ -93,12 +146,22 @@ type ScraperSpecificCredentials = { email: string; password: string } & (
   | {
       otpLongTermToken: string;
     }
+  | {
+      idToken: string;
+    }
 );
 
 export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentials> {
   private otpContext?: string;
 
   private accessToken?: string;
+
+  /**
+   * Long-lived (~10 year) device-bound token returned by `/v1/getIdToken`.
+   * Reusing this token in `credentials.idToken` or `credentials.otpLongTermToken`
+   * allows subsequent logins to go directly to `/v1/sessions/token` without SMS OTP.
+   */
+  public idToken?: string;
 
   async triggerTwoFactorAuth(phoneNumber: string): Promise<ScraperTwoFactorAuthTriggerResult> {
     if (!phoneNumber.startsWith('+')) {
@@ -108,10 +171,15 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
     }
 
     debug('Fetching device token');
-    const deviceTokenResponse = await fetchPost(`${IDENTITY_SERVER_URL}/devices/token`, {
-      extClientId: 'mobile',
-      os: 'Android',
-    });
+    const deviceTokenResponse = await fetchPost(
+      `${IDENTITY_SERVER_URL}/devices/token`,
+      {
+        extClientId: 'mobile',
+        os: 'Android',
+      },
+      ONE_ZERO_HEADERS,
+      ONE_ZERO_CLIENT_CERT,
+    );
 
     const {
       resultData: { deviceToken },
@@ -119,11 +187,16 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
 
     debug(`Sending OTP to phone number ${phoneNumber}`);
 
-    const otpPrepareResponse = await fetchPost(`${IDENTITY_SERVER_URL}/otp/prepare`, {
-      factorValue: phoneNumber,
-      deviceToken,
-      otpChannel: 'SMS_OTP',
-    });
+    const otpPrepareResponse = await fetchPost(
+      `${IDENTITY_SERVER_URL}/otp/prepare`,
+      {
+        factorValue: phoneNumber,
+        deviceToken,
+        otpChannel: 'SMS_OTP',
+      },
+      ONE_ZERO_HEADERS,
+      ONE_ZERO_CLIENT_CERT,
+    );
 
     const {
       resultData: { otpContext },
@@ -142,10 +215,15 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
     }
 
     debug('Requesting OTP token');
-    const otpVerifyResponse = await fetchPost(`${IDENTITY_SERVER_URL}/otp/verify`, {
-      otpContext: this.otpContext,
-      otpCode,
-    });
+    const otpVerifyResponse = await fetchPost(
+      `${IDENTITY_SERVER_URL}/otp/verify`,
+      {
+        otpContext: this.otpContext,
+        otpCode,
+      },
+      ONE_ZERO_HEADERS,
+      ONE_ZERO_CLIENT_CERT,
+    );
 
     const {
       resultData: { otpToken },
@@ -154,7 +232,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
   }
 
   private async resolveOtpToken(
-    credentials: ScraperSpecificCredentials,
+    credentials: Exclude<ScraperSpecificCredentials, { idToken: string }>,
   ): Promise<ScraperGetLongTermTwoFactorTokenResult> {
     if ('otpLongTermToken' in credentials) {
       if (!credentials.otpLongTermToken) {
@@ -193,29 +271,63 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
   }
 
   async login(credentials: ScraperSpecificCredentials): Promise<ScraperLoginResult> {
-    const otpTokenResult = await this.resolveOtpToken(credentials);
-    if (!otpTokenResult.success) {
-      return otpTokenResult;
+    let idToken: string;
+
+    if ('idToken' in credentials) {
+      if (!credentials.idToken) {
+        return createGenericError('Invalid idToken');
+      }
+      debug('Reusing saved idToken, skipping SMS verification');
+      idToken = credentials.idToken;
+    } else {
+      const otpTokenResult = await this.resolveOtpToken(credentials);
+      if (!otpTokenResult.success) {
+        return otpTokenResult;
+      }
+
+      if (isIdToken(otpTokenResult.longTermTwoFactorAuthToken)) {
+        debug('Reusing saved idToken from otpLongTermToken, skipping getIdToken');
+        idToken = otpTokenResult.longTermTwoFactorAuthToken;
+      } else {
+        debug('Requesting id token');
+        const getIdTokenResponse = await fetchPost(
+          `${IDENTITY_SERVER_URL}/getIdToken`,
+          {
+            otpSmsToken: otpTokenResult.longTermTwoFactorAuthToken,
+            email: credentials.email,
+            pass: credentials.password,
+            pinCode: '',
+          },
+          ONE_ZERO_HEADERS,
+          ONE_ZERO_CLIENT_CERT,
+        );
+
+        if (!getIdTokenResponse?.resultData?.idToken) {
+          const isSavedJwt = Boolean(parseJwtPayload(otpTokenResult.longTermTwoFactorAuthToken));
+          return mapIdentityError(getIdTokenResponse?.errorResponse?.type, isSavedJwt);
+        }
+
+        idToken = getIdTokenResponse.resultData.idToken;
+      }
     }
 
-    debug('Requesting id token');
-    const getIdTokenResponse = await fetchPost(`${IDENTITY_SERVER_URL}/getIdToken`, {
-      otpSmsToken: otpTokenResult.longTermTwoFactorAuthToken,
-      email: credentials.email,
-      pass: credentials.password,
-      pinCode: '',
-    });
-
-    const {
-      resultData: { idToken },
-    } = getIdTokenResponse;
+    this.idToken = idToken;
 
     debug('Requesting session token');
 
-    const getSessionTokenResponse = await fetchPost(`${IDENTITY_SERVER_URL}/sessions/token`, {
-      idToken,
-      pass: credentials.password,
-    });
+    const getSessionTokenResponse = await fetchPost(
+      `${IDENTITY_SERVER_URL}/sessions/token`,
+      {
+        idToken,
+        pass: credentials.password,
+      },
+      ONE_ZERO_HEADERS,
+      ONE_ZERO_CLIENT_CERT,
+    );
+
+    if (!getSessionTokenResponse?.resultData?.accessToken) {
+      return mapIdentityError(getSessionTokenResponse?.errorResponse?.type, Boolean(parseJwtPayload(idToken)));
+    }
 
     const {
       resultData: { accessToken },
@@ -225,7 +337,7 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
 
     return {
       success: true,
-      persistentOtpToken: otpTokenResult.longTermTwoFactorAuthToken,
+      persistentOtpToken: idToken,
     };
   }
 
@@ -251,7 +363,8 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
             limit: 50,
           },
         },
-        { authorization: `Bearer ${this.accessToken}` },
+        { ...ONE_ZERO_HEADERS, authorization: `Bearer ${this.accessToken}` },
+        ONE_ZERO_CLIENT_CERT,
       );
 
       movements.unshift(...newMovements);
@@ -334,7 +447,8 @@ export default class OneZeroScraper extends BaseScraper<ScraperSpecificCredentia
       GRAPHQL_API_URL,
       GET_CUSTOMER,
       {},
-      { authorization: `Bearer ${this.accessToken}` },
+      { ...ONE_ZERO_HEADERS, authorization: `Bearer ${this.accessToken}` },
+      ONE_ZERO_CLIENT_CERT,
     );
     const portfolios = result.customer.flatMap(customer => customer.portfolios || []);
 
