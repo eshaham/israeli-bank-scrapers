@@ -61,3 +61,74 @@ export interface Transaction {
   category?: string;
   rawTransaction?: unknown;
 }
+
+export enum LoanTypes {
+  Loan = 'loan',
+  Mortgage = 'mortgage',
+}
+
+export enum LoanInterestTypes {
+  Fixed = 'fixed',
+  Variable = 'variable',
+}
+
+export enum LoanLinkageTypes {
+  None = 'none',
+  Cpi = 'cpi',
+}
+
+export interface Loan {
+  type: LoanTypes;
+  /**
+   * the bank account the loan is attached to, in the same format as `TransactionsAccount.accountNumber`
+   */
+  accountNumber: string;
+  loanId: string;
+  /**
+   * the bank's display name for the loan or mortgage track
+   */
+  name?: string;
+  currency: string;
+  originalAmount: number;
+  /**
+   * the remaining principal (keren). Undefined when the bank doesn't expose it or it couldn't be fetched.
+   */
+  principalBalance?: number;
+  /**
+   * the balance required to pay off the loan, as reported by the bank: principal plus accrued
+   * interest and linkage differences. Whether early repayment fees are included varies by bank.
+   */
+  totalBalance?: number;
+  /**
+   * ISO date string
+   */
+  startDate?: string;
+  /**
+   * ISO date string
+   */
+  endDate?: string;
+  /**
+   * the amount of the most recent periodic payment
+   */
+  lastPaymentAmount?: number;
+  /**
+   * the amount of the next scheduled payment
+   */
+  nextPaymentAmount?: number;
+  /**
+   * ISO date string of the next scheduled payment
+   */
+  nextPaymentDate?: string;
+  /**
+   * annual interest rate in percent, e.g. 4.5 for 4.5%
+   */
+  interestRate?: number;
+  interestType?: LoanInterestTypes;
+  linkage?: LoanLinkageTypes;
+  /**
+   * mortgage tracks (maslulim). The parent already covers the whole mortgage,
+   * so consumers should not sum the parent and its tracks together.
+   * Undefined when the tracks could not be fetched.
+   */
+  tracks?: Loan[];
+}

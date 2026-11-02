@@ -10,6 +10,7 @@ import { TransactionStatuses, TransactionTypes, type Transaction, type Transacti
 import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from '../base-scraper-with-browser';
 import { type ScraperOptions, type ScraperScrapingResult } from '../interface';
 import { fetchForeignCurrencyAccounts } from './leumi-forex';
+import { fetchLeumiLoans } from './leumi-loans';
 
 const debug = getDebug('leumi');
 const BASE_URL = 'https://hb2.bankleumi.co.il';
@@ -362,9 +363,12 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
     const foreignCurrencyAccounts = await fetchForeignCurrencyAccounts(this.page, startMoment, this.options);
     accounts.push(...foreignCurrencyAccounts);
 
+    const loans = this.options.includeLoans ? await fetchLeumiLoans(this.page) : undefined;
+
     return {
       success: true,
       accounts,
+      ...(loans && { loans }),
     };
   }
 }
