@@ -1,7 +1,7 @@
 import { SCRAPERS } from '../definitions';
 import { exportTransactions, extendAsyncTimeout, getTestsConfig, maybeTestCompanyAPI } from '../tests/tests-utils';
 import { LoginResults } from './base-scraper-with-browser';
-import VisaCalScraper from './visa-cal';
+import VisaCalScraper, { isInvalidPasswordErrorUrl } from './visa-cal';
 
 const COMPANY_ID = 'visaCal'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
@@ -50,5 +50,29 @@ describe('VisaCal legacy scraper', () => {
     // uncomment to test multiple accounts
     // expect(result?.accounts?.length).toEqual(2)
     exportTransactions(COMPANY_ID, result.accounts || []);
+  });
+});
+
+describe('isInvalidPasswordErrorUrl', () => {
+  // The login iframe URL cal-online shows after rejecting the credentials (captured 2026-09-28)
+  const errorUrl = (message: string) =>
+    'https://digital-web.cal-online.co.il/calconnect/error;headers=%5Bobject%20Object%5D;status=400;statusText=OK;' +
+    'url=https:%2F%2Fconnect.cal-online.co.il%2Fcol-rest%2Fcalconnect%2Fauthentication%2Flogin;ok=false;' +
+    `name=HttpErrorResponse;message=Http%20failure%20response;error=${encodeURIComponent(message)}`;
+
+  test('detects the invalid-password error route', () => {
+    expect(isInvalidPasswordErrorUrl(errorUrl('שם המשתמש או הסיסמה שהוזנו שגויים'))).toBe(true);
+  });
+
+  test('ignores other errors and other routes', () => {
+    expect(isInvalidPasswordErrorUrl(errorUrl('שגיאה כללית'))).toBe(false);
+    expect(isInvalidPasswordErrorUrl('https://digital-web.cal-online.co.il/calconnect/index.html')).toBe(false);
+    expect(isInvalidPasswordErrorUrl('https://digital-web.cal-online.co.il/dashboard')).toBe(false);
+  });
+
+  test('does not throw on a malformed escape', () => {
+    expect(isInvalidPasswordErrorUrl('https://digital-web.cal-online.co.il/calconnect/error;error=%E0%A4%A')).toBe(
+      false,
+    );
   });
 });
