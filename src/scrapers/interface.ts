@@ -1,6 +1,6 @@
 import { type BrowserContext, type Browser, type Page } from 'puppeteer';
 import { type CompanyTypes, type ScraperProgressTypes } from '../definitions';
-import { type TransactionsAccount } from '../transactions';
+import { type Loan, type TransactionsAccount } from '../transactions';
 import { type ErrorResult, type ScraperErrorTypes } from './errors';
 
 // TODO: Remove this type when the scraper 'factory' will return concrete scraper types
@@ -154,6 +154,13 @@ export type ScraperOptions = ScraperBrowserOptions & {
   includeRawTransaction?: boolean;
 
   /**
+   * Also fetch loans and mortgages, returned under `loans` in the result. Only some scrapers support it.
+   * Failing to fetch loans does not fail the scrape.
+   * @default false
+   */
+  includeLoans?: boolean;
+
+  /**
    * Adjust the viewport size of the browser page.
    * If not set, the default viewport size of 1024x768 will be used.
    */
@@ -184,6 +191,7 @@ export interface ScraperScrapingResult {
   success: boolean;
   accounts?: TransactionsAccount[];
   futureDebits?: FutureDebit[];
+  loans?: Loan[];
   errorType?: ScraperErrorTypes;
   errorMessage?: string; // only on success=false
 }

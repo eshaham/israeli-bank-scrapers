@@ -107,6 +107,25 @@ The structure of the result object is as follows:
       status: string //can either be 'completed' or 'pending'
     }],
   }],
+  loans: [{ // only when `includeLoans: true` is set and the scraper supports it. Missing if loans could not be fetched.
+    type: string, // can be either 'loan' or 'mortgage'
+    accountNumber: string, // the account the loan is attached to
+    loanId: string,
+    name: string, // the bank's display name, if available
+    currency: string,
+    originalAmount: double,
+    principalBalance: double, // the remaining principal, if available
+    totalBalance: double, // payoff balance as reported by the bank, if available. May include early repayment fees.
+    startDate: string, // ISO date string, if available
+    endDate: string, // ISO date string, if available
+    lastPaymentAmount: double, // the most recent periodic payment, if available
+    nextPaymentAmount: double, // if available
+    nextPaymentDate: string, // ISO date string, if available
+    interestRate: double, // annual percent, if available
+    interestType: string, // 'fixed' or 'variable', if available
+    linkage: string, // 'none' or 'cpi', if available
+    tracks: [], // mortgage tracks, same structure. Don't sum them with the parent.
+  }],
   errorType: "INVALID_PASSWORD"|"CHANGE_PASSWORD"|"ACCOUNT_BLOCKED"|"UNKNOWN_ERROR"|"TIMEOUT"|"GENERIC", // only on success=false
   errorMessage: string, // only on success=false
 }
@@ -288,6 +307,7 @@ const credentials = {
 };
 ```
 This scraper supports fetching transaction from up to one year.
+With `includeLoans: true`, mortgages (including their tracks) and shekel loans are returned under `loans`. For customers with more than one checking account, `loans` may be missing when the bank's regular loans page can't be read, since "no regular loans" can't be told apart from an error for them.
 
 ## Discount scraper
 This scraper expects the following credentials object:
