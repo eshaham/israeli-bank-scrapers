@@ -23,6 +23,9 @@ const FOREIGN_NO_DATA_SELECTOR = '#NOINFORMATIONREGIONSERVERSIDEERROR';
 // value of the "by dates" option in the transaction period dropdown
 const FOREIGN_PERIOD_BY_DATES = '3';
 const FOREIGN_NO_DATA_MSG = 'לא קיימות תנועות מתאימות על פי הסינון שהוגדר';
+// shown instead of the accounts dropdown to customers without foreign currency accounts ("אין ללקוח מוצרי מט״ח");
+// only the start is matched, since the abbreviation may use either quote character
+const FOREIGN_NO_PRODUCTS_MSG = 'אין ללקוח מוצרי';
 const FOREIGN_DATE_FORMAT = 'DD/MM/YY';
 
 // Both the activity table and the "no transactions" notice are waited on together, so once
@@ -240,6 +243,25 @@ async function fetchForeignCurrencyAccount(
   };
 }
 
+/**
+ * Waits until the page shows either the accounts dropdown or the "no foreign currency products" notice, so
+ * customers without foreign currency accounts don't wait out the whole timeout. Resolves to whether there are accounts.
+ */
+export async function waitForForeignAccounts(page: Page): Promise<boolean> {
+  await page.waitForFunction(
+    (selector: string, noProductsMsg: string) =>
+      !!document.querySelector(selector) || (document.body?.innerText ?? '').includes(noProductsMsg),
+    {},
+    FOREIGN_ACCOUNTS_SELECTOR,
+    FOREIGN_NO_PRODUCTS_MSG,
+  );
+  if (!(await page.$(FOREIGN_ACCOUNTS_SELECTOR))) {
+    return false;
+  }
+  await waitUntilElementFound(page, FOREIGN_ACCOUNTS_SELECTOR, true);
+  return true;
+}
+
 export async function fetchForeignCurrencyAccounts(
   page: Page,
   startDate: Moment,
@@ -255,7 +277,10 @@ export async function fetchForeignCurrencyAccounts(
     // runtime for some accounts after 1-2 seconds so we need to hang the process for a short while.
     await hangProcess(4000);
 
-    await waitUntilElementFound(page, FOREIGN_ACCOUNTS_SELECTOR, true);
+    if (!(await waitForForeignAccounts(page))) {
+      debug('no foreign currency accounts');
+      return accounts;
+    }
 
     const accountOptions = await page.$$eval(`${FOREIGN_ACCOUNTS_SELECTOR} option`, elements =>
       Array.from(elements, element => ({ value: element.value, text: element.text })).filter(option => !!option.value),

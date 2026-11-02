@@ -1,10 +1,12 @@
 import moment from 'moment';
+import { type Page } from 'puppeteer';
 import { type ScraperOptions } from '../interface';
 import {
   getForeignTransactionAmount,
   mapForeignCurrency,
   mapForeignTransaction,
   parseForeignAmount,
+  waitForForeignAccounts,
 } from './leumi-forex';
 
 describe('mapForeignCurrency', () => {
@@ -121,5 +123,37 @@ describe('mapForeignTransaction', () => {
 
     expect(withRaw.rawTransaction).toBeDefined();
     expect(withoutRaw.rawTransaction).toBeUndefined();
+  });
+});
+
+describe('waitForForeignAccounts', () => {
+  const createPage = (hasDropdown: boolean) => {
+    const page = {
+      waitForFunction: jest.fn().mockResolvedValue(undefined),
+      $: jest.fn().mockResolvedValue(hasDropdown ? {} : null),
+      waitForSelector: jest.fn().mockResolvedValue({}),
+    };
+    return page;
+  };
+
+  test('returns false without waiting for the dropdown when the page says there are no foreign currency products', async () => {
+    const page = createPage(false);
+    await expect(waitForForeignAccounts(page as unknown as Page)).resolves.toBe(false);
+    expect(page.waitForSelector).not.toHaveBeenCalled();
+  });
+
+  test('returns true once the accounts dropdown is visible', async () => {
+    const page = createPage(true);
+    await expect(waitForForeignAccounts(page as unknown as Page)).resolves.toBe(true);
+    expect(page.waitForSelector).toHaveBeenCalledWith('#ddlAccounts_m_ddl', expect.objectContaining({ visible: true }));
+  });
+
+  test('waits for either the dropdown or the no-products notice', async () => {
+    const page = createPage(false);
+    await waitForForeignAccounts(page as unknown as Page);
+    const [predicate, , selector, message] = page.waitForFunction.mock.calls[0];
+    expect(selector).toBe('#ddlAccounts_m_ddl');
+    expect(message).toBe('אין ללקוח מוצרי');
+    expect(typeof predicate).toBe('function');
   });
 });
