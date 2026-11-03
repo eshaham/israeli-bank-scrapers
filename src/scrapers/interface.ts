@@ -20,6 +20,14 @@ export type ScraperCredentials =
       | {
           otpLongTermToken: string;
         }
+    ))
+  | ({ phoneNumber: string; password: string } & (
+      | {
+          otpCodeRetriever: () => Promise<string>;
+        }
+      | {
+          otpLongTermToken: string;
+        }
     ));
 
 export type OptInFeatures =

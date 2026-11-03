@@ -21,6 +21,7 @@ export enum CompanyTypes {
   beyahadBishvilha = 'beyahadBishvilha',
   oneZero = 'oneZero',
   pagi = 'pagi',
+  pepper = 'pepper',
 }
 
 export const SCRAPERS = {
@@ -95,6 +96,10 @@ export const SCRAPERS = {
   [CompanyTypes.pagi]: {
     name: 'Pagi',
     loginFields: ['username', PASSWORD_FIELD],
+  },
+  [CompanyTypes.pepper]: {
+    name: 'Pepper',
+    loginFields: ['phoneNumber', PASSWORD_FIELD, 'otpCodeRetriever', 'otpLongTermToken'],
   },
 };
 
