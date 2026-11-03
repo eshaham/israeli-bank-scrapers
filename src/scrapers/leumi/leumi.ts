@@ -13,9 +13,10 @@ import { fetchForeignCurrencyAccounts } from './leumi-forex';
 
 const debug = getDebug('leumi');
 const BASE_URL = 'https://hb2.bankleumi.co.il';
-const LOGIN_URL = 'https://www.leumi.co.il/he';
+const LOGIN_URL = `${BASE_URL}/authenticate/logon`;
 const TRANSACTIONS_URL = `${BASE_URL}/eBanking/SO/SPA.aspx#/ts/BusinessAccountTrx?WidgetPar=1`;
 const FILTERED_TRANSACTIONS_URL = `${BASE_URL}/ChannelWCF/Broker.svc/ProcessRequest?moduleName=UC_SO_27_GetBusinessAccountTrx`;
+const ACCOUNT_NUMBER_SELECTOR = 'app-masked-number-combo span.display-number-li';
 const SAVINGS_URL = `${BASE_URL}/uiapiproxy/v1/digital-retails/mobile/accounts/1/Deposits?operationList=true`;
 
 const DATE_FORMAT = 'DD.MM.YY';
@@ -266,12 +267,21 @@ async function fetchTransactions(
 ): Promise<TransactionsAccount[]> {
   const accounts: TransactionsAccount[] = [];
 
+  // The transactions page is reached through a hash change on the SPA, so navigation resolves before the
+  // account selector is rendered. Wait for it instead of failing with "Failed to extract or parse the account number".
+  try {
+    await waitUntilElementFound(page, ACCOUNT_NUMBER_SELECTOR, false, 30000);
+  } catch {
+    debug('account number selector was not rendered within 30 seconds');
+  }
+
   // DEVELOPER NOTICE the account number received from the server is being altered at
   // runtime for some accounts after 1-2 seconds so we need to hang the process for a short while.
   await hangProcess(4000);
 
-  const accountsIds = (await page.evaluate(() =>
-    Array.from(document.querySelectorAll('app-masked-number-combo span.display-number-li'), e => e.textContent),
+  const accountsIds = (await page.evaluate(
+    selector => Array.from(document.querySelectorAll(selector), e => e.textContent),
+    ACCOUNT_NUMBER_SELECTOR,
   )) as string[];
 
   // due to a bug, the altered value might include undesired signs like & that should be removed
@@ -315,7 +325,7 @@ async function fetchSavingsAccounts(
 
 async function navigateToLogin(page: Page): Promise<void> {
   debug('navigating directly to login page');
-  await page.goto('https://hb2.bankleumi.co.il/authenticate/logon');
+  await page.goto(LOGIN_URL);
   debug('waiting for page to be loaded (networkidle2)');
   await waitForNavigation(page, { waitUntil: 'networkidle2' });
   debug('waiting for components of login to enter credentials');
