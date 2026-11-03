@@ -12,6 +12,8 @@ components:
 
   src/scrapers/amex.ts:
     - daniel-hauser
+  src/scrapers/bank-jerusalem.ts:
+    - Barvaziyel
   src/scrapers/behatsdaa.ts:
     - daniel-hauser
   src/scrapers/beinleumi.ts:

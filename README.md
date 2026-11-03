@@ -31,6 +31,7 @@ Currently only the following banks are supported:
 - Beyhad Bishvilha - [ביחד בשבילך](https://www.hist.org.il/) (thanks [@esakal](https://github.com/esakal))
 - OneZero (Experimental) (thanks [@orzarchi](https://github.com/orzarchi))
 - Behatsdaa - [בהצדעה](behatsdaa.org.il) (thanks [@daniel-hauser](https://github.com/daniel-hauser))
+- Bank of Jerusalem
 
 # Prerequisites
 To use this you will need to have [Node.js](https://nodejs.org) >= 22.22.2 installed.
@@ -396,6 +397,27 @@ const credentials = {
 };
 ```
 This scraper supports fetching transaction from up to six months.
+
+## Bank of Jerusalem
+This scraper expects the following credentials object:
+```node
+const credentials = {
+  username: <user name>,
+  password: <user password>
+};
+```
+
+It returns the current account (its balance, and the transactions its page lists from `startDate` on) and each deposit as a separate savings account, with its revalued balance and no transactions.
+
+The bank's site is behind a bot check (Radware) that asks a new browser profile to solve a captcha before the login page. Run with `showBrowser: true` and solve it in the window. To be asked only once, keep the browser profile between runs by passing a folder of its own in `args`:
+```node
+const options = {
+  companyId: CompanyTypes.bankJerusalem,
+  startDate,
+  showBrowser: true,
+  args: ['--user-data-dir=/path/to/a/folder/for/this/scraper'],
+};
+```
 
 ## Beyhad Bishvilha
 This scraper expects the following credentials object::
