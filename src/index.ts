@@ -10,6 +10,12 @@ export {
   ScraperLoginResult,
   ScraperOptions,
   ScraperScrapingResult,
+  DiscountSupplementalData,
+  SupplementalAccount,
+  SupplementalAccountType,
+  SupplementalSecurityHolding,
+  SupplementalSectionResult,
+  SupplementalSectionStatus,
 } from './scrapers/interface';
 
 export { default as OneZeroScraper } from './scrapers/one-zero';

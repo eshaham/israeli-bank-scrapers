@@ -1,6 +1,6 @@
 import { type BrowserContext, type Browser, type Page } from 'puppeteer';
 import { type CompanyTypes, type ScraperProgressTypes } from '../definitions';
-import { type TransactionsAccount } from '../transactions';
+import { type Transaction, type TransactionsAccount } from '../transactions';
 import { type ErrorResult, type ScraperErrorTypes } from './errors';
 
 // TODO: Remove this type when the scraper 'factory' will return concrete scraper types
@@ -27,6 +27,40 @@ export type OptInFeatures =
   | 'mizrahi:pendingIfNoIdentifier'
   | 'mizrahi:pendingIfHasGenericDescription'
   | 'mizrahi:pendingIfTodayTransaction';
+
+export type SupplementalAccountType = 'foreignCurrency' | 'savings' | 'securities' | 'card';
+export type SupplementalSectionStatus = 'complete' | 'empty' | 'partial' | 'unavailable';
+
+export interface SupplementalSecurityHolding {
+  symbol: string;
+  assetClass: string;
+  quantity: number;
+  marketValue: number;
+  currency: string;
+  asOf: string;
+}
+
+export interface SupplementalAccount {
+  type: SupplementalAccountType;
+  accountNumber: string;
+  sourceAccountNumber: string;
+  name?: string;
+  currency?: string;
+  balance?: number;
+  balanceDate?: string;
+  holdings?: SupplementalSecurityHolding[];
+  txns?: Transaction[];
+}
+
+export interface SupplementalSectionResult {
+  status: SupplementalSectionStatus;
+  recordCount: number;
+}
+
+export interface DiscountSupplementalData {
+  accounts: SupplementalAccount[];
+  sections: Record<'foreignCurrency' | 'deposits' | 'securities' | 'cards', SupplementalSectionResult>;
+}
 
 export interface FutureDebit {
   amount: number;
@@ -183,6 +217,7 @@ export interface OutputDataOptions {
 export interface ScraperScrapingResult {
   success: boolean;
   accounts?: TransactionsAccount[];
+  supplementalData?: DiscountSupplementalData;
   futureDebits?: FutureDebit[];
   errorType?: ScraperErrorTypes;
   errorMessage?: string; // only on success=false

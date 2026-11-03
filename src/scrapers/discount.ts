@@ -7,6 +7,7 @@ import { getRawTransaction } from '../helpers/transactions';
 import { type Transaction, TransactionStatuses, TransactionTypes } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
 import { ScraperErrorTypes } from './errors';
+import { fetchDiscountSupplementalData } from './discount-supplemental';
 import { type ScraperOptions, type ScraperScrapingResult } from './interface';
 
 const BASE_URL = 'https://start.telebank.co.il';
@@ -125,10 +126,24 @@ async function fetchAccountData(page: Page, options: ScraperOptions): Promise<Sc
     });
   }
 
-  const accountData = {
+  const accountData: ScraperScrapingResult = {
     success: true,
     accounts: accountsData,
   };
+
+  try {
+    accountData.supplementalData = await fetchDiscountSupplementalData(page, accounts, options.startDate);
+  } catch {
+    accountData.supplementalData = {
+      accounts: [],
+      sections: {
+        foreignCurrency: { status: 'unavailable', recordCount: 0 },
+        deposits: { status: 'unavailable', recordCount: 0 },
+        securities: { status: 'unavailable', recordCount: 0 },
+        cards: { status: 'unavailable', recordCount: 0 },
+      },
+    };
+  }
 
   return accountData;
 }

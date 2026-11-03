@@ -300,6 +300,14 @@ const credentials = {
 ```
 This scraper supports fetching transaction from up to one year (minus 1 day).
 
+Successful Discount scrapes also include an optional `supplementalData` result. Its
+`accounts` array contains normalized linked foreign-currency accounts, deposits,
+securities portfolios and credit cards. Securities portfolios include their individual
+holdings, and cards include transactions. `sections` reports `complete`, `empty`,
+`partial` or `unavailable` for each section so an unavailable endpoint is not confused
+with an account that has no data. Supplemental reads use the authenticated browser
+session and do not submit or modify transactions.
+
 ## Mercantile scraper
 This scraper expects the following credentials object:
 ```node
