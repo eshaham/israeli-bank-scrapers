@@ -9,7 +9,7 @@ import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from 
 import { ScraperErrorTypes } from './errors';
 import { type ScraperOptions, type ScraperScrapingResult } from './interface';
 
-const BASE_URL = 'https://start.telebank.co.il';
+export const BASE_URL = 'https://start.telebank.co.il';
 const DATE_FORMAT = 'YYYYMMDD';
 
 interface ScrapedTransaction {
@@ -18,6 +18,7 @@ interface ScrapedTransaction {
   ValueDate: string;
   OperationAmount: number;
   OperationDescriptionToDisplay: string;
+  OperationDescription?: string;
 }
 
 interface CurrentAccountInfo {
@@ -63,7 +64,7 @@ function convertTransactions(
       originalAmount: txn.OperationAmount,
       originalCurrency: 'ILS',
       chargedAmount: txn.OperationAmount,
-      description: txn.OperationDescriptionToDisplay,
+      description: txn.OperationDescriptionToDisplay || txn.OperationDescription || '',
       status: txnStatus,
     };
 
@@ -75,10 +76,18 @@ function convertTransactions(
   });
 }
 
-async function fetchAccountData(page: Page, options: ScraperOptions): Promise<ScraperScrapingResult> {
+/**
+ * Fetches accounts and their transactions from the Titan gateway API. Private and business sites share
+ * the API; they differ only in the endpoint that lists the user's accounts.
+ */
+export async function fetchAccountData(
+  page: Page,
+  options: ScraperOptions,
+  accountsPath = 'userAccountsData',
+): Promise<ScraperScrapingResult> {
   const apiSiteUrl = `${BASE_URL}/Titan/gatewayAPI`;
 
-  const accountDataUrl = `${apiSiteUrl}/userAccountsData`;
+  const accountDataUrl = `${apiSiteUrl}/${accountsPath}`;
   const accountInfo = await fetchGetWithinPage<ScrapedAccountData>(page, accountDataUrl);
 
   if (!accountInfo) {
