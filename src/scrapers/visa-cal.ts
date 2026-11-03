@@ -47,6 +47,7 @@ enum TrnTypeCode {
   credit = '6',
   installments = '8',
   standingOrder = '9',
+  debit = '41',
 }
 
 interface ScrapedTransaction {
@@ -351,7 +352,7 @@ function createLoginFields(credentials: ScraperSpecificCredentials) {
   ];
 }
 
-function convertParsedDataToTransactions(
+export function convertParsedDataToTransactions(
   data: CardTransactionDetails[],
   pendingData?: CardPendingTransactionDetails | null,
   options?: ScraperOptions,
@@ -385,7 +386,7 @@ function convertParsedDataToTransactions(
 
     const result: Transaction = {
       identifier: !isPending(transaction) ? transaction.trnIntId : undefined,
-      type: [TrnTypeCode.regular, TrnTypeCode.standingOrder].includes(transaction.trnTypeCode)
+      type: [TrnTypeCode.regular, TrnTypeCode.standingOrder, TrnTypeCode.debit].includes(transaction.trnTypeCode)
         ? TransactionTypes.Normal
         : TransactionTypes.Installments,
       status: isPending(transaction) ? TransactionStatuses.Pending : TransactionStatuses.Completed,
