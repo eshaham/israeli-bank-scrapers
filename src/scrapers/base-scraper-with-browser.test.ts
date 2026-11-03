@@ -50,4 +50,25 @@ describe('Base scraper with browser', () => {
       throw e;
     }
   });
+
+  test('should launch the browser without the --enable-automation flag', async () => {
+    const options = {
+      ...testsConfig.options,
+      companyId: 'test',
+      showBrowser: false,
+    };
+
+    const baseScraperWithBrowser = new BaseScraperWithBrowser(options);
+    try {
+      await baseScraperWithBrowser.initialize();
+      // @ts-ignore
+      const { page } = baseScraperWithBrowser;
+      const spawnArgs: string[] = page.browser().process()?.spawnargs ?? [];
+      expect(spawnArgs).not.toContain('--enable-automation');
+      await baseScraperWithBrowser.terminate(true);
+    } catch (e) {
+      await baseScraperWithBrowser.terminate(false);
+      throw e;
+    }
+  });
 });

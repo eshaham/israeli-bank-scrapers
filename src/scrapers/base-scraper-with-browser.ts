@@ -170,6 +170,9 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
       headless,
       executablePath,
       args,
+      // puppeteer adds --enable-automation by default, which puts Chrome into an "automated" mode that
+      // bot-detection systems (e.g. Isracard, see #1181) pick up on. Dropping it has no downside for scraping.
+      ignoreDefaultArgs: ['--enable-automation'],
       timeout,
     });
 

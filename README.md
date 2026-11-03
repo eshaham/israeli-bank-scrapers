@@ -135,6 +135,7 @@ The return value is a list of scraper metadata:
 
 This option allows you to provide an externally created browser instance. You can get a browser directly from puppeteer via `puppeteer.launch()`.  
 Note that for backwards compatibility, the browser will be closed by the library after the scraper finishes unless `skipCloseBrowser` is set to true.
+When the library launches the browser itself it drops puppeteer's default `--enable-automation` flag, which some sites (e.g. Isracard) use to detect automation. If you provide your own browser, pass `ignoreDefaultArgs: ['--enable-automation']` to `puppeteer.launch()` to get the same behavior.
 
 Example:
 
