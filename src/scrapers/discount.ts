@@ -94,12 +94,13 @@ async function fetchAccountData(page: Page, options: ScraperOptions): Promise<Sc
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
 
   const startDateStr = startMoment.format(DATE_FORMAT);
+  const endDateStr = moment().format(DATE_FORMAT);
 
   const accounts: string[] = accountInfo.UserAccountsData.UserAccounts.map(acc => acc.NewAccountInfo.AccountID);
   const accountsData: Array<{ accountNumber: string; balance: number; txns: Transaction[] }> = [];
 
   for (const accountNumber of accounts) {
-    const txnsUrl = `${apiSiteUrl}/lastTransactions/${accountNumber}/Date?IsCategoryDescCode=True&IsTransactionDetails=True&IsEventNames=True&IsFutureTransactionFlag=True&FromDate=${startDateStr}`;
+    const txnsUrl = `${apiSiteUrl}/lastTransactions/transactions/${accountNumber}/ByDate?FromDate=${startDateStr}&ToDate=${endDateStr}&IsTransactionDetails=True&IsFutureTransactionFlag=True&IsEventNames=True&IsCategoryDescCode=True`;
     const txnsResult = await fetchGetWithinPage<ScrapedTransactionData>(page, txnsUrl);
     if (!txnsResult || txnsResult.Error || !txnsResult.CurrentAccountLastTransactions) {
       return {
