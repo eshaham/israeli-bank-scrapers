@@ -20,6 +20,9 @@ export type ScraperCredentials =
       | {
           otpLongTermToken: string;
         }
+      | {
+          idToken: string;
+        }
     ));
 
 export type OptInFeatures =
