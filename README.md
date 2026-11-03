@@ -279,6 +279,16 @@ const credentials = {
 ```
 This scraper supports fetching transaction from up to one year.
 
+Bank Hapoalim may ask for an SMS verification code when logging in from an unrecognized device. To enter it manually, run with `showBrowser: true` and give yourself enough time using the `loginTimeout` option (in milliseconds, default 20 seconds):
+```node
+const scraper = createScraper({
+  companyId: CompanyTypes.hapoalim,
+  startDate: new Date('2026-01-01'),
+  showBrowser: true,
+  loginTimeout: 5 * 60 * 1000, // 5 minutes to type the SMS code
+});
+```
+
 ## Bank Leumi scraper
 This scraper expects the following credentials object:
 ```node

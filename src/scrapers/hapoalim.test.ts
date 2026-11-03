@@ -1,6 +1,7 @@
 import HapoalimScraper from './hapoalim';
+import * as navigation from '../helpers/navigation';
 import { maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions } from '../tests/tests-utils';
-import { SCRAPERS } from '../definitions';
+import { CompanyTypes, SCRAPERS } from '../definitions';
 import { LoginResults } from './base-scraper-with-browser';
 
 const COMPANY_ID = 'hapoalim'; // TODO this property should be hard-coded in the provider
@@ -15,6 +16,26 @@ describe('Hapoalim legacy scraper', () => {
     expect(SCRAPERS.hapoalim).toBeDefined();
     expect(SCRAPERS.hapoalim.loginFields).toContain('userCode');
     expect(SCRAPERS.hapoalim.loginFields).toContain('password');
+  });
+
+  test('should use loginTimeout when waiting for the post-login redirect', async () => {
+    const waitForRedirectSpy = jest.spyOn(navigation, 'waitForRedirect').mockResolvedValue(undefined);
+    const credentials = { userCode: 'user', password: 'pass' };
+    try {
+      const withTimeout = new HapoalimScraper({
+        companyId: CompanyTypes.hapoalim,
+        startDate: new Date(),
+        loginTimeout: 300000,
+      });
+      await withTimeout.getLoginOptions(credentials).postAction?.();
+      expect(waitForRedirectSpy).toHaveBeenLastCalledWith(undefined, 300000);
+
+      const withoutTimeout = new HapoalimScraper({ companyId: CompanyTypes.hapoalim, startDate: new Date() });
+      await withoutTimeout.getLoginOptions(credentials).postAction?.();
+      expect(waitForRedirectSpy).toHaveBeenLastCalledWith(undefined, undefined);
+    } finally {
+      waitForRedirectSpy.mockRestore();
+    }
   });
 
   maybeTestCompanyAPI(COMPANY_ID, config => config.companyAPI.invalidPassword)(

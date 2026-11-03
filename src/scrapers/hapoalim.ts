@@ -291,7 +291,7 @@ class HapoalimScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials>
       loginUrl: `${this.baseUrl}/cgi-bin/poalwwwc?reqName=getLogonPage`,
       fields: createLoginFields(credentials),
       submitButtonSelector: '.login-btn',
-      postAction: async () => waitForRedirect(this.page),
+      postAction: async () => waitForRedirect(this.page, this.options.loginTimeout),
       possibleResults: getPossibleLoginResults(this.baseUrl),
     };
   }
