@@ -1,4 +1,4 @@
-import moment from 'moment';
+import moment, { type Moment } from 'moment';
 import { type Page } from 'puppeteer';
 import { randomUUID } from 'crypto';
 import { getDebug } from '../helpers/debug';
@@ -52,6 +52,8 @@ type FetchedAccountData = {
 
 type FetchedAccountTransactionsData = {
   transactions: ScrapedTransaction[];
+  // Page size the server actually applied. It ignores the requested numItemsPerPage and caps at 150.
+  numItemsPerPage?: string | number;
 };
 
 type BalanceAndCreditLimit = {
@@ -172,18 +174,58 @@ async function getExtraScrap(
   return { transactions: res };
 }
 
+/**
+ * The transactions endpoint returns at most one page (currently 150 rows, newest first) and has no
+ * page cursor, so a busy account silently loses its oldest rows. When a response comes back full,
+ * split the date range in half and fetch each half, recursing until every window fits in one page.
+ */
+export async function fetchTransactionsInRange(
+  fetchRange: (start: Moment, end: Moment) => Promise<FetchedAccountTransactionsData | null>,
+  start: Moment,
+  end: Moment,
+): Promise<ScrapedTransaction[]> {
+  const result = await fetchRange(start, end);
+  const txns = result?.transactions ?? [];
+  const pageSize = Number(result?.numItemsPerPage);
+  const isFull = pageSize > 0 && txns.length >= pageSize;
+  const days = end.diff(start, 'days');
+  if (!isFull) {
+    return txns;
+  }
+  if (days < 1) {
+    debug(`a single day (${start.format(DATE_FORMAT)}) has ${txns.length} transactions, some may be missing`);
+    return txns;
+  }
+
+  const mid = start.clone().add(Math.floor(days / 2), 'days');
+  debug(
+    `page full for ${start.format(DATE_FORMAT)}-${end.format(DATE_FORMAT)}, splitting at ${mid.format(DATE_FORMAT)}`,
+  );
+  const older = await fetchTransactionsInRange(fetchRange, start, mid);
+  const newer = await fetchTransactionsInRange(fetchRange, mid.clone().add(1, 'day'), end);
+  // Keep the server's newest-first order.
+  return [...newer, ...older];
+}
+
 async function getAccountTransactions(
   baseUrl: string,
   apiSiteUrl: string,
   page: Page,
   accountNumber: string,
-  startDate: string,
-  endDate: string,
+  startMoment: Moment,
+  endMoment: Moment,
   additionalTransactionInformation = false,
   options?: ScraperOptions,
 ) {
-  const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=1000&retrievalEndDate=${endDate}&retrievalStartDate=${startDate}&sortCode=1`;
-  const txnsResult = await fetchPoalimXSRFWithinPage(page, txnsUrl, '/current-account/transactions');
+  const transactions = await fetchTransactionsInRange(
+    (start, end) => {
+      const txnsUrl = `${apiSiteUrl}/current-account/transactions?accountId=${accountNumber}&numItemsPerPage=1000&retrievalEndDate=${end.format(DATE_FORMAT)}&retrievalStartDate=${start.format(DATE_FORMAT)}&sortCode=1`;
+      return fetchPoalimXSRFWithinPage(page, txnsUrl, '/current-account/transactions');
+    },
+    startMoment,
+    endMoment,
+  );
+  const txnsResult: FetchedAccountTransactionsData = { transactions };
 
   const finalResult =
     additionalTransactionInformation && txnsResult?.transactions.length
@@ -219,8 +261,7 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOpt
   const startMoment = moment.max(defaultStartMoment, moment(startDate));
   const { additionalTransactionInformation } = options;
 
-  const startDateStr = startMoment.format(DATE_FORMAT);
-  const endDateStr = moment().format(DATE_FORMAT);
+  const endMoment = moment();
 
   const accounts: TransactionsAccount[] = [];
 
@@ -234,8 +275,8 @@ async function fetchAccountData(page: Page, baseUrl: string, options: ScraperOpt
       apiSiteUrl,
       page,
       accountNumber,
-      startDateStr,
-      endDateStr,
+      startMoment,
+      endMoment,
       additionalTransactionInformation,
       options,
     );
