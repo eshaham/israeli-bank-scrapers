@@ -9,6 +9,7 @@ import { waitForNavigation } from '../../helpers/navigation';
 import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../../transactions';
 import { BaseScraperWithBrowser, LoginResults, type LoginOptions } from '../base-scraper-with-browser';
 import { type ScraperOptions, type ScraperScrapingResult } from '../interface';
+import { addChequeDetails } from './leumi-cheques';
 import { fetchForeignCurrencyAccounts } from './leumi-forex';
 
 const debug = getDebug('leumi');
@@ -361,6 +362,10 @@ class LeumiScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
 
     const foreignCurrencyAccounts = await fetchForeignCurrencyAccounts(this.page, startMoment, this.options);
     accounts.push(...foreignCurrencyAccounts);
+
+    if (this.options.additionalTransactionInformation) {
+      await addChequeDetails(this.page, accounts);
+    }
 
     return {
       success: true,
