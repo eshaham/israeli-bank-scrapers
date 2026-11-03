@@ -2,7 +2,6 @@ import moment from 'moment';
 import { type HTTPRequest, type Frame, type Page } from 'puppeteer';
 import { getDebug } from '../helpers/debug';
 import { clickButton, elementPresentOnPage, pageEval, waitUntilElementFound } from '../helpers/elements-interactions';
-import { fetchPost } from '../helpers/fetch';
 import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { getFromSessionStorage } from '../helpers/storage';
 import { filterOldTransactions, getRawTransaction } from '../helpers/transactions';
@@ -20,12 +19,6 @@ import { type ScraperScrapingResult, type ScraperOptions } from './interface';
 const apiHeaders = {
   'User-Agent':
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
-  Origin: 'https://digital-web.cal-online.co.il',
-  Referer: 'https://digital-web.cal-online.co.il',
-  'Accept-Language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
-  'Sec-Fetch-Site': 'same-site',
-  'Sec-Fetch-Mode': 'cors',
-  'Sec-Fetch-Dest': 'empty',
 };
 const LOGIN_URL = 'https://www.cal-online.co.il/';
 const TRANSACTIONS_REQUEST_ENDPOINT =
@@ -34,6 +27,93 @@ const FRAMES_REQUEST_ENDPOINT = 'https://api.cal-online.co.il/Frames/api/Frames/
 const PENDING_TRANSACTIONS_REQUEST_ENDPOINT =
   'https://api.cal-online.co.il/Transactions/api/approvals/getClearanceRequests';
 const SSO_AUTHORIZATION_REQUEST_ENDPOINT = 'https://connect.cal-online.co.il/col-rest/calconnect/authentication/SSO';
+
+// Used only when the in-page request fails: mirrors the headers Cal's own web app sends from digital-web.cal-online.co.il.
+const nodeFallbackHeaders = {
+  ...apiHeaders,
+  Origin: 'https://digital-web.cal-online.co.il',
+  Referer: 'https://digital-web.cal-online.co.il',
+  'Accept-Language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
+  'Sec-Fetch-Site': 'same-site',
+  'Sec-Fetch-Mode': 'cors',
+  'Sec-Fetch-Dest': 'empty',
+};
+
+function parseCalResponse<TResult>(endpoint: string, text: string, status: number): TResult {
+  const snippet = String(text).slice(0, 200).replace(/\s+/g, ' ');
+  if (status < 200 || status >= 300) {
+    throw new Error(`Cal API request to ${endpoint} failed with status ${status}: ${snippet}`);
+  }
+  try {
+    return JSON.parse(text) as TResult;
+  } catch {
+    throw new Error(`Cal API request to ${endpoint} returned a non-JSON response (status ${status}): ${snippet}`);
+  }
+}
+
+/**
+ * Sends a POST request to the Cal API from inside the logged-in page, so that all traffic (including
+ * any proxy configured on the browser) leaves from the browser. `Origin` and `Referer` are set by the
+ * browser itself.
+ *
+ * If the in-page request produces no HTTP response (CORS failure when the dashboard is not on
+ * digital-web.cal-online.co.il, or the page navigated and its context is gone), the request is retried
+ * once from Node. Any HTTP response from the page, whatever its status, is final.
+ */
+export async function fetchCalApi<TResult>(
+  page: Page,
+  url: string,
+  data: Record<string, any>,
+  headers: Record<string, string>,
+): Promise<TResult> {
+  const endpoint = url.split('?')[0];
+  let text: string;
+  let status: number;
+  try {
+    [text, status] = await page.evaluate(
+      async (innerUrl: string, innerData: Record<string, any>, innerHeaders: Record<string, string>) => {
+        const response = await fetch(innerUrl, {
+          method: 'POST',
+          body: JSON.stringify(innerData),
+          credentials: 'include',
+          headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...innerHeaders },
+        });
+        return [await response.text(), response.status] as const;
+      },
+      url,
+      data,
+      headers,
+    );
+  } catch (e) {
+    const inPageError = (e as Error)?.message ?? String(e);
+    debug('in-page request to %s failed, falling back to node: %s', endpoint, inPageError);
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...nodeFallbackHeaders, ...headers },
+      });
+      [text, status] = [await response.text(), response.status];
+    } catch (fallbackError) {
+      throw new Error(
+        `Cal API request to ${endpoint} failed in the browser: ${inPageError}; node fallback also failed: ${
+          (fallbackError as Error)?.message ?? String(fallbackError)
+        }`,
+      );
+    }
+    try {
+      return parseCalResponse<TResult>(endpoint, text, status);
+    } catch (fallbackError) {
+      throw new Error(
+        `Cal API request to ${endpoint} failed in the browser: ${inPageError}; node fallback also failed: ${
+          (fallbackError as Error).message
+        }`,
+      );
+    }
+  }
+
+  return parseCalResponse<TResult>(endpoint, text, status);
+}
 
 const InvalidPasswordMessage = 'שם המשתמש או הסיסמה שהוזנו שגויים';
 const ChangePasswordMessage = 'להחליף סיסמה';
@@ -525,16 +605,17 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     xSiteId: string,
   ): Promise<TransactionsAccount> {
     debug('fetch frames (misgarot) for card %s', card.cardUniqueId);
-    const frames = await fetchPost<FramesResponse>(
-      FRAMES_REQUEST_ENDPOINT,
-      { cardsForFrameData: [{ cardUniqueId: card.cardUniqueId }] },
-      {
-        Authorization,
-        'X-Site-Id': xSiteId,
-        'Content-Type': 'application/json',
-        ...apiHeaders,
-      },
-    );
+    let frames: FramesResponse = {};
+    try {
+      frames = await fetchCalApi<FramesResponse>(
+        this.page,
+        FRAMES_REQUEST_ENDPOINT,
+        { cardsForFrameData: [{ cardUniqueId: card.cardUniqueId }] },
+        { Authorization, 'X-Site-Id': xSiteId },
+      );
+    } catch (e) {
+      debug('failed to fetch frames for card %s: %s', card.cardUniqueId, (e as Error)?.message);
+    }
 
     debug('frames response for card %s: %O', card.cardUniqueId, frames);
 
@@ -579,29 +660,26 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     const allMonthsData: CardTransactionDetails[] = [];
 
     debug(`fetch pending transactions for card ${card.cardUniqueId}`);
-    let pendingData = await fetchPost(
-      PENDING_TRANSACTIONS_REQUEST_ENDPOINT,
-      { cardUniqueIDArray: [card.cardUniqueId] },
-      {
-        Authorization,
-        'X-Site-Id': xSiteId,
-        'Content-Type': 'application/json',
-        ...apiHeaders,
-      },
-    );
+    let pendingData: any = null;
+    try {
+      pendingData = await fetchCalApi<any>(
+        this.page,
+        PENDING_TRANSACTIONS_REQUEST_ENDPOINT,
+        { cardUniqueIDArray: [card.cardUniqueId] },
+        { Authorization, 'X-Site-Id': xSiteId },
+      );
+    } catch (e) {
+      debug('failed to fetch pending transactions for card %s: %s', card.last4Digits, (e as Error)?.message);
+    }
 
     debug(`fetch completed transactions for card ${card.cardUniqueId}`);
     for (let i = 0; i <= months; i++) {
       const month = finalMonthToFetchMoment.clone().subtract(i, 'months');
-      const monthData = await fetchPost(
+      const monthData = await fetchCalApi<any>(
+        this.page,
         TRANSACTIONS_REQUEST_ENDPOINT,
         { cardUniqueId: card.cardUniqueId, month: month.format('M'), year: month.format('YYYY') },
-        {
-          Authorization,
-          'X-Site-Id': xSiteId,
-          'Content-Type': 'application/json',
-          ...apiHeaders,
-        },
+        { Authorization, 'X-Site-Id': xSiteId },
       );
 
       if (monthData?.statusCode !== 1)
