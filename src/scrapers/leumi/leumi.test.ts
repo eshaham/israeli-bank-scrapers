@@ -1,5 +1,5 @@
 import { LoginResults } from '../base-scraper-with-browser';
-import LeumiScraper from './leumi';
+import LeumiScraper, { isPostLoginUrl } from './leumi';
 import { SHEKEL_CURRENCY } from '../../constants';
 import { SCRAPERS } from '../../definitions';
 import { getDebug } from '../../helpers/debug';
@@ -107,5 +107,18 @@ describe('Leumi legacy scraper', () => {
     } else {
       debug('No foreign currency accounts found - this may be expected if the test account has none');
     }
+  });
+});
+
+describe('isPostLoginUrl', () => {
+  test('recognizes the private and the business account landing pages', () => {
+    expect(isPostLoginUrl('https://hb2.bankleumi.co.il/eBanking/SO/SPA.aspx#/ts/BusinessAccountTrx?WidgetPar=1')).toBe(
+      true,
+    );
+    expect(isPostLoginUrl('https://hb2.bankleumi.co.il/staticcontent/digitalfront/he/')).toBe(true);
+  });
+
+  test('does not treat the login page as logged in', () => {
+    expect(isPostLoginUrl('https://www.leumi.co.il/he')).toBe(false);
   });
 });
