@@ -35,6 +35,7 @@ const SUBMIT_LOGIN_SELECTOR = '.btn';
 interface ScrapedTransaction {
   credit: string;
   debit: string;
+  balance: string;
   date: string;
   reference?: string;
   description: string;
@@ -62,7 +63,7 @@ function getPossibleLoginResults(page: Page): PossibleLoginResults {
 }
 
 function getAmountData(amountStr: string) {
-  const amountStrCopy = amountStr.replace(',', '');
+  const amountStrCopy = amountStr.replace(/,/g, '');
   return parseFloat(amountStrCopy);
 }
 
@@ -112,13 +113,18 @@ function handleTransactionRow(txns: ScrapedTransaction[], txnRow: TransactionsTr
     description: div[3],
     debit: div[4],
     credit: div[5],
+    balance: div[6],
     status: TransactionStatuses.Completed,
   };
 
   txns.push(tx);
 }
 
-async function getAccountTransactions(page: Page, options?: ScraperOptions): Promise<Transaction[]> {
+async function getAccountTransactions(
+  page: Page,
+  accountNumber: string,
+  options?: ScraperOptions,
+): Promise<TransactionsAccount> {
   // Wait for transactions.
   await waitUntilElementFound(page, '.under-line-txn-table-header', true);
 
@@ -139,7 +145,13 @@ async function getAccountTransactions(page: Page, options?: ScraperOptions): Pro
     handleTransactionRow(txns, txnRow);
   }
 
-  return convertTransactions(txns, options);
+  const balance = txns.length ? getAmountData(txns[0].balance) : NaN;
+  return {
+    accountNumber,
+    balance: Number.isNaN(balance) ? undefined : balance,
+    balanceDate: Number.isNaN(balance) ? undefined : moment(txns[0].date, DATE_FORMAT).toISOString(),
+    txns: convertTransactions(txns, options),
+  };
 }
 
 // All datepicker selectors are scoped to the "from date" control to avoid ambiguity with the "to date" picker.
@@ -177,12 +189,7 @@ async function fetchAccountData(
   await waitUntilElementDisappear(page, '.loading-bar-spinner');
   await searchByDates(page, startDate);
   await waitUntilElementDisappear(page, '.loading-bar-spinner');
-  const txns = await getAccountTransactions(page, options);
-
-  return {
-    accountNumber: accountID,
-    txns,
-  };
+  return getAccountTransactions(page, accountID, options);
 }
 
 // Multi-portfolio iteration contributed by @mamlukishay (https://github.com/gczobel/israeli-bank-scrapers/pull/1)
