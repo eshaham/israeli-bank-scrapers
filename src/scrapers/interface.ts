@@ -23,6 +23,7 @@ export type ScraperCredentials =
     ));
 
 export type OptInFeatures =
+  | 'beinleumi:assets'
   | 'isracard-amex:skipAdditionalTransactionInformation'
   | 'mizrahi:pendingIfNoIdentifier'
   | 'mizrahi:pendingIfHasGenericDescription'

@@ -7,6 +7,10 @@ export interface TransactionsAccount {
   currency?: string;
   savingsAccount?: boolean;
   txns: Transaction[];
+  /** FIBI asset snapshot fields, populated only with the beinleumi:assets opt-in. */
+  assetsDate?: string;
+  foreignCurrencyBalances?: ForeignCurrencyBalance[];
+  securitiesPortfolio?: SecuritiesPortfolio;
 }
 
 export enum CardType {
@@ -60,4 +64,32 @@ export interface Transaction {
   installments?: TransactionInstallments;
   category?: string;
   rawTransaction?: unknown;
+}
+
+/** Bank-reported balance in the original currency; valueInILS is a separate valuation. */
+export interface ForeignCurrencyBalance {
+  currency: string;
+  balance: number;
+  valueInILS: number;
+}
+
+export interface SecurityHolding {
+  securityNumber: string;
+  isin?: string;
+  symbol?: string;
+  name: string;
+  type: string;
+  currency: string;
+  quantity: number;
+  marketValue: number;
+  valueInILS: number;
+  /** Prices in currency units, after checking the bank's quote unit against marketValue. */
+  unitPrice?: number;
+  adjustedCostPrice?: number;
+}
+
+export interface SecuritiesPortfolio {
+  currency: 'ILS';
+  value: number;
+  holdings: SecurityHolding[];
 }

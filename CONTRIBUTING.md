@@ -168,3 +168,11 @@ function getLoginOptions(credentials) {
 
 ### Overriding fetchData()
 You can override this async function however way you want, as long as your return results as `ScaperScrapingResult` (checkout declaration [here](./src/scrapers/base-scraper.ts#L151)).
+
+### Synthetic FIBI asset browser tests
+
+`beinleumi-assets-browser.test.ts` answers every Chromium request locally with
+synthetic HTML/API payloads. It never contacts a bank or needs credentials.
+Puppeteer's installed browser is used by default; set `ASSETS_TEST_CHROMIUM` to a
+local Chromium executable when browser downloads are disabled. For a container
+running as root, set `PUPPETEER_NO_SANDBOX=true`.

@@ -80,6 +80,59 @@ import { CompanyTypes, createScraper } from 'israeli-bank-scrapers';
 
 Check the options declaration [here](./src/scrapers/interface.ts#L29) for available options.
 
+### FIBI foreign currencies and securities (opt-in)
+
+For `CompanyTypes.beinleumi`, add `optInFeatures: ['beinleumi:assets']` to
+read the selected account's FX and securities valuation screens in addition to
+transaction history. Other providers and the default FIBI flow are unchanged.
+The optional fields are attached to the matching `accounts[]` entry:
+
+```typescript
+{
+  accountNumber: '001234',
+  balance: 1000, // Existing bank balance, unchanged
+  assetsDate: '2026-10-04', // Israel calendar date of the asset snapshot
+  foreignCurrencyBalances: [
+    { currency: 'CHF', balance: 50, valueInILS: 200 },
+  ],
+  securitiesPortfolio: {
+    currency: 'ILS',
+    value: 100,
+    holdings: [{
+      securityNumber: '1234567',
+      name: 'Example fund',
+      type: 'MutualFund', // Bank-provided security type
+      currency: 'ILS',
+      quantity: 10,
+      marketValue: 100,
+      valueInILS: 100,
+      unitPrice: 10,
+      adjustedCostPrice: 9,
+    }],
+  },
+  txns: [],
+}
+```
+
+Foreign balances exclude the bank's cash subsets; `valueInILS` is a valuation
+of the same balance, not an additional balance. Likewise, `securitiesPortfolio.value`
+is the total of the holdings' `valueInILS` fields. Do not add the total and its
+components together. Prices are returned in the holding's currency units when
+quantity and bank valuation establish whether the bank quotes units or hundredths
+(e.g. agorot); otherwise price fields are omitted. Optional ISIN and symbol fields
+are included when the bank supplies them.
+
+Asset navigation uses the authenticated `online.fibi.co.il` and
+`apps.fibi.co.il` sites. Custom browser network policies need to permit those
+bank hosts. Incomplete portfolio pages, unmatched valuations or ambiguous account
+scopes fail the scrape rather than returning partial assets. Assets are read only
+for the account selected when the scraper reaches the bank summary; other accounts
+may still have transaction history but no asset fields. A missing menu section
+leaves its field absent, which must not be interpreted as a zero balance. A
+successfully read empty portfolio has `holdings: []` and `value: 0`. These are current
+snapshots, not historical positions or a public bank API contract. The existing
+transaction `startDate` filtering is unchanged.
+
 Regarding credentials, you should provide the relevant credentials for the chosen company. See [this file](./src/definitions.ts) with list of credentials per company.
 
 The structure of the result object is as follows:
