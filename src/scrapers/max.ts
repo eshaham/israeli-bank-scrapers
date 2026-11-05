@@ -78,6 +78,7 @@ enum MaxPlanName {
   MonthlyCardFee = 'דמי כרטיס',
   CurrencyPocket = 'חיוב ארנק מטח',
   MonthlyChargeDistribution = 'חלוקת חיוב חודשי',
+  TransferToAccumulatingBasket = 'העברה לסל מצטבר',
 }
 
 const INVALID_DETAILS_SELECTOR = '#popupWrongDetails';
@@ -170,7 +171,7 @@ async function loadCategories(page: Page) {
   }
 }
 
-function getTransactionType(planName: string, planTypeId: number) {
+export function getTransactionType(planName: string, planTypeId: number) {
   const cleanedUpTxnTypeStr = planName.replace('\t', ' ').trim() as MaxPlanName;
   switch (cleanedUpTxnTypeStr) {
     case MaxPlanName.ImmediateCharge:
@@ -193,6 +194,7 @@ function getTransactionType(planName: string, planTypeId: number) {
     case MaxPlanName.MonthlyCardFee:
     case MaxPlanName.CurrencyPocket:
     case MaxPlanName.MonthlyChargeDistribution:
+    case MaxPlanName.TransferToAccumulatingBasket:
       return TransactionTypes.Normal;
     case MaxPlanName.Installments:
     case MaxPlanName.Credit:
@@ -206,7 +208,9 @@ function getTransactionType(planName: string, planTypeId: number) {
         case 5:
           return TransactionTypes.Normal;
         default:
-          throw new Error(`Unknown transaction type ${cleanedUpTxnTypeStr as string}`);
+          // An unknown plan name must not abort the whole scrape, so treat it as a normal transaction
+          debug(`Unknown transaction type ${cleanedUpTxnTypeStr as string} (planTypeId ${planTypeId})`);
+          return TransactionTypes.Normal;
       }
   }
 }
@@ -277,7 +281,7 @@ function mapTransaction(rawTransaction: ScrapedTransaction, options?: ScraperOpt
     originalCurrency: rawTransaction.originalCurrency,
     chargedAmount: -rawTransaction.actualPaymentAmount,
     chargedCurrency: getChargedCurrency(rawTransaction.paymentCurrency),
-    description: rawTransaction.merchantName.trim(),
+    description: (rawTransaction.merchantName ?? '').trim(),
     memo: getMemo(rawTransaction),
     category: categories.get(rawTransaction?.categoryId),
     installments,

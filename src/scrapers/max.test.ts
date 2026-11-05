@@ -1,7 +1,8 @@
-import MaxScraper, { getMemo } from './max';
+import MaxScraper, { getMemo, getTransactionType } from './max';
 import { maybeTestCompanyAPI, extendAsyncTimeout, getTestsConfig, exportTransactions } from '../tests/tests-utils';
 import { SCRAPERS } from '../definitions';
 import { LoginResults } from './base-scraper-with-browser';
+import { TransactionTypes } from '../transactions';
 
 const COMPANY_ID = 'max'; // TODO this property should be hard-coded in the provider
 const testsConfig = getTestsConfig();
@@ -80,5 +81,20 @@ describe('getMemo', () => {
   ])('%o should create memo: %s', (transaction, expected) => {
     const memo = getMemo(transaction);
     expect(memo).toBe(expected);
+  });
+});
+
+describe('getTransactionType', () => {
+  test.each<[string, number, TransactionTypes]>([
+    ['רגילה', 1, TransactionTypes.Normal],
+    ['תשלומים', 1, TransactionTypes.Installments],
+    ['העברה לסל מצטבר', 1, TransactionTypes.Normal],
+    ['unknown plan', 2, TransactionTypes.Installments],
+    ['unknown plan', 3, TransactionTypes.Installments],
+    ['unknown plan', 5, TransactionTypes.Normal],
+    ['הלוואה ברגע למולטי', 1, TransactionTypes.Normal],
+    ['unknown plan', 99, TransactionTypes.Normal],
+  ])('%s with planTypeId %d should be %s', (planName, planTypeId, expected) => {
+    expect(getTransactionType(planName, planTypeId)).toBe(expected);
   });
 });
