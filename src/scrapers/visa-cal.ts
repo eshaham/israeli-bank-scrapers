@@ -384,7 +384,9 @@ function convertParsedDataToTransactions(
     const originalAmount = transaction.trnAmt * (transaction.trnTypeCode === TrnTypeCode.credit ? 1 : -1);
 
     const result: Transaction = {
-      identifier: !isPending(transaction) ? transaction.trnIntId : undefined,
+      identifier: !isPending(transaction)
+        ? (installments ? `${transaction.trnIntId}_${installments.number}` : transaction.trnIntId)
+        : undefined,
       type: [TrnTypeCode.regular, TrnTypeCode.standingOrder].includes(transaction.trnTypeCode)
         ? TransactionTypes.Normal
         : TransactionTypes.Installments,
