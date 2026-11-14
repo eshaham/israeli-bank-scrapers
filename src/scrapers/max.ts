@@ -39,6 +39,8 @@ export interface ScrapedTransaction {
   categoryId: number;
   fundsTransferComment?: string;
   fundsTransferReceiverOrTransfer?: string;
+  promotionClub?: string | null;
+  promotionAmount?: number | null;
   dealData?: {
     arn: string;
   };
@@ -241,13 +243,20 @@ export function getMemo({
   comments,
   fundsTransferReceiverOrTransfer,
   fundsTransferComment,
-}: Pick<ScrapedTransaction, 'comments' | 'fundsTransferReceiverOrTransfer' | 'fundsTransferComment'>) {
+  promotionClub,
+  promotionAmount,
+}: Pick<
+  ScrapedTransaction,
+  'comments' | 'fundsTransferReceiverOrTransfer' | 'fundsTransferComment' | 'promotionClub' | 'promotionAmount'
+>) {
+  let memo = comments;
   if (fundsTransferReceiverOrTransfer) {
-    const memo = comments ? `${comments} ${fundsTransferReceiverOrTransfer}` : fundsTransferReceiverOrTransfer;
-    return fundsTransferComment ? `${memo}: ${fundsTransferComment}` : memo;
+    memo = comments ? `${comments} ${fundsTransferReceiverOrTransfer}` : fundsTransferReceiverOrTransfer;
+    memo = fundsTransferComment ? `${memo}: ${fundsTransferComment}` : memo;
   }
 
-  return comments;
+  const promotion = [promotionClub, promotionAmount].filter(value => value != null && value !== '').join(': ');
+  return promotion ? [memo, promotion].filter(Boolean).join(' | ') : memo;
 }
 
 function mapTransaction(rawTransaction: ScrapedTransaction, options?: ScraperOptions): Transaction {
