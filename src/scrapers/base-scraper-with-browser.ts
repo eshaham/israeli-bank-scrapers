@@ -324,6 +324,13 @@ class BaseScraperWithBrowser<TCredentials extends ScraperCredentials> extends Ba
           success: false,
           errorType: ScraperErrorTypes.ChangePassword,
         };
+      case LoginResults.AccountBlocked:
+        this.emitProgress(ScraperProgressTypes.LoginFailed);
+        return {
+          success: false,
+          errorType: ScraperErrorTypes.AccountBlocked,
+          errorMessage: `Login failed with ${loginResult} error`,
+        };
       default:
         throw new Error(`unexpected login result "${loginResult}"`);
     }

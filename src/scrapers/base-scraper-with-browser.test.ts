@@ -1,5 +1,7 @@
+import { CompanyTypes, ScraperProgressTypes } from '../definitions';
 import { extendAsyncTimeout, getTestsConfig } from '../tests/tests-utils';
-import { BaseScraperWithBrowser } from './base-scraper-with-browser';
+import { BaseScraperWithBrowser, LoginResults } from './base-scraper-with-browser';
+import { ScraperErrorTypes } from './errors';
 
 const testsConfig = getTestsConfig();
 
@@ -49,5 +51,25 @@ describe('Base scraper with browser', () => {
       await baseScraperWithBrowser.terminate(false);
       throw e;
     }
+  });
+
+  test('should return an account blocked error result when the account is blocked', () => {
+    const baseScraperWithBrowser = new BaseScraperWithBrowser({
+      companyId: CompanyTypes.leumi,
+      startDate: new Date(),
+    });
+
+    const progressTypes: ScraperProgressTypes[] = [];
+    baseScraperWithBrowser.onProgress((_companyId, payload) => progressTypes.push(payload.type));
+
+    // @ts-ignore
+    const result = baseScraperWithBrowser.handleLoginResult(LoginResults.AccountBlocked);
+
+    expect(result).toEqual({
+      success: false,
+      errorType: ScraperErrorTypes.AccountBlocked,
+      errorMessage: 'Login failed with ACCOUNT_BLOCKED error',
+    });
+    expect(progressTypes).toEqual([ScraperProgressTypes.LoginFailed]);
   });
 });
