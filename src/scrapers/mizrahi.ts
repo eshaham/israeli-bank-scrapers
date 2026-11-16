@@ -199,14 +199,21 @@ function createHeadersFromRequest(request: HTTPRequest) {
   };
 }
 
-function getTransactionIdentifier(row: ScrapedTransaction): string | number | undefined {
+export function getTransactionIdentifier(row: ScrapedTransaction): string | undefined {
   if (!row.MC02AsmahtaMekoritEZ) {
     return undefined;
   }
-  if (row.TransactionNumber && String(row.TransactionNumber) !== '1') {
-    return `${row.MC02AsmahtaMekoritEZ}-${row.TransactionNumber}`;
-  }
-  return parseInt(row.MC02AsmahtaMekoritEZ, 10);
+
+  // The bank reuses an asmachta (MC02AsmahtaMekoritEZ) across unrelated transactions, and
+  // TransactionNumber is neither always sent nor unique within an asmachta, so the asmachta on its
+  // own does not identify a transaction. Compose the identifier from the other fields the bank
+  // already sends for the row: its transaction date and its amount.
+  // Every part comes from the response body, never from the scrape time or the row's position in
+  // the response, so the same transaction yields the same identifier on every scrape.
+  const transactionNumber = row.TransactionNumber ? String(row.TransactionNumber) : '0';
+  const transactionDate = (row.MC02PeulaTaaEZ || '').replace(/\D/g, '');
+
+  return `${row.MC02AsmahtaMekoritEZ}_${transactionNumber}_${transactionDate}_${row.MC02SchumEZ}`;
 }
 
 async function convertTransactions(
