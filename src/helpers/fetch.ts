@@ -140,7 +140,7 @@ export async function fetchPostWithinPage<TResult>(
   } catch (e) {
     if (!ignoreErrors) {
       throw new Error(
-        `fetchPostWithinPage parse error: ${e instanceof Error ? `${e.message}\n${e.stack}` : String(e)}, url: ${url}, data: ${JSON.stringify(data)}, extraHeaders: ${JSON.stringify(extraHeaders)}, result: ${resultText}`,
+        `fetchPostWithinPage parse error: ${e instanceof Error ? `${e.message}\n${e.stack}` : String(e)}, url: ${url}, result: ${resultText}, status: ${status}`,
       );
     }
   }
