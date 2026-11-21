@@ -334,6 +334,17 @@ const credentials = {
 };
 ```
 
+The bank may ask for a one-time code sent by SMS after the password (for example when logging in from a new device). To support it, add an `otpCodeRetriever` callback that resolves with the code, and optionally the last digits of the phone to send it to (otherwise the first phone the bank lists is used):
+```node
+const credentials = {
+  username: <user name>,
+  password: <user password>,
+  otpCodeRetriever: async () => <the code the user received>,
+  otpPhoneLastDigits: '1234', // optional
+};
+```
+Without `otpCodeRetriever`, a login that reaches the code screen fails with `TWO_FACTOR_RETRIEVER_MISSING`.
+
 ## Bank Otsar Hahayal scraper
 This scraper expects the following credentials object:
 ```node

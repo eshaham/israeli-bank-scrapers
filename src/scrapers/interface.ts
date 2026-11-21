@@ -8,6 +8,7 @@ import { type ErrorResult, type ScraperErrorTypes } from './errors';
 export type ScraperCredentials =
   | { userCode: string; password: string }
   | { username: string; password: string }
+  | { username: string; password: string; otpCodeRetriever?: () => Promise<string>; otpPhoneLastDigits?: string }
   | { id: string; password: string }
   | { id: string; password: string; num: string }
   | { id: string; password: string; card6Digits: string }
