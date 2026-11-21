@@ -352,6 +352,16 @@ const credentials = {
   password: <user password>
 };
 ```
+
+It also supports Cal's quick login ("כניסה מהירה"): the ID number and the last 4 digits of one of the cards, then a one-time code that Cal sends by SMS. Provide an `otpCodeRetriever` callback that resolves with the code:
+```node
+const credentials = {
+  id: <ID number>,
+  last4Digits: <last 4 digits of a card>,
+  otpCodeRetriever: async () => <the code the user received>,
+};
+```
+Cal returns all the cards of that ID, whichever card's digits are used.
 This scraper supports fetching transaction from up to one year.
 
 ## Max scraper (Formerly Leumi-Card)

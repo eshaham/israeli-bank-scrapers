@@ -6,7 +6,7 @@ import { fetchPost } from '../helpers/fetch';
 import { getCurrentUrl, waitForNavigation } from '../helpers/navigation';
 import { getFromSessionStorage } from '../helpers/storage';
 import { filterOldTransactions, getRawTransaction } from '../helpers/transactions';
-import { waitUntil } from '../helpers/waiting';
+import { sleep, waitUntil } from '../helpers/waiting';
 import {
   CardType,
   TransactionStatuses,
@@ -344,11 +344,46 @@ function getPossibleLoginResults() {
 }
 
 function createLoginFields(credentials: ScraperSpecificCredentials) {
+  if (isQuickLogin(credentials)) {
+    debug('create login fields for quick login (ID and card digits)');
+    return [
+      { selector: '[formcontrolname="id"]', value: credentials.id },
+      { selector: '[formcontrolname="secondOtpParam"]', value: credentials.last4Digits },
+    ];
+  }
   debug('create login fields for username and password');
   return [
     { selector: '[formcontrolname="userName"]', value: credentials.username },
     { selector: '[formcontrolname="password"]', value: credentials.password },
   ];
+}
+
+const QUICK_LOGIN_CODE_INPUT = '[formcontrolname="otp"]';
+const QUICK_LOGIN_MAX_ATTEMPTS = 3;
+const QUICK_LOGIN_RESULT_TIMEOUT_MS = 30000;
+
+/** Clicks the first visible, enabled button in the frame whose text matches. */
+async function clickButtonByText(frame: Frame, pattern: RegExp) {
+  return frame.evaluate(source => {
+    const re = new RegExp(source);
+    const button = Array.from(document.querySelectorAll('button')).find(
+      b => !!b.offsetParent && !b.disabled && re.test(b.innerText.trim()),
+    );
+    button?.click();
+    return !!button;
+  }, pattern.source);
+}
+
+async function hasVisibleError(frame: Frame) {
+  try {
+    return await frame.evaluate(() =>
+      Array.from(document.querySelectorAll('mat-error, [role="alert"]')).some(
+        e => !!(e as HTMLElement).offsetParent && !!(e as HTMLElement).innerText.trim(),
+      ),
+    );
+  } catch {
+    return false;
+  }
 }
 
 function convertParsedDataToTransactions(
@@ -412,12 +447,33 @@ function convertParsedDataToTransactions(
   });
 }
 
-type ScraperSpecificCredentials = { username: string; password: string };
+type PasswordCredentials = { username: string; password: string };
+type QuickLoginCredentials = { id: string; last4Digits: string; otpCodeRetriever: () => Promise<string> };
+type ScraperSpecificCredentials = PasswordCredentials | QuickLoginCredentials;
+
+function isQuickLogin(credentials: ScraperSpecificCredentials): credentials is QuickLoginCredentials {
+  return 'otpCodeRetriever' in credentials && typeof credentials.otpCodeRetriever === 'function';
+}
 
 class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   private authorization: string | undefined = undefined;
 
   private authRequestPromise: Promise<HTTPRequest | undefined> | undefined;
+
+  private loginFrame: Frame | undefined;
+
+  openQuickLoginPopup = async () => {
+    debug('open login popup for quick login');
+    await waitUntilElementFound(this.page, '#ccLoginDesktopBtn', true);
+    await clickButton(this.page, '#ccLoginDesktopBtn');
+    const frame = await getLoginFrame(this.page);
+    debug('navigate to the quick login tab');
+    await waitUntilElementFound(frame, '#send-otp');
+    await clickButton(frame, '#send-otp');
+    await waitUntilElementFound(frame, '[formcontrolname="id"]', true);
+    this.loginFrame = frame;
+    return frame;
+  };
 
   openLoginPopup = async () => {
     debug('open login popup, wait until login button available');
@@ -481,36 +537,91 @@ class VisaCalScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> 
     return Promise.resolve('09031987-273E-2311-906C-8AF85B17C8D9');
   }
 
-  getLoginOptions(credentials: ScraperSpecificCredentials): LoginOptions {
-    this.authRequestPromise = this.page
-      .waitForRequest(SSO_AUTHORIZATION_REQUEST_ENDPOINT, { timeout: 10_000 })
-      .catch(e => {
-        debug('error while waiting for the token request', e);
-        return undefined;
+  private waitForAuthRequest(timeout: number) {
+    this.authRequestPromise = this.page.waitForRequest(SSO_AUTHORIZATION_REQUEST_ENDPOINT, { timeout }).catch(e => {
+      debug('error while waiting for the token request', e);
+      return undefined;
+    });
+  }
+
+  private async finishLogin(navigated: boolean) {
+    try {
+      if (!navigated) await waitForNavigation(this.page);
+      const currentUrl = await getCurrentUrl(this.page);
+      if (currentUrl.endsWith('site-tutorial')) {
+        await clickButton(this.page, 'button.btn-close');
+      }
+      const request = await this.authRequestPromise;
+      this.authorization = String(request?.headers().authorization || '').trim();
+    } catch (e) {
+      const currentUrl = await getCurrentUrl(this.page);
+      if (currentUrl.endsWith('dashboard')) return;
+      const requiresChangePassword = await hasChangePasswordForm(this.page);
+      if (requiresChangePassword) return;
+      throw e;
+    }
+  }
+
+  /**
+   * Quick login: after "send me a code", Cal shows a code field in the login frame. A correct
+   * code leaves the home page (or closes the frame); a wrong one shows an error in the frame.
+   */
+  private async enterQuickLoginCode(credentials: QuickLoginCredentials) {
+    const frame = this.loginFrame ?? (await getLoginFrame(this.page));
+    await waitUntilElementFound(frame, QUICK_LOGIN_CODE_INPUT, true, QUICK_LOGIN_RESULT_TIMEOUT_MS);
+
+    for (let attempt = 1; attempt <= QUICK_LOGIN_MAX_ATTEMPTS; attempt += 1) {
+      debug(`waiting for the one-time code (attempt ${attempt})`);
+      const code = String(await credentials.otpCodeRetriever()).replace(/\D/g, '');
+      await frame.$eval(QUICK_LOGIN_CODE_INPUT, el => {
+        (el as HTMLInputElement).value = '';
       });
+      await frame.type(QUICK_LOGIN_CODE_INPUT, code);
+      // The token request follows the code, which can take longer than the usual 10 seconds to arrive.
+      this.waitForAuthRequest(QUICK_LOGIN_RESULT_TIMEOUT_MS);
+      const before = this.page.url();
+      const submitted =
+        (await clickButtonByText(frame, /כניסה|אישור|המשך|התחבר/)) ||
+        (await frame
+          .$eval('button[type="submit"]', b => {
+            b.click();
+            return true;
+          })
+          .catch(() => false));
+      if (!submitted) throw new Error('could not find the button to submit the one-time code');
+
+      const end = Date.now() + QUICK_LOGIN_RESULT_TIMEOUT_MS;
+      while (Date.now() < end) {
+        if (this.page.url() !== before || frame.isDetached()) return true;
+        if (await hasVisibleError(frame)) break;
+        await sleep(500);
+      }
+      if (Date.now() >= end) return false;
+      debug('Cal rejected the one-time code');
+    }
+    throw new Error(`Cal rejected the one-time code ${QUICK_LOGIN_MAX_ATTEMPTS} times`);
+  }
+
+  getLoginOptions(credentials: ScraperSpecificCredentials): LoginOptions {
+    this.waitForAuthRequest(10_000);
+    const quickLogin = isQuickLogin(credentials);
     return {
       loginUrl: `${LOGIN_URL}`,
       fields: createLoginFields(credentials),
-      submitButtonSelector: 'button[type="submit"]',
+      submitButtonSelector: quickLogin
+        ? async () => {
+            const frame = this.loginFrame ?? (await getLoginFrame(this.page));
+            if (!(await clickButtonByText(frame, /SMS|שלחו לי/))) {
+              throw new Error('could not find the button that sends the one-time code');
+            }
+          }
+        : 'button[type="submit"]',
       possibleResults: getPossibleLoginResults(),
       checkReadiness: async () => waitUntilElementFound(this.page, '#ccLoginDesktopBtn'),
-      preAction: this.openLoginPopup,
+      preAction: quickLogin ? this.openQuickLoginPopup : this.openLoginPopup,
       postAction: async () => {
-        try {
-          await waitForNavigation(this.page);
-          const currentUrl = await getCurrentUrl(this.page);
-          if (currentUrl.endsWith('site-tutorial')) {
-            await clickButton(this.page, 'button.btn-close');
-          }
-          const request = await this.authRequestPromise;
-          this.authorization = String(request?.headers().authorization || '').trim();
-        } catch (e) {
-          const currentUrl = await getCurrentUrl(this.page);
-          if (currentUrl.endsWith('dashboard')) return;
-          const requiresChangePassword = await hasChangePasswordForm(this.page);
-          if (requiresChangePassword) return;
-          throw e;
-        }
+        const navigated = quickLogin ? await this.enterQuickLoginCode(credentials) : false;
+        await this.finishLogin(navigated);
       },
       userAgent: apiHeaders['User-Agent'],
     };
