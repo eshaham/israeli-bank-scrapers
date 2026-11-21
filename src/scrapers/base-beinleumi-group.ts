@@ -13,7 +13,16 @@ import { getRawTransaction } from '../helpers/transactions';
 import { sleep } from '../helpers/waiting';
 import { TransactionStatuses, TransactionTypes, type Transaction, type TransactionsAccount } from '../transactions';
 import { BaseScraperWithBrowser, LoginResults, type PossibleLoginResults } from './base-scraper-with-browser';
-import { type ScraperOptions } from './interface';
+import {
+  OTP_CODE_INPUT,
+  OTP_SEND_BUTTON,
+  OtpRetrieverMissingError,
+  completeOtp,
+  isOtpRequested,
+  type OtpCredentials,
+} from './beinleumi-otp';
+import { ScraperErrorTypes } from './errors';
+import { type ScraperCredentials, type ScraperOptions, type ScraperScrapingResult } from './interface';
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 const NO_TRANSACTION_IN_DATE_RANGE_TEXT = 'לא נמצאו נתונים בנושא המבוקש';
@@ -317,6 +326,8 @@ export async function waitForPostLogin(page: Page) {
     waitUntilElementFound(page, '#account_num', true), // New UI
     waitUntilElementFound(page, '#matafLogoutLink', true), // Old UI
     waitUntilElementFound(page, '#validationMsg', true), // Old UI
+    waitUntilElementFound(page, OTP_SEND_BUTTON, true), // One-time code: pick a phone
+    waitUntilElementFound(page, OTP_CODE_INPUT, true), // One-time code: enter it
   ]);
 }
 
@@ -500,7 +511,7 @@ async function fetchAccounts(page: Page, startDate: Moment, options?: ScraperOpt
   return accounts;
 }
 
-type ScraperSpecificCredentials = { username: string; password: string };
+type ScraperSpecificCredentials = { username: string; password: string } & OtpCredentials;
 
 class BeinleumiGroupBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCredentials> {
   BASE_URL = '';
@@ -514,7 +525,13 @@ class BeinleumiGroupBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCr
       loginUrl: `${this.LOGIN_URL}`,
       fields: createLoginFields(credentials),
       submitButtonSelector: '#continueBtn',
-      postAction: async () => waitForPostLogin(this.page),
+      postAction: async () => {
+        await waitForPostLogin(this.page);
+        if (await isOtpRequested(this.page)) {
+          await completeOtp(this.page, credentials);
+          await waitForPostLogin(this.page);
+        }
+      },
       possibleResults: getPossibleLoginResults(),
       // HACK: For some reason, though the login button (#continueBtn) is present and visible, the click action does not perform.
       // Adding this delay fixes the issue.
@@ -522,6 +539,17 @@ class BeinleumiGroupBaseScraper extends BaseScraperWithBrowser<ScraperSpecificCr
         await sleep(1000);
       },
     };
+  }
+
+  async login(credentials: ScraperCredentials): Promise<ScraperScrapingResult> {
+    try {
+      return await super.login(credentials);
+    } catch (e) {
+      if (e instanceof OtpRetrieverMissingError) {
+        return { success: false, errorType: ScraperErrorTypes.TwoFactorRetrieverMissing, errorMessage: e.message };
+      }
+      throw e;
+    }
   }
 
   async fetchData() {
